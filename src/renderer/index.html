@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <title>PraticaAI Reviewer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Il renderer non parla con la rete: Google, Drive e i token vivono solo nel main.
+      `connect-src` tiene aperto il websocket di Vite in sviluppo; in produzione la
+      pagina è caricata da file:// e non effettua nessuna richiesta remota.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self' 'unsafe-inline';
+               style-src 'self' 'unsafe-inline';
+               img-src 'self' data: blob:;
+               font-src 'self' data:;
+               worker-src 'self' blob:;
+               connect-src 'self' blob: data: ws://localhost:* http://localhost:*;
+               object-src 'none';
+               base-uri 'none';
+               form-action 'none'"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+# better-sqlite3 e` un modulo nativo: deve poter eseguire il proprio build script,
+# altrimenti `electron-rebuild` non trova nulla da ricompilare contro l'ABI di Electron.
+allowBuilds:
+  better-sqlite3: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  tesseract.js: true
+
+minimumReleaseAgeExclude:
+  - '@vitest/mocker@5.0.1'
+  - '@vitest/spy@5.0.1'
+  - electron@44.4.0
+  - vitest@5.0.1

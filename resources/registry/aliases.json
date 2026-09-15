@@ -1,0 +1,5931 @@
+{
+  "accounting.autofattura": {
+    "canonical_name": "autofattura",
+    "aliases": [
+      "autofattura",
+      "AUTOFATTURA"
+    ],
+    "synonyms": [
+      "modulo autofattura",
+      "prospetto autofattura"
+    ]
+  },
+  "accounting.bilancio_di_verifica": {
+    "canonical_name": "bilancio di verifica",
+    "aliases": [
+      "bilancio di verifica",
+      "BILANCIO DI VERIFICA"
+    ],
+    "synonyms": [
+      "modulo bilancio di verifica",
+      "prospetto bilancio di verifica"
+    ]
+  },
+  "accounting.bilancio_esercizio": {
+    "canonical_name": "bilancio esercizio",
+    "aliases": [
+      "BILANCIO ESERCIZIO",
+      "Bilancio Esercizio",
+      "bilancio esercizio"
+    ],
+    "synonyms": [
+      "modulo bilancio esercizio"
+    ]
+  },
+  "accounting.documento_commerciale": {
+    "canonical_name": "documento commerciale",
+    "aliases": [
+      "documento commerciale",
+      "DOCUMENTO COMMERCIALE"
+    ],
+    "synonyms": [
+      "modulo documento commerciale",
+      "prospetto documento commerciale"
+    ]
+  },
+  "accounting.fattura": {
+    "canonical_name": "fattura",
+    "aliases": [
+      "fattura",
+      "invoice",
+      "FATTURA"
+    ],
+    "synonyms": [
+      "modulo fattura"
+    ]
+  },
+  "accounting.fattura_analogica": {
+    "canonical_name": "fattura analogica",
+    "aliases": [
+      "FATTURA ANALOGICA",
+      "Fattura Analogica",
+      "fattura analogica"
+    ],
+    "synonyms": [
+      "modulo fattura analogica"
+    ]
+  },
+  "accounting.fattura_elettronica": {
+    "canonical_name": "fattura elettronica",
+    "aliases": [
+      "FATTURA ELETTRONICA",
+      "Fattura Elettronica",
+      "fattura elettronica"
+    ],
+    "synonyms": [
+      "modulo fattura elettronica"
+    ]
+  },
+  "accounting.fattura_proforma": {
+    "canonical_name": "fattura proforma",
+    "aliases": [
+      "FATTURA PROFORMA",
+      "Fattura Proforma",
+      "fattura proforma"
+    ],
+    "synonyms": [
+      "modulo fattura proforma"
+    ]
+  },
+  "accounting.libro_giornale": {
+    "canonical_name": "libro giornale",
+    "aliases": [
+      "LIBRO GIORNALE",
+      "Libro Giornale",
+      "libro giornale"
+    ],
+    "synonyms": [
+      "modulo libro giornale"
+    ]
+  },
+  "accounting.libro_mastro": {
+    "canonical_name": "libro mastro",
+    "aliases": [
+      "libro mastro",
+      "LIBRO MASTRO"
+    ],
+    "synonyms": [
+      "modulo libro mastro",
+      "prospetto libro mastro"
+    ]
+  },
+  "accounting.mastrino_contabile": {
+    "canonical_name": "mastrino contabile",
+    "aliases": [
+      "mastrino contabile",
+      "MASTRINO CONTABILE"
+    ],
+    "synonyms": [
+      "modulo mastrino contabile",
+      "prospetto mastrino contabile"
+    ]
+  },
+  "accounting.nota_di_credito": {
+    "canonical_name": "nota di credito",
+    "aliases": [
+      "NOTA DI CREDITO",
+      "Nota Di Credito",
+      "nota di credito"
+    ],
+    "synonyms": [
+      "modulo nota di credito"
+    ]
+  },
+  "accounting.nota_di_debito": {
+    "canonical_name": "nota di debito",
+    "aliases": [
+      "NOTA DI DEBITO",
+      "Nota Di Debito",
+      "nota di debito"
+    ],
+    "synonyms": [
+      "modulo nota di debito"
+    ]
+  },
+  "accounting.parcella_professionale": {
+    "canonical_name": "parcella professionale",
+    "aliases": [
+      "parcella professionale",
+      "PARCELLA PROFESSIONALE"
+    ],
+    "synonyms": [
+      "modulo parcella professionale",
+      "prospetto parcella professionale"
+    ]
+  },
+  "accounting.prima_nota": {
+    "canonical_name": "prima nota",
+    "aliases": [
+      "PRIMA NOTA",
+      "Prima Nota",
+      "prima nota"
+    ],
+    "synonyms": [
+      "modulo prima nota"
+    ]
+  },
+  "accounting.prospetto_fatture_da_emettere": {
+    "canonical_name": "prospetto fatture da emettere",
+    "aliases": [
+      "fatture da emettere",
+      "prospetto fatture da emettere",
+      "fatture da emettere excel",
+      "PROSPETTO FATTURE DA EMETTERE"
+    ],
+    "synonyms": [
+      "modulo prospetto fatture da emettere"
+    ]
+  },
+  "accounting.prospetto_ratei_risconti": {
+    "canonical_name": "prospetto ratei e risconti",
+    "aliases": [
+      "prospetto ratei e risconti",
+      "PROSPETTO RATEI E RISCONTI",
+      "prospetto ratei risconti"
+    ],
+    "synonyms": [
+      "modulo prospetto ratei e risconti",
+      "prospetto prospetto ratei e risconti"
+    ]
+  },
+  "accounting.registro_iva_acquisti": {
+    "canonical_name": "registro IVA acquisti",
+    "aliases": [
+      "registro IVA acquisti",
+      "REGISTRO IVA ACQUISTI",
+      "registro iva acquisti"
+    ],
+    "synonyms": [
+      "modulo registro IVA acquisti",
+      "prospetto registro IVA acquisti",
+      "imposta sul valore aggiunto"
+    ]
+  },
+  "accounting.registro_iva_vendite": {
+    "canonical_name": "registro IVA vendite",
+    "aliases": [
+      "registro IVA vendite",
+      "REGISTRO IVA VENDITE",
+      "registro iva vendite"
+    ],
+    "synonyms": [
+      "modulo registro IVA vendite",
+      "prospetto registro IVA vendite",
+      "imposta sul valore aggiunto"
+    ]
+  },
+  "accounting.ricevuta_fiscale": {
+    "canonical_name": "ricevuta fiscale",
+    "aliases": [
+      "ricevuta fiscale",
+      "RICEVUTA FISCALE"
+    ],
+    "synonyms": [
+      "modulo ricevuta fiscale",
+      "prospetto ricevuta fiscale"
+    ]
+  },
+  "accounting.riconciliazione_bancaria": {
+    "canonical_name": "riconciliazione bancaria",
+    "aliases": [
+      "riconciliazione bancaria",
+      "RICONCILIAZIONE BANCARIA"
+    ],
+    "synonyms": [
+      "modulo riconciliazione bancaria",
+      "prospetto riconciliazione bancaria"
+    ]
+  },
+  "accounting.scheda_contabile_cliente": {
+    "canonical_name": "scheda contabile cliente",
+    "aliases": [
+      "scheda contabile cliente",
+      "SCHEDA CONTABILE CLIENTE"
+    ],
+    "synonyms": [
+      "modulo scheda contabile cliente",
+      "prospetto scheda contabile cliente"
+    ]
+  },
+  "accounting.scheda_contabile_fornitore": {
+    "canonical_name": "scheda contabile fornitore",
+    "aliases": [
+      "scheda contabile fornitore",
+      "SCHEDA CONTABILE FORNITORE"
+    ],
+    "synonyms": [
+      "modulo scheda contabile fornitore",
+      "prospetto scheda contabile fornitore"
+    ]
+  },
+  "accounting.situazione_contabile": {
+    "canonical_name": "situazione contabile",
+    "aliases": [
+      "situazione contabile",
+      "SITUAZIONE CONTABILE"
+    ],
+    "synonyms": [
+      "modulo situazione contabile",
+      "prospetto situazione contabile"
+    ]
+  },
+  "assets_maintenance.contratto_manutenzione": {
+    "canonical_name": "contratto manutenzione",
+    "aliases": [
+      "CONTRATTO MANUTENZIONE",
+      "Contratto Manutenzione",
+      "contratto manutenzione"
+    ],
+    "synonyms": [
+      "modulo contratto manutenzione"
+    ]
+  },
+  "assets_maintenance.dichiarazione_conformit_ce": {
+    "canonical_name": "dichiarazione conformità CE",
+    "aliases": [
+      "DICHIARAZIONE CONFORMITÀ CE",
+      "Dichiarazione Conformità Ce",
+      "dichiarazione conformità CE",
+      "dichiarazione conformita CE",
+      "dichiarazione conformit ce"
+    ],
+    "synonyms": [
+      "modulo dichiarazione conformità CE"
+    ]
+  },
+  "assets_maintenance.dichiarazione_conformita_ce": {
+    "canonical_name": "dichiarazione conformità CE",
+    "aliases": [
+      "DICHIARAZIONE CONFORMITÀ CE",
+      "Dichiarazione Conformità Ce",
+      "dichiarazione conformità CE",
+      "dichiarazione conformita CE",
+      "dichiarazione conformita ce"
+    ],
+    "synonyms": [
+      "modulo dichiarazione conformità CE"
+    ]
+  },
+  "assets_maintenance.manuale_uso_manutenzione": {
+    "canonical_name": "manuale uso manutenzione",
+    "aliases": [
+      "MANUALE USO MANUTENZIONE",
+      "Manuale Uso Manutenzione",
+      "manuale uso manutenzione",
+      "manuale di uso e manutenzione",
+      "manuale di funzionamento e manutenzione"
+    ],
+    "synonyms": [
+      "modulo manuale uso manutenzione"
+    ]
+  },
+  "assets_maintenance.ordine_lavoro_manutenzione": {
+    "canonical_name": "ordine di lavoro manutenzione",
+    "aliases": [
+      "ordine di lavoro manutenzione",
+      "ORDINE DI LAVORO MANUTENZIONE",
+      "ordine lavoro manutenzione"
+    ],
+    "synonyms": [
+      "modulo ordine di lavoro manutenzione",
+      "prospetto ordine di lavoro manutenzione"
+    ]
+  },
+  "assets_maintenance.piano_manutenzione_preventiva": {
+    "canonical_name": "piano manutenzione preventiva",
+    "aliases": [
+      "piano manutenzione preventiva",
+      "PIANO MANUTENZIONE PREVENTIVA"
+    ],
+    "synonyms": [
+      "modulo piano manutenzione preventiva",
+      "prospetto piano manutenzione preventiva"
+    ]
+  },
+  "assets_maintenance.rapporto_assistenza_tecnica": {
+    "canonical_name": "rapporto assistenza tecnica",
+    "aliases": [
+      "RAPPORTO ASSISTENZA TECNICA",
+      "Rapporto Assistenza Tecnica",
+      "rapporto assistenza tecnica"
+    ],
+    "synonyms": [
+      "modulo rapporto assistenza tecnica"
+    ]
+  },
+  "assets_maintenance.registro_cespiti": {
+    "canonical_name": "registro cespiti",
+    "aliases": [
+      "REGISTRO CESPITI",
+      "Registro Cespiti",
+      "registro cespiti"
+    ],
+    "synonyms": [
+      "modulo registro cespiti"
+    ]
+  },
+  "assets_maintenance.registro_verifiche_periodiche": {
+    "canonical_name": "registro verifiche periodiche",
+    "aliases": [
+      "REGISTRO VERIFICHE PERIODICHE",
+      "Registro Verifiche Periodiche",
+      "registro verifiche periodiche"
+    ],
+    "synonyms": [
+      "modulo registro verifiche periodiche"
+    ]
+  },
+  "assets_maintenance.scheda_cespite": {
+    "canonical_name": "scheda cespite",
+    "aliases": [
+      "scheda cespite",
+      "SCHEDA CESPITE"
+    ],
+    "synonyms": [
+      "modulo scheda cespite",
+      "prospetto scheda cespite"
+    ]
+  },
+  "assets_maintenance.scheda_manutenzione": {
+    "canonical_name": "scheda manutenzione",
+    "aliases": [
+      "SCHEDA MANUTENZIONE",
+      "Scheda Manutenzione",
+      "scheda manutenzione"
+    ],
+    "synonyms": [
+      "modulo scheda manutenzione"
+    ]
+  },
+  "assets_maintenance.verbale_collaudo_attrezzatura": {
+    "canonical_name": "verbale collaudo attrezzatura",
+    "aliases": [
+      "VERBALE COLLAUDO ATTREZZATURA",
+      "Verbale Collaudo Attrezzatura",
+      "verbale collaudo attrezzatura"
+    ],
+    "synonyms": [
+      "modulo verbale collaudo attrezzatura"
+    ]
+  },
+  "assets_maintenance.verbale_dismissione_cespite": {
+    "canonical_name": "verbale dismissione cespite",
+    "aliases": [
+      "verbale dismissione cespite",
+      "VERBALE DISMISSIONE CESPITE"
+    ],
+    "synonyms": [
+      "modulo verbale dismissione cespite",
+      "prospetto verbale dismissione cespite"
+    ]
+  },
+  "assets_maintenance.verbale_messa_in_servizio": {
+    "canonical_name": "verbale messa in servizio",
+    "aliases": [
+      "verbale messa in servizio",
+      "VERBALE MESSA IN SERVIZIO"
+    ],
+    "synonyms": [
+      "modulo verbale messa in servizio",
+      "prospetto verbale messa in servizio"
+    ]
+  },
+  "assets_maintenance.verbale_trasferimento_cespite": {
+    "canonical_name": "verbale trasferimento cespite",
+    "aliases": [
+      "verbale trasferimento cespite",
+      "VERBALE TRASFERIMENTO CESPITE"
+    ],
+    "synonyms": [
+      "modulo verbale trasferimento cespite",
+      "prospetto verbale trasferimento cespite"
+    ]
+  },
+  "banking.assegno_bancario": {
+    "canonical_name": "assegno bancario",
+    "aliases": [
+      "assegno bancario",
+      "ASSEGNO BANCARIO"
+    ],
+    "synonyms": [
+      "modulo assegno bancario",
+      "prospetto assegno bancario"
+    ]
+  },
+  "banking.avviso_accredito": {
+    "canonical_name": "avviso di accredito bancario",
+    "aliases": [
+      "avviso di accredito bancario",
+      "AVVISO DI ACCREDITO BANCARIO",
+      "avviso accredito"
+    ],
+    "synonyms": [
+      "modulo avviso di accredito bancario",
+      "prospetto avviso di accredito bancario"
+    ]
+  },
+  "banking.avviso_addebito_sdd": {
+    "canonical_name": "avviso di addebito SDD",
+    "aliases": [
+      "avviso di addebito SDD",
+      "AVVISO DI ADDEBITO SDD",
+      "avviso addebito sdd"
+    ],
+    "synonyms": [
+      "modulo avviso di addebito SDD",
+      "prospetto avviso di addebito SDD",
+      "addebito diretto SEPA"
+    ]
+  },
+  "banking.comunicazione_variazione_tasso": {
+    "canonical_name": "comunicazione variazione tasso",
+    "aliases": [
+      "comunicazione variazione tasso",
+      "COMUNICAZIONE VARIAZIONE TASSO"
+    ],
+    "synonyms": [
+      "modulo comunicazione variazione tasso",
+      "prospetto comunicazione variazione tasso"
+    ]
+  },
+  "banking.contabile_bancaria": {
+    "canonical_name": "contabile bancaria",
+    "aliases": [
+      "CONTABILE BANCARIA",
+      "Contabile Bancaria",
+      "contabile bancaria"
+    ],
+    "synonyms": [
+      "modulo contabile bancaria"
+    ]
+  },
+  "banking.conteggio_estintivo": {
+    "canonical_name": "conteggio estintivo",
+    "aliases": [
+      "conteggio estintivo",
+      "CONTEGGIO ESTINTIVO"
+    ],
+    "synonyms": [
+      "modulo conteggio estintivo",
+      "prospetto conteggio estintivo"
+    ]
+  },
+  "banking.contratto_factoring": {
+    "canonical_name": "contratto di factoring",
+    "aliases": [
+      "contratto di factoring",
+      "CONTRATTO DI FACTORING",
+      "contratto factoring"
+    ],
+    "synonyms": [
+      "modulo contratto di factoring",
+      "prospetto contratto di factoring"
+    ]
+  },
+  "banking.contratto_finanziamento_veicolo": {
+    "canonical_name": "contratto di finanziamento veicolo",
+    "aliases": [
+      "contratto di finanziamento veicolo",
+      "CONTRATTO DI FINANZIAMENTO VEICOLO",
+      "contratto finanziamento veicolo"
+    ],
+    "synonyms": [
+      "modulo contratto di finanziamento veicolo",
+      "prospetto contratto di finanziamento veicolo"
+    ]
+  },
+  "banking.contratto_leasing_finanziario": {
+    "canonical_name": "contratto leasing finanziario",
+    "aliases": [
+      "CONTRATTO LEASING",
+      "contratto locazione finanziaria",
+      "leasing finanziario",
+      "contratto leasing finanziario",
+      "CONTRATTO LEASING FINANZIARIO"
+    ],
+    "synonyms": [
+      "modulo contratto leasing finanziario"
+    ]
+  },
+  "banking.contratto_mutuo_chirografario": {
+    "canonical_name": "contratto di mutuo chirografario",
+    "aliases": [
+      "contratto di mutuo chirografario",
+      "CONTRATTO DI MUTUO CHIROGRAFARIO",
+      "contratto mutuo chirografario"
+    ],
+    "synonyms": [
+      "modulo contratto di mutuo chirografario",
+      "prospetto contratto di mutuo chirografario"
+    ]
+  },
+  "banking.contratto_mutuo_ipotecario": {
+    "canonical_name": "contratto di mutuo ipotecario",
+    "aliases": [
+      "contratto di mutuo ipotecario",
+      "CONTRATTO DI MUTUO IPOTECARIO",
+      "contratto mutuo ipotecario"
+    ],
+    "synonyms": [
+      "modulo contratto di mutuo ipotecario",
+      "prospetto contratto di mutuo ipotecario"
+    ]
+  },
+  "banking.disposizione_bonifico": {
+    "canonical_name": "disposizione bonifico",
+    "aliases": [
+      "DISPOSIZIONE BONIFICO",
+      "Disposizione Bonifico",
+      "disposizione bonifico"
+    ],
+    "synonyms": [
+      "modulo disposizione bonifico"
+    ]
+  },
+  "banking.distinta_cessione_crediti_factoring": {
+    "canonical_name": "distinta cessione crediti factoring",
+    "aliases": [
+      "distinta cessione crediti factoring",
+      "DISTINTA CESSIONE CREDITI FACTORING"
+    ],
+    "synonyms": [
+      "modulo distinta cessione crediti factoring",
+      "prospetto distinta cessione crediti factoring"
+    ]
+  },
+  "banking.documento_sintesi_linea_credito": {
+    "canonical_name": "documento di sintesi linea di credito",
+    "aliases": [
+      "documento di sintesi linea di credito",
+      "DOCUMENTO DI SINTESI LINEA DI CREDITO",
+      "documento sintesi linea credito"
+    ],
+    "synonyms": [
+      "modulo documento di sintesi linea di credito",
+      "prospetto documento di sintesi linea di credito"
+    ]
+  },
+  "banking.estratto_conto_bancario": {
+    "canonical_name": "estratto conto bancario",
+    "aliases": [
+      "ESTRATTO CONTO BANCARIO",
+      "Estratto Conto Bancario",
+      "estratto conto bancario",
+      "estratto conto"
+    ],
+    "synonyms": [
+      "modulo estratto conto bancario"
+    ]
+  },
+  "banking.estratto_conto_carta_aziendale": {
+    "canonical_name": "estratto conto carta aziendale",
+    "aliases": [
+      "estratto conto carta aziendale",
+      "ESTRATTO CONTO CARTA AZIENDALE"
+    ],
+    "synonyms": [
+      "modulo estratto conto carta aziendale",
+      "prospetto estratto conto carta aziendale"
+    ]
+  },
+  "banking.fideiussione_bancaria": {
+    "canonical_name": "fideiussione bancaria",
+    "aliases": [
+      "fideiussione bancaria",
+      "FIDEIUSSIONE BANCARIA"
+    ],
+    "synonyms": [
+      "modulo fideiussione bancaria",
+      "prospetto fideiussione bancaria"
+    ]
+  },
+  "banking.lettera_affidamento_bancario": {
+    "canonical_name": "lettera affidamento bancario",
+    "aliases": [
+      "LETTERA AFFIDAMENTO BANCARIO",
+      "Lettera Affidamento Bancario",
+      "lettera affidamento bancario"
+    ],
+    "synonyms": [
+      "modulo lettera affidamento bancario"
+    ]
+  },
+  "banking.lista_movimenti_bancari": {
+    "canonical_name": "lista movimenti bancari",
+    "aliases": [
+      "lista movimenti bancari",
+      "LISTA MOVIMENTI BANCARI"
+    ],
+    "synonyms": [
+      "modulo lista movimenti bancari",
+      "prospetto lista movimenti bancari"
+    ]
+  },
+  "banking.mandato_sdd": {
+    "canonical_name": "mandato SDD",
+    "aliases": [
+      "MANDATO SDD",
+      "Mandato Sdd",
+      "mandato SDD",
+      "mandato sdd"
+    ],
+    "synonyms": [
+      "modulo mandato SDD"
+    ]
+  },
+  "banking.piano_ammortamento_finanziamento": {
+    "canonical_name": "piano ammortamento finanziamento",
+    "aliases": [
+      "PIANO AMMORTAMENTO FINANZIAMENTO",
+      "Piano Ammortamento Finanziamento",
+      "piano ammortamento finanziamento"
+    ],
+    "synonyms": [
+      "modulo piano ammortamento finanziamento"
+    ]
+  },
+  "banking.quietanza_pagamento": {
+    "canonical_name": "quietanza pagamento",
+    "aliases": [
+      "QUIETANZA PAGAMENTO",
+      "Quietanza Pagamento",
+      "quietanza pagamento"
+    ],
+    "synonyms": [
+      "modulo quietanza pagamento"
+    ]
+  },
+  "banking.rendiconto_factoring": {
+    "canonical_name": "rendiconto factoring",
+    "aliases": [
+      "rendiconto factoring",
+      "RENDICONTO FACTORING"
+    ],
+    "synonyms": [
+      "modulo rendiconto factoring",
+      "prospetto rendiconto factoring"
+    ]
+  },
+  "banking.report_covenant_finanziari": {
+    "canonical_name": "report covenant finanziari",
+    "aliases": [
+      "report covenant finanziari",
+      "REPORT COVENANT FINANZIARI"
+    ],
+    "synonyms": [
+      "modulo report covenant finanziari",
+      "prospetto report covenant finanziari"
+    ]
+  },
+  "banking.riba_cbi": {
+    "canonical_name": "flusso Ri.Ba./CBI",
+    "aliases": [
+      "Ri.Ba.",
+      "RIBA",
+      "CBI",
+      "flusso CBI",
+      "flusso Ri.Ba./CBI",
+      "FLUSSO RI.BA./CBI",
+      "riba cbi"
+    ],
+    "synonyms": [
+      "modulo flusso Ri.Ba./CBI"
+    ]
+  },
+  "banking.ricevuta_bonifico": {
+    "canonical_name": "ricevuta bonifico",
+    "aliases": [
+      "RICEVUTA BONIFICO",
+      "Ricevuta Bonifico",
+      "ricevuta bonifico"
+    ],
+    "synonyms": [
+      "modulo ricevuta bonifico"
+    ]
+  },
+  "banking.richiesta_fido_aziendale": {
+    "canonical_name": "richiesta fido aziendale",
+    "aliases": [
+      "RICHIESTA DI FIDO AD AZIENDE",
+      "richiesta fido",
+      "domanda di fido",
+      "richiesta fido aziendale",
+      "RICHIESTA FIDO AZIENDALE"
+    ],
+    "synonyms": [
+      "modulo richiesta fido aziendale"
+    ]
+  },
+  "banking.richiesta_finanziamento": {
+    "canonical_name": "richiesta di finanziamento",
+    "aliases": [
+      "richiesta di finanziamento",
+      "RICHIESTA DI FINANZIAMENTO",
+      "richiesta finanziamento"
+    ],
+    "synonyms": [
+      "modulo richiesta di finanziamento",
+      "prospetto richiesta di finanziamento"
+    ]
+  },
+  "certifications_licenses.autorizzazione_amministrativa": {
+    "canonical_name": "autorizzazione amministrativa",
+    "aliases": [
+      "AUTORIZZAZIONE AMMINISTRATIVA",
+      "Autorizzazione Amministrativa",
+      "autorizzazione amministrativa"
+    ],
+    "synonyms": [
+      "modulo autorizzazione amministrativa"
+    ]
+  },
+  "certifications_licenses.autorizzazione_suap": {
+    "canonical_name": "autorizzazione SUAP",
+    "aliases": [
+      "autorizzazione SUAP",
+      "AUTORIZZAZIONE SUAP",
+      "autorizzazione suap"
+    ],
+    "synonyms": [
+      "modulo autorizzazione SUAP",
+      "prospetto autorizzazione SUAP"
+    ]
+  },
+  "certifications_licenses.certificato_antimafia": {
+    "canonical_name": "certificato antimafia",
+    "aliases": [
+      "CERTIFICATO ANTIMAFIA",
+      "Certificato Antimafia",
+      "certificato antimafia"
+    ],
+    "synonyms": [
+      "modulo certificato antimafia"
+    ]
+  },
+  "certifications_licenses.certificato_carichi_pendenti": {
+    "canonical_name": "certificato carichi pendenti",
+    "aliases": [
+      "CERTIFICATO CARICHI PENDENTI",
+      "Certificato Carichi Pendenti",
+      "certificato carichi pendenti"
+    ],
+    "synonyms": [
+      "modulo certificato carichi pendenti"
+    ]
+  },
+  "certifications_licenses.certificato_casellario_giudiziale": {
+    "canonical_name": "certificato casellario giudiziale",
+    "aliases": [
+      "CERTIFICATO CASELLARIO GIUDIZIALE",
+      "Certificato Casellario Giudiziale",
+      "certificato casellario giudiziale"
+    ],
+    "synonyms": [
+      "modulo certificato casellario giudiziale"
+    ]
+  },
+  "certifications_licenses.certificato_soa": {
+    "canonical_name": "certificato SOA",
+    "aliases": [
+      "CERTIFICATO SOA",
+      "Certificato Soa",
+      "certificato SOA",
+      "certificato soa"
+    ],
+    "synonyms": [
+      "modulo certificato SOA"
+    ]
+  },
+  "certifications_licenses.dichiarazione_crediti_patente_cantieri": {
+    "canonical_name": "dichiarazione crediti patente cantieri",
+    "aliases": [
+      "dichiarazione crediti patente cantieri",
+      "DICHIARAZIONE CREDITI PATENTE CANTIERI"
+    ],
+    "synonyms": [
+      "modulo dichiarazione crediti patente cantieri",
+      "prospetto dichiarazione crediti patente cantieri"
+    ]
+  },
+  "certifications_licenses.licenza_esercizio": {
+    "canonical_name": "licenza esercizio",
+    "aliases": [
+      "LICENZA ESERCIZIO",
+      "Licenza Esercizio",
+      "licenza esercizio"
+    ],
+    "synonyms": [
+      "modulo licenza esercizio"
+    ]
+  },
+  "certifications_licenses.patente_a_crediti": {
+    "canonical_name": "patente a crediti",
+    "aliases": [
+      "PATENTE A CREDITI",
+      "Patente A Crediti",
+      "patente a crediti"
+    ],
+    "synonyms": [
+      "modulo patente a crediti"
+    ]
+  },
+  "certifications_licenses.ricevuta_rilascio_patente_crediti": {
+    "canonical_name": "ricevuta rilascio patente a crediti",
+    "aliases": [
+      "ricevuta rilascio patente a crediti",
+      "RICEVUTA RILASCIO PATENTE A CREDITI",
+      "ricevuta rilascio patente crediti"
+    ],
+    "synonyms": [
+      "modulo ricevuta rilascio patente a crediti",
+      "prospetto ricevuta rilascio patente a crediti"
+    ]
+  },
+  "certifications_licenses.scia_impresa": {
+    "canonical_name": "SCIA impresa",
+    "aliases": [
+      "SCIA impresa",
+      "SCIA IMPRESA",
+      "scia impresa",
+      "segnalazione certificata di inizio attività"
+    ],
+    "synonyms": [
+      "modulo SCIA impresa",
+      "prospetto SCIA impresa",
+      "segnalazione certificata inizio attività"
+    ]
+  },
+  "certifications_licenses.white_list_prefettura": {
+    "canonical_name": "white list prefettura",
+    "aliases": [
+      "WHITE LIST PREFETTURA",
+      "White List Prefettura",
+      "white list prefettura"
+    ],
+    "synonyms": [
+      "modulo white list prefettura"
+    ]
+  },
+  "communications.circolare_interna": {
+    "canonical_name": "circolare interna",
+    "aliases": [
+      "CIRCOLARE INTERNA",
+      "Circolare Interna",
+      "circolare interna"
+    ],
+    "synonyms": [
+      "modulo circolare interna"
+    ]
+  },
+  "communications.comunicazione_cliente": {
+    "canonical_name": "comunicazione cliente",
+    "aliases": [
+      "COMUNICAZIONE CLIENTE",
+      "Comunicazione Cliente",
+      "comunicazione cliente"
+    ],
+    "synonyms": [
+      "modulo comunicazione cliente"
+    ]
+  },
+  "communications.comunicazione_fornitore": {
+    "canonical_name": "comunicazione fornitore",
+    "aliases": [
+      "COMUNICAZIONE FORNITORE",
+      "Comunicazione Fornitore",
+      "comunicazione fornitore"
+    ],
+    "synonyms": [
+      "modulo comunicazione fornitore"
+    ]
+  },
+  "communications.email_richiesta_documenti": {
+    "canonical_name": "email richiesta documenti",
+    "aliases": [
+      "EMAIL RICHIESTA DOCUMENTI",
+      "Email Richiesta Documenti",
+      "email richiesta documenti"
+    ],
+    "synonyms": [
+      "modulo email richiesta documenti"
+    ]
+  },
+  "communications.lettera_commerciale": {
+    "canonical_name": "lettera commerciale",
+    "aliases": [
+      "LETTERA COMMERCIALE",
+      "Lettera Commerciale",
+      "lettera commerciale"
+    ],
+    "synonyms": [
+      "modulo lettera commerciale"
+    ]
+  },
+  "communications.notifica_sdi": {
+    "canonical_name": "notifica SDI",
+    "aliases": [
+      "NOTIFICA SDI",
+      "Notifica Sdi",
+      "notifica SDI",
+      "notifica sdi"
+    ],
+    "synonyms": [
+      "modulo notifica SDI"
+    ]
+  },
+  "communications.pec_ricevuta_accettazione": {
+    "canonical_name": "PEC ricevuta accettazione",
+    "aliases": [
+      "PEC RICEVUTA ACCETTAZIONE",
+      "PEC ricevuta accettazione",
+      "Pec Ricevuta Accettazione",
+      "pec ricevuta accettazione"
+    ],
+    "synonyms": [
+      "modulo PEC ricevuta accettazione"
+    ]
+  },
+  "communications.pec_ricevuta_consegna": {
+    "canonical_name": "PEC ricevuta consegna",
+    "aliases": [
+      "PEC RICEVUTA CONSEGNA",
+      "PEC ricevuta consegna",
+      "Pec Ricevuta Consegna",
+      "pec ricevuta consegna"
+    ],
+    "synonyms": [
+      "modulo PEC ricevuta consegna"
+    ]
+  },
+  "communications.richiesta_documenti_ente": {
+    "canonical_name": "richiesta documenti da ente",
+    "aliases": [
+      "richiesta documenti da ente",
+      "RICHIESTA DOCUMENTI DA ENTE",
+      "richiesta documenti ente"
+    ],
+    "synonyms": [
+      "modulo richiesta documenti da ente",
+      "prospetto richiesta documenti da ente"
+    ]
+  },
+  "communications.risposta_reclamo": {
+    "canonical_name": "risposta a reclamo",
+    "aliases": [
+      "risposta a reclamo",
+      "RISPOSTA A RECLAMO",
+      "risposta reclamo"
+    ],
+    "synonyms": [
+      "modulo risposta a reclamo",
+      "prospetto risposta a reclamo"
+    ]
+  },
+  "construction_site.certificato_pagamento": {
+    "canonical_name": "certificato pagamento",
+    "aliases": [
+      "CERTIFICATO PAGAMENTO",
+      "Certificato Pagamento",
+      "certificato pagamento"
+    ],
+    "synonyms": [
+      "modulo certificato pagamento"
+    ]
+  },
+  "construction_site.computo_metrico_estimativo": {
+    "canonical_name": "computo metrico estimativo",
+    "aliases": [
+      "COMPUTO METRICO ESTIMATIVO",
+      "computo metrico",
+      "CME",
+      "computo metrico estimativo"
+    ],
+    "synonyms": [
+      "modulo computo metrico estimativo"
+    ]
+  },
+  "construction_site.giornale_lavori": {
+    "canonical_name": "giornale lavori",
+    "aliases": [
+      "GIORNALE LAVORI",
+      "Giornale Lavori",
+      "giornale lavori"
+    ],
+    "synonyms": [
+      "modulo giornale lavori"
+    ]
+  },
+  "construction_site.libretto_misure": {
+    "canonical_name": "libretto misure",
+    "aliases": [
+      "LIBRETTO MISURE",
+      "Libretto Misure",
+      "libretto misure"
+    ],
+    "synonyms": [
+      "modulo libretto misure"
+    ]
+  },
+  "construction_site.registro_contabilit_lavori": {
+    "canonical_name": "registro contabilità lavori",
+    "aliases": [
+      "REGISTRO CONTABILITÀ LAVORI",
+      "Registro Contabilità Lavori",
+      "registro contabilità lavori",
+      "registro contabilita lavori",
+      "registro contabilit lavori"
+    ],
+    "synonyms": [
+      "modulo registro contabilità lavori"
+    ]
+  },
+  "construction_site.registro_contabilita_lavori": {
+    "canonical_name": "registro contabilità lavori",
+    "aliases": [
+      "REGISTRO CONTABILITÀ LAVORI",
+      "Registro Contabilità Lavori",
+      "registro contabilità lavori",
+      "registro contabilita lavori"
+    ],
+    "synonyms": [
+      "modulo registro contabilità lavori"
+    ]
+  },
+  "construction_site.sal": {
+    "canonical_name": "SAL",
+    "aliases": [
+      "SAL",
+      "Sal",
+      "sal"
+    ],
+    "synonyms": [
+      "modulo SAL"
+    ]
+  },
+  "construction_site.tavola_strutturale": {
+    "canonical_name": "tavola strutturale",
+    "aliases": [
+      "tavola strutturale",
+      "elaborato strutturale",
+      "tavola travi",
+      "tavola fondazioni",
+      "TAVOLA STRUTTURALE"
+    ],
+    "synonyms": [
+      "modulo tavola strutturale"
+    ]
+  },
+  "construction_site.verbale_consegna_lavori": {
+    "canonical_name": "verbale consegna lavori",
+    "aliases": [
+      "VERBALE CONSEGNA LAVORI",
+      "Verbale Consegna Lavori",
+      "verbale consegna lavori"
+    ],
+    "synonyms": [
+      "modulo verbale consegna lavori"
+    ]
+  },
+  "construction_site.verbale_ripresa_lavori": {
+    "canonical_name": "verbale ripresa lavori",
+    "aliases": [
+      "VERBALE RIPRESA LAVORI",
+      "Verbale Ripresa Lavori",
+      "verbale ripresa lavori"
+    ],
+    "synonyms": [
+      "modulo verbale ripresa lavori"
+    ]
+  },
+  "construction_site.verbale_sospensione_lavori": {
+    "canonical_name": "verbale sospensione lavori",
+    "aliases": [
+      "VERBALE SOSPENSIONE LAVORI",
+      "Verbale Sospensione Lavori",
+      "verbale sospensione lavori"
+    ],
+    "synonyms": [
+      "modulo verbale sospensione lavori"
+    ]
+  },
+  "contracts_general.accordo_livello_servizio": {
+    "canonical_name": "accordo sul livello di servizio",
+    "aliases": [
+      "accordo sul livello di servizio",
+      "ACCORDO SUL LIVELLO DI SERVIZIO",
+      "accordo livello servizio"
+    ],
+    "synonyms": [
+      "modulo accordo sul livello di servizio",
+      "prospetto accordo sul livello di servizio"
+    ]
+  },
+  "contracts_general.addendum_contrattuale": {
+    "canonical_name": "addendum contrattuale",
+    "aliases": [
+      "ADDENDUM CONTRATTUALE",
+      "Addendum Contrattuale",
+      "addendum contrattuale"
+    ],
+    "synonyms": [
+      "modulo addendum contrattuale"
+    ]
+  },
+  "contracts_general.capitolato_tecnico_lavori": {
+    "canonical_name": "capitolato tecnico lavori",
+    "aliases": [
+      "capitolato tecnico lavori",
+      "CAPITOLATO TECNICO LAVORI"
+    ],
+    "synonyms": [
+      "modulo capitolato tecnico lavori",
+      "prospetto capitolato tecnico lavori"
+    ]
+  },
+  "contracts_general.contratto_agenzia_commerciale": {
+    "canonical_name": "contratto di agenzia commerciale",
+    "aliases": [
+      "contratto di agenzia commerciale",
+      "CONTRATTO DI AGENZIA COMMERCIALE",
+      "contratto agenzia commerciale"
+    ],
+    "synonyms": [
+      "modulo contratto di agenzia commerciale",
+      "prospetto contratto di agenzia commerciale"
+    ]
+  },
+  "contracts_general.contratto_consulenza": {
+    "canonical_name": "contratto consulenza",
+    "aliases": [
+      "CONTRATTO CONSULENZA",
+      "Contratto Consulenza",
+      "contratto consulenza"
+    ],
+    "synonyms": [
+      "modulo contratto consulenza"
+    ]
+  },
+  "contracts_general.contratto_deposito": {
+    "canonical_name": "contratto di deposito",
+    "aliases": [
+      "contratto di deposito",
+      "CONTRATTO DI DEPOSITO",
+      "contratto deposito"
+    ],
+    "synonyms": [
+      "modulo contratto di deposito",
+      "prospetto contratto di deposito"
+    ]
+  },
+  "contracts_general.contratto_distribuzione": {
+    "canonical_name": "contratto di distribuzione",
+    "aliases": [
+      "contratto di distribuzione",
+      "CONTRATTO DI DISTRIBUZIONE",
+      "contratto distribuzione"
+    ],
+    "synonyms": [
+      "modulo contratto di distribuzione",
+      "prospetto contratto di distribuzione"
+    ]
+  },
+  "contracts_general.contratto_fornitura": {
+    "canonical_name": "contratto fornitura",
+    "aliases": [
+      "CONTRATTO FORNITURA",
+      "Contratto Fornitura",
+      "contratto fornitura"
+    ],
+    "synonyms": [
+      "modulo contratto fornitura"
+    ]
+  },
+  "contracts_general.contratto_licenza_software": {
+    "canonical_name": "contratto licenza software",
+    "aliases": [
+      "contratto licenza software",
+      "CONTRATTO LICENZA SOFTWARE"
+    ],
+    "synonyms": [
+      "modulo contratto licenza software",
+      "prospetto contratto licenza software"
+    ]
+  },
+  "contracts_general.contratto_quadro": {
+    "canonical_name": "contratto quadro",
+    "aliases": [
+      "CONTRATTO QUADRO",
+      "Contratto Quadro",
+      "contratto quadro"
+    ],
+    "synonyms": [
+      "modulo contratto quadro"
+    ]
+  },
+  "contracts_general.contratto_saas": {
+    "canonical_name": "contratto SaaS",
+    "aliases": [
+      "contratto SaaS",
+      "CONTRATTO SAAS",
+      "contratto saas"
+    ],
+    "synonyms": [
+      "modulo contratto SaaS",
+      "prospetto contratto SaaS",
+      "software as a service"
+    ]
+  },
+  "contracts_general.contratto_servizi": {
+    "canonical_name": "contratto servizi",
+    "aliases": [
+      "CONTRATTO SERVIZI",
+      "Contratto Servizi",
+      "contratto servizi",
+      "contratto di servizi"
+    ],
+    "synonyms": [
+      "modulo contratto servizi"
+    ]
+  },
+  "contracts_general.contratto_subappalto": {
+    "canonical_name": "contratto di subappalto",
+    "aliases": [
+      "contratto di subappalto",
+      "contratto subappalto",
+      "subappalto",
+      "CONTRATTO DI SUBAPPALTO"
+    ],
+    "synonyms": [
+      "modulo contratto di subappalto"
+    ]
+  },
+  "contracts_general.contratto_trasporto": {
+    "canonical_name": "contratto di trasporto",
+    "aliases": [
+      "contratto di trasporto",
+      "CONTRATTO DI TRASPORTO",
+      "contratto trasporto"
+    ],
+    "synonyms": [
+      "modulo contratto di trasporto",
+      "prospetto contratto di trasporto"
+    ]
+  },
+  "contracts_general.incarico_professionale": {
+    "canonical_name": "incarico professionale",
+    "aliases": [
+      "incarico professionale",
+      "INCARICO PROFESSIONALE"
+    ],
+    "synonyms": [
+      "modulo incarico professionale",
+      "prospetto incarico professionale"
+    ]
+  },
+  "contracts_general.recesso_contratto": {
+    "canonical_name": "recesso contratto",
+    "aliases": [
+      "RECESSO CONTRATTO",
+      "Recesso Contratto",
+      "recesso contratto"
+    ],
+    "synonyms": [
+      "modulo recesso contratto"
+    ]
+  },
+  "contracts_general.rinnovo_contratto": {
+    "canonical_name": "rinnovo contratto",
+    "aliases": [
+      "RINNOVO CONTRATTO",
+      "Rinnovo Contratto",
+      "rinnovo contratto"
+    ],
+    "synonyms": [
+      "modulo rinnovo contratto"
+    ]
+  },
+  "contracts_general.risoluzione_contratto": {
+    "canonical_name": "risoluzione contratto",
+    "aliases": [
+      "RISOLUZIONE CONTRATTO",
+      "Risoluzione Contratto",
+      "risoluzione contratto"
+    ],
+    "synonyms": [
+      "modulo risoluzione contratto"
+    ]
+  },
+  "corporate_registry.atto_costitutivo": {
+    "canonical_name": "atto costitutivo",
+    "aliases": [
+      "ATTO COSTITUTIVO",
+      "Atto Costitutivo",
+      "atto costitutivo"
+    ],
+    "synonyms": [
+      "modulo atto costitutivo"
+    ]
+  },
+  "corporate_registry.certificato_camerale": {
+    "canonical_name": "certificato camerale",
+    "aliases": [
+      "CERTIFICATO CAMERALE",
+      "Certificato Camerale",
+      "certificato camerale"
+    ],
+    "synonyms": [
+      "modulo certificato camerale"
+    ]
+  },
+  "corporate_registry.certificato_vigenza": {
+    "canonical_name": "certificato di vigenza",
+    "aliases": [
+      "certificato di vigenza",
+      "CERTIFICATO DI VIGENZA",
+      "certificato vigenza"
+    ],
+    "synonyms": [
+      "modulo certificato di vigenza",
+      "prospetto certificato di vigenza"
+    ]
+  },
+  "corporate_registry.comunicazione_titolare_effettivo": {
+    "canonical_name": "comunicazione titolare effettivo",
+    "aliases": [
+      "comunicazione titolare effettivo",
+      "COMUNICAZIONE TITOLARE EFFETTIVO"
+    ],
+    "synonyms": [
+      "modulo comunicazione titolare effettivo",
+      "prospetto comunicazione titolare effettivo"
+    ]
+  },
+  "corporate_registry.libro_soci": {
+    "canonical_name": "libro soci",
+    "aliases": [
+      "libro soci",
+      "LIBRO SOCI"
+    ],
+    "synonyms": [
+      "modulo libro soci",
+      "prospetto libro soci"
+    ]
+  },
+  "corporate_registry.pratica_comunica": {
+    "canonical_name": "pratica ComUnica",
+    "aliases": [
+      "pratica ComUnica",
+      "PRATICA COMUNICA",
+      "pratica comunica"
+    ],
+    "synonyms": [
+      "modulo pratica ComUnica",
+      "prospetto pratica ComUnica"
+    ]
+  },
+  "corporate_registry.procura_generale": {
+    "canonical_name": "procura generale",
+    "aliases": [
+      "PROCURA GENERALE",
+      "Procura Generale",
+      "procura generale"
+    ],
+    "synonyms": [
+      "modulo procura generale"
+    ]
+  },
+  "corporate_registry.procura_speciale": {
+    "canonical_name": "procura speciale",
+    "aliases": [
+      "PROCURA SPECIALE",
+      "Procura Speciale",
+      "procura speciale"
+    ],
+    "synonyms": [
+      "modulo procura speciale"
+    ]
+  },
+  "corporate_registry.relazione_collegio_sindacale": {
+    "canonical_name": "relazione del collegio sindacale",
+    "aliases": [
+      "relazione del collegio sindacale",
+      "RELAZIONE DEL COLLEGIO SINDACALE",
+      "relazione collegio sindacale"
+    ],
+    "synonyms": [
+      "modulo relazione del collegio sindacale",
+      "prospetto relazione del collegio sindacale"
+    ]
+  },
+  "corporate_registry.relazione_gestione": {
+    "canonical_name": "relazione sulla gestione",
+    "aliases": [
+      "relazione sulla gestione",
+      "RELAZIONE SULLA GESTIONE",
+      "relazione gestione"
+    ],
+    "synonyms": [
+      "modulo relazione sulla gestione",
+      "prospetto relazione sulla gestione"
+    ]
+  },
+  "corporate_registry.relazione_revisore_legale": {
+    "canonical_name": "relazione del revisore legale",
+    "aliases": [
+      "relazione del revisore legale",
+      "RELAZIONE DEL REVISORE LEGALE",
+      "relazione revisore legale"
+    ],
+    "synonyms": [
+      "modulo relazione del revisore legale",
+      "prospetto relazione del revisore legale"
+    ]
+  },
+  "corporate_registry.statuto_societario": {
+    "canonical_name": "statuto societario",
+    "aliases": [
+      "STATUTO SOCIETARIO",
+      "Statuto Societario",
+      "statuto societario"
+    ],
+    "synonyms": [
+      "modulo statuto societario"
+    ]
+  },
+  "corporate_registry.verbale_assemblea_soci": {
+    "canonical_name": "verbale assemblea soci",
+    "aliases": [
+      "VERBALE ASSEMBLEA SOCI",
+      "Verbale Assemblea Soci",
+      "verbale assemblea soci"
+    ],
+    "synonyms": [
+      "modulo verbale assemblea soci"
+    ]
+  },
+  "corporate_registry.verbale_consiglio_amministrazione": {
+    "canonical_name": "verbale consiglio amministrazione",
+    "aliases": [
+      "VERBALE CONSIGLIO AMMINISTRAZIONE",
+      "Verbale Consiglio Amministrazione",
+      "verbale consiglio amministrazione"
+    ],
+    "synonyms": [
+      "modulo verbale consiglio amministrazione"
+    ]
+  },
+  "corporate_registry.visura_camerale": {
+    "canonical_name": "visura camerale",
+    "aliases": [
+      "VISURA CAMERALE",
+      "Visura Camerale",
+      "visura camerale",
+      "visura storica",
+      "visura ordinaria"
+    ],
+    "synonyms": [
+      "modulo visura camerale"
+    ]
+  },
+  "credit_collections.aging_crediti": {
+    "canonical_name": "aging crediti",
+    "aliases": [
+      "aging crediti",
+      "AGING CREDITI"
+    ],
+    "synonyms": [
+      "modulo aging crediti",
+      "prospetto aging crediti"
+    ]
+  },
+  "credit_collections.estratto_conto_cliente": {
+    "canonical_name": "estratto conto cliente",
+    "aliases": [
+      "estratto conto cliente",
+      "ESTRATTO CONTO CLIENTE"
+    ],
+    "synonyms": [
+      "modulo estratto conto cliente",
+      "prospetto estratto conto cliente"
+    ]
+  },
+  "credit_collections.mandato_recupero_crediti": {
+    "canonical_name": "mandato recupero crediti",
+    "aliases": [
+      "mandato recupero crediti",
+      "MANDATO RECUPERO CREDITI"
+    ],
+    "synonyms": [
+      "modulo mandato recupero crediti",
+      "prospetto mandato recupero crediti"
+    ]
+  },
+  "credit_collections.piano_rientro": {
+    "canonical_name": "piano di rientro",
+    "aliases": [
+      "piano di rientro",
+      "PIANO DI RIENTRO",
+      "piano rientro"
+    ],
+    "synonyms": [
+      "modulo piano di rientro",
+      "prospetto piano di rientro"
+    ]
+  },
+  "credit_collections.pratica_recupero_crediti": {
+    "canonical_name": "pratica recupero crediti",
+    "aliases": [
+      "pratica recupero crediti",
+      "PRATICA RECUPERO CREDITI"
+    ],
+    "synonyms": [
+      "modulo pratica recupero crediti",
+      "prospetto pratica recupero crediti"
+    ]
+  },
+  "credit_collections.promessa_pagamento": {
+    "canonical_name": "promessa di pagamento",
+    "aliases": [
+      "promessa di pagamento",
+      "PROMESSA DI PAGAMENTO",
+      "promessa pagamento"
+    ],
+    "synonyms": [
+      "modulo promessa di pagamento",
+      "prospetto promessa di pagamento"
+    ]
+  },
+  "credit_collections.sollecito_pagamento": {
+    "canonical_name": "sollecito di pagamento",
+    "aliases": [
+      "sollecito di pagamento",
+      "SOLLECITO DI PAGAMENTO",
+      "sollecito pagamento"
+    ],
+    "synonyms": [
+      "modulo sollecito di pagamento",
+      "prospetto sollecito di pagamento"
+    ]
+  },
+  "customs_trade.certificato_origine": {
+    "canonical_name": "certificato di origine",
+    "aliases": [
+      "certificato di origine",
+      "CERTIFICATO DI ORIGINE",
+      "certificato origine"
+    ],
+    "synonyms": [
+      "modulo certificato di origine",
+      "prospetto certificato di origine"
+    ]
+  },
+  "customs_trade.dichiarazione_doganale_dau": {
+    "canonical_name": "dichiarazione doganale DAU",
+    "aliases": [
+      "dichiarazione doganale DAU",
+      "DICHIARAZIONE DOGANALE DAU",
+      "dichiarazione doganale dau"
+    ],
+    "synonyms": [
+      "modulo dichiarazione doganale DAU",
+      "prospetto dichiarazione doganale DAU",
+      "documento amministrativo unico"
+    ]
+  },
+  "customs_trade.dichiarazione_esportatore": {
+    "canonical_name": "dichiarazione dell'esportatore",
+    "aliases": [
+      "dichiarazione dell'esportatore",
+      "DICHIARAZIONE DELL'ESPORTATORE",
+      "dichiarazione esportatore"
+    ],
+    "synonyms": [
+      "modulo dichiarazione dell'esportatore",
+      "prospetto dichiarazione dell'esportatore"
+    ]
+  },
+  "customs_trade.fattura_doganale": {
+    "canonical_name": "fattura doganale",
+    "aliases": [
+      "fattura doganale",
+      "FATTURA DOGANALE"
+    ],
+    "synonyms": [
+      "modulo fattura doganale",
+      "prospetto fattura doganale"
+    ]
+  },
+  "customs_trade.licenza_import_export": {
+    "canonical_name": "licenza import export",
+    "aliases": [
+      "licenza import export",
+      "LICENZA IMPORT EXPORT"
+    ],
+    "synonyms": [
+      "modulo licenza import export",
+      "prospetto licenza import export"
+    ]
+  },
+  "environment.analisi_rifiuto": {
+    "canonical_name": "analisi rifiuto",
+    "aliases": [
+      "ANALISI RIFIUTO",
+      "Analisi Rifiuto",
+      "analisi rifiuto"
+    ],
+    "synonyms": [
+      "modulo analisi rifiuto"
+    ]
+  },
+  "environment.autorizzazione_ambientale": {
+    "canonical_name": "autorizzazione ambientale",
+    "aliases": [
+      "AUTORIZZAZIONE AMBIENTALE",
+      "Autorizzazione Ambientale",
+      "autorizzazione ambientale"
+    ],
+    "synonyms": [
+      "modulo autorizzazione ambientale"
+    ]
+  },
+  "environment.autorizzazione_integrata_ambientale": {
+    "canonical_name": "autorizzazione integrata ambientale",
+    "aliases": [
+      "autorizzazione integrata ambientale",
+      "AUTORIZZAZIONE INTEGRATA AMBIENTALE"
+    ],
+    "synonyms": [
+      "modulo autorizzazione integrata ambientale",
+      "prospetto autorizzazione integrata ambientale"
+    ]
+  },
+  "environment.bolletta_servizio_ambientale": {
+    "canonical_name": "bolletta servizio ambientale",
+    "aliases": [
+      "bolletta rifiuti",
+      "bolletta servizio ambientale",
+      "tariffa rifiuti",
+      "Ecoambiente bolletta",
+      "BOLLETTA SERVIZIO AMBIENTALE"
+    ],
+    "synonyms": [
+      "modulo bolletta servizio ambientale"
+    ]
+  },
+  "environment.certificato_iso_14001": {
+    "canonical_name": "certificato ISO 14001",
+    "aliases": [
+      "CERTIFICATO ISO 14001",
+      "Certificato Iso 14001",
+      "certificato ISO 14001",
+      "certificato iso 14001"
+    ],
+    "synonyms": [
+      "modulo certificato ISO 14001"
+    ]
+  },
+  "environment.dichiarazione_emas": {
+    "canonical_name": "dichiarazione ambientale EMAS",
+    "aliases": [
+      "dichiarazione ambientale EMAS",
+      "DICHIARAZIONE AMBIENTALE EMAS",
+      "dichiarazione emas"
+    ],
+    "synonyms": [
+      "modulo dichiarazione ambientale EMAS",
+      "prospetto dichiarazione ambientale EMAS"
+    ]
+  },
+  "environment.fir_formulario_rifiuti": {
+    "canonical_name": "FIR formulario rifiuti",
+    "aliases": [
+      "FIR FORMULARIO RIFIUTI",
+      "FIR formulario rifiuti",
+      "Fir Formulario Rifiuti",
+      "fir formulario rifiuti"
+    ],
+    "synonyms": [
+      "modulo FIR formulario rifiuti"
+    ]
+  },
+  "environment.informativa_tariffaria_rifiuti": {
+    "canonical_name": "informativa tariffaria rifiuti",
+    "aliases": [
+      "informativa TARIP",
+      "informativa tariffa rifiuti",
+      "tariffa puntuale rifiuti",
+      "informativa tariffaria rifiuti",
+      "INFORMATIVA TARIFFARIA RIFIUTI"
+    ],
+    "synonyms": [
+      "modulo informativa tariffaria rifiuti"
+    ]
+  },
+  "environment.mud": {
+    "canonical_name": "MUD",
+    "aliases": [
+      "MUD",
+      "Mud",
+      "mud"
+    ],
+    "synonyms": [
+      "modulo MUD"
+    ]
+  },
+  "environment.registro_emissioni": {
+    "canonical_name": "registro emissioni",
+    "aliases": [
+      "REGISTRO EMISSIONI",
+      "Registro Emissioni",
+      "registro emissioni"
+    ],
+    "synonyms": [
+      "modulo registro emissioni"
+    ]
+  },
+  "environment.registro_rifiuti": {
+    "canonical_name": "registro rifiuti",
+    "aliases": [
+      "REGISTRO RIFIUTI",
+      "Registro Rifiuti",
+      "registro rifiuti"
+    ],
+    "synonyms": [
+      "modulo registro rifiuti"
+    ]
+  },
+  "environment.ricevuta_iscrizione_rentri": {
+    "canonical_name": "ricevuta iscrizione RENTRI",
+    "aliases": [
+      "ricevuta iscrizione RENTRI",
+      "RICEVUTA ISCRIZIONE RENTRI",
+      "ricevuta iscrizione rentri"
+    ],
+    "synonyms": [
+      "modulo ricevuta iscrizione RENTRI",
+      "prospetto ricevuta iscrizione RENTRI",
+      "registro elettronico nazionale tracciabilità rifiuti"
+    ]
+  },
+  "environment.scheda_sicurezza_sds": {
+    "canonical_name": "scheda sicurezza SDS",
+    "aliases": [
+      "SCHEDA SICUREZZA SDS",
+      "Scheda Sicurezza Sds",
+      "scheda sicurezza SDS",
+      "scheda sicurezza sds"
+    ],
+    "synonyms": [
+      "modulo scheda sicurezza SDS"
+    ]
+  },
+  "finance_corporate.piano_risanamento_aziendale": {
+    "canonical_name": "piano di risanamento aziendale",
+    "aliases": [
+      "piano di risanamento aziendale",
+      "PIANO DI RISANAMENTO AZIENDALE",
+      "piano risanamento aziendale"
+    ],
+    "synonyms": [
+      "modulo piano di risanamento aziendale",
+      "prospetto piano di risanamento aziendale"
+    ]
+  },
+  "fiscal_tax.avviso_accertamento": {
+    "canonical_name": "avviso di accertamento",
+    "aliases": [
+      "avviso di accertamento",
+      "AVVISO DI ACCERTAMENTO",
+      "avviso accertamento"
+    ],
+    "synonyms": [
+      "modulo avviso di accertamento",
+      "prospetto avviso di accertamento"
+    ]
+  },
+  "fiscal_tax.avviso_addebito_inps": {
+    "canonical_name": "avviso di addebito INPS",
+    "aliases": [
+      "avviso di addebito INPS",
+      "AVVISO DI ADDEBITO INPS",
+      "avviso addebito inps"
+    ],
+    "synonyms": [
+      "modulo avviso di addebito INPS",
+      "prospetto avviso di addebito INPS",
+      "Istituto nazionale previdenza sociale"
+    ]
+  },
+  "fiscal_tax.avviso_bonario": {
+    "canonical_name": "avviso bonario",
+    "aliases": [
+      "avviso bonario",
+      "AVVISO BONARIO"
+    ],
+    "synonyms": [
+      "modulo avviso bonario",
+      "prospetto avviso bonario"
+    ]
+  },
+  "fiscal_tax.avviso_pagamento_tributi_locali": {
+    "canonical_name": "avviso pagamento tributi locali",
+    "aliases": [
+      "avviso pagamento tributi locali",
+      "AVVISO PAGAMENTO TRIBUTI LOCALI"
+    ],
+    "synonyms": [
+      "modulo avviso pagamento tributi locali",
+      "prospetto avviso pagamento tributi locali"
+    ]
+  },
+  "fiscal_tax.cartella_di_pagamento": {
+    "canonical_name": "cartella di pagamento",
+    "aliases": [
+      "CARTELLA DI PAGAMENTO",
+      "Cartella Di Pagamento",
+      "cartella di pagamento"
+    ],
+    "synonyms": [
+      "modulo cartella di pagamento"
+    ]
+  },
+  "fiscal_tax.certificato_attribuzione_partita_iva": {
+    "canonical_name": "certificato attribuzione partita IVA",
+    "aliases": [
+      "certificato attribuzione partita IVA",
+      "CERTIFICATO ATTRIBUZIONE PARTITA IVA",
+      "certificato attribuzione partita iva"
+    ],
+    "synonyms": [
+      "modulo certificato attribuzione partita IVA",
+      "prospetto certificato attribuzione partita IVA",
+      "imposta sul valore aggiunto"
+    ]
+  },
+  "fiscal_tax.certificato_regolarit_fiscale": {
+    "canonical_name": "certificato regolarità fiscale",
+    "aliases": [
+      "CERTIFICATO REGOLARITÀ FISCALE",
+      "Certificato Regolarità Fiscale",
+      "certificato regolarità fiscale",
+      "certificato regolarita fiscale",
+      "certificato regolarit fiscale"
+    ],
+    "synonyms": [
+      "modulo certificato regolarità fiscale"
+    ]
+  },
+  "fiscal_tax.certificato_regolarita_fiscale": {
+    "canonical_name": "certificato regolarità fiscale",
+    "aliases": [
+      "CERTIFICATO REGOLARITÀ FISCALE",
+      "Certificato Regolarità Fiscale",
+      "certificato regolarità fiscale",
+      "certificato regolarita fiscale"
+    ],
+    "synonyms": [
+      "modulo certificato regolarità fiscale"
+    ]
+  },
+  "fiscal_tax.certificazione_unica": {
+    "canonical_name": "certificazione unica",
+    "aliases": [
+      "CERTIFICAZIONE UNICA",
+      "CU",
+      "Certificazione Unica",
+      "certificazione unica"
+    ],
+    "synonyms": [
+      "modulo certificazione unica"
+    ]
+  },
+  "fiscal_tax.comunicazione_irregolarita": {
+    "canonical_name": "comunicazione di irregolarità",
+    "aliases": [
+      "comunicazione di irregolarità",
+      "COMUNICAZIONE DI IRREGOLARITÀ",
+      "comunicazione di irregolarita",
+      "comunicazione irregolarita"
+    ],
+    "synonyms": [
+      "modulo comunicazione di irregolarità",
+      "prospetto comunicazione di irregolarità"
+    ]
+  },
+  "fiscal_tax.dichiarazione_imposta_bollo": {
+    "canonical_name": "dichiarazione imposta di bollo",
+    "aliases": [
+      "dichiarazione imposta di bollo",
+      "DICHIARAZIONE IMPOSTA DI BOLLO",
+      "dichiarazione imposta bollo"
+    ],
+    "synonyms": [
+      "modulo dichiarazione imposta di bollo",
+      "prospetto dichiarazione imposta di bollo"
+    ]
+  },
+  "fiscal_tax.dichiarazione_intento": {
+    "canonical_name": "dichiarazione di intento",
+    "aliases": [
+      "dichiarazione di intento",
+      "DICHIARAZIONE DI INTENTO",
+      "dichiarazione intento"
+    ],
+    "synonyms": [
+      "modulo dichiarazione di intento",
+      "prospetto dichiarazione di intento"
+    ]
+  },
+  "fiscal_tax.dichiarazione_iva": {
+    "canonical_name": "dichiarazione IVA",
+    "aliases": [
+      "DICHIARAZIONE IVA",
+      "Dichiarazione Iva",
+      "dichiarazione IVA",
+      "dichiarazione iva"
+    ],
+    "synonyms": [
+      "modulo dichiarazione IVA"
+    ]
+  },
+  "fiscal_tax.dichiarazione_redditi": {
+    "canonical_name": "dichiarazione redditi",
+    "aliases": [
+      "DICHIARAZIONE REDDITI",
+      "Dichiarazione Redditi",
+      "dichiarazione redditi"
+    ],
+    "synonyms": [
+      "modulo dichiarazione redditi"
+    ]
+  },
+  "fiscal_tax.intrastat": {
+    "canonical_name": "elenco riepilogativo Intrastat",
+    "aliases": [
+      "elenco riepilogativo Intrastat",
+      "ELENCO RIEPILOGATIVO INTRASTAT",
+      "intrastat"
+    ],
+    "synonyms": [
+      "modulo elenco riepilogativo Intrastat",
+      "prospetto elenco riepilogativo Intrastat"
+    ]
+  },
+  "fiscal_tax.istanza_autotutela_tributaria": {
+    "canonical_name": "istanza di autotutela tributaria",
+    "aliases": [
+      "istanza di autotutela tributaria",
+      "ISTANZA DI AUTOTUTELA TRIBUTARIA",
+      "istanza autotutela tributaria"
+    ],
+    "synonyms": [
+      "modulo istanza di autotutela tributaria",
+      "prospetto istanza di autotutela tributaria"
+    ]
+  },
+  "fiscal_tax.liquidazione_periodica_iva": {
+    "canonical_name": "liquidazione periodica IVA",
+    "aliases": [
+      "LIQUIDAZIONE PERIODICA IVA",
+      "Liquidazione Periodica Iva",
+      "liquidazione periodica IVA",
+      "liquidazione periodica iva"
+    ],
+    "synonyms": [
+      "modulo liquidazione periodica IVA"
+    ]
+  },
+  "fiscal_tax.modello_730": {
+    "canonical_name": "modello 730",
+    "aliases": [
+      "MODELLO 730",
+      "MOD. 730",
+      "730/2025",
+      "dichiarazione 730",
+      "modello 730"
+    ],
+    "synonyms": [
+      "modulo modello 730"
+    ]
+  },
+  "fiscal_tax.modello_770": {
+    "canonical_name": "modello 770",
+    "aliases": [
+      "MODELLO 770",
+      "Modello 770",
+      "modello 770"
+    ],
+    "synonyms": [
+      "modulo modello 770"
+    ]
+  },
+  "fiscal_tax.modello_f24": {
+    "canonical_name": "modello F24",
+    "aliases": [
+      "MODELLO F24",
+      "Modello F24",
+      "modello F24",
+      "modello f24"
+    ],
+    "synonyms": [
+      "modulo modello F24"
+    ]
+  },
+  "fiscal_tax.modello_iva_tr": {
+    "canonical_name": "modello IVA TR",
+    "aliases": [
+      "modello IVA TR",
+      "MODELLO IVA TR",
+      "modello iva tr"
+    ],
+    "synonyms": [
+      "modulo modello IVA TR",
+      "prospetto modello IVA TR",
+      "imposta sul valore aggiunto"
+    ]
+  },
+  "fiscal_tax.prospetto_versamenti_f24": {
+    "canonical_name": "prospetto versamenti F24",
+    "aliases": [
+      "prospetto versamenti F24",
+      "PROSPETTO VERSAMENTI F24",
+      "prospetto versamenti f24"
+    ],
+    "synonyms": [
+      "modulo prospetto versamenti F24",
+      "prospetto prospetto versamenti F24",
+      "modello di pagamento unificato"
+    ]
+  },
+  "fiscal_tax.quietanza_versamento": {
+    "canonical_name": "quietanza di versamento tributario",
+    "aliases": [
+      "QUIETANZA DI VERSAMENTO",
+      "quietanza versamento F24",
+      "ricevuta versamento tributi",
+      "quietanza di versamento tributario",
+      "QUIETANZA DI VERSAMENTO TRIBUTARIO",
+      "quietanza versamento"
+    ],
+    "synonyms": [
+      "modulo quietanza di versamento tributario"
+    ]
+  },
+  "fiscal_tax.ricevuta_lipe": {
+    "canonical_name": "ricevuta comunicazione liquidazioni periodiche IVA",
+    "aliases": [
+      "ricevuta comunicazione liquidazioni periodiche IVA",
+      "RICEVUTA COMUNICAZIONE LIQUIDAZIONI PERIODICHE IVA",
+      "ricevuta lipe"
+    ],
+    "synonyms": [
+      "modulo ricevuta comunicazione liquidazioni periodiche IVA",
+      "prospetto ricevuta comunicazione liquidazioni periodiche IVA",
+      "imposta sul valore aggiunto"
+    ]
+  },
+  "fiscal_tax.ricevuta_presa_in_carico_f24": {
+    "canonical_name": "ricevuta presa in carico F24",
+    "aliases": [
+      "ricevuta presa in carico F24",
+      "RICEVUTA PRESA IN CARICO F24",
+      "ricevuta presa in carico f24"
+    ],
+    "synonyms": [
+      "modulo ricevuta presa in carico F24",
+      "prospetto ricevuta presa in carico F24",
+      "modello di pagamento unificato"
+    ]
+  },
+  "fiscal_tax.ricevuta_registrazione_contratto": {
+    "canonical_name": "ricevuta registrazione contratto",
+    "aliases": [
+      "ricevuta registrazione contratto",
+      "RICEVUTA REGISTRAZIONE CONTRATTO"
+    ],
+    "synonyms": [
+      "modulo ricevuta registrazione contratto",
+      "prospetto ricevuta registrazione contratto"
+    ]
+  },
+  "fiscal_tax.ricevuta_telematica_agenzia_entrate": {
+    "canonical_name": "ricevuta telematica Agenzia Entrate",
+    "aliases": [
+      "ricevuta telematica Agenzia Entrate",
+      "RICEVUTA TELEMATICA AGENZIA ENTRATE",
+      "ricevuta telematica agenzia entrate"
+    ],
+    "synonyms": [
+      "modulo ricevuta telematica Agenzia Entrate",
+      "prospetto ricevuta telematica Agenzia Entrate"
+    ]
+  },
+  "governance_compliance.certificato_iso_37001": {
+    "canonical_name": "certificato ISO 37001",
+    "aliases": [
+      "certificato ISO 37001",
+      "CERTIFICATO ISO 37001",
+      "certificato iso 37001"
+    ],
+    "synonyms": [
+      "modulo certificato ISO 37001",
+      "prospetto certificato ISO 37001"
+    ]
+  },
+  "governance_compliance.codice_etico": {
+    "canonical_name": "codice etico",
+    "aliases": [
+      "CODICE ETICO",
+      "Codice Etico",
+      "codice etico"
+    ],
+    "synonyms": [
+      "modulo codice etico"
+    ]
+  },
+  "governance_compliance.due_diligence_fornitore": {
+    "canonical_name": "due diligence fornitore",
+    "aliases": [
+      "DUE DILIGENCE FORNITORE",
+      "Due Diligence Fornitore",
+      "due diligence fornitore"
+    ],
+    "synonyms": [
+      "modulo due diligence fornitore"
+    ]
+  },
+  "governance_compliance.modello_231": {
+    "canonical_name": "modello 231",
+    "aliases": [
+      "MODELLO 231",
+      "Modello 231",
+      "modello 231"
+    ],
+    "synonyms": [
+      "modulo modello 231"
+    ]
+  },
+  "governance_compliance.nomina_organismo_vigilanza": {
+    "canonical_name": "nomina organismo vigilanza",
+    "aliases": [
+      "NOMINA ORGANISMO VIGILANZA",
+      "Nomina Organismo Vigilanza",
+      "nomina organismo vigilanza"
+    ],
+    "synonyms": [
+      "modulo nomina organismo vigilanza"
+    ]
+  },
+  "governance_compliance.policy_anticorruzione": {
+    "canonical_name": "policy anticorruzione",
+    "aliases": [
+      "POLICY ANTICORRUZIONE",
+      "Policy Anticorruzione",
+      "policy anticorruzione"
+    ],
+    "synonyms": [
+      "modulo policy anticorruzione"
+    ]
+  },
+  "governance_compliance.questionario_compliance": {
+    "canonical_name": "questionario compliance",
+    "aliases": [
+      "QUESTIONARIO COMPLIANCE",
+      "Questionario Compliance",
+      "questionario compliance"
+    ],
+    "synonyms": [
+      "modulo questionario compliance"
+    ]
+  },
+  "governance_compliance.verbale_odv": {
+    "canonical_name": "verbale ODV",
+    "aliases": [
+      "VERBALE ODV",
+      "Verbale Odv",
+      "verbale ODV",
+      "verbale odv"
+    ],
+    "synonyms": [
+      "modulo verbale ODV"
+    ]
+  },
+  "governance_compliance.whistleblowing_report": {
+    "canonical_name": "whistleblowing report",
+    "aliases": [
+      "WHISTLEBLOWING REPORT",
+      "Whistleblowing Report",
+      "whistleblowing report"
+    ],
+    "synonyms": [
+      "modulo whistleblowing report"
+    ]
+  },
+  "grants_incentives.avviso_pubblico": {
+    "canonical_name": "avviso pubblico",
+    "aliases": [
+      "avviso pubblico",
+      "AVVISO PUBBLICO"
+    ],
+    "synonyms": [
+      "modulo avviso pubblico",
+      "prospetto avviso pubblico"
+    ]
+  },
+  "grants_incentives.bando_contributi": {
+    "canonical_name": "bando contributi",
+    "aliases": [
+      "bando contributi",
+      "BANDO CONTRIBUTI"
+    ],
+    "synonyms": [
+      "modulo bando contributi",
+      "prospetto bando contributi"
+    ]
+  },
+  "grants_incentives.decreto_concessione_contributo": {
+    "canonical_name": "decreto concessione contributo",
+    "aliases": [
+      "decreto concessione contributo",
+      "DECRETO CONCESSIONE CONTRIBUTO"
+    ],
+    "synonyms": [
+      "modulo decreto concessione contributo",
+      "prospetto decreto concessione contributo"
+    ]
+  },
+  "grants_incentives.domanda_contributo": {
+    "canonical_name": "domanda di contributo",
+    "aliases": [
+      "domanda di contributo",
+      "DOMANDA DI CONTRIBUTO",
+      "domanda contributo"
+    ],
+    "synonyms": [
+      "modulo domanda di contributo",
+      "prospetto domanda di contributo"
+    ]
+  },
+  "grants_incentives.domanda_partecipazione_bando": {
+    "canonical_name": "domanda partecipazione bando",
+    "aliases": [
+      "domanda partecipazione bando",
+      "DOMANDA PARTECIPAZIONE BANDO"
+    ],
+    "synonyms": [
+      "modulo domanda partecipazione bando",
+      "prospetto domanda partecipazione bando"
+    ]
+  },
+  "grants_incentives.graduatoria_bando": {
+    "canonical_name": "graduatoria bando",
+    "aliases": [
+      "graduatoria bando",
+      "GRADUATORIA BANDO"
+    ],
+    "synonyms": [
+      "modulo graduatoria bando",
+      "prospetto graduatoria bando"
+    ]
+  },
+  "grants_incentives.lettera_ammissione_finanziamento": {
+    "canonical_name": "lettera ammissione a finanziamento",
+    "aliases": [
+      "lettera ammissione a finanziamento",
+      "LETTERA AMMISSIONE A FINANZIAMENTO",
+      "lettera ammissione finanziamento"
+    ],
+    "synonyms": [
+      "modulo lettera ammissione a finanziamento",
+      "prospetto lettera ammissione a finanziamento"
+    ]
+  },
+  "grants_incentives.rendiconto_contributo": {
+    "canonical_name": "rendiconto contributo",
+    "aliases": [
+      "rendiconto contributo",
+      "RENDICONTO CONTRIBUTO"
+    ],
+    "synonyms": [
+      "modulo rendiconto contributo",
+      "prospetto rendiconto contributo"
+    ]
+  },
+  "grants_incentives.richiesta_erogazione_saldo": {
+    "canonical_name": "richiesta erogazione saldo contributo",
+    "aliases": [
+      "richiesta erogazione saldo contributo",
+      "RICHIESTA EROGAZIONE SALDO CONTRIBUTO",
+      "richiesta erogazione saldo"
+    ],
+    "synonyms": [
+      "modulo richiesta erogazione saldo contributo",
+      "prospetto richiesta erogazione saldo contributo"
+    ]
+  },
+  "hr_employment.accordo_smart_working": {
+    "canonical_name": "accordo di lavoro agile",
+    "aliases": [
+      "accordo di lavoro agile",
+      "ACCORDO DI LAVORO AGILE",
+      "accordo smart working"
+    ],
+    "synonyms": [
+      "modulo accordo di lavoro agile",
+      "prospetto accordo di lavoro agile"
+    ]
+  },
+  "hr_employment.cedolino_paga": {
+    "canonical_name": "cedolino paga",
+    "aliases": [
+      "CEDOLINO PAGA",
+      "Cedolino Paga",
+      "cedolino paga"
+    ],
+    "synonyms": [
+      "modulo cedolino paga"
+    ]
+  },
+  "hr_employment.comunicazione_superamento_prova": {
+    "canonical_name": "comunicazione superamento periodo di prova",
+    "aliases": [
+      "comunicazione superamento periodo di prova",
+      "COMUNICAZIONE SUPERAMENTO PERIODO DI PROVA",
+      "comunicazione superamento prova"
+    ],
+    "synonyms": [
+      "modulo comunicazione superamento periodo di prova",
+      "prospetto comunicazione superamento periodo di prova"
+    ]
+  },
+  "hr_employment.contestazione_disciplinare": {
+    "canonical_name": "contestazione disciplinare",
+    "aliases": [
+      "contestazione disciplinare",
+      "lettera di richiamo",
+      "richiamo disciplinare",
+      "CONTESTAZIONE DISCIPLINARE"
+    ],
+    "synonyms": [
+      "modulo contestazione disciplinare"
+    ]
+  },
+  "hr_employment.contratto_distacco_temporaneo": {
+    "canonical_name": "contratto di distacco temporaneo",
+    "aliases": [
+      "contratto di distacco",
+      "accordo di distacco",
+      "distacco temporaneo personale",
+      "contratto di distacco temporaneo",
+      "CONTRATTO DI DISTACCO TEMPORANEO",
+      "contratto distacco temporaneo"
+    ],
+    "synonyms": [
+      "modulo contratto di distacco temporaneo"
+    ]
+  },
+  "hr_employment.contratto_lavoro": {
+    "canonical_name": "contratto lavoro",
+    "aliases": [
+      "CONTRATTO LAVORO",
+      "Contratto Lavoro",
+      "contratto lavoro"
+    ],
+    "synonyms": [
+      "modulo contratto lavoro"
+    ]
+  },
+  "hr_employment.dimissioni_volontarie": {
+    "canonical_name": "dimissioni volontarie",
+    "aliases": [
+      "dimissioni volontarie",
+      "modulo recesso rapporto di lavoro",
+      "recesso telematico",
+      "DIMISSIONI VOLONTARIE"
+    ],
+    "synonyms": [
+      "modulo dimissioni volontarie"
+    ]
+  },
+  "hr_employment.lettera_assunzione": {
+    "canonical_name": "lettera assunzione",
+    "aliases": [
+      "LETTERA ASSUNZIONE",
+      "Lettera Assunzione",
+      "lettera assunzione",
+      "lettera di assunzione"
+    ],
+    "synonyms": [
+      "modulo lettera assunzione"
+    ]
+  },
+  "hr_employment.lettera_distacco_temporaneo": {
+    "canonical_name": "lettera di distacco temporaneo",
+    "aliases": [
+      "lettera di distacco",
+      "distacco temporaneo lavoratore",
+      "comunicazione distacco",
+      "lettera di distacco temporaneo",
+      "LETTERA DI DISTACCO TEMPORANEO",
+      "lettera distacco temporaneo"
+    ],
+    "synonyms": [
+      "modulo lettera di distacco temporaneo"
+    ]
+  },
+  "hr_employment.lettera_licenziamento": {
+    "canonical_name": "lettera di licenziamento",
+    "aliases": [
+      "lettera di licenziamento",
+      "licenziamento per giusta causa",
+      "comunicazione di licenziamento",
+      "LETTERA DI LICENZIAMENTO",
+      "lettera licenziamento"
+    ],
+    "synonyms": [
+      "modulo lettera di licenziamento"
+    ]
+  },
+  "hr_employment.lettera_promozione": {
+    "canonical_name": "lettera di promozione",
+    "aliases": [
+      "lettera di promozione",
+      "LETTERA DI PROMOZIONE",
+      "lettera promozione"
+    ],
+    "synonyms": [
+      "modulo lettera di promozione",
+      "prospetto lettera di promozione"
+    ]
+  },
+  "hr_employment.lettera_sanzione_disciplinare": {
+    "canonical_name": "lettera di sanzione disciplinare",
+    "aliases": [
+      "lettera di sanzione disciplinare",
+      "LETTERA DI SANZIONE DISCIPLINARE",
+      "lettera sanzione disciplinare"
+    ],
+    "synonyms": [
+      "modulo lettera di sanzione disciplinare",
+      "prospetto lettera di sanzione disciplinare"
+    ]
+  },
+  "hr_employment.lettera_trasferimento": {
+    "canonical_name": "lettera di trasferimento",
+    "aliases": [
+      "lettera di trasferimento",
+      "LETTERA DI TRASFERIMENTO",
+      "lettera trasferimento"
+    ],
+    "synonyms": [
+      "modulo lettera di trasferimento",
+      "prospetto lettera di trasferimento"
+    ]
+  },
+  "hr_employment.lettera_variazione_retributiva": {
+    "canonical_name": "lettera variazione retributiva",
+    "aliases": [
+      "LETTERA VARIAZIONE RETRIBUTIVA",
+      "Lettera Variazione Retributiva",
+      "lettera variazione retributiva"
+    ],
+    "synonyms": [
+      "modulo lettera variazione retributiva"
+    ]
+  },
+  "hr_employment.patto_non_concorrenza": {
+    "canonical_name": "patto di non concorrenza",
+    "aliases": [
+      "patto di non concorrenza",
+      "PATTO DI NON CONCORRENZA",
+      "patto non concorrenza"
+    ],
+    "synonyms": [
+      "modulo patto di non concorrenza",
+      "prospetto patto di non concorrenza"
+    ]
+  },
+  "hr_employment.unilav_assunzione": {
+    "canonical_name": "UNILAV assunzione",
+    "aliases": [
+      "UNILAV ASSUNZIONE",
+      "UNILAV assunzione",
+      "Unilav Assunzione",
+      "unilav assunzione"
+    ],
+    "synonyms": [
+      "modulo UNILAV assunzione"
+    ]
+  },
+  "hr_employment.unilav_cessazione": {
+    "canonical_name": "UNILAV cessazione",
+    "aliases": [
+      "UNILAV CESSAZIONE",
+      "UNILAV cessazione",
+      "Unilav Cessazione",
+      "unilav cessazione"
+    ],
+    "synonyms": [
+      "modulo UNILAV cessazione"
+    ]
+  },
+  "hr_employment.unilav_proroga": {
+    "canonical_name": "UNILAV proroga",
+    "aliases": [
+      "UNILAV PROROGA",
+      "UNILAV proroga",
+      "Unilav Proroga",
+      "unilav proroga"
+    ],
+    "synonyms": [
+      "modulo UNILAV proroga"
+    ]
+  },
+  "hr_employment.unilav_trasformazione": {
+    "canonical_name": "UNILAV trasformazione",
+    "aliases": [
+      "UNILAV TRASFORMAZIONE",
+      "UNILAV trasformazione",
+      "Unilav Trasformazione",
+      "unilav trasformazione"
+    ],
+    "synonyms": [
+      "modulo UNILAV trasformazione"
+    ]
+  },
+  "hr_payroll.prospetto_costo_del_personale": {
+    "canonical_name": "prospetto costo del personale",
+    "aliases": [
+      "prospetto costo del personale",
+      "PROSPETTO COSTO DEL PERSONALE"
+    ],
+    "synonyms": [
+      "modulo prospetto costo del personale",
+      "prospetto prospetto costo del personale"
+    ]
+  },
+  "hr_personnel.autorizzazione_trasferta": {
+    "canonical_name": "autorizzazione trasferta",
+    "aliases": [
+      "autorizzazione trasferta",
+      "AUTORIZZAZIONE TRASFERTA"
+    ],
+    "synonyms": [
+      "modulo autorizzazione trasferta",
+      "prospetto autorizzazione trasferta"
+    ]
+  },
+  "hr_personnel.cambio_iban_dipendente": {
+    "canonical_name": "cambio IBAN dipendente",
+    "aliases": [
+      "CAMBIO IBAN DIPENDENTE",
+      "Cambio Iban Dipendente",
+      "cambio IBAN dipendente",
+      "cambio iban dipendente"
+    ],
+    "synonyms": [
+      "modulo cambio IBAN dipendente"
+    ]
+  },
+  "hr_personnel.foglio_presenze": {
+    "canonical_name": "foglio presenze",
+    "aliases": [
+      "FOGLIO PRESENZE",
+      "Foglio Presenze",
+      "foglio presenze"
+    ],
+    "synonyms": [
+      "modulo foglio presenze"
+    ]
+  },
+  "hr_personnel.informativa_fondo_pensione": {
+    "canonical_name": "informativa fondo pensione",
+    "aliases": [
+      "informativa fondo pensione",
+      "informativa previdenza complementare",
+      "Prevedi informativa",
+      "INFORMATIVA FONDO PENSIONE"
+    ],
+    "synonyms": [
+      "modulo informativa fondo pensione"
+    ]
+  },
+  "hr_personnel.modulo_detrazioni_fiscali": {
+    "canonical_name": "modulo detrazioni fiscali dipendente",
+    "aliases": [
+      "modulo detrazioni fiscali dipendente",
+      "MODULO DETRAZIONI FISCALI DIPENDENTE",
+      "modulo detrazioni fiscali"
+    ],
+    "synonyms": [
+      "modulo modulo detrazioni fiscali dipendente",
+      "prospetto modulo detrazioni fiscali dipendente"
+    ]
+  },
+  "hr_personnel.nota_spese": {
+    "canonical_name": "nota spese",
+    "aliases": [
+      "NOTA SPESE",
+      "Nota Spese",
+      "nota spese"
+    ],
+    "synonyms": [
+      "modulo nota spese"
+    ]
+  },
+  "hr_personnel.prospetto_rimborsi_chilometrici": {
+    "canonical_name": "prospetto rimborsi chilometrici",
+    "aliases": [
+      "prospetto rimborsi chilometrici",
+      "PROSPETTO RIMBORSI CHILOMETRICI"
+    ],
+    "synonyms": [
+      "modulo prospetto rimborsi chilometrici",
+      "prospetto prospetto rimborsi chilometrici"
+    ]
+  },
+  "hr_personnel.report_spese_trasferta": {
+    "canonical_name": "report spese trasferta",
+    "aliases": [
+      "report spese trasferta",
+      "REPORT SPESE TRASFERTA"
+    ],
+    "synonyms": [
+      "modulo report spese trasferta",
+      "prospetto report spese trasferta"
+    ]
+  },
+  "hr_personnel.richiesta_congedo": {
+    "canonical_name": "richiesta di congedo",
+    "aliases": [
+      "richiesta di congedo",
+      "RICHIESTA DI CONGEDO",
+      "richiesta congedo"
+    ],
+    "synonyms": [
+      "modulo richiesta di congedo",
+      "prospetto richiesta di congedo"
+    ]
+  },
+  "hr_personnel.richiesta_ferie": {
+    "canonical_name": "richiesta ferie",
+    "aliases": [
+      "RICHIESTA FERIE",
+      "Richiesta Ferie",
+      "richiesta ferie"
+    ],
+    "synonyms": [
+      "modulo richiesta ferie"
+    ]
+  },
+  "hr_personnel.richiesta_permesso": {
+    "canonical_name": "richiesta permesso",
+    "aliases": [
+      "RICHIESTA PERMESSO",
+      "Richiesta Permesso",
+      "richiesta permesso"
+    ],
+    "synonyms": [
+      "modulo richiesta permesso"
+    ]
+  },
+  "hr_personnel.rimborso_spese": {
+    "canonical_name": "rimborso spese",
+    "aliases": [
+      "RIMBORSO SPESE",
+      "Rimborso Spese",
+      "rimborso spese"
+    ],
+    "synonyms": [
+      "modulo rimborso spese"
+    ]
+  },
+  "hr_personnel.scelta_destinazione_tfr": {
+    "canonical_name": "scelta destinazione TFR",
+    "aliases": [
+      "scelta destinazione TFR",
+      "SCELTA DESTINAZIONE TFR",
+      "scelta destinazione tfr"
+    ],
+    "synonyms": [
+      "modulo scelta destinazione TFR",
+      "prospetto scelta destinazione TFR"
+    ]
+  },
+  "hr_personnel.scheda_valutazione_performance": {
+    "canonical_name": "scheda valutazione performance",
+    "aliases": [
+      "scheda valutazione performance",
+      "SCHEDA VALUTAZIONE PERFORMANCE"
+    ],
+    "synonyms": [
+      "modulo scheda valutazione performance",
+      "prospetto scheda valutazione performance"
+    ]
+  },
+  "hr_personnel.trasferta_dipendente": {
+    "canonical_name": "trasferta dipendente",
+    "aliases": [
+      "TRASFERTA DIPENDENTE",
+      "Trasferta Dipendente",
+      "trasferta dipendente"
+    ],
+    "synonyms": [
+      "modulo trasferta dipendente"
+    ]
+  },
+  "hr_personnel.variazione_residenza_dipendente": {
+    "canonical_name": "variazione residenza dipendente",
+    "aliases": [
+      "VARIAZIONE RESIDENZA DIPENDENTE",
+      "Variazione Residenza Dipendente",
+      "variazione residenza dipendente"
+    ],
+    "synonyms": [
+      "modulo variazione residenza dipendente"
+    ]
+  },
+  "hr_personnel.verbale_consegna_beni_aziendali": {
+    "canonical_name": "verbale consegna beni aziendali",
+    "aliases": [
+      "verbale consegna beni aziendali",
+      "VERBALE CONSEGNA BENI AZIENDALI"
+    ],
+    "synonyms": [
+      "modulo verbale consegna beni aziendali",
+      "prospetto verbale consegna beni aziendali"
+    ]
+  },
+  "hr_recruiting.curriculum_vitae": {
+    "canonical_name": "curriculum vitae",
+    "aliases": [
+      "curriculum vitae",
+      "CURRICULUM VITAE"
+    ],
+    "synonyms": [
+      "modulo curriculum vitae",
+      "prospetto curriculum vitae"
+    ]
+  },
+  "hr_recruiting.domanda_candidatura": {
+    "canonical_name": "domanda di candidatura",
+    "aliases": [
+      "domanda di candidatura",
+      "DOMANDA DI CANDIDATURA",
+      "domanda candidatura"
+    ],
+    "synonyms": [
+      "modulo domanda di candidatura",
+      "prospetto domanda di candidatura"
+    ]
+  },
+  "hr_training.piano_formativo_individuale": {
+    "canonical_name": "piano formativo individuale",
+    "aliases": [
+      "piano formativo individuale",
+      "PIANO FORMATIVO INDIVIDUALE"
+    ],
+    "synonyms": [
+      "modulo piano formativo individuale",
+      "prospetto piano formativo individuale"
+    ]
+  },
+  "hr_welfare.prospetto_welfare_aziendale": {
+    "canonical_name": "prospetto welfare aziendale",
+    "aliases": [
+      "prospetto welfare aziendale",
+      "PROSPETTO WELFARE AZIENDALE"
+    ],
+    "synonyms": [
+      "modulo prospetto welfare aziendale",
+      "prospetto prospetto welfare aziendale"
+    ]
+  },
+  "hr_welfare.regolamento_welfare": {
+    "canonical_name": "regolamento welfare aziendale",
+    "aliases": [
+      "regolamento welfare aziendale",
+      "REGOLAMENTO WELFARE AZIENDALE",
+      "regolamento welfare"
+    ],
+    "synonyms": [
+      "modulo regolamento welfare aziendale",
+      "prospetto regolamento welfare aziendale"
+    ]
+  },
+  "hse_health.certificato_malattia": {
+    "canonical_name": "certificato malattia",
+    "aliases": [
+      "CERTIFICATO MALATTIA",
+      "Certificato Malattia",
+      "certificato malattia"
+    ],
+    "synonyms": [
+      "modulo certificato malattia"
+    ]
+  },
+  "hse_health.comunicazione_infortunio": {
+    "canonical_name": "comunicazione infortunio",
+    "aliases": [
+      "COMUNICAZIONE INFORTUNIO",
+      "Comunicazione Infortunio",
+      "comunicazione infortunio"
+    ],
+    "synonyms": [
+      "modulo comunicazione infortunio"
+    ]
+  },
+  "hse_health.denuncia_infortunio_inail": {
+    "canonical_name": "denuncia infortunio INAIL",
+    "aliases": [
+      "DENUNCIA INFORTUNIO INAIL",
+      "Denuncia Infortunio Inail",
+      "denuncia infortunio INAIL",
+      "denuncia infortunio inail"
+    ],
+    "synonyms": [
+      "modulo denuncia infortunio INAIL"
+    ]
+  },
+  "hse_health.denuncia_malattia_professionale_inail": {
+    "canonical_name": "denuncia malattia professionale INAIL",
+    "aliases": [
+      "denuncia malattia professionale INAIL",
+      "DENUNCIA MALATTIA PROFESSIONALE INAIL",
+      "denuncia malattia professionale inail"
+    ],
+    "synonyms": [
+      "modulo denuncia malattia professionale INAIL",
+      "prospetto denuncia malattia professionale INAIL",
+      "Istituto nazionale assicurazione infortuni sul lavoro"
+    ]
+  },
+  "hse_health.giudizio_idoneit": {
+    "canonical_name": "giudizio idoneità",
+    "aliases": [
+      "GIUDIZIO IDONEITÀ",
+      "Giudizio Idoneità",
+      "giudizio idoneità",
+      "giudizio idoneita",
+      "giudizio idoneit"
+    ],
+    "synonyms": [
+      "modulo giudizio idoneità"
+    ]
+  },
+  "hse_health.giudizio_idoneita": {
+    "canonical_name": "giudizio idoneità",
+    "aliases": [
+      "GIUDIZIO IDONEITÀ",
+      "Giudizio Idoneità",
+      "giudizio idoneità",
+      "giudizio idoneita"
+    ],
+    "synonyms": [
+      "modulo giudizio idoneità"
+    ]
+  },
+  "hse_health.nomina_medico_competente": {
+    "canonical_name": "nomina medico competente",
+    "aliases": [
+      "NOMINA MEDICO COMPETENTE",
+      "Nomina Medico Competente",
+      "nomina medico competente"
+    ],
+    "synonyms": [
+      "modulo nomina medico competente"
+    ]
+  },
+  "hse_health.protocollo_sanitario": {
+    "canonical_name": "protocollo sanitario",
+    "aliases": [
+      "PROTOCOLLO SANITARIO",
+      "Protocollo Sanitario",
+      "protocollo sanitario"
+    ],
+    "synonyms": [
+      "modulo protocollo sanitario"
+    ]
+  },
+  "hse_health.registro_sorveglianza_sanitaria": {
+    "canonical_name": "registro sorveglianza sanitaria",
+    "aliases": [
+      "REGISTRO SORVEGLIANZA SANITARIA",
+      "Registro Sorveglianza Sanitaria",
+      "registro sorveglianza sanitaria"
+    ],
+    "synonyms": [
+      "modulo registro sorveglianza sanitaria"
+    ]
+  },
+  "hse_health.verbale_sopralluogo_medico_competente": {
+    "canonical_name": "verbale sopralluogo medico competente",
+    "aliases": [
+      "VERBALE SOPRALLUOGO MEDICO COMPETENTE",
+      "Verbale Sopralluogo Medico Competente",
+      "verbale sopralluogo medico competente"
+    ],
+    "synonyms": [
+      "modulo verbale sopralluogo medico competente"
+    ]
+  },
+  "hse_risk.accettazione_psc": {
+    "canonical_name": "accettazione PSC",
+    "aliases": [
+      "accettazione PSC",
+      "modulo di accettazione del piano di sicurezza e coordinamento",
+      "presa visione PSC",
+      "presa visione PSC e POS",
+      "ACCETTAZIONE PSC",
+      "accettazione psc"
+    ],
+    "synonyms": [
+      "modulo accettazione PSC"
+    ]
+  },
+  "hse_risk.consegna_dpi": {
+    "canonical_name": "verbale/consegna DPI",
+    "aliases": [
+      "DPI",
+      "consegna DPI",
+      "dispositivi di protezione individuale",
+      "verbale/consegna DPI",
+      "VERBALE/CONSEGNA DPI",
+      "consegna dpi"
+    ],
+    "synonyms": [
+      "modulo verbale/consegna DPI"
+    ]
+  },
+  "hse_risk.duvri": {
+    "canonical_name": "DUVRI",
+    "aliases": [
+      "DUVRI",
+      "Duvri",
+      "duvri"
+    ],
+    "synonyms": [
+      "modulo DUVRI"
+    ]
+  },
+  "hse_risk.dvr": {
+    "canonical_name": "DVR",
+    "aliases": [
+      "DVR",
+      "Dvr",
+      "dvr"
+    ],
+    "synonyms": [
+      "modulo DVR"
+    ]
+  },
+  "hse_risk.nomina_preposto": {
+    "canonical_name": "nomina preposto",
+    "aliases": [
+      "NOMINA PREPOSTO",
+      "nomina a preposto",
+      "preposto ai sensi del D.Lgs. 81/2008",
+      "nomina preposto"
+    ],
+    "synonyms": [
+      "modulo nomina preposto"
+    ]
+  },
+  "hse_risk.nomina_rls": {
+    "canonical_name": "nomina o elezione RLS",
+    "aliases": [
+      "nomina o elezione RLS",
+      "NOMINA O ELEZIONE RLS",
+      "nomina rls"
+    ],
+    "synonyms": [
+      "modulo nomina o elezione RLS",
+      "prospetto nomina o elezione RLS",
+      "rappresentante lavoratori sicurezza"
+    ]
+  },
+  "hse_risk.nomina_rspp": {
+    "canonical_name": "nomina RSPP",
+    "aliases": [
+      "nomina RSPP",
+      "NOMINA RSPP",
+      "nomina rspp"
+    ],
+    "synonyms": [
+      "modulo nomina RSPP",
+      "prospetto nomina RSPP",
+      "responsabile servizio prevenzione protezione"
+    ]
+  },
+  "hse_risk.permesso_di_lavoro": {
+    "canonical_name": "permesso di lavoro",
+    "aliases": [
+      "permesso di lavoro",
+      "PERMESSO DI LAVORO"
+    ],
+    "synonyms": [
+      "modulo permesso di lavoro",
+      "prospetto permesso di lavoro"
+    ]
+  },
+  "hse_risk.piano_emergenza_evacuazione": {
+    "canonical_name": "piano di emergenza ed evacuazione",
+    "aliases": [
+      "piano di emergenza ed evacuazione",
+      "PIANO DI EMERGENZA ED EVACUAZIONE",
+      "piano emergenza evacuazione"
+    ],
+    "synonyms": [
+      "modulo piano di emergenza ed evacuazione",
+      "prospetto piano di emergenza ed evacuazione"
+    ]
+  },
+  "hse_risk.pos": {
+    "canonical_name": "POS",
+    "aliases": [
+      "POS",
+      "Pos",
+      "pos"
+    ],
+    "synonyms": [
+      "modulo POS"
+    ]
+  },
+  "hse_risk.psc": {
+    "canonical_name": "PSC",
+    "aliases": [
+      "PSC",
+      "Psc",
+      "psc"
+    ],
+    "synonyms": [
+      "modulo PSC"
+    ]
+  },
+  "hse_risk.pss": {
+    "canonical_name": "PSS",
+    "aliases": [
+      "PSS",
+      "Pss",
+      "pss"
+    ],
+    "synonyms": [
+      "modulo PSS"
+    ]
+  },
+  "hse_risk.registro_controlli_antincendio": {
+    "canonical_name": "registro controlli antincendio",
+    "aliases": [
+      "registro controlli antincendio",
+      "REGISTRO CONTROLLI ANTINCENDIO"
+    ],
+    "synonyms": [
+      "modulo registro controlli antincendio",
+      "prospetto registro controlli antincendio"
+    ]
+  },
+  "hse_risk.relazione_tecnica_psc": {
+    "canonical_name": "relazione tecnica allegata al PSC",
+    "aliases": [
+      "relazione tecnica allegata al PSC",
+      "RELAZIONE TECNICA ALLEGATA AL PSC",
+      "relazione tecnica psc"
+    ],
+    "synonyms": [
+      "modulo relazione tecnica allegata al PSC",
+      "prospetto relazione tecnica allegata al PSC",
+      "piano sicurezza coordinamento"
+    ]
+  },
+  "hse_risk.requisiti_sicurezza_ambiente_committente": {
+    "canonical_name": "requisiti sicurezza e ambiente del committente",
+    "aliases": [
+      "requisiti sicurezza e ambiente del committente",
+      "REQUISITI SICUREZZA E AMBIENTE DEL COMMITTENTE",
+      "requisiti sicurezza ambiente committente"
+    ],
+    "synonyms": [
+      "modulo requisiti sicurezza e ambiente del committente",
+      "prospetto requisiti sicurezza e ambiente del committente"
+    ]
+  },
+  "hse_risk.valutazione_rischio_chimico": {
+    "canonical_name": "valutazione rischio chimico",
+    "aliases": [
+      "VALUTAZIONE RISCHIO CHIMICO",
+      "Valutazione Rischio Chimico",
+      "valutazione rischio chimico"
+    ],
+    "synonyms": [
+      "modulo valutazione rischio chimico"
+    ]
+  },
+  "hse_risk.valutazione_rumore": {
+    "canonical_name": "valutazione rumore",
+    "aliases": [
+      "VALUTAZIONE RUMORE",
+      "Valutazione Rumore",
+      "valutazione rumore"
+    ],
+    "synonyms": [
+      "modulo valutazione rumore"
+    ]
+  },
+  "hse_risk.valutazione_stress_lavoro_correlato": {
+    "canonical_name": "valutazione stress lavoro correlato",
+    "aliases": [
+      "valutazione stress lavoro correlato",
+      "VALUTAZIONE STRESS LAVORO CORRELATO"
+    ],
+    "synonyms": [
+      "modulo valutazione stress lavoro correlato",
+      "prospetto valutazione stress lavoro correlato"
+    ]
+  },
+  "hse_risk.valutazione_vibrazioni": {
+    "canonical_name": "valutazione vibrazioni",
+    "aliases": [
+      "VALUTAZIONE VIBRAZIONI",
+      "Valutazione Vibrazioni",
+      "valutazione vibrazioni"
+    ],
+    "synonyms": [
+      "modulo valutazione vibrazioni"
+    ]
+  },
+  "hse_risk.verbale_coordinamento_sicurezza": {
+    "canonical_name": "verbale coordinamento sicurezza",
+    "aliases": [
+      "verbale coordinamento sicurezza",
+      "VERBALE COORDINAMENTO SICUREZZA"
+    ],
+    "synonyms": [
+      "modulo verbale coordinamento sicurezza",
+      "prospetto verbale coordinamento sicurezza"
+    ]
+  },
+  "hse_risk.verbale_riunione_periodica_sicurezza": {
+    "canonical_name": "verbale riunione periodica sicurezza",
+    "aliases": [
+      "verbale riunione periodica sicurezza",
+      "VERBALE RIUNIONE PERIODICA SICUREZZA"
+    ],
+    "synonyms": [
+      "modulo verbale riunione periodica sicurezza",
+      "prospetto verbale riunione periodica sicurezza"
+    ]
+  },
+  "hse_risk.verbale_rls": {
+    "canonical_name": "verbale RLS",
+    "aliases": [
+      "VERBALE RLS",
+      "rappresentante lavoratori sicurezza",
+      "verbale RLS",
+      "verbale rls"
+    ],
+    "synonyms": [
+      "modulo verbale RLS"
+    ]
+  },
+  "hse_training.attestato_antincendio": {
+    "canonical_name": "attestato antincendio",
+    "aliases": [
+      "ATTESTATO ANTINCENDIO",
+      "Attestato Antincendio",
+      "attestato antincendio"
+    ],
+    "synonyms": [
+      "modulo attestato antincendio"
+    ]
+  },
+  "hse_training.attestato_dpi_terza_categoria": {
+    "canonical_name": "attestato DPI terza categoria",
+    "aliases": [
+      "ATTESTATO DPI TERZA CATEGORIA",
+      "Attestato Dpi Terza Categoria",
+      "attestato DPI terza categoria",
+      "attestato dpi terza categoria"
+    ],
+    "synonyms": [
+      "modulo attestato DPI terza categoria"
+    ]
+  },
+  "hse_training.attestato_formazione_generale": {
+    "canonical_name": "attestato formazione generale",
+    "aliases": [
+      "ATTESTATO FORMAZIONE GENERALE",
+      "Attestato Formazione Generale",
+      "attestato formazione generale"
+    ],
+    "synonyms": [
+      "modulo attestato formazione generale"
+    ]
+  },
+  "hse_training.attestato_formazione_specifica": {
+    "canonical_name": "attestato formazione specifica",
+    "aliases": [
+      "ATTESTATO FORMAZIONE SPECIFICA",
+      "Attestato Formazione Specifica",
+      "attestato formazione specifica"
+    ],
+    "synonyms": [
+      "modulo attestato formazione specifica"
+    ]
+  },
+  "hse_training.attestato_lavori_in_quota": {
+    "canonical_name": "attestato lavori in quota",
+    "aliases": [
+      "attestato lavori in quota",
+      "ATTESTATO LAVORI IN QUOTA"
+    ],
+    "synonyms": [
+      "modulo attestato lavori in quota",
+      "prospetto attestato lavori in quota"
+    ]
+  },
+  "hse_training.attestato_preposto": {
+    "canonical_name": "attestato preposto",
+    "aliases": [
+      "ATTESTATO PREPOSTO",
+      "Attestato Preposto",
+      "attestato preposto"
+    ],
+    "synonyms": [
+      "modulo attestato preposto"
+    ]
+  },
+  "hse_training.attestato_primo_soccorso": {
+    "canonical_name": "attestato primo soccorso",
+    "aliases": [
+      "ATTESTATO PRIMO SOCCORSO",
+      "Attestato Primo Soccorso",
+      "attestato primo soccorso"
+    ],
+    "synonyms": [
+      "modulo attestato primo soccorso"
+    ]
+  },
+  "hse_training.attestato_rls": {
+    "canonical_name": "attestato RLS",
+    "aliases": [
+      "ATTESTATO RLS",
+      "Attestato Rls",
+      "attestato RLS",
+      "attestato rls"
+    ],
+    "synonyms": [
+      "modulo attestato RLS"
+    ]
+  },
+  "hse_training.attestato_spazi_confinati": {
+    "canonical_name": "attestato spazi confinati",
+    "aliases": [
+      "attestato spazi confinati",
+      "ATTESTATO SPAZI CONFINATI"
+    ],
+    "synonyms": [
+      "modulo attestato spazi confinati",
+      "prospetto attestato spazi confinati"
+    ]
+  },
+  "hse_training.nomina_addetto_antincendio": {
+    "canonical_name": "nomina addetto antincendio",
+    "aliases": [
+      "nomina addetto antincendio",
+      "designazione addetto antincendio",
+      "nomina prevenzione incendi",
+      "NOMINA ADDETTO ANTINCENDIO"
+    ],
+    "synonyms": [
+      "modulo nomina addetto antincendio"
+    ]
+  },
+  "hse_training.registro_formazione": {
+    "canonical_name": "registro formazione",
+    "aliases": [
+      "REGISTRO FORMAZIONE",
+      "Registro Formazione",
+      "registro formazione"
+    ],
+    "synonyms": [
+      "modulo registro formazione"
+    ]
+  },
+  "identity_personal.carta_identit": {
+    "canonical_name": "carta identità",
+    "aliases": [
+      "CARTA IDENTITÀ",
+      "Carta Identità",
+      "carta di identità",
+      "carta identità",
+      "carta identita",
+      "carta identit"
+    ],
+    "synonyms": [
+      "modulo carta identità"
+    ]
+  },
+  "identity_personal.carta_identita": {
+    "canonical_name": "carta di identità",
+    "aliases": [
+      "CARTA IDENTITA",
+      "CARTA DI IDENTITA",
+      "documento di identità",
+      "carta di identità",
+      "CARTA DI IDENTITÀ",
+      "carta di identita",
+      "carta identita"
+    ],
+    "synonyms": [
+      "modulo carta di identità"
+    ]
+  },
+  "identity_personal.certificato_nascita": {
+    "canonical_name": "certificato nascita",
+    "aliases": [
+      "CERTIFICATO NASCITA",
+      "Certificato Nascita",
+      "certificato nascita"
+    ],
+    "synonyms": [
+      "modulo certificato nascita"
+    ]
+  },
+  "identity_personal.certificato_residenza": {
+    "canonical_name": "certificato residenza",
+    "aliases": [
+      "CERTIFICATO RESIDENZA",
+      "Certificato Residenza",
+      "certificato residenza"
+    ],
+    "synonyms": [
+      "modulo certificato residenza"
+    ]
+  },
+  "identity_personal.codice_fiscale": {
+    "canonical_name": "codice fiscale",
+    "aliases": [
+      "CODICE FISCALE",
+      "Codice Fiscale",
+      "codice fiscale"
+    ],
+    "synonyms": [
+      "modulo codice fiscale"
+    ]
+  },
+  "identity_personal.passaporto": {
+    "canonical_name": "passaporto",
+    "aliases": [
+      "PASSAPORTO",
+      "Passaporto",
+      "passaporto"
+    ],
+    "synonyms": [
+      "modulo passaporto"
+    ]
+  },
+  "identity_personal.patente_di_guida": {
+    "canonical_name": "patente di guida",
+    "aliases": [
+      "PATENTE DI GUIDA",
+      "Patente Di Guida",
+      "patente di guida"
+    ],
+    "synonyms": [
+      "modulo patente di guida"
+    ]
+  },
+  "identity_personal.permesso_di_soggiorno": {
+    "canonical_name": "permesso di soggiorno",
+    "aliases": [
+      "PERMESSO DI SOGGIORNO",
+      "Permesso Di Soggiorno",
+      "permesso di soggiorno"
+    ],
+    "synonyms": [
+      "modulo permesso di soggiorno"
+    ]
+  },
+  "identity_personal.stato_di_famiglia": {
+    "canonical_name": "stato di famiglia",
+    "aliases": [
+      "STATO DI FAMIGLIA",
+      "Stato Di Famiglia",
+      "stato di famiglia"
+    ],
+    "synonyms": [
+      "modulo stato di famiglia"
+    ]
+  },
+  "insurance.apertura_sinistro": {
+    "canonical_name": "comunicazione apertura sinistro",
+    "aliases": [
+      "comunicazione apertura sinistro",
+      "COMUNICAZIONE APERTURA SINISTRO",
+      "apertura sinistro"
+    ],
+    "synonyms": [
+      "modulo comunicazione apertura sinistro",
+      "prospetto comunicazione apertura sinistro"
+    ]
+  },
+  "insurance.appendice_polizza": {
+    "canonical_name": "appendice polizza",
+    "aliases": [
+      "APPENDICE POLIZZA",
+      "Appendice Polizza",
+      "appendice polizza"
+    ],
+    "synonyms": [
+      "modulo appendice polizza"
+    ]
+  },
+  "insurance.attestato_rischio": {
+    "canonical_name": "attestato di rischio",
+    "aliases": [
+      "attestato di rischio",
+      "ATTESTATO DI RISCHIO",
+      "attestato rischio"
+    ],
+    "synonyms": [
+      "modulo attestato di rischio",
+      "prospetto attestato di rischio"
+    ]
+  },
+  "insurance.carta_verde": {
+    "canonical_name": "carta verde assicurativa",
+    "aliases": [
+      "carta verde assicurativa",
+      "CARTA VERDE ASSICURATIVA",
+      "carta verde"
+    ],
+    "synonyms": [
+      "modulo carta verde assicurativa",
+      "prospetto carta verde assicurativa"
+    ]
+  },
+  "insurance.certificato_assicurativo": {
+    "canonical_name": "certificato assicurativo",
+    "aliases": [
+      "certificato assicurativo",
+      "CERTIFICATO ASSICURATIVO",
+      "certificato di assicurazione"
+    ],
+    "synonyms": [
+      "modulo certificato assicurativo",
+      "prospetto certificato assicurativo"
+    ]
+  },
+  "insurance.condizioni_assicurazione": {
+    "canonical_name": "condizioni di assicurazione",
+    "aliases": [
+      "condizioni di assicurazione",
+      "CONDIZIONI DI ASSICURAZIONE",
+      "condizioni assicurazione"
+    ],
+    "synonyms": [
+      "modulo condizioni di assicurazione",
+      "prospetto condizioni di assicurazione"
+    ]
+  },
+  "insurance.denuncia_sinistro": {
+    "canonical_name": "denuncia di sinistro",
+    "aliases": [
+      "denuncia di sinistro",
+      "DENUNCIA DI SINISTRO",
+      "denuncia sinistro"
+    ],
+    "synonyms": [
+      "modulo denuncia di sinistro",
+      "prospetto denuncia di sinistro"
+    ]
+  },
+  "insurance.fascicolo_informativo_polizza": {
+    "canonical_name": "fascicolo informativo polizza",
+    "aliases": [
+      "fascicolo informativo polizza",
+      "FASCICOLO INFORMATIVO POLIZZA"
+    ],
+    "synonyms": [
+      "modulo fascicolo informativo polizza",
+      "prospetto fascicolo informativo polizza"
+    ]
+  },
+  "insurance.liquidazione_sinistro": {
+    "canonical_name": "prospetto liquidazione sinistro",
+    "aliases": [
+      "prospetto liquidazione sinistro",
+      "PROSPETTO LIQUIDAZIONE SINISTRO",
+      "liquidazione sinistro"
+    ],
+    "synonyms": [
+      "modulo prospetto liquidazione sinistro",
+      "prospetto prospetto liquidazione sinistro"
+    ]
+  },
+  "insurance.perizia_assicurativa": {
+    "canonical_name": "perizia assicurativa",
+    "aliases": [
+      "perizia assicurativa",
+      "PERIZIA ASSICURATIVA"
+    ],
+    "synonyms": [
+      "modulo perizia assicurativa",
+      "prospetto perizia assicurativa"
+    ]
+  },
+  "insurance.polizza_automezzi": {
+    "canonical_name": "polizza automezzi",
+    "aliases": [
+      "POLIZZA AUTOMEZZI",
+      "Polizza Automezzi",
+      "polizza automezzi"
+    ],
+    "synonyms": [
+      "modulo polizza automezzi"
+    ]
+  },
+  "insurance.polizza_car": {
+    "canonical_name": "polizza CAR",
+    "aliases": [
+      "POLIZZA CAR",
+      "Polizza Car",
+      "polizza CAR",
+      "polizza car"
+    ],
+    "synonyms": [
+      "modulo polizza CAR"
+    ]
+  },
+  "insurance.polizza_fideiussoria": {
+    "canonical_name": "polizza fideiussoria",
+    "aliases": [
+      "POLIZZA FIDEIUSSORIA",
+      "Polizza Fideiussoria",
+      "polizza fideiussoria"
+    ],
+    "synonyms": [
+      "modulo polizza fideiussoria"
+    ]
+  },
+  "insurance.polizza_incendio": {
+    "canonical_name": "polizza incendio",
+    "aliases": [
+      "POLIZZA INCENDIO",
+      "Polizza Incendio",
+      "polizza incendio"
+    ],
+    "synonyms": [
+      "modulo polizza incendio"
+    ]
+  },
+  "insurance.polizza_rc_professionale": {
+    "canonical_name": "polizza RC professionale",
+    "aliases": [
+      "POLIZZA RC PROFESSIONALE",
+      "Polizza Rc Professionale",
+      "polizza RC professionale",
+      "polizza rc professionale"
+    ],
+    "synonyms": [
+      "modulo polizza RC professionale"
+    ]
+  },
+  "insurance.polizza_rct_rco": {
+    "canonical_name": "polizza RCT RCO",
+    "aliases": [
+      "POLIZZA RCT RCO",
+      "Polizza Rct Rco",
+      "polizza RCT RCO",
+      "polizza rct rco"
+    ],
+    "synonyms": [
+      "modulo polizza RCT RCO"
+    ]
+  },
+  "insurance.preventivo_polizza": {
+    "canonical_name": "preventivo polizza",
+    "aliases": [
+      "preventivo polizza",
+      "PREVENTIVO POLIZZA"
+    ],
+    "synonyms": [
+      "modulo preventivo polizza",
+      "prospetto preventivo polizza"
+    ]
+  },
+  "insurance.quietanza_premio_assicurativo": {
+    "canonical_name": "quietanza premio assicurativo",
+    "aliases": [
+      "QUIETANZA PREMIO ASSICURATIVO",
+      "Quietanza Premio Assicurativo",
+      "quietanza premio assicurativo"
+    ],
+    "synonyms": [
+      "modulo quietanza premio assicurativo"
+    ]
+  },
+  "insurance.scheda_polizza": {
+    "canonical_name": "scheda di polizza",
+    "aliases": [
+      "SCHEDA DI POLIZZA",
+      "numero di polizza",
+      "decorrenza polizza",
+      "scadenza polizza",
+      "scheda di polizza",
+      "scheda polizza"
+    ],
+    "synonyms": [
+      "modulo scheda di polizza"
+    ]
+  },
+  "it_security.backup_report": {
+    "canonical_name": "backup report",
+    "aliases": [
+      "BACKUP REPORT",
+      "Backup Report",
+      "backup report"
+    ],
+    "synonyms": [
+      "modulo backup report"
+    ]
+  },
+  "it_security.business_continuity_plan": {
+    "canonical_name": "business continuity plan",
+    "aliases": [
+      "BUSINESS CONTINUITY PLAN",
+      "Business Continuity Plan",
+      "business continuity plan"
+    ],
+    "synonyms": [
+      "modulo business continuity plan"
+    ]
+  },
+  "it_security.nomina_amministratore_sistema": {
+    "canonical_name": "nomina amministratore sistema",
+    "aliases": [
+      "NOMINA AMMINISTRATORE SISTEMA",
+      "Nomina Amministratore Sistema",
+      "nomina amministratore sistema"
+    ],
+    "synonyms": [
+      "modulo nomina amministratore sistema"
+    ]
+  },
+  "it_security.piano_disaster_recovery": {
+    "canonical_name": "piano disaster recovery",
+    "aliases": [
+      "piano disaster recovery",
+      "PIANO DISASTER RECOVERY"
+    ],
+    "synonyms": [
+      "modulo piano disaster recovery",
+      "prospetto piano disaster recovery"
+    ]
+  },
+  "it_security.piano_risposta_incidenti": {
+    "canonical_name": "piano risposta agli incidenti",
+    "aliases": [
+      "piano risposta agli incidenti",
+      "PIANO RISPOSTA AGLI INCIDENTI",
+      "piano risposta incidenti"
+    ],
+    "synonyms": [
+      "modulo piano risposta agli incidenti",
+      "prospetto piano risposta agli incidenti"
+    ]
+  },
+  "it_security.policy_sicurezza_it": {
+    "canonical_name": "policy sicurezza IT",
+    "aliases": [
+      "POLICY SICUREZZA IT",
+      "Policy Sicurezza It",
+      "policy sicurezza IT",
+      "policy sicurezza it"
+    ],
+    "synonyms": [
+      "modulo policy sicurezza IT"
+    ]
+  },
+  "it_security.rapporto_penetration_test": {
+    "canonical_name": "rapporto penetration test",
+    "aliases": [
+      "RAPPORTO PENETRATION TEST",
+      "Rapporto Penetration Test",
+      "rapporto penetration test"
+    ],
+    "synonyms": [
+      "modulo rapporto penetration test"
+    ]
+  },
+  "it_security.rapporto_vulnerability_assessment": {
+    "canonical_name": "rapporto vulnerability assessment",
+    "aliases": [
+      "RAPPORTO VULNERABILITY ASSESSMENT",
+      "Rapporto Vulnerability Assessment",
+      "rapporto vulnerability assessment"
+    ],
+    "synonyms": [
+      "modulo rapporto vulnerability assessment"
+    ]
+  },
+  "it_security.registro_asset_it": {
+    "canonical_name": "registro asset IT",
+    "aliases": [
+      "REGISTRO ASSET IT",
+      "Registro Asset It",
+      "registro asset IT",
+      "registro asset it"
+    ],
+    "synonyms": [
+      "modulo registro asset IT"
+    ]
+  },
+  "it_security.registro_incidenti_cyber": {
+    "canonical_name": "registro incidenti cyber",
+    "aliases": [
+      "REGISTRO INCIDENTI CYBER",
+      "Registro Incidenti Cyber",
+      "registro incidenti cyber"
+    ],
+    "synonyms": [
+      "modulo registro incidenti cyber"
+    ]
+  },
+  "it_security.report_incidente_cyber": {
+    "canonical_name": "report incidente cyber",
+    "aliases": [
+      "report incidente cyber",
+      "REPORT INCIDENTE CYBER"
+    ],
+    "synonyms": [
+      "modulo report incidente cyber",
+      "prospetto report incidente cyber"
+    ]
+  },
+  "it_security.test_business_continuity": {
+    "canonical_name": "rapporto test continuità operativa",
+    "aliases": [
+      "rapporto test continuità operativa",
+      "RAPPORTO TEST CONTINUITÀ OPERATIVA",
+      "rapporto test continuita operativa",
+      "test business continuity"
+    ],
+    "synonyms": [
+      "modulo rapporto test continuità operativa",
+      "prospetto rapporto test continuità operativa"
+    ]
+  },
+  "legal_corporate.accordo_riservatezza": {
+    "canonical_name": "accordo riservatezza",
+    "aliases": [
+      "ACCORDO RISERVATEZZA",
+      "Accordo Riservatezza",
+      "accordo riservatezza"
+    ],
+    "synonyms": [
+      "modulo accordo riservatezza"
+    ]
+  },
+  "legal_corporate.cessione_contratto": {
+    "canonical_name": "cessione contratto",
+    "aliases": [
+      "CESSIONE CONTRATTO",
+      "Cessione Contratto",
+      "cessione contratto"
+    ],
+    "synonyms": [
+      "modulo cessione contratto"
+    ]
+  },
+  "legal_corporate.cessione_credito": {
+    "canonical_name": "cessione credito",
+    "aliases": [
+      "CESSIONE CREDITO",
+      "Cessione Credito",
+      "cessione credito"
+    ],
+    "synonyms": [
+      "modulo cessione credito"
+    ]
+  },
+  "legal_corporate.lettera_intenti": {
+    "canonical_name": "lettera intenti",
+    "aliases": [
+      "LETTERA INTENTI",
+      "Lettera Intenti",
+      "lettera intenti"
+    ],
+    "synonyms": [
+      "modulo lettera intenti"
+    ]
+  },
+  "legal_corporate.memorandum_intesa": {
+    "canonical_name": "memorandum intesa",
+    "aliases": [
+      "MEMORANDUM INTESA",
+      "Memorandum Intesa",
+      "memorandum intesa"
+    ],
+    "synonyms": [
+      "modulo memorandum intesa"
+    ]
+  },
+  "legal_corporate.nda": {
+    "canonical_name": "NDA",
+    "aliases": [
+      "NDA",
+      "Nda",
+      "nda"
+    ],
+    "synonyms": [
+      "modulo NDA"
+    ]
+  },
+  "legal_corporate.patto_parasociale": {
+    "canonical_name": "patto parasociale",
+    "aliases": [
+      "PATTO PARASOCIALE",
+      "Patto Parasociale",
+      "patto parasociale"
+    ],
+    "synonyms": [
+      "modulo patto parasociale"
+    ]
+  },
+  "legal_corporate.riconoscimento_debito": {
+    "canonical_name": "riconoscimento debito",
+    "aliases": [
+      "RICONOSCIMENTO DEBITO",
+      "Riconoscimento Debito",
+      "riconoscimento debito"
+    ],
+    "synonyms": [
+      "modulo riconoscimento debito"
+    ]
+  },
+  "legal_disputes.accordo_transattivo": {
+    "canonical_name": "accordo transattivo",
+    "aliases": [
+      "ACCORDO TRANSATTIVO",
+      "Accordo Transattivo",
+      "accordo transattivo"
+    ],
+    "synonyms": [
+      "modulo accordo transattivo"
+    ]
+  },
+  "legal_disputes.atto_citazione": {
+    "canonical_name": "atto citazione",
+    "aliases": [
+      "ATTO CITAZIONE",
+      "Atto Citazione",
+      "atto citazione"
+    ],
+    "synonyms": [
+      "modulo atto citazione"
+    ]
+  },
+  "legal_disputes.decreto_ingiuntivo": {
+    "canonical_name": "decreto ingiuntivo",
+    "aliases": [
+      "DECRETO INGIUNTIVO",
+      "Decreto Ingiuntivo",
+      "decreto ingiuntivo"
+    ],
+    "synonyms": [
+      "modulo decreto ingiuntivo"
+    ]
+  },
+  "legal_disputes.diffida": {
+    "canonical_name": "diffida",
+    "aliases": [
+      "DIFFIDA",
+      "Diffida",
+      "diffida"
+    ],
+    "synonyms": [
+      "modulo diffida"
+    ]
+  },
+  "legal_disputes.messa_in_mora": {
+    "canonical_name": "messa in mora",
+    "aliases": [
+      "MESSA IN MORA",
+      "Messa In Mora",
+      "messa in mora"
+    ],
+    "synonyms": [
+      "modulo messa in mora"
+    ]
+  },
+  "legal_disputes.precetto": {
+    "canonical_name": "precetto",
+    "aliases": [
+      "PRECETTO",
+      "Precetto",
+      "precetto"
+    ],
+    "synonyms": [
+      "modulo precetto"
+    ]
+  },
+  "legal_disputes.procura_alle_liti": {
+    "canonical_name": "procura alle liti",
+    "aliases": [
+      "procura alle liti",
+      "PROCURA ALLE LITI"
+    ],
+    "synonyms": [
+      "modulo procura alle liti",
+      "prospetto procura alle liti"
+    ]
+  },
+  "legal_disputes.ricorso": {
+    "canonical_name": "ricorso",
+    "aliases": [
+      "RICORSO",
+      "Ricorso",
+      "ricorso"
+    ],
+    "synonyms": [
+      "modulo ricorso"
+    ]
+  },
+  "legal_disputes.verbale_conciliazione": {
+    "canonical_name": "verbale conciliazione",
+    "aliases": [
+      "VERBALE CONCILIAZIONE",
+      "Verbale Conciliazione",
+      "verbale conciliazione"
+    ],
+    "synonyms": [
+      "modulo verbale conciliazione"
+    ]
+  },
+  "logistics_warehouse.conferma_spedizione": {
+    "canonical_name": "conferma di spedizione",
+    "aliases": [
+      "conferma di spedizione",
+      "CONFERMA DI SPEDIZIONE",
+      "conferma spedizione"
+    ],
+    "synonyms": [
+      "modulo conferma di spedizione",
+      "prospetto conferma di spedizione"
+    ]
+  },
+  "logistics_warehouse.inventario_magazzino": {
+    "canonical_name": "inventario di magazzino",
+    "aliases": [
+      "inventario di magazzino",
+      "INVENTARIO DI MAGAZZINO",
+      "inventario magazzino"
+    ],
+    "synonyms": [
+      "modulo inventario di magazzino",
+      "prospetto inventario di magazzino"
+    ]
+  },
+  "logistics_warehouse.lettera_vettura_aerea_awb": {
+    "canonical_name": "lettera di vettura aerea AWB",
+    "aliases": [
+      "lettera di vettura aerea AWB",
+      "LETTERA DI VETTURA AEREA AWB",
+      "lettera vettura aerea awb"
+    ],
+    "synonyms": [
+      "modulo lettera di vettura aerea AWB",
+      "prospetto lettera di vettura aerea AWB",
+      "air waybill"
+    ]
+  },
+  "logistics_warehouse.movimento_magazzino": {
+    "canonical_name": "movimento di magazzino",
+    "aliases": [
+      "movimento di magazzino",
+      "MOVIMENTO DI MAGAZZINO",
+      "movimento magazzino"
+    ],
+    "synonyms": [
+      "modulo movimento di magazzino",
+      "prospetto movimento di magazzino"
+    ]
+  },
+  "logistics_warehouse.ordine_spedizione": {
+    "canonical_name": "ordine di spedizione",
+    "aliases": [
+      "ordine di spedizione",
+      "ORDINE DI SPEDIZIONE",
+      "ordine spedizione"
+    ],
+    "synonyms": [
+      "modulo ordine di spedizione",
+      "prospetto ordine di spedizione"
+    ]
+  },
+  "logistics_warehouse.packing_list": {
+    "canonical_name": "packing list",
+    "aliases": [
+      "packing list",
+      "PACKING LIST"
+    ],
+    "synonyms": [
+      "modulo packing list",
+      "prospetto packing list"
+    ]
+  },
+  "logistics_warehouse.polizza_carico_bill_of_lading": {
+    "canonical_name": "polizza di carico Bill of Lading",
+    "aliases": [
+      "polizza di carico Bill of Lading",
+      "POLIZZA DI CARICO BILL OF LADING",
+      "polizza carico bill of lading"
+    ],
+    "synonyms": [
+      "modulo polizza di carico Bill of Lading",
+      "prospetto polizza di carico Bill of Lading"
+    ]
+  },
+  "logistics_warehouse.prova_consegna_pod": {
+    "canonical_name": "prova di consegna POD",
+    "aliases": [
+      "prova di consegna POD",
+      "PROVA DI CONSEGNA POD",
+      "prova consegna pod"
+    ],
+    "synonyms": [
+      "modulo prova di consegna POD",
+      "prospetto prova di consegna POD",
+      "proof of delivery"
+    ]
+  },
+  "logistics_warehouse.scheda_articolo": {
+    "canonical_name": "scheda articolo di magazzino",
+    "aliases": [
+      "scheda articolo di magazzino",
+      "SCHEDA ARTICOLO DI MAGAZZINO",
+      "scheda articolo"
+    ],
+    "synonyms": [
+      "modulo scheda articolo di magazzino",
+      "prospetto scheda articolo di magazzino"
+    ]
+  },
+  "logistics_warehouse.verbale_conta_inventariale": {
+    "canonical_name": "verbale conta inventariale",
+    "aliases": [
+      "verbale conta inventariale",
+      "VERBALE CONTA INVENTARIALE"
+    ],
+    "synonyms": [
+      "modulo verbale conta inventariale",
+      "prospetto verbale conta inventariale"
+    ]
+  },
+  "master_data.dati_fatturazione": {
+    "canonical_name": "dati di fatturazione",
+    "aliases": [
+      "dati di fatturazione",
+      "DATI DI FATTURAZIONE",
+      "dati fatturazione"
+    ],
+    "synonyms": [
+      "modulo dati di fatturazione",
+      "prospetto dati di fatturazione"
+    ]
+  },
+  "payments_treasury.avviso_pagamento": {
+    "canonical_name": "avviso pagamento",
+    "aliases": [
+      "AVVISO PAGAMENTO",
+      "Avviso Pagamento",
+      "avviso pagamento"
+    ],
+    "synonyms": [
+      "modulo avviso pagamento"
+    ]
+  },
+  "payments_treasury.distinta_bonifici": {
+    "canonical_name": "distinta bonifici",
+    "aliases": [
+      "DISTINTA BONIFICI",
+      "Distinta Bonifici",
+      "distinta bonifici"
+    ],
+    "synonyms": [
+      "modulo distinta bonifici"
+    ]
+  },
+  "payments_treasury.distinta_incasso_riba": {
+    "canonical_name": "distinta incasso Ri.Ba.",
+    "aliases": [
+      "distinta incasso Ri.Ba.",
+      "DISTINTA INCASSO RI.BA.",
+      "distinta incasso riba"
+    ],
+    "synonyms": [
+      "modulo distinta incasso Ri.Ba.",
+      "prospetto distinta incasso Ri.Ba."
+    ]
+  },
+  "payments_treasury.incasso_ri_ba": {
+    "canonical_name": "incasso RI.BA.",
+    "aliases": [
+      "INCASSO RI.BA.",
+      "Incasso Ri.Ba.",
+      "incasso RI.BA.",
+      "incasso ri ba"
+    ],
+    "synonyms": [
+      "modulo incasso RI.BA."
+    ]
+  },
+  "payments_treasury.ordine_pagamento": {
+    "canonical_name": "ordine pagamento",
+    "aliases": [
+      "ORDINE PAGAMENTO",
+      "Ordine Pagamento",
+      "ordine pagamento"
+    ],
+    "synonyms": [
+      "modulo ordine pagamento"
+    ]
+  },
+  "payments_treasury.ricevuta_pagamento_cbill": {
+    "canonical_name": "ricevuta pagamento CBILL",
+    "aliases": [
+      "CBILL",
+      "ricevuta CBILL",
+      "avviso CBILL",
+      "pagamento CBILL",
+      "ricevuta pagamento CBILL",
+      "RICEVUTA PAGAMENTO CBILL",
+      "ricevuta pagamento cbill"
+    ],
+    "synonyms": [
+      "modulo ricevuta pagamento CBILL"
+    ]
+  },
+  "payments_treasury.ricevuta_pagopa": {
+    "canonical_name": "ricevuta telematica pagoPA",
+    "aliases": [
+      "ricevuta telematica pagoPA",
+      "RICEVUTA TELEMATICA PAGOPA",
+      "ricevuta pagopa"
+    ],
+    "synonyms": [
+      "modulo ricevuta telematica pagoPA",
+      "prospetto ricevuta telematica pagoPA",
+      "pagamento verso pubblica amministrazione"
+    ]
+  },
+  "payments_treasury.ricevuta_pos": {
+    "canonical_name": "ricevuta POS",
+    "aliases": [
+      "RICEVUTA POS",
+      "Ricevuta Pos",
+      "ricevuta POS",
+      "ricevuta pos"
+    ],
+    "synonyms": [
+      "modulo ricevuta POS"
+    ]
+  },
+  "payments_treasury.richiesta_pagamento": {
+    "canonical_name": "richiesta pagamento",
+    "aliases": [
+      "RICHIESTA PAGAMENTO",
+      "Richiesta Pagamento",
+      "richiesta pagamento"
+    ],
+    "synonyms": [
+      "modulo richiesta pagamento"
+    ]
+  },
+  "payments_treasury.riconciliazione_carte_aziendali": {
+    "canonical_name": "riconciliazione carte aziendali",
+    "aliases": [
+      "riconciliazione carte aziendali",
+      "RICONCILIAZIONE CARTE AZIENDALI"
+    ],
+    "synonyms": [
+      "modulo riconciliazione carte aziendali",
+      "prospetto riconciliazione carte aziendali"
+    ]
+  },
+  "payments_treasury.riconciliazione_pagamento": {
+    "canonical_name": "riconciliazione pagamento",
+    "aliases": [
+      "RICONCILIAZIONE PAGAMENTO",
+      "Riconciliazione Pagamento",
+      "riconciliazione pagamento"
+    ],
+    "synonyms": [
+      "modulo riconciliazione pagamento"
+    ]
+  },
+  "payments_treasury.scadenziario_fornitori": {
+    "canonical_name": "scadenziario fornitori",
+    "aliases": [
+      "SCADENZIARIO FORNITORI",
+      "Scadenziario Fornitori",
+      "scadenziario fornitori"
+    ],
+    "synonyms": [
+      "modulo scadenziario fornitori"
+    ]
+  },
+  "payroll_contributions.basi_calcolo_autoliquidazione_inail": {
+    "canonical_name": "basi di calcolo autoliquidazione INAIL",
+    "aliases": [
+      "basi di calcolo autoliquidazione INAIL",
+      "BASI DI CALCOLO AUTOLIQUIDAZIONE INAIL",
+      "basi calcolo autoliquidazione inail"
+    ],
+    "synonyms": [
+      "modulo basi di calcolo autoliquidazione INAIL",
+      "prospetto basi di calcolo autoliquidazione INAIL",
+      "Istituto nazionale assicurazione infortuni sul lavoro"
+    ]
+  },
+  "payroll_contributions.certificato_agibilita_inps": {
+    "canonical_name": "certificato di agibilità INPS",
+    "aliases": [
+      "certificato di agibilità INPS",
+      "CERTIFICATO DI AGIBILITÀ INPS",
+      "certificato di agibilita INPS",
+      "certificato agibilita inps"
+    ],
+    "synonyms": [
+      "modulo certificato di agibilità INPS",
+      "prospetto certificato di agibilità INPS",
+      "Istituto nazionale previdenza sociale"
+    ]
+  },
+  "payroll_contributions.certificazione_retribuzioni": {
+    "canonical_name": "certificazione retribuzioni",
+    "aliases": [
+      "CERTIFICAZIONE RETRIBUZIONI",
+      "Certificazione Retribuzioni",
+      "certificazione retribuzioni"
+    ],
+    "synonyms": [
+      "modulo certificazione retribuzioni"
+    ]
+  },
+  "payroll_contributions.denuncia_uniemens": {
+    "canonical_name": "denuncia UNIEMENS",
+    "aliases": [
+      "DENUNCIA UNIEMENS",
+      "Denuncia Uniemens",
+      "denuncia UNIEMENS",
+      "denuncia uniemens"
+    ],
+    "synonyms": [
+      "modulo denuncia UNIEMENS"
+    ]
+  },
+  "payroll_contributions.distinta_stipendi": {
+    "canonical_name": "distinta stipendi",
+    "aliases": [
+      "DISTINTA STIPENDI",
+      "Distinta Stipendi",
+      "distinta stipendi"
+    ],
+    "synonyms": [
+      "modulo distinta stipendi"
+    ]
+  },
+  "payroll_contributions.durc": {
+    "canonical_name": "DURC",
+    "aliases": [
+      "DURC",
+      "Durc",
+      "durc"
+    ],
+    "synonyms": [
+      "modulo DURC"
+    ]
+  },
+  "payroll_contributions.estratto_conto_contributivo": {
+    "canonical_name": "estratto conto contributivo",
+    "aliases": [
+      "estratto conto contributivo",
+      "ESTRATTO CONTO CONTRIBUTIVO"
+    ],
+    "synonyms": [
+      "modulo estratto conto contributivo",
+      "prospetto estratto conto contributivo"
+    ]
+  },
+  "payroll_contributions.f24_contributi": {
+    "canonical_name": "F24 contributi",
+    "aliases": [
+      "F24 CONTRIBUTI",
+      "F24 Contributi",
+      "F24 contributi",
+      "f24 contributi"
+    ],
+    "synonyms": [
+      "modulo F24 contributi"
+    ]
+  },
+  "payroll_contributions.prospetto_contributivo": {
+    "canonical_name": "prospetto contributivo",
+    "aliases": [
+      "PROSPETTO CONTRIBUTIVO",
+      "Prospetto Contributivo",
+      "prospetto contributivo"
+    ],
+    "synonyms": [
+      "modulo prospetto contributivo"
+    ]
+  },
+  "payroll_contributions.prospetto_ferie_permessi": {
+    "canonical_name": "prospetto ferie permessi",
+    "aliases": [
+      "PROSPETTO FERIE PERMESSI",
+      "Prospetto Ferie Permessi",
+      "prospetto ferie permessi"
+    ],
+    "synonyms": [
+      "modulo prospetto ferie permessi"
+    ]
+  },
+  "payroll_contributions.prospetto_tfr": {
+    "canonical_name": "prospetto TFR",
+    "aliases": [
+      "PROSPETTO TFR",
+      "Prospetto Tfr",
+      "prospetto TFR",
+      "prospetto tfr"
+    ],
+    "synonyms": [
+      "modulo prospetto TFR"
+    ]
+  },
+  "pnrr_esg.attestazione_parit_genere": {
+    "canonical_name": "attestazione parità genere",
+    "aliases": [
+      "ATTESTAZIONE PARITÀ GENERE",
+      "Attestazione Parità Genere",
+      "attestazione parità genere",
+      "attestazione parita genere",
+      "attestazione parit genere"
+    ],
+    "synonyms": [
+      "modulo attestazione parità genere"
+    ]
+  },
+  "pnrr_esg.attestazione_parita_genere": {
+    "canonical_name": "attestazione parità genere",
+    "aliases": [
+      "ATTESTAZIONE PARITÀ GENERE",
+      "Attestazione Parità Genere",
+      "attestazione parità genere",
+      "attestazione parita genere"
+    ],
+    "synonyms": [
+      "modulo attestazione parità genere"
+    ]
+  },
+  "pnrr_esg.checklist_pnrr": {
+    "canonical_name": "checklist PNRR",
+    "aliases": [
+      "CHECKLIST PNRR",
+      "Checklist Pnrr",
+      "checklist PNRR",
+      "checklist pnrr"
+    ],
+    "synonyms": [
+      "modulo checklist PNRR"
+    ]
+  },
+  "pnrr_esg.dichiarazione_assenza_doppio_finanziamento": {
+    "canonical_name": "dichiarazione assenza doppio finanziamento",
+    "aliases": [
+      "DICHIARAZIONE ASSENZA DOPPIO FINANZIAMENTO",
+      "Dichiarazione Assenza Doppio Finanziamento",
+      "dichiarazione assenza doppio finanziamento"
+    ],
+    "synonyms": [
+      "modulo dichiarazione assenza doppio finanziamento"
+    ]
+  },
+  "pnrr_esg.dichiarazione_conflitto_interessi": {
+    "canonical_name": "dichiarazione conflitto interessi",
+    "aliases": [
+      "DICHIARAZIONE CONFLITTO INTERESSI",
+      "Dichiarazione Conflitto Interessi",
+      "dichiarazione conflitto interessi"
+    ],
+    "synonyms": [
+      "modulo dichiarazione conflitto interessi"
+    ]
+  },
+  "pnrr_esg.dichiarazione_dnsh": {
+    "canonical_name": "dichiarazione DNSH",
+    "aliases": [
+      "DICHIARAZIONE DNSH",
+      "Dichiarazione Dnsh",
+      "dichiarazione DNSH",
+      "dichiarazione dnsh"
+    ],
+    "synonyms": [
+      "modulo dichiarazione DNSH"
+    ]
+  },
+  "pnrr_esg.dichiarazione_titolare_effettivo": {
+    "canonical_name": "dichiarazione titolare effettivo",
+    "aliases": [
+      "DICHIARAZIONE TITOLARE EFFETTIVO",
+      "Dichiarazione Titolare Effettivo",
+      "dichiarazione titolare effettivo"
+    ],
+    "synonyms": [
+      "modulo dichiarazione titolare effettivo"
+    ]
+  },
+  "pnrr_esg.inventario_ghg": {
+    "canonical_name": "inventario GHG",
+    "aliases": [
+      "inventario GHG",
+      "INVENTARIO GHG",
+      "inventario ghg"
+    ],
+    "synonyms": [
+      "modulo inventario GHG",
+      "prospetto inventario GHG",
+      "gas a effetto serra"
+    ]
+  },
+  "pnrr_esg.questionario_esg_fornitore": {
+    "canonical_name": "questionario ESG fornitore",
+    "aliases": [
+      "questionario ESG fornitore",
+      "QUESTIONARIO ESG FORNITORE",
+      "questionario esg fornitore"
+    ],
+    "synonyms": [
+      "modulo questionario ESG fornitore",
+      "prospetto questionario ESG fornitore"
+    ]
+  },
+  "pnrr_esg.rapporto_gender_pay_gap": {
+    "canonical_name": "rapporto gender pay gap",
+    "aliases": [
+      "rapporto gender pay gap",
+      "RAPPORTO GENDER PAY GAP"
+    ],
+    "synonyms": [
+      "modulo rapporto gender pay gap",
+      "prospetto rapporto gender pay gap"
+    ]
+  },
+  "pnrr_esg.relazione_cam": {
+    "canonical_name": "relazione CAM",
+    "aliases": [
+      "RELAZIONE CAM",
+      "Relazione Cam",
+      "relazione CAM",
+      "relazione cam"
+    ],
+    "synonyms": [
+      "modulo relazione CAM"
+    ]
+  },
+  "pnrr_esg.relazione_emissioni_ghg": {
+    "canonical_name": "relazione emissioni GHG",
+    "aliases": [
+      "relazione emissioni GHG",
+      "RELAZIONE EMISSIONI GHG",
+      "relazione emissioni ghg"
+    ],
+    "synonyms": [
+      "modulo relazione emissioni GHG",
+      "prospetto relazione emissioni GHG",
+      "gas a effetto serra"
+    ]
+  },
+  "pnrr_esg.relazione_sostenibilit": {
+    "canonical_name": "relazione sostenibilità",
+    "aliases": [
+      "RELAZIONE SOSTENIBILITÀ",
+      "Relazione Sostenibilità",
+      "relazione sostenibilità",
+      "relazione sostenibilita",
+      "relazione sostenibilit"
+    ],
+    "synonyms": [
+      "modulo relazione sostenibilità"
+    ]
+  },
+  "pnrr_esg.relazione_sostenibilita": {
+    "canonical_name": "relazione sostenibilità",
+    "aliases": [
+      "RELAZIONE SOSTENIBILITÀ",
+      "Relazione Sostenibilità",
+      "relazione sostenibilità",
+      "relazione sostenibilita"
+    ],
+    "synonyms": [
+      "modulo relazione sostenibilità"
+    ]
+  },
+  "pnrr_esg.report_avanzamento_pnrr": {
+    "canonical_name": "report avanzamento PNRR",
+    "aliases": [
+      "report avanzamento PNRR",
+      "REPORT AVANZAMENTO PNRR",
+      "report avanzamento pnrr"
+    ],
+    "synonyms": [
+      "modulo report avanzamento PNRR",
+      "prospetto report avanzamento PNRR",
+      "piano nazionale ripresa resilienza"
+    ]
+  },
+  "privacy_gdpr.accordo_contitolarita": {
+    "canonical_name": "accordo di contitolarità",
+    "aliases": [
+      "accordo di contitolarità",
+      "ACCORDO DI CONTITOLARITÀ",
+      "accordo di contitolarita",
+      "accordo contitolarita"
+    ],
+    "synonyms": [
+      "modulo accordo di contitolarità",
+      "prospetto accordo di contitolarità"
+    ]
+  },
+  "privacy_gdpr.consenso_privacy": {
+    "canonical_name": "consenso privacy",
+    "aliases": [
+      "CONSENSO PRIVACY",
+      "Consenso Privacy",
+      "consenso privacy"
+    ],
+    "synonyms": [
+      "modulo consenso privacy"
+    ]
+  },
+  "privacy_gdpr.data_breach_report": {
+    "canonical_name": "data breach report",
+    "aliases": [
+      "DATA BREACH REPORT",
+      "Data Breach Report",
+      "data breach report"
+    ],
+    "synonyms": [
+      "modulo data breach report"
+    ]
+  },
+  "privacy_gdpr.dpia": {
+    "canonical_name": "DPIA",
+    "aliases": [
+      "DPIA",
+      "Dpia",
+      "dpia"
+    ],
+    "synonyms": [
+      "modulo DPIA"
+    ]
+  },
+  "privacy_gdpr.informativa_privacy": {
+    "canonical_name": "informativa privacy",
+    "aliases": [
+      "INFORMATIVA PRIVACY",
+      "Informativa Privacy",
+      "informativa privacy"
+    ],
+    "synonyms": [
+      "modulo informativa privacy"
+    ]
+  },
+  "privacy_gdpr.nomina_autorizzato_trattamento": {
+    "canonical_name": "nomina autorizzato trattamento",
+    "aliases": [
+      "NOMINA AUTORIZZATO TRATTAMENTO",
+      "Nomina Autorizzato Trattamento",
+      "nomina autorizzato trattamento"
+    ],
+    "synonyms": [
+      "modulo nomina autorizzato trattamento"
+    ]
+  },
+  "privacy_gdpr.nomina_dpo": {
+    "canonical_name": "nomina DPO",
+    "aliases": [
+      "nomina DPO",
+      "NOMINA DPO",
+      "nomina dpo"
+    ],
+    "synonyms": [
+      "modulo nomina DPO",
+      "prospetto nomina DPO",
+      "responsabile protezione dati"
+    ]
+  },
+  "privacy_gdpr.nomina_responsabile_trattamento": {
+    "canonical_name": "nomina responsabile trattamento",
+    "aliases": [
+      "NOMINA RESPONSABILE TRATTAMENTO",
+      "Nomina Responsabile Trattamento",
+      "nomina responsabile trattamento"
+    ],
+    "synonyms": [
+      "modulo nomina responsabile trattamento"
+    ]
+  },
+  "privacy_gdpr.notifica_data_breach_garante": {
+    "canonical_name": "notifica data breach al Garante",
+    "aliases": [
+      "notifica data breach al Garante",
+      "NOTIFICA DATA BREACH AL GARANTE",
+      "notifica data breach garante"
+    ],
+    "synonyms": [
+      "modulo notifica data breach al Garante",
+      "prospetto notifica data breach al Garante"
+    ]
+  },
+  "privacy_gdpr.registro_consensi": {
+    "canonical_name": "registro consensi privacy",
+    "aliases": [
+      "registro consensi privacy",
+      "REGISTRO CONSENSI PRIVACY",
+      "registro consensi"
+    ],
+    "synonyms": [
+      "modulo registro consensi privacy",
+      "prospetto registro consensi privacy"
+    ]
+  },
+  "privacy_gdpr.registro_data_breach": {
+    "canonical_name": "registro delle violazioni dati",
+    "aliases": [
+      "registro delle violazioni dati",
+      "REGISTRO DELLE VIOLAZIONI DATI",
+      "registro data breach"
+    ],
+    "synonyms": [
+      "modulo registro delle violazioni dati",
+      "prospetto registro delle violazioni dati"
+    ]
+  },
+  "privacy_gdpr.registro_trattamenti": {
+    "canonical_name": "registro trattamenti",
+    "aliases": [
+      "REGISTRO TRATTAMENTI",
+      "Registro Trattamenti",
+      "registro trattamenti"
+    ],
+    "synonyms": [
+      "modulo registro trattamenti"
+    ]
+  },
+  "privacy_gdpr.richiesta_esercizio_diritti_gdpr": {
+    "canonical_name": "richiesta esercizio diritti GDPR",
+    "aliases": [
+      "RICHIESTA ESERCIZIO DIRITTI GDPR",
+      "Richiesta Esercizio Diritti Gdpr",
+      "richiesta esercizio diritti GDPR",
+      "richiesta esercizio diritti gdpr"
+    ],
+    "synonyms": [
+      "modulo richiesta esercizio diritti GDPR"
+    ]
+  },
+  "privacy_gdpr.valutazione_legittimo_interesse": {
+    "canonical_name": "valutazione legittimo interesse",
+    "aliases": [
+      "valutazione legittimo interesse",
+      "VALUTAZIONE LEGITTIMO INTERESSE"
+    ],
+    "synonyms": [
+      "modulo valutazione legittimo interesse",
+      "prospetto valutazione legittimo interesse"
+    ]
+  },
+  "procurement.anagrafica_fornitore": {
+    "canonical_name": "anagrafica fornitore",
+    "aliases": [
+      "anagrafica fornitore",
+      "ANAGRAFICA FORNITORE"
+    ],
+    "synonyms": [
+      "modulo anagrafica fornitore",
+      "prospetto anagrafica fornitore"
+    ]
+  },
+  "procurement.catalogo_fornitore": {
+    "canonical_name": "catalogo fornitore",
+    "aliases": [
+      "catalogo fornitore",
+      "CATALOGO FORNITORE"
+    ],
+    "synonyms": [
+      "modulo catalogo fornitore",
+      "prospetto catalogo fornitore"
+    ]
+  },
+  "procurement.conferma_ordine": {
+    "canonical_name": "conferma ordine",
+    "aliases": [
+      "CONFERMA ORDINE",
+      "Conferma Ordine",
+      "conferma ordine"
+    ],
+    "synonyms": [
+      "modulo conferma ordine"
+    ]
+  },
+  "procurement.contestazione_fornitura": {
+    "canonical_name": "contestazione fornitura",
+    "aliases": [
+      "CONTESTAZIONE FORNITURA",
+      "Contestazione Fornitura",
+      "contestazione fornitura"
+    ],
+    "synonyms": [
+      "modulo contestazione fornitura"
+    ]
+  },
+  "procurement.ddt": {
+    "canonical_name": "DDT",
+    "aliases": [
+      "DDT",
+      "Ddt",
+      "ddt"
+    ],
+    "synonyms": [
+      "modulo DDT"
+    ]
+  },
+  "procurement.dichiarazione_conflitto_interessi_fornitore": {
+    "canonical_name": "dichiarazione conflitto interessi fornitore",
+    "aliases": [
+      "dichiarazione conflitto interessi fornitore",
+      "DICHIARAZIONE CONFLITTO INTERESSI FORNITORE"
+    ],
+    "synonyms": [
+      "modulo dichiarazione conflitto interessi fornitore",
+      "prospetto dichiarazione conflitto interessi fornitore"
+    ]
+  },
+  "procurement.listino_prezzi_fornitore": {
+    "canonical_name": "listino prezzi fornitore",
+    "aliases": [
+      "listino prezzi fornitore",
+      "LISTINO PREZZI FORNITORE"
+    ],
+    "synonyms": [
+      "modulo listino prezzi fornitore",
+      "prospetto listino prezzi fornitore"
+    ]
+  },
+  "procurement.offerta_commerciale": {
+    "canonical_name": "offerta commerciale",
+    "aliases": [
+      "OFFERTA COMMERCIALE",
+      "Offerta Commerciale",
+      "offerta commerciale"
+    ],
+    "synonyms": [
+      "modulo offerta commerciale"
+    ]
+  },
+  "procurement.ordine_acquisto": {
+    "canonical_name": "ordine acquisto",
+    "aliases": [
+      "ORDINE ACQUISTO",
+      "Ordine Acquisto",
+      "ordine acquisto"
+    ],
+    "synonyms": [
+      "modulo ordine acquisto"
+    ]
+  },
+  "procurement.ordine_aperto": {
+    "canonical_name": "ordine aperto",
+    "aliases": [
+      "ordine aperto",
+      "ORDINE APERTO"
+    ],
+    "synonyms": [
+      "modulo ordine aperto",
+      "prospetto ordine aperto"
+    ]
+  },
+  "procurement.preventivo": {
+    "canonical_name": "preventivo",
+    "aliases": [
+      "PREVENTIVO",
+      "Preventivo",
+      "preventivo"
+    ],
+    "synonyms": [
+      "modulo preventivo"
+    ]
+  },
+  "procurement.questionario_qualifica_fornitore": {
+    "canonical_name": "questionario qualifica fornitore",
+    "aliases": [
+      "questionario qualifica fornitore",
+      "QUESTIONARIO QUALIFICA FORNITORE"
+    ],
+    "synonyms": [
+      "modulo questionario qualifica fornitore",
+      "prospetto questionario qualifica fornitore"
+    ]
+  },
+  "procurement.reclamo_fornitore": {
+    "canonical_name": "reclamo al fornitore",
+    "aliases": [
+      "reclamo al fornitore",
+      "RECLAMO AL FORNITORE",
+      "reclamo fornitore"
+    ],
+    "synonyms": [
+      "modulo reclamo al fornitore",
+      "prospetto reclamo al fornitore"
+    ]
+  },
+  "procurement.richiesta_acquisto": {
+    "canonical_name": "richiesta di acquisto",
+    "aliases": [
+      "richiesta di acquisto",
+      "RICHIESTA DI ACQUISTO",
+      "richiesta acquisto"
+    ],
+    "synonyms": [
+      "modulo richiesta di acquisto",
+      "prospetto richiesta di acquisto"
+    ]
+  },
+  "procurement.richiesta_offerta": {
+    "canonical_name": "richiesta offerta",
+    "aliases": [
+      "RICHIESTA OFFERTA",
+      "Richiesta Offerta",
+      "richiesta offerta"
+    ],
+    "synonyms": [
+      "modulo richiesta offerta"
+    ]
+  },
+  "procurement.vendor_scorecard": {
+    "canonical_name": "scheda valutazione fornitore",
+    "aliases": [
+      "scheda valutazione fornitore",
+      "SCHEDA VALUTAZIONE FORNITORE",
+      "vendor scorecard"
+    ],
+    "synonyms": [
+      "modulo scheda valutazione fornitore",
+      "prospetto scheda valutazione fornitore"
+    ]
+  },
+  "procurement.verbale_consegna": {
+    "canonical_name": "verbale consegna",
+    "aliases": [
+      "VERBALE CONSEGNA",
+      "Verbale Consegna",
+      "verbale consegna"
+    ],
+    "synonyms": [
+      "modulo verbale consegna"
+    ]
+  },
+  "procurement.verbale_valutazione_offerte": {
+    "canonical_name": "verbale valutazione offerte",
+    "aliases": [
+      "verbale valutazione offerte",
+      "VERBALE VALUTAZIONE OFFERTE"
+    ],
+    "synonyms": [
+      "modulo verbale valutazione offerte",
+      "prospetto verbale valutazione offerte"
+    ]
+  },
+  "public_contracts.atto_sottomissione": {
+    "canonical_name": "atto sottomissione",
+    "aliases": [
+      "ATTO SOTTOMISSIONE",
+      "Atto Sottomissione",
+      "atto sottomissione"
+    ],
+    "synonyms": [
+      "modulo atto sottomissione"
+    ]
+  },
+  "public_contracts.certificato_regolare_esecuzione": {
+    "canonical_name": "certificato regolare esecuzione",
+    "aliases": [
+      "CERTIFICATO REGOLARE ESECUZIONE",
+      "Certificato Regolare Esecuzione",
+      "certificato regolare esecuzione"
+    ],
+    "synonyms": [
+      "modulo certificato regolare esecuzione"
+    ]
+  },
+  "public_contracts.certificato_ultimazione_lavori": {
+    "canonical_name": "certificato ultimazione lavori",
+    "aliases": [
+      "CERTIFICATO ULTIMAZIONE LAVORI",
+      "Certificato Ultimazione Lavori",
+      "certificato ultimazione lavori"
+    ],
+    "synonyms": [
+      "modulo certificato ultimazione lavori"
+    ]
+  },
+  "public_contracts.collaudo_lavori": {
+    "canonical_name": "collaudo lavori",
+    "aliases": [
+      "COLLAUDO LAVORI",
+      "Collaudo Lavori",
+      "collaudo lavori"
+    ],
+    "synonyms": [
+      "modulo collaudo lavori"
+    ]
+  },
+  "public_contracts.contratto_appalto_pubblico": {
+    "canonical_name": "contratto appalto pubblico",
+    "aliases": [
+      "CONTRATTO APPALTO PUBBLICO",
+      "Contratto Appalto Pubblico",
+      "contratto appalto pubblico"
+    ],
+    "synonyms": [
+      "modulo contratto appalto pubblico"
+    ]
+  },
+  "public_contracts.determina_aggiudicazione": {
+    "canonical_name": "determina aggiudicazione",
+    "aliases": [
+      "DETERMINA AGGIUDICAZIONE",
+      "Determina Aggiudicazione",
+      "determina aggiudicazione"
+    ],
+    "synonyms": [
+      "modulo determina aggiudicazione"
+    ]
+  },
+  "public_contracts.ordine_servizio": {
+    "canonical_name": "ordine servizio",
+    "aliases": [
+      "ORDINE SERVIZIO",
+      "Ordine Servizio",
+      "ordine servizio"
+    ],
+    "synonyms": [
+      "modulo ordine servizio"
+    ]
+  },
+  "public_contracts.verbale_aggiudicazione": {
+    "canonical_name": "verbale aggiudicazione",
+    "aliases": [
+      "VERBALE AGGIUDICAZIONE",
+      "Verbale Aggiudicazione",
+      "verbale aggiudicazione"
+    ],
+    "synonyms": [
+      "modulo verbale aggiudicazione"
+    ]
+  },
+  "public_procurement.bando_gara": {
+    "canonical_name": "bando gara",
+    "aliases": [
+      "BANDO GARA",
+      "Bando Gara",
+      "bando gara"
+    ],
+    "synonyms": [
+      "modulo bando gara"
+    ]
+  },
+  "public_procurement.capitolato_speciale_appalto": {
+    "canonical_name": "capitolato speciale appalto",
+    "aliases": [
+      "CAPITOLATO SPECIALE APPALTO",
+      "Capitolato Speciale Appalto",
+      "capitolato speciale appalto"
+    ],
+    "synonyms": [
+      "modulo capitolato speciale appalto"
+    ]
+  },
+  "public_procurement.dgue": {
+    "canonical_name": "DGUE",
+    "aliases": [
+      "DGUE",
+      "Dgue",
+      "dgue"
+    ],
+    "synonyms": [
+      "modulo DGUE"
+    ]
+  },
+  "public_procurement.dichiarazione_requisiti_art_94": {
+    "canonical_name": "dichiarazione requisiti art 94",
+    "aliases": [
+      "DICHIARAZIONE REQUISITI ART 94",
+      "Dichiarazione Requisiti Art 94",
+      "dichiarazione requisiti art 94"
+    ],
+    "synonyms": [
+      "modulo dichiarazione requisiti art 94"
+    ]
+  },
+  "public_procurement.disciplinare_gara": {
+    "canonical_name": "disciplinare gara",
+    "aliases": [
+      "DISCIPLINARE GARA",
+      "Disciplinare Gara",
+      "disciplinare gara"
+    ],
+    "synonyms": [
+      "modulo disciplinare gara"
+    ]
+  },
+  "public_procurement.lettera_invito": {
+    "canonical_name": "lettera invito",
+    "aliases": [
+      "LETTERA INVITO",
+      "Lettera Invito",
+      "lettera invito"
+    ],
+    "synonyms": [
+      "modulo lettera invito"
+    ]
+  },
+  "public_procurement.offerta_economica_gara": {
+    "canonical_name": "offerta economica gara",
+    "aliases": [
+      "OFFERTA ECONOMICA GARA",
+      "Offerta Economica Gara",
+      "offerta economica gara"
+    ],
+    "synonyms": [
+      "modulo offerta economica gara"
+    ]
+  },
+  "public_procurement.offerta_tecnica_gara": {
+    "canonical_name": "offerta tecnica gara",
+    "aliases": [
+      "OFFERTA TECNICA GARA",
+      "Offerta Tecnica Gara",
+      "offerta tecnica gara"
+    ],
+    "synonyms": [
+      "modulo offerta tecnica gara"
+    ]
+  },
+  "quality_iso.azione_correttiva": {
+    "canonical_name": "azione correttiva",
+    "aliases": [
+      "AZIONE CORRETTIVA",
+      "Azione Correttiva",
+      "azione correttiva"
+    ],
+    "synonyms": [
+      "modulo azione correttiva"
+    ]
+  },
+  "quality_iso.certificato_iso_27001": {
+    "canonical_name": "certificato ISO 27001",
+    "aliases": [
+      "certificato ISO 27001",
+      "CERTIFICATO ISO 27001",
+      "certificato iso 27001"
+    ],
+    "synonyms": [
+      "modulo certificato ISO 27001",
+      "prospetto certificato ISO 27001"
+    ]
+  },
+  "quality_iso.certificato_iso_45001": {
+    "canonical_name": "certificato ISO 45001",
+    "aliases": [
+      "certificato ISO 45001",
+      "CERTIFICATO ISO 45001",
+      "certificato iso 45001"
+    ],
+    "synonyms": [
+      "modulo certificato ISO 45001",
+      "prospetto certificato ISO 45001"
+    ]
+  },
+  "quality_iso.certificato_iso_50001": {
+    "canonical_name": "certificato ISO 50001",
+    "aliases": [
+      "certificato ISO 50001",
+      "CERTIFICATO ISO 50001",
+      "certificato iso 50001"
+    ],
+    "synonyms": [
+      "modulo certificato ISO 50001",
+      "prospetto certificato ISO 50001"
+    ]
+  },
+  "quality_iso.certificato_iso_9001": {
+    "canonical_name": "certificato ISO 9001",
+    "aliases": [
+      "CERTIFICATO ISO 9001",
+      "Certificato Iso 9001",
+      "certificato ISO 9001",
+      "certificato iso 9001"
+    ],
+    "synonyms": [
+      "modulo certificato ISO 9001"
+    ]
+  },
+  "quality_iso.certificato_taratura": {
+    "canonical_name": "certificato di taratura",
+    "aliases": [
+      "certificato di taratura",
+      "CERTIFICATO DI TARATURA",
+      "certificato taratura"
+    ],
+    "synonyms": [
+      "modulo certificato di taratura",
+      "prospetto certificato di taratura"
+    ]
+  },
+  "quality_iso.istruzione_operativa": {
+    "canonical_name": "istruzione operativa",
+    "aliases": [
+      "ISTRUZIONE OPERATIVA",
+      "Istruzione Operativa",
+      "istruzione operativa"
+    ],
+    "synonyms": [
+      "modulo istruzione operativa"
+    ]
+  },
+  "quality_iso.manuale_qualit": {
+    "canonical_name": "manuale qualità",
+    "aliases": [
+      "MANUALE QUALITÀ",
+      "Manuale Qualità",
+      "manuale qualità",
+      "manuale qualita",
+      "manuale qualit"
+    ],
+    "synonyms": [
+      "modulo manuale qualità"
+    ]
+  },
+  "quality_iso.manuale_qualita": {
+    "canonical_name": "manuale qualità",
+    "aliases": [
+      "MANUALE QUALITÀ",
+      "Manuale Qualità",
+      "manuale qualità",
+      "manuale qualita"
+    ],
+    "synonyms": [
+      "modulo manuale qualità"
+    ]
+  },
+  "quality_iso.piano_audit": {
+    "canonical_name": "piano di audit",
+    "aliases": [
+      "piano di audit",
+      "PIANO DI AUDIT",
+      "piano audit"
+    ],
+    "synonyms": [
+      "modulo piano di audit",
+      "prospetto piano di audit"
+    ]
+  },
+  "quality_iso.piano_controllo_qualita": {
+    "canonical_name": "piano controllo qualità",
+    "aliases": [
+      "piano controllo qualità",
+      "PIANO CONTROLLO QUALITÀ",
+      "piano controllo qualita"
+    ],
+    "synonyms": [
+      "modulo piano controllo qualità",
+      "prospetto piano controllo qualità"
+    ]
+  },
+  "quality_iso.piano_haccp": {
+    "canonical_name": "piano HACCP",
+    "aliases": [
+      "piano HACCP",
+      "PIANO HACCP",
+      "piano haccp"
+    ],
+    "synonyms": [
+      "modulo piano HACCP",
+      "prospetto piano HACCP"
+    ]
+  },
+  "quality_iso.piano_miglioramento": {
+    "canonical_name": "piano miglioramento",
+    "aliases": [
+      "PIANO MIGLIORAMENTO",
+      "Piano Miglioramento",
+      "piano miglioramento"
+    ],
+    "synonyms": [
+      "modulo piano miglioramento"
+    ]
+  },
+  "quality_iso.procedura_qualit": {
+    "canonical_name": "procedura qualità",
+    "aliases": [
+      "PROCEDURA QUALITÀ",
+      "Procedura Qualità",
+      "procedura qualità",
+      "procedura qualita",
+      "procedura qualit"
+    ],
+    "synonyms": [
+      "modulo procedura qualità"
+    ]
+  },
+  "quality_iso.procedura_qualita": {
+    "canonical_name": "procedura qualità",
+    "aliases": [
+      "PROCEDURA QUALITÀ",
+      "Procedura Qualità",
+      "procedura qualità",
+      "procedura qualita"
+    ],
+    "synonyms": [
+      "modulo procedura qualità"
+    ]
+  },
+  "quality_iso.rapporto_audit_fornitore": {
+    "canonical_name": "rapporto audit fornitore",
+    "aliases": [
+      "rapporto audit fornitore",
+      "RAPPORTO AUDIT FORNITORE"
+    ],
+    "synonyms": [
+      "modulo rapporto audit fornitore",
+      "prospetto rapporto audit fornitore"
+    ]
+  },
+  "quality_iso.rapporto_ispezione": {
+    "canonical_name": "rapporto di ispezione",
+    "aliases": [
+      "rapporto di ispezione",
+      "RAPPORTO DI ISPEZIONE",
+      "rapporto ispezione"
+    ],
+    "synonyms": [
+      "modulo rapporto di ispezione",
+      "prospetto rapporto di ispezione"
+    ]
+  },
+  "quality_iso.rapporto_non_conformit": {
+    "canonical_name": "rapporto non conformità",
+    "aliases": [
+      "RAPPORTO NON CONFORMITÀ",
+      "Rapporto Non Conformità",
+      "rapporto non conformità",
+      "rapporto non conformita",
+      "rapporto non conformit"
+    ],
+    "synonyms": [
+      "modulo rapporto non conformità"
+    ]
+  },
+  "quality_iso.rapporto_non_conformita": {
+    "canonical_name": "rapporto non conformità",
+    "aliases": [
+      "RAPPORTO NON CONFORMITÀ",
+      "Rapporto Non Conformità",
+      "rapporto non conformità",
+      "rapporto non conformita"
+    ],
+    "synonyms": [
+      "modulo rapporto non conformità"
+    ]
+  },
+  "quality_iso.verbale_audit_interno": {
+    "canonical_name": "verbale audit interno",
+    "aliases": [
+      "VERBALE AUDIT INTERNO",
+      "Verbale Audit Interno",
+      "verbale audit interno"
+    ],
+    "synonyms": [
+      "modulo verbale audit interno"
+    ]
+  },
+  "real_estate.ape": {
+    "canonical_name": "APE",
+    "aliases": [
+      "APE",
+      "Ape",
+      "ape"
+    ],
+    "synonyms": [
+      "modulo APE"
+    ]
+  },
+  "real_estate.certificato_agibilit": {
+    "canonical_name": "certificato agibilità",
+    "aliases": [
+      "CERTIFICATO AGIBILITÀ",
+      "Certificato Agibilità",
+      "certificato agibilità",
+      "certificato agibilita",
+      "certificato agibilit"
+    ],
+    "synonyms": [
+      "modulo certificato agibilità"
+    ]
+  },
+  "real_estate.certificato_agibilita": {
+    "canonical_name": "certificato agibilità",
+    "aliases": [
+      "CERTIFICATO AGIBILITÀ",
+      "Certificato Agibilità",
+      "certificato agibilità",
+      "certificato agibilita"
+    ],
+    "synonyms": [
+      "modulo certificato agibilità"
+    ]
+  },
+  "real_estate.contratto_comodato": {
+    "canonical_name": "contratto comodato",
+    "aliases": [
+      "CONTRATTO COMODATO",
+      "Contratto Comodato",
+      "contratto comodato"
+    ],
+    "synonyms": [
+      "modulo contratto comodato"
+    ]
+  },
+  "real_estate.contratto_locazione": {
+    "canonical_name": "contratto locazione",
+    "aliases": [
+      "CONTRATTO LOCAZIONE",
+      "Contratto Locazione",
+      "contratto locazione"
+    ],
+    "synonyms": [
+      "modulo contratto locazione"
+    ]
+  },
+  "real_estate.planimetria_catastale": {
+    "canonical_name": "planimetria catastale",
+    "aliases": [
+      "PLANIMETRIA CATASTALE",
+      "Planimetria Catastale",
+      "planimetria catastale"
+    ],
+    "synonyms": [
+      "modulo planimetria catastale"
+    ]
+  },
+  "real_estate.proposta_locazione": {
+    "canonical_name": "proposta di locazione",
+    "aliases": [
+      "proposta di locazione",
+      "PROPOSTA DI LOCAZIONE",
+      "proposta locazione"
+    ],
+    "synonyms": [
+      "modulo proposta di locazione",
+      "prospetto proposta di locazione"
+    ]
+  },
+  "real_estate.rogito_compravendita": {
+    "canonical_name": "rogito compravendita",
+    "aliases": [
+      "ROGITO COMPRAVENDITA",
+      "Rogito Compravendita",
+      "rogito compravendita"
+    ],
+    "synonyms": [
+      "modulo rogito compravendita"
+    ]
+  },
+  "real_estate.verbale_consegna_immobile": {
+    "canonical_name": "verbale consegna immobile",
+    "aliases": [
+      "VERBALE CONSEGNA IMMOBILE",
+      "Verbale Consegna Immobile",
+      "verbale consegna immobile"
+    ],
+    "synonyms": [
+      "modulo verbale consegna immobile"
+    ]
+  },
+  "real_estate.verbale_riconsegna_immobile": {
+    "canonical_name": "verbale riconsegna immobile",
+    "aliases": [
+      "verbale riconsegna immobile",
+      "VERBALE RICONSEGNA IMMOBILE"
+    ],
+    "synonyms": [
+      "modulo verbale riconsegna immobile",
+      "prospetto verbale riconsegna immobile"
+    ]
+  },
+  "real_estate.visura_catastale": {
+    "canonical_name": "visura catastale",
+    "aliases": [
+      "VISURA CATASTALE",
+      "Visura Catastale",
+      "visura catastale"
+    ],
+    "synonyms": [
+      "modulo visura catastale"
+    ]
+  },
+  "rentals.contratto_noleggio_breve_termine": {
+    "canonical_name": "contratto noleggio breve termine",
+    "aliases": [
+      "contratto noleggio breve termine",
+      "CONTRATTO NOLEGGIO BREVE TERMINE"
+    ],
+    "synonyms": [
+      "modulo contratto noleggio breve termine",
+      "prospetto contratto noleggio breve termine"
+    ]
+  },
+  "rentals.contratto_noleggio_operativo": {
+    "canonical_name": "contratto noleggio operativo",
+    "aliases": [
+      "contratto noleggio operativo",
+      "CONTRATTO NOLEGGIO OPERATIVO"
+    ],
+    "synonyms": [
+      "modulo contratto noleggio operativo",
+      "prospetto contratto noleggio operativo"
+    ]
+  },
+  "rentals.verbale_consegna_bene_noleggiato": {
+    "canonical_name": "verbale consegna bene noleggiato",
+    "aliases": [
+      "verbale consegna bene noleggiato",
+      "VERBALE CONSEGNA BENE NOLEGGIATO"
+    ],
+    "synonyms": [
+      "modulo verbale consegna bene noleggiato",
+      "prospetto verbale consegna bene noleggiato"
+    ]
+  },
+  "sales_crm.forecast_vendite": {
+    "canonical_name": "forecast vendite",
+    "aliases": [
+      "forecast vendite",
+      "FORECAST VENDITE"
+    ],
+    "synonyms": [
+      "modulo forecast vendite",
+      "prospetto forecast vendite"
+    ]
+  },
+  "sales_crm.rapporto_visita_commerciale": {
+    "canonical_name": "rapporto visita commerciale",
+    "aliases": [
+      "rapporto visita commerciale",
+      "RAPPORTO VISITA COMMERCIALE"
+    ],
+    "synonyms": [
+      "modulo rapporto visita commerciale",
+      "prospetto rapporto visita commerciale"
+    ]
+  },
+  "sales_crm.scheda_cliente": {
+    "canonical_name": "scheda cliente CRM",
+    "aliases": [
+      "scheda cliente CRM",
+      "SCHEDA CLIENTE CRM",
+      "scheda cliente"
+    ],
+    "synonyms": [
+      "modulo scheda cliente CRM",
+      "prospetto scheda cliente CRM",
+      "gestione relazioni clienti"
+    ]
+  },
+  "sales_crm.scheda_lead": {
+    "canonical_name": "scheda lead commerciale",
+    "aliases": [
+      "scheda lead commerciale",
+      "SCHEDA LEAD COMMERCIALE",
+      "scheda lead"
+    ],
+    "synonyms": [
+      "modulo scheda lead commerciale",
+      "prospetto scheda lead commerciale"
+    ]
+  },
+  "sales_crm.verbale_incontro_cliente": {
+    "canonical_name": "verbale incontro cliente",
+    "aliases": [
+      "verbale incontro cliente",
+      "VERBALE INCONTRO CLIENTE"
+    ],
+    "synonyms": [
+      "modulo verbale incontro cliente",
+      "prospetto verbale incontro cliente"
+    ]
+  },
+  "sales_customers.conferma_ordine_cliente": {
+    "canonical_name": "conferma ordine cliente",
+    "aliases": [
+      "CONFERMA ORDINE CLIENTE",
+      "Conferma Ordine Cliente",
+      "conferma ordine cliente"
+    ],
+    "synonyms": [
+      "modulo conferma ordine cliente"
+    ]
+  },
+  "sales_customers.contratto_vendita": {
+    "canonical_name": "contratto vendita",
+    "aliases": [
+      "CONTRATTO VENDITA",
+      "Contratto Vendita",
+      "contratto vendita"
+    ],
+    "synonyms": [
+      "modulo contratto vendita"
+    ]
+  },
+  "sales_customers.listino_prezzi_cliente": {
+    "canonical_name": "listino prezzi cliente",
+    "aliases": [
+      "listino prezzi cliente",
+      "LISTINO PREZZI CLIENTE"
+    ],
+    "synonyms": [
+      "modulo listino prezzi cliente",
+      "prospetto listino prezzi cliente"
+    ]
+  },
+  "sales_customers.ordine_cliente": {
+    "canonical_name": "ordine cliente",
+    "aliases": [
+      "ORDINE CLIENTE",
+      "Ordine Cliente",
+      "ordine cliente"
+    ],
+    "synonyms": [
+      "modulo ordine cliente"
+    ]
+  },
+  "sales_customers.proposta_commerciale": {
+    "canonical_name": "proposta commerciale",
+    "aliases": [
+      "PROPOSTA COMMERCIALE",
+      "Proposta Commerciale",
+      "proposta commerciale"
+    ],
+    "synonyms": [
+      "modulo proposta commerciale"
+    ]
+  },
+  "sales_customers.rapportino_intervento": {
+    "canonical_name": "rapporto d’intervento",
+    "aliases": [
+      "RAPPORTINO INTERVENTO",
+      "Rapportino Intervento",
+      "rapportino intervento",
+      "RAPPORTO D'INTERVENTO",
+      "RAPPORTO D’INTERVENTO",
+      "rapporto d'intervento",
+      "rapporto d’intervento",
+      "rapporto dintervento"
+    ],
+    "synonyms": [
+      "modulo rapporto d’intervento"
+    ]
+  },
+  "sales_customers.reclamo_cliente": {
+    "canonical_name": "reclamo cliente",
+    "aliases": [
+      "RECLAMO CLIENTE",
+      "Reclamo Cliente",
+      "reclamo cliente"
+    ],
+    "synonyms": [
+      "modulo reclamo cliente"
+    ]
+  },
+  "sales_customers.reso_cliente": {
+    "canonical_name": "reso cliente",
+    "aliases": [
+      "RESO CLIENTE",
+      "Reso Cliente",
+      "reso cliente"
+    ],
+    "synonyms": [
+      "modulo reso cliente"
+    ]
+  },
+  "sales_customers.verbale_accettazione_cliente": {
+    "canonical_name": "verbale accettazione cliente",
+    "aliases": [
+      "VERBALE ACCETTAZIONE CLIENTE",
+      "Verbale Accettazione Cliente",
+      "verbale accettazione cliente"
+    ],
+    "synonyms": [
+      "modulo verbale accettazione cliente"
+    ]
+  },
+  "technical_products.attestazione_provenienza_materia_prima": {
+    "canonical_name": "attestazione provenienza materia prima",
+    "aliases": [
+      "PROVENIENZA",
+      "materia prima",
+      "scheda provenienza",
+      "attestazione provenienza materia prima",
+      "ATTESTAZIONE PROVENIENZA MATERIA PRIMA"
+    ],
+    "synonyms": [
+      "modulo attestazione provenienza materia prima"
+    ]
+  },
+  "technical_products.dichiarazione_cam": {
+    "canonical_name": "dichiarazione CAM prodotto/materiale",
+    "aliases": [
+      "DICHIARAZIONE CAM",
+      "CAM prodotto",
+      "criteri ambientali minimi",
+      "dichiarazione CAM prodotto/materiale",
+      "DICHIARAZIONE CAM PRODOTTO/MATERIALE",
+      "dichiarazione cam"
+    ],
+    "synonyms": [
+      "modulo dichiarazione CAM prodotto/materiale"
+    ]
+  },
+  "technical_products.dichiarazione_prestazione_dop": {
+    "canonical_name": "dichiarazione di prestazione DoP",
+    "aliases": [
+      "DOP",
+      "DoP",
+      "dichiarazione di prestazione",
+      "dichiarazione di prestazione DoP",
+      "DICHIARAZIONE DI PRESTAZIONE DOP",
+      "dichiarazione prestazione dop"
+    ],
+    "synonyms": [
+      "modulo dichiarazione di prestazione DoP"
+    ]
+  },
+  "technical_products.epd_dichiarazione_ambientale_prodotto": {
+    "canonical_name": "EPD dichiarazione ambientale di prodotto",
+    "aliases": [
+      "EPD",
+      "environmental product declaration",
+      "dichiarazione ambientale di prodotto",
+      "EPD dichiarazione ambientale di prodotto",
+      "EPD DICHIARAZIONE AMBIENTALE DI PRODOTTO",
+      "epd dichiarazione ambientale prodotto"
+    ],
+    "synonyms": [
+      "modulo EPD dichiarazione ambientale di prodotto"
+    ]
+  },
+  "technical_products.rapporto_prova_laboratorio": {
+    "canonical_name": "rapporto prova laboratorio",
+    "aliases": [
+      "PROVE LABORATORIO",
+      "rapporto di prova",
+      "test report",
+      "rapporto prova laboratorio",
+      "RAPPORTO PROVA LABORATORIO"
+    ],
+    "synonyms": [
+      "modulo rapporto prova laboratorio"
+    ]
+  },
+  "technical_products.scheda_tecnica_prodotto": {
+    "canonical_name": "scheda tecnica prodotto",
+    "aliases": [
+      "scheda tecnica prodotto",
+      "scheda tecnica",
+      "technical data sheet",
+      "TDS",
+      "SCHEDA TECNICA PRODOTTO"
+    ],
+    "synonyms": [
+      "modulo scheda tecnica prodotto"
+    ]
+  },
+  "utilities_subscriptions.bolletta_energia_elettrica": {
+    "canonical_name": "bolletta energia elettrica",
+    "aliases": [
+      "bolletta energia elettrica",
+      "BOLLETTA ENERGIA ELETTRICA"
+    ],
+    "synonyms": [
+      "modulo bolletta energia elettrica",
+      "prospetto bolletta energia elettrica"
+    ]
+  },
+  "utilities_subscriptions.bolletta_gas": {
+    "canonical_name": "bolletta gas",
+    "aliases": [
+      "bolletta gas",
+      "BOLLETTA GAS"
+    ],
+    "synonyms": [
+      "modulo bolletta gas",
+      "prospetto bolletta gas"
+    ]
+  },
+  "utilities_subscriptions.preventivo_fornitura_idrica": {
+    "canonical_name": "preventivo fornitura idrica",
+    "aliases": [
+      "preventivo fornitura idrica",
+      "PREVENTIVO FORNITURA IDRICA"
+    ],
+    "synonyms": [
+      "modulo preventivo fornitura idrica",
+      "prospetto preventivo fornitura idrica"
+    ]
+  },
+  "vehicles_transport.carta_circolazione": {
+    "canonical_name": "carta circolazione",
+    "aliases": [
+      "CARTA CIRCOLAZIONE",
+      "Carta Circolazione",
+      "carta circolazione"
+    ],
+    "synonyms": [
+      "modulo carta circolazione"
+    ]
+  },
+  "vehicles_transport.certificato_propriet_veicolo": {
+    "canonical_name": "certificato proprietà veicolo",
+    "aliases": [
+      "CERTIFICATO PROPRIETÀ VEICOLO",
+      "Certificato Proprietà Veicolo",
+      "certificato proprietà veicolo",
+      "certificato proprieta veicolo",
+      "certificato propriet veicolo"
+    ],
+    "synonyms": [
+      "modulo certificato proprietà veicolo"
+    ]
+  },
+  "vehicles_transport.certificato_proprieta_veicolo": {
+    "canonical_name": "certificato proprietà veicolo",
+    "aliases": [
+      "CERTIFICATO PROPRIETÀ VEICOLO",
+      "Certificato Proprietà Veicolo",
+      "certificato proprietà veicolo",
+      "certificato proprieta veicolo"
+    ],
+    "synonyms": [
+      "modulo certificato proprietà veicolo"
+    ]
+  },
+  "vehicles_transport.documento_trasporto_rifiuti": {
+    "canonical_name": "documento trasporto rifiuti",
+    "aliases": [
+      "DOCUMENTO TRASPORTO RIFIUTI",
+      "Documento Trasporto Rifiuti",
+      "documento trasporto rifiuti"
+    ],
+    "synonyms": [
+      "modulo documento trasporto rifiuti"
+    ]
+  },
+  "vehicles_transport.lettera_vettura_cmr": {
+    "canonical_name": "lettera vettura CMR",
+    "aliases": [
+      "LETTERA VETTURA CMR",
+      "Lettera Vettura Cmr",
+      "lettera vettura CMR",
+      "lettera vettura cmr"
+    ],
+    "synonyms": [
+      "modulo lettera vettura CMR"
+    ]
+  },
+  "vehicles_transport.polizza_rca": {
+    "canonical_name": "polizza RCA",
+    "aliases": [
+      "POLIZZA RCA",
+      "Polizza Rca",
+      "polizza RCA",
+      "polizza rca"
+    ],
+    "synonyms": [
+      "modulo polizza RCA"
+    ]
+  },
+  "vehicles_transport.prospetto_indennita_chilometrica": {
+    "canonical_name": "prospetto indennità chilometrica",
+    "aliases": [
+      "indennità chilometrica",
+      "prospetto km",
+      "INDKM",
+      "rimborso chilometrico",
+      "prospetto indennità chilometrica",
+      "PROSPETTO INDENNITÀ CHILOMETRICA",
+      "prospetto indennita chilometrica"
+    ],
+    "synonyms": [
+      "modulo prospetto indennità chilometrica"
+    ]
+  },
+  "vehicles_transport.registro_carburante": {
+    "canonical_name": "registro carburante",
+    "aliases": [
+      "registro carburante",
+      "prospetto carburante",
+      "carburante",
+      "REGISTRO CARBURANTE"
+    ],
+    "synonyms": [
+      "modulo registro carburante"
+    ]
+  },
+  "vehicles_transport.revisione_veicolo": {
+    "canonical_name": "revisione veicolo",
+    "aliases": [
+      "REVISIONE VEICOLO",
+      "Revisione Veicolo",
+      "revisione veicolo"
+    ],
+    "synonyms": [
+      "modulo revisione veicolo"
+    ]
+  },
+  "vehicles_transport.scheda_tachigrafica": {
+    "canonical_name": "scheda tachigrafica",
+    "aliases": [
+      "SCHEDA TACHIGRAFICA",
+      "Scheda Tachigrafica",
+      "scheda tachigrafica"
+    ],
+    "synonyms": [
+      "modulo scheda tachigrafica"
+    ]
+  },
+  "vehicles_transport.verbale_consegna_veicolo": {
+    "canonical_name": "verbale consegna veicolo",
+    "aliases": [
+      "VERBALE CONSEGNA VEICOLO",
+      "Verbale Consegna Veicolo",
+      "verbale consegna veicolo"
+    ],
+    "synonyms": [
+      "modulo verbale consegna veicolo"
+    ]
+  }
+}
