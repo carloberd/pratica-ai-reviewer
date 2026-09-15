@@ -1,15 +1,38 @@
-import type { ReviewDocument } from '@shared/types'
+import type { RegistryTypeOption, ReviewDecision, ReviewDocument } from '@shared/types'
+import { useState } from 'react'
 import { cx } from '../lib/cx'
 import { formatDateTime, pct, textSourceLabel, typeLabel } from '../lib/format'
 import styles from './document-review.module.css'
 import { BAND_CLASS } from './document-table'
+import FieldEditor from './field-editor'
 
 interface Props {
   document: ReviewDocument
+  types: RegistryTypeOption[]
+  busy: boolean
   onBack: () => void
+  onFieldCommit: (fieldId: string, value: string | null) => void
+  onDecide: (decision: ReviewDecision, note?: string) => void
+  onAssignType: (documentType: string | null) => void
 }
 
-export default function ReviewView({ document, onBack }: Props) {
+export default function ReviewView({
+  document,
+  types,
+  busy,
+  onBack,
+  onFieldCommit,
+  onDecide,
+  onAssignType
+}: Props) {
+  const [note, setNote] = useState('')
+  const [focusedEvidence, setFocusedEvidence] = useState<string | null>(null)
+
+  const corrections = document.fields.filter(
+    (field) => field.correctedValue !== undefined && field.correctedValue !== field.value
+  ).length
+  const decided = document.status !== 'NEEDS_REVIEW'
+
   return (
     <>
       <button type="button" className={styles.back} onClick={onBack}>
@@ -53,11 +76,38 @@ export default function ReviewView({ document, onBack }: Props) {
             </div>
           ))}
 
+          <div className={styles.toolbar}>
+            <span className={styles.muted}>Tipo documento</span>
+            <select
+              className={styles.select}
+              value={document.documentType ?? ''}
+              disabled={busy}
+              onChange={(event) => onAssignType(event.target.value || null)}
+            >
+              <option value="">Da assegnare</option>
+              {types.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.label} · {type.id}
+                </option>
+              ))}
+            </select>
+            <span className={styles.muted}>
+              Cambiando tipo cambiano i campi richiesti alla prossima elaborazione.
+            </span>
+          </div>
+
           <div className={styles.sectionHeader}>
             <div>
               <h2>Dati estratti</h2>
-              <div className={styles.muted}>Ogni dato è collegato alla propria evidenza</div>
+              <div className={styles.muted}>
+                Modifica un valore per registrarlo come correzione: il precompilato resta visibile.
+              </div>
             </div>
+            {corrections > 0 && (
+              <span className={cx(styles.badge, styles.medium)}>
+                {corrections === 1 ? '1 correzione' : `${corrections} correzioni`}
+              </span>
+            )}
           </div>
 
           {document.fields.length === 0 ? (
@@ -67,22 +117,69 @@ export default function ReviewView({ document, onBack }: Props) {
             </div>
           ) : (
             <div className={styles.fieldList}>
-              {document.fields.map((field) => {
-                const shown = field.correctedValue ?? field.value
-                return (
-                  <div className={styles.fieldRow} key={field.id}>
-                    <div className={styles.fieldLabel}>{field.label}</div>
-                    <div className={shown ? styles.fieldValue : styles.fieldEmpty}>
-                      {shown || 'Nessuna evidenza'}
-                    </div>
-                    <div className={styles.confidence}>
-                      {field.value ? pct(field.confidence) : '—'}
-                    </div>
-                  </div>
-                )
-              })}
+              {document.fields.map((field) => (
+                <FieldEditor
+                  key={field.id}
+                  field={field}
+                  disabled={busy}
+                  onCommit={(value) => onFieldCommit(field.id, value)}
+                  onFocusEvidence={setFocusedEvidence}
+                />
+              ))}
             </div>
           )}
+
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2>Decisione</h2>
+              <div className={styles.muted}>
+                La nota viene registrata nella timeline insieme alla decisione.
+              </div>
+            </div>
+          </div>
+          <textarea
+            className={styles.textarea}
+            placeholder="Nota per la revisione (facoltativa)"
+            value={note}
+            disabled={busy}
+            onChange={(event) => setNote(event.target.value)}
+          />
+
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={cx(styles.button, styles.buttonPrimary)}
+              disabled={busy || corrections > 0}
+              title={
+                corrections > 0 ? 'Ci sono correzioni: usa «Conferma con correzione».' : undefined
+              }
+              onClick={() => onDecide('APPROVE', note || undefined)}
+            >
+              Approva
+            </button>
+            <button
+              type="button"
+              className={styles.button}
+              disabled={busy || corrections === 0}
+              title={corrections === 0 ? 'Modifica almeno un campo per correggere.' : undefined}
+              onClick={() => onDecide('CORRECT', note || undefined)}
+            >
+              Conferma con correzione
+            </button>
+            <button
+              type="button"
+              className={cx(styles.button, styles.buttonDanger)}
+              disabled={busy}
+              onClick={() => onDecide('REJECT', note || undefined)}
+            >
+              Rifiuta
+            </button>
+            {decided && (
+              <span className={cx(styles.badge, styles.status)}>
+                {document.status === 'APPROVED' ? 'Già approvato' : 'Già rifiutato'}
+              </span>
+            )}
+          </div>
         </section>
 
         <div style={{ display: 'grid', gap: 16 }}>
@@ -97,7 +194,15 @@ export default function ReviewView({ document, onBack }: Props) {
               <div className={styles.muted}>Nessuna evidenza registrata.</div>
             ) : (
               document.evidence.map((evidence) => (
-                <div className={styles.evidence} key={evidence.id}>
+                <button
+                  type="button"
+                  key={evidence.id}
+                  className={cx(
+                    styles.evidenceButton,
+                    focusedEvidence === evidence.id && styles.evidenceActive
+                  )}
+                  onClick={() => setFocusedEvidence(evidence.id)}
+                >
                   <div className={styles.evidenceTop}>
                     <span>
                       {evidence.label} · pag. {evidence.page}
@@ -105,7 +210,7 @@ export default function ReviewView({ document, onBack }: Props) {
                     <strong>{pct(evidence.confidence)}</strong>
                   </div>
                   <div className={styles.evidenceText}>{evidence.text}</div>
-                </div>
+                </button>
               ))
             )}
           </section>

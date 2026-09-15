@@ -1,14 +1,18 @@
 import type {
   AuthStatus,
   DashboardKpi,
+  DocumentFilters,
+  RegistryTypeOption,
+  ReviewDecision,
   ReviewDocument,
   ReviewDocumentSummary,
   SyncProgress
 } from '@shared/types'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { cx } from '../lib/cx'
 import { api, errorMessage, needsLogin } from '../lib/ipc'
 import AuthPanel from './auth-panel'
+import DocumentFiltersBar from './document-filters'
 import styles from './document-review.module.css'
 import DocumentTable from './document-table'
 import ReviewView from './review-view'
@@ -16,8 +20,8 @@ import ReviewView from './review-view'
 /**
  * Shell portata dal modulo PraticaAI Document Review v5.2. La struttura (sidebar,
  * dashboard con KPI, tabella documenti, vista di revisione con campi, evidenze e
- * timeline) è quella originale; i dati non arrivano più da `mock-data` ma dal main
- * attraverso i canali IPC.
+ * timeline) è quella originale; i dati arrivano dal main attraverso i canali IPC:
+ * i KPI da query SQL, la tabella dal database, la ricerca da FTS5.
  */
 type View = 'dashboard' | 'documents' | 'review'
 
@@ -26,42 +30,66 @@ export default function DocumentReviewShell() {
   const [auth, setAuth] = useState<AuthStatus | null>(null)
   const [kpis, setKpis] = useState<DashboardKpi[]>([])
   const [documents, setDocuments] = useState<ReviewDocumentSummary[]>([])
+  const [total, setTotal] = useState(0)
+  const [filters, setFilters] = useState<DocumentFilters>({})
+  const [types, setTypes] = useState<RegistryTypeOption[]>([])
   const [selected, setSelected] = useState<ReviewDocument | null>(null)
   const [pending, setPending] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
   const [progress, setProgress] = useState<SyncProgress | null>(null)
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (current: DocumentFilters) => {
     try {
-      const [status, stats, list] = await Promise.all([
+      const [status, stats, list, all] = await Promise.all([
         api.auth.status(),
         api.docs.stats(),
+        api.docs.list(current),
         api.docs.list()
       ])
       setAuth(status)
       setKpis(stats.kpis)
       setDocuments(list)
+      setTotal(all.length)
     } catch (caught) {
       setError(errorMessage(caught))
     }
   }, [])
 
   useEffect(() => {
-    void refresh()
+    void refresh(filters)
+  }, [refresh, filters])
+
+  useEffect(() => {
+    api.docs
+      .types()
+      .then(setTypes)
+      .catch(() => setTypes([]))
     return window.reviewer.onSyncProgress((update) => {
       setProgress(update.phase === 'done' ? null : update)
     })
-  }, [refresh])
+  }, [])
+
+  /**
+   * I tipi offerti dal filtro sono solo quelli presenti fra i documenti: un menu con
+   * tutti e 511 i tipi del registry non aiuterebbe a filtrare.
+   */
+  const typesInUse = useMemo(() => {
+    const present = new Set(documents.map((doc) => doc.documentType).filter((id) => id !== null))
+    return types.filter((type) => present.has(type.id))
+  }, [documents, types])
 
   async function run(label: string, work: () => Promise<void>) {
     setPending(label)
     setError(null)
+    setMessage(null)
     try {
       await work()
     } catch (caught) {
       setError(errorMessage(caught))
-      if (needsLogin(caught))
+      if (needsLogin(caught)) {
         setAuth((current) => (current ? { ...current, signedIn: false } : current))
+      }
     } finally {
       setPending(null)
       setProgress(null)
@@ -71,7 +99,7 @@ export default function DocumentReviewShell() {
   const login = () =>
     run('login', async () => {
       setAuth(await api.auth.login())
-      await refresh()
+      await refresh(filters)
     })
 
   const logout = () =>
@@ -82,10 +110,13 @@ export default function DocumentReviewShell() {
   const sync = () =>
     run('sync', async () => {
       const result = await api.drive.sync()
-      await refresh()
+      await refresh(filters)
+      setMessage(
+        `Sincronizzazione completata: ${result.added} nuovi, ${result.updated} aggiornati, ${result.skipped} invariati.`
+      )
       if (result.errors.length > 0) {
         setError(
-          `Sincronizzazione completata con ${result.errors.length} errori. Primo: ${result.errors[0]?.message}`
+          `${result.errors.length} documenti non sincronizzati. Primo: ${result.errors[0]?.filename} — ${result.errors[0]?.message}`
         )
       }
     })
@@ -95,6 +126,37 @@ export default function DocumentReviewShell() {
       setSelected(await api.docs.get(id))
       setView('review')
     })
+
+  const commitField = (fieldId: string, value: string | null) => {
+    if (!selected) return
+    const documentId = selected.id
+    void run('field', async () => {
+      setSelected(await api.fields.update(documentId, fieldId, value))
+    })
+  }
+
+  const decide = (decision: ReviewDecision, note?: string) => {
+    if (!selected) return
+    const documentId = selected.id
+    void run('decide', async () => {
+      setSelected(await api.review.submit(documentId, decision, note))
+      await refresh(filters)
+      setMessage(
+        decision === 'REJECT' ? 'Revisione registrata come rifiutata.' : 'Revisione registrata.'
+      )
+    })
+  }
+
+  const assignType = (documentType: string | null) => {
+    if (!selected) return
+    const documentId = selected.id
+    void run('type', async () => {
+      setSelected(await api.docs.setType(documentId, documentType))
+      await refresh(filters)
+    })
+  }
+
+  const busy = pending !== null
 
   return (
     <div className={styles.shell}>
@@ -110,7 +172,7 @@ export default function DocumentReviewShell() {
             <NavButton active={view === 'documents'} onClick={() => setView('documents')}>
               Documenti
             </NavButton>
-            <NavButton active={view === 'review'} onClick={() => selected && setView('review')}>
+            <NavButton active={view === 'review'} onClick={() => setView('review')}>
               Revisione
             </NavButton>
           </nav>
@@ -121,7 +183,7 @@ export default function DocumentReviewShell() {
               <button
                 type="button"
                 className={cx(styles.button, styles.buttonSmall)}
-                disabled={pending !== null}
+                disabled={busy}
                 onClick={logout}
               >
                 Esci
@@ -148,7 +210,7 @@ export default function DocumentReviewShell() {
                 <button
                   type="button"
                   className={cx(styles.button, styles.buttonPrimary)}
-                  disabled={pending !== null}
+                  disabled={busy}
                   onClick={sync}
                 >
                   {pending === 'sync' ? 'Sincronizzo…' : 'Sincronizza da Drive'}
@@ -178,6 +240,7 @@ export default function DocumentReviewShell() {
             )}
 
             {error && <div className={styles.error}>{error}</div>}
+            {message && <div className={styles.success}>{message}</div>}
 
             {view === 'dashboard' && (
               <>
@@ -199,13 +262,16 @@ export default function DocumentReviewShell() {
                   <button
                     type="button"
                     className={styles.button}
-                    onClick={() => setView('documents')}
+                    onClick={() => {
+                      setFilters({ status: 'NEEDS_REVIEW' })
+                      setView('documents')
+                    }}
                   >
                     Vedi tutti
                   </button>
                 </div>
                 <DocumentTable
-                  documents={documents.filter((doc) => doc.status === 'NEEDS_REVIEW')}
+                  documents={documents.filter((doc) => doc.status === 'NEEDS_REVIEW').slice(0, 10)}
                   onOpen={openDocument}
                   emptyTitle="Nessun documento da verificare"
                   emptyHint="Sincronizza da Google Drive per popolare la coda."
@@ -223,18 +289,39 @@ export default function DocumentReviewShell() {
                     </div>
                   </div>
                 </div>
+                <DocumentFiltersBar
+                  filters={filters}
+                  onChange={setFilters}
+                  types={typesInUse}
+                  total={total}
+                  shown={documents.length}
+                />
                 <DocumentTable
                   documents={documents}
                   onOpen={openDocument}
-                  emptyTitle="Nessun documento sincronizzato"
-                  emptyHint="Accedi con Google e avvia la sincronizzazione da Drive."
+                  emptyTitle={
+                    total === 0 ? 'Nessun documento sincronizzato' : 'Nessun documento trovato'
+                  }
+                  emptyHint={
+                    total === 0
+                      ? 'Accedi con Google e avvia la sincronizzazione da Drive.'
+                      : 'Prova ad allargare i filtri o a cambiare la ricerca.'
+                  }
                 />
               </>
             )}
 
             {view === 'review' &&
               (selected ? (
-                <ReviewView document={selected} onBack={() => setView('documents')} />
+                <ReviewView
+                  document={selected}
+                  types={types}
+                  busy={busy}
+                  onBack={() => setView('documents')}
+                  onFieldCommit={commitField}
+                  onDecide={decide}
+                  onAssignType={assignType}
+                />
               ) : (
                 <div className={cx(styles.card, styles.empty)}>
                   <div className={styles.emptyTitle}>Nessun documento aperto</div>

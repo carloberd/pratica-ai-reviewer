@@ -8,12 +8,15 @@ import { createDriveClient } from '../drive/client'
 import { type DocumentProcessor, syncDrive } from '../drive/sync'
 import { fail, logError, ok, ReviewerError } from '../errors'
 import { cachePathFor } from '../paths'
+import { buildReviewPayload, describeReview } from '../review'
 import {
   documentFiltersSchema,
   documentIdSchema,
   documentRefSchema,
+  reviewPayloadSchema,
   searchSchema,
-  setTypeSchema
+  setTypeSchema,
+  updateFieldSchema
 } from './schemas'
 
 /** Canali senza input: accettano `undefined` e nient'altro di significativo. */
@@ -122,6 +125,37 @@ export function registerIpcHandlers(context: IpcContext): void {
     })
 
     return repo.getReviewDocument(id)!
+  })
+
+  // ---- campi e revisione ---------------------------------------------------
+  handle('fields:update', updateFieldSchema, ({ documentId, fieldId, correctedValue }) => {
+    const field = repo.fields.get(fieldId)
+    if (!field || field.document_id !== documentId) {
+      throw new ReviewerError('NOT_FOUND', 'Campo non trovato su questo documento.')
+    }
+
+    // Solo i campi davvero cambiati diventano una correzione: riscrivere lo stesso
+    // valore non deve apparire come intervento del revisore.
+    const trimmed = correctedValue?.trim() ?? null
+    const next = trimmed === null || trimmed === (field.value ?? '') ? null : trimmed
+    repo.fields.setCorrectedValue(fieldId, next)
+
+    return repo.getReviewDocument(documentId)!
+  })
+
+  handle('review:submit', reviewPayloadSchema, ({ documentId, payload }) => {
+    const document = repo.getReviewDocument(documentId)
+    if (!document) throw new ReviewerError('NOT_FOUND', 'Documento non trovato.')
+
+    const full = buildReviewPayload(document, payload.decision, payload.note)
+    const { title, detail } = describeReview(full)
+
+    repo.transaction(() => {
+      repo.documents.setStatus(documentId, payload.decision === 'REJECT' ? 'REJECTED' : 'APPROVED')
+      repo.events.add(documentId, title, detail)
+    })
+
+    return repo.getReviewDocument(documentId)!
   })
 
   // ---- ricerca -------------------------------------------------------------

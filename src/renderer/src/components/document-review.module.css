@@ -525,6 +525,7 @@
 .pillRequired {
   background: #f1e7fb;
   color: #5a3c86;
+  margin-left: 6px;
 }
 .pillChanged {
   background: #fff4dc;
