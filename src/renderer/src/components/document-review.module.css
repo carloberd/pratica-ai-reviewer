@@ -746,3 +746,34 @@
   word-break: break-all;
   font-size: 11px;
 }
+
+/* ---- schede della vista di revisione ---- */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #e8ecef;
+  margin: 18px 0 16px;
+}
+.tab {
+  border: 0;
+  background: transparent;
+  color: #68747c;
+  padding: 9px 12px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 13px;
+}
+.tab:hover {
+  color: #243139;
+}
+.tabActive {
+  color: #0d1b20;
+  border-bottom-color: #61d19f;
+}
+.tabCount {
+  margin-left: 6px;
+  color: #8b969d;
+  font-weight: 500;
+}

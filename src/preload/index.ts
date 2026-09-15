@@ -65,7 +65,10 @@ export const reviewerApi = {
     }) => invoke<IpcResultOf<Annotation>>('annotations:add', input),
     update: (input: { id: string; bbox?: BoundingBox; note?: string | null }) =>
       invoke<IpcResultOf<Annotation>>('annotations:update', input),
-    delete: (id: string) => invoke<IpcResultOf<{ id: string }>>('annotations:delete', { id })
+    delete: (id: string) => invoke<IpcResultOf<{ id: string }>>('annotations:delete', { id }),
+    /** Copia del PDF con le annotazioni sopra: l'originale in cache resta intatto. */
+    export: (documentId: string) =>
+      invoke<IpcResultOf<{ path: string | null }>>('annotations:export', { documentId })
   },
   search: {
     query: (text: string) => invoke<IpcResultOf<SearchHit[]>>('search:query', { text })

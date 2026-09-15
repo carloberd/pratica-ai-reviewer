@@ -1,21 +1,26 @@
 import { readFile } from 'node:fs/promises'
 import type { IpcResult, RegistryTypeOption } from '@shared/types'
-import { ipcMain, type WebContents } from 'electron'
+import { BrowserWindow, dialog, ipcMain, type WebContents } from 'electron'
 import { z } from 'zod'
 import type { AuthService } from '../auth/service'
 import type { Repository } from '../db/repository'
-import { createDriveClient } from '../drive/client'
+import { toAnnotation } from '../db/rows'
+import { createDriveClient, DOCX_MIME, PDF_MIME } from '../drive/client'
 import { type DocumentProcessor, syncDrive } from '../drive/sync'
 import { fail, logError, ok, ReviewerError } from '../errors'
+import { exportAnnotatedPdf, writeAnnotatedPdf } from '../export/annotated-pdf'
+import { extractDocxPages } from '../extract/docx'
 import { cachePathFor } from '../paths'
 import { buildReviewPayload, describeReview } from '../review'
 import {
+  addAnnotationSchema,
   documentFiltersSchema,
   documentIdSchema,
   documentRefSchema,
   reviewPayloadSchema,
   searchSchema,
   setTypeSchema,
+  updateAnnotationSchema,
   updateFieldSchema
 } from './schemas'
 
@@ -168,6 +173,84 @@ export function registerIpcHandlers(context: IpcContext): void {
     }))
   )
 
+  // ---- annotazioni ---------------------------------------------------------
+  // D3: vivono in SQLite e non toccano mai il PDF in cache, che resta identico al
+  // file su Drive byte per byte.
+  handle('annotations:list', documentRefSchema, ({ documentId }) =>
+    repo.listAnnotations(documentId)
+  )
+
+  handle('annotations:add', addAnnotationSchema, (input) => {
+    const document = repo.documents.get(input.documentId)
+    if (!document) throw new ReviewerError('NOT_FOUND', 'Documento non trovato.')
+    if (document.mime !== PDF_MIME) {
+      throw new ReviewerError('UNSUPPORTED', 'Le annotazioni sono disponibili solo sui PDF.')
+    }
+    return toAnnotation(
+      repo.annotations.add({
+        documentId: input.documentId,
+        page: input.page,
+        bbox: input.bbox,
+        kind: input.kind,
+        note: input.note
+      })
+    )
+  })
+
+  handle('annotations:update', updateAnnotationSchema, ({ id, bbox, note }) => {
+    const updated = repo.annotations.update(id, {
+      ...(bbox ? { bbox } : {}),
+      ...(note !== undefined ? { note } : {})
+    })
+    if (!updated) throw new ReviewerError('NOT_FOUND', 'Annotazione non trovata.')
+    return toAnnotation(updated)
+  })
+
+  handle('annotations:delete', documentIdSchema, ({ id }) => {
+    if (!repo.annotations.delete(id)) {
+      throw new ReviewerError('NOT_FOUND', 'Annotazione non trovata.')
+    }
+    return { id }
+  })
+
+  handle('annotations:export', documentRefSchema, async ({ documentId }) => {
+    const row = repo.documents.get(documentId)
+    if (!row) throw new ReviewerError('NOT_FOUND', 'Documento non trovato.')
+    if (row.mime !== PDF_MIME) {
+      throw new ReviewerError('UNSUPPORTED', 'Solo i PDF possono essere esportati annotati.')
+    }
+    if (!row.cached_path) {
+      throw new ReviewerError('NOT_FOUND', 'Il file non è ancora stato scaricato in cache.')
+    }
+
+    const suggested = `${row.filename.replace(/\.pdf$/i, '')} - annotato.pdf`
+    const parent = context.sender?.() ? BrowserWindow.fromWebContents(context.sender()!) : null
+    const choice = await (parent
+      ? dialog.showSaveDialog(parent, {
+          defaultPath: suggested,
+          filters: [{ name: 'PDF', extensions: ['pdf'] }]
+        })
+      : dialog.showSaveDialog({
+          defaultPath: suggested,
+          filters: [{ name: 'PDF', extensions: ['pdf'] }]
+        }))
+
+    if (choice.canceled || !choice.filePath) return { path: null }
+
+    const bytes = await exportAnnotatedPdf(
+      row.cached_path,
+      repo.listAnnotations(documentId),
+      row.filename
+    )
+    await writeAnnotatedPdf(choice.filePath, bytes)
+    repo.events.add(
+      documentId,
+      'PDF annotato esportato',
+      `Copia con le annotazioni salvata in «${choice.filePath}». Il file in cache non è stato modificato.`
+    )
+    return { path: choice.filePath }
+  })
+
   // ---- file in cache -------------------------------------------------------
   handle('pdf:read', documentRefSchema, async ({ documentId }) => {
     const row = repo.documents.get(documentId)
@@ -175,11 +258,23 @@ export function registerIpcHandlers(context: IpcContext): void {
     if (!row.cached_path) {
       throw new ReviewerError('NOT_FOUND', 'Il file non è ancora stato scaricato in cache.')
     }
-    if (row.mime !== 'application/pdf') {
+    if (row.mime !== PDF_MIME) {
       throw new ReviewerError('UNSUPPORTED', 'Il documento non è un PDF.')
     }
     const buffer = await readFile(row.cached_path)
     // Copia in un ArrayBuffer proprio: il pool di Buffer di Node non va esposto.
     return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
+  })
+
+  handle('docx:text', documentRefSchema, async ({ documentId }) => {
+    const row = repo.documents.get(documentId)
+    if (!row) throw new ReviewerError('NOT_FOUND', 'Documento non trovato.')
+    if (row.mime !== DOCX_MIME)
+      throw new ReviewerError('UNSUPPORTED', 'Il documento non è un DOCX.')
+    if (!row.cached_path) {
+      throw new ReviewerError('NOT_FOUND', 'Il file non è ancora stato scaricato in cache.')
+    }
+    const pages = await extractDocxPages(row.cached_path)
+    return pages.map((page) => page.text).join('\n\n')
   })
 }

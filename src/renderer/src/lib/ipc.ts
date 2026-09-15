@@ -68,7 +68,19 @@ export const api = {
   search: {
     query: (text: string) => call(() => window.reviewer.search.query(text))
   },
+  annotations: {
+    list: (documentId: string) => call(() => window.reviewer.annotations.list(documentId)),
+    add: (input: Parameters<typeof window.reviewer.annotations.add>[0]) =>
+      call(() => window.reviewer.annotations.add(input)),
+    update: (id: string, note: string) =>
+      call(() => window.reviewer.annotations.update({ id, note })),
+    delete: (id: string) => call(() => window.reviewer.annotations.delete(id)),
+    export: (documentId: string) => call(() => window.reviewer.annotations.export(documentId))
+  },
   pdf: {
     read: (documentId: string) => call(() => window.reviewer.pdf.read(documentId))
+  },
+  docx: {
+    text: (documentId: string) => call(() => window.reviewer.docx.text(documentId))
   }
 }

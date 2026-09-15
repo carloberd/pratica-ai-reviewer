@@ -1,7 +1,14 @@
-import type { RegistryTypeOption, ReviewDecision, ReviewDocument } from '@shared/types'
+import type {
+  Annotation,
+  BoundingBox,
+  RegistryTypeOption,
+  ReviewDecision,
+  ReviewDocument
+} from '@shared/types'
 import { useState } from 'react'
 import { cx } from '../lib/cx'
 import { formatDateTime, pct, textSourceLabel, typeLabel } from '../lib/format'
+import DocumentPreview from './document-preview'
 import styles from './document-review.module.css'
 import { BAND_CLASS } from './document-table'
 import FieldEditor from './field-editor'
@@ -9,24 +16,43 @@ import FieldEditor from './field-editor'
 interface Props {
   document: ReviewDocument
   types: RegistryTypeOption[]
+  annotations: Annotation[]
   busy: boolean
   onBack: () => void
   onFieldCommit: (fieldId: string, value: string | null) => void
   onDecide: (decision: ReviewDecision, note?: string) => void
   onAssignType: (documentType: string | null) => void
+  onCreateAnnotation: (page: number, bbox: BoundingBox, kind: 'highlight' | 'note') => void
+  onUpdateAnnotation: (id: string, note: string) => void
+  onDeleteAnnotation: (id: string) => void
+  onExportAnnotated: () => void
 }
+
+type Tab = 'fields' | 'document'
 
 export default function ReviewView({
   document,
   types,
+  annotations,
   busy,
   onBack,
   onFieldCommit,
   onDecide,
-  onAssignType
+  onAssignType,
+  onCreateAnnotation,
+  onUpdateAnnotation,
+  onDeleteAnnotation,
+  onExportAnnotated
 }: Props) {
   const [note, setNote] = useState('')
+  const [tab, setTab] = useState<Tab>('fields')
   const [focusedEvidence, setFocusedEvidence] = useState<string | null>(null)
+
+  /** Da un'evidenza si salta al documento, sulla pagina e sulla riga da cui viene. */
+  function openEvidence(evidenceId: string) {
+    setFocusedEvidence(evidenceId)
+    setTab('document')
+  }
 
   const corrections = document.fields.filter(
     (field) => field.correctedValue !== undefined && field.correctedValue !== field.value
@@ -96,90 +122,133 @@ export default function ReviewView({
             </span>
           </div>
 
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2>Dati estratti</h2>
-              <div className={styles.muted}>
-                Modifica un valore per registrarlo come correzione: il precompilato resta visibile.
-              </div>
-            </div>
-            {corrections > 0 && (
-              <span className={cx(styles.badge, styles.medium)}>
-                {corrections === 1 ? '1 correzione' : `${corrections} correzioni`}
-              </span>
-            )}
+          <div className={styles.tabs}>
+            <button
+              type="button"
+              className={cx(styles.tab, tab === 'fields' && styles.tabActive)}
+              onClick={() => setTab('fields')}
+            >
+              Dati estratti<span className={styles.tabCount}>{document.fields.length}</span>
+            </button>
+            <button
+              type="button"
+              className={cx(styles.tab, tab === 'document' && styles.tabActive)}
+              onClick={() => setTab('document')}
+            >
+              Documento
+              {annotations.length > 0 && (
+                <span className={styles.tabCount}>
+                  {annotations.length === 1 ? '1 annotazione' : `${annotations.length} annotazioni`}
+                </span>
+              )}
+            </button>
           </div>
 
-          {document.fields.length === 0 ? (
-            <div className={styles.empty}>
-              <div className={styles.emptyTitle}>Nessun campo da compilare</div>
-              <div>La precompilazione non è ancora stata eseguita su questo documento.</div>
-            </div>
-          ) : (
-            <div className={styles.fieldList}>
-              {document.fields.map((field) => (
-                <FieldEditor
-                  key={field.id}
-                  field={field}
-                  disabled={busy}
-                  onCommit={(value) => onFieldCommit(field.id, value)}
-                  onFocusEvidence={setFocusedEvidence}
-                />
-              ))}
-            </div>
+          {tab === 'document' && (
+            <DocumentPreview
+              document={document}
+              evidence={document.evidence}
+              annotations={annotations}
+              focusedEvidenceId={focusedEvidence}
+              busy={busy}
+              onCreateAnnotation={onCreateAnnotation}
+              onUpdateNote={onUpdateAnnotation}
+              onDeleteAnnotation={onDeleteAnnotation}
+              onExport={onExportAnnotated}
+            />
           )}
 
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2>Decisione</h2>
-              <div className={styles.muted}>
-                La nota viene registrata nella timeline insieme alla decisione.
+          {tab === 'fields' && (
+            <>
+              <div className={styles.sectionHeader}>
+                <div>
+                  <h2>Dati estratti</h2>
+                  <div className={styles.muted}>
+                    Modifica un valore per registrarlo come correzione: il precompilato resta
+                    visibile.
+                  </div>
+                </div>
+                {corrections > 0 && (
+                  <span className={cx(styles.badge, styles.medium)}>
+                    {corrections === 1 ? '1 correzione' : `${corrections} correzioni`}
+                  </span>
+                )}
               </div>
-            </div>
-          </div>
-          <textarea
-            className={styles.textarea}
-            placeholder="Nota per la revisione (facoltativa)"
-            value={note}
-            disabled={busy}
-            onChange={(event) => setNote(event.target.value)}
-          />
 
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={cx(styles.button, styles.buttonPrimary)}
-              disabled={busy || corrections > 0}
-              title={
-                corrections > 0 ? 'Ci sono correzioni: usa «Conferma con correzione».' : undefined
-              }
-              onClick={() => onDecide('APPROVE', note || undefined)}
-            >
-              Approva
-            </button>
-            <button
-              type="button"
-              className={styles.button}
-              disabled={busy || corrections === 0}
-              title={corrections === 0 ? 'Modifica almeno un campo per correggere.' : undefined}
-              onClick={() => onDecide('CORRECT', note || undefined)}
-            >
-              Conferma con correzione
-            </button>
-            <button
-              type="button"
-              className={cx(styles.button, styles.buttonDanger)}
-              disabled={busy}
-              onClick={() => onDecide('REJECT', note || undefined)}
-            >
-              Rifiuta
-            </button>
-            {decided && (
-              <span className={cx(styles.badge, styles.status)}>
-                {document.status === 'APPROVED' ? 'Già approvato' : 'Già rifiutato'}
-              </span>
-            )}
-          </div>
+              {document.fields.length === 0 ? (
+                <div className={styles.empty}>
+                  <div className={styles.emptyTitle}>Nessun campo da compilare</div>
+                  <div>La precompilazione non è ancora stata eseguita su questo documento.</div>
+                </div>
+              ) : (
+                <div className={styles.fieldList}>
+                  {document.fields.map((field) => (
+                    <FieldEditor
+                      key={field.id}
+                      field={field}
+                      disabled={busy}
+                      onCommit={(value) => onFieldCommit(field.id, value)}
+                      onFocusEvidence={openEvidence}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div className={styles.sectionHeader}>
+                <div>
+                  <h2>Decisione</h2>
+                  <div className={styles.muted}>
+                    La nota viene registrata nella timeline insieme alla decisione.
+                  </div>
+                </div>
+              </div>
+              <textarea
+                className={styles.textarea}
+                placeholder="Nota per la revisione (facoltativa)"
+                value={note}
+                disabled={busy}
+                onChange={(event) => setNote(event.target.value)}
+              />
+
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={cx(styles.button, styles.buttonPrimary)}
+                  disabled={busy || corrections > 0}
+                  title={
+                    corrections > 0
+                      ? 'Ci sono correzioni: usa «Conferma con correzione».'
+                      : undefined
+                  }
+                  onClick={() => onDecide('APPROVE', note || undefined)}
+                >
+                  Approva
+                </button>
+                <button
+                  type="button"
+                  className={styles.button}
+                  disabled={busy || corrections === 0}
+                  title={corrections === 0 ? 'Modifica almeno un campo per correggere.' : undefined}
+                  onClick={() => onDecide('CORRECT', note || undefined)}
+                >
+                  Conferma con correzione
+                </button>
+                <button
+                  type="button"
+                  className={cx(styles.button, styles.buttonDanger)}
+                  disabled={busy}
+                  onClick={() => onDecide('REJECT', note || undefined)}
+                >
+                  Rifiuta
+                </button>
+                {decided && (
+                  <span className={cx(styles.badge, styles.status)}>
+                    {document.status === 'APPROVED' ? 'Già approvato' : 'Già rifiutato'}
+                  </span>
+                )}
+              </div>
+            </>
+          )}
         </section>
 
         <div style={{ display: 'grid', gap: 16 }}>
@@ -201,7 +270,7 @@ export default function ReviewView({
                     styles.evidenceButton,
                     focusedEvidence === evidence.id && styles.evidenceActive
                   )}
-                  onClick={() => setFocusedEvidence(evidence.id)}
+                  onClick={() => openEvidence(evidence.id)}
                 >
                   <div className={styles.evidenceTop}>
                     <span>
