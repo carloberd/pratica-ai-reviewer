@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
+    "google-auth-library": "^11.0.2",
     "googleapis": "^181.0.0",
     "mammoth": "^1.12.3",
     "pdf-lib": "^1.17.1",

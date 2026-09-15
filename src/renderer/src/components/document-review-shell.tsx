@@ -1,37 +1,100 @@
-import type { ConfidenceBand, ReviewDocument } from '@shared/types'
-import { useMemo, useState } from 'react'
+import type {
+  AuthStatus,
+  DashboardKpi,
+  ReviewDocument,
+  ReviewDocumentSummary,
+  SyncProgress
+} from '@shared/types'
+import { useCallback, useEffect, useState } from 'react'
 import { cx } from '../lib/cx'
-import { formatDateTime, pct, STATUS_LABELS, textSourceLabel, typeLabel } from '../lib/format'
-import { dashboardKpis, mockDocuments } from '../lib/mock-data'
+import { api, errorMessage, needsLogin } from '../lib/ipc'
+import AuthPanel from './auth-panel'
 import styles from './document-review.module.css'
+import DocumentTable from './document-table'
+import ReviewView from './review-view'
 
 /**
- * Porting della shell `components/document-review/document-review-shell.tsx` del
- * modulo PraticaAI Document Review v5.2. In F0 gira ancora sui dati demo: la
- * sostituzione di `mock-data` con i dati reali via IPC avviene in F4.
+ * Shell portata dal modulo PraticaAI Document Review v5.2. La struttura (sidebar,
+ * dashboard con KPI, tabella documenti, vista di revisione con campi, evidenze e
+ * timeline) è quella originale; i dati non arrivano più da `mock-data` ma dal main
+ * attraverso i canali IPC.
  */
 type View = 'dashboard' | 'documents' | 'review'
 
-const BAND_CLASS: Record<ConfidenceBand, string | undefined> = {
-  HIGH: styles.high,
-  MEDIUM: styles.medium,
-  LOW: styles.low
-}
-
 export default function DocumentReviewShell() {
   const [view, setView] = useState<View>('dashboard')
-  const [documents] = useState<ReviewDocument[]>(mockDocuments)
-  const [selectedId, setSelectedId] = useState<string | null>(mockDocuments[0]?.id ?? null)
+  const [auth, setAuth] = useState<AuthStatus | null>(null)
+  const [kpis, setKpis] = useState<DashboardKpi[]>([])
+  const [documents, setDocuments] = useState<ReviewDocumentSummary[]>([])
+  const [selected, setSelected] = useState<ReviewDocument | null>(null)
+  const [pending, setPending] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [progress, setProgress] = useState<SyncProgress | null>(null)
 
-  const selected = useMemo(
-    () => documents.find((doc) => doc.id === selectedId) ?? documents[0] ?? null,
-    [documents, selectedId]
-  )
+  const refresh = useCallback(async () => {
+    try {
+      const [status, stats, list] = await Promise.all([
+        api.auth.status(),
+        api.docs.stats(),
+        api.docs.list()
+      ])
+      setAuth(status)
+      setKpis(stats.kpis)
+      setDocuments(list)
+    } catch (caught) {
+      setError(errorMessage(caught))
+    }
+  }, [])
 
-  function openDocument(id: string) {
-    setSelectedId(id)
-    setView('review')
+  useEffect(() => {
+    void refresh()
+    return window.reviewer.onSyncProgress((update) => {
+      setProgress(update.phase === 'done' ? null : update)
+    })
+  }, [refresh])
+
+  async function run(label: string, work: () => Promise<void>) {
+    setPending(label)
+    setError(null)
+    try {
+      await work()
+    } catch (caught) {
+      setError(errorMessage(caught))
+      if (needsLogin(caught))
+        setAuth((current) => (current ? { ...current, signedIn: false } : current))
+    } finally {
+      setPending(null)
+      setProgress(null)
+    }
   }
+
+  const login = () =>
+    run('login', async () => {
+      setAuth(await api.auth.login())
+      await refresh()
+    })
+
+  const logout = () =>
+    run('logout', async () => {
+      setAuth(await api.auth.logout())
+    })
+
+  const sync = () =>
+    run('sync', async () => {
+      const result = await api.drive.sync()
+      await refresh()
+      if (result.errors.length > 0) {
+        setError(
+          `Sincronizzazione completata con ${result.errors.length} errori. Primo: ${result.errors[0]?.message}`
+        )
+      }
+    })
+
+  const openDocument = (id: string) =>
+    run('open', async () => {
+      setSelected(await api.docs.get(id))
+      setView('review')
+    })
 
   return (
     <div className={styles.shell}>
@@ -47,10 +110,24 @@ export default function DocumentReviewShell() {
             <NavButton active={view === 'documents'} onClick={() => setView('documents')}>
               Documenti
             </NavButton>
-            <NavButton active={view === 'review'} onClick={() => setView('review')}>
+            <NavButton active={view === 'review'} onClick={() => selected && setView('review')}>
               Revisione
             </NavButton>
           </nav>
+          <div className={styles.navSpacer} />
+          {auth?.signedIn && (
+            <div className={styles.userBox}>
+              <div className={styles.userMail}>{auth.email ?? 'Account Google collegato'}</div>
+              <button
+                type="button"
+                className={cx(styles.button, styles.buttonSmall)}
+                disabled={pending !== null}
+                onClick={logout}
+              >
+                Esci
+              </button>
+            </div>
+          )}
           <div className={styles.sidebarFooter}>Document Brain · Review v5.2</div>
         </aside>
 
@@ -66,21 +143,46 @@ export default function DocumentReviewShell() {
               </h1>
               <p>Controllo documentale con evidenze e human review</p>
             </div>
-            <div className={styles.avatar}>AI</div>
+            <div className={styles.toolbar}>
+              {auth?.signedIn && (
+                <button
+                  type="button"
+                  className={cx(styles.button, styles.buttonPrimary)}
+                  disabled={pending !== null}
+                  onClick={sync}
+                >
+                  {pending === 'sync' ? 'Sincronizzo…' : 'Sincronizza da Drive'}
+                </button>
+              )}
+              <div className={styles.avatar}>AI</div>
+            </div>
           </header>
 
           <div className={styles.content}>
-            <div className={styles.banner}>
-              <span className={styles.bannerTitle}>Anteprima con dati demo.</span>
-              <span>
-                La pipeline Google Drive, SQLite e precompilazione non è ancora collegata.
-              </span>
-            </div>
+            <AuthPanel status={auth} busy={pending === 'login'} onLogin={login} />
+
+            {progress && (
+              <div className={styles.banner}>
+                <span className={styles.bannerTitle}>
+                  {progress.phase === 'listing'
+                    ? 'Leggo i file su Drive…'
+                    : progress.phase === 'downloading'
+                      ? 'Scarico i documenti…'
+                      : 'Estraggo il testo…'}
+                </span>
+                <span>
+                  {progress.total > 0 && `${progress.current} di ${progress.total}`}
+                  {progress.filename && ` · ${progress.filename}`}
+                </span>
+              </div>
+            )}
+
+            {error && <div className={styles.error}>{error}</div>}
 
             {view === 'dashboard' && (
               <>
                 <section className={styles.kpiGrid}>
-                  {dashboardKpis.map((kpi) => (
+                  {kpis.map((kpi) => (
                     <article className={cx(styles.card, styles.kpi)} key={kpi.id}>
                       <div className={styles.kpiLabel}>{kpi.label}</div>
                       <div className={styles.kpiValue}>{kpi.value.toLocaleString('it-IT')}</div>
@@ -102,7 +204,12 @@ export default function DocumentReviewShell() {
                     Vedi tutti
                   </button>
                 </div>
-                <DocumentTable documents={documents} onOpen={openDocument} />
+                <DocumentTable
+                  documents={documents.filter((doc) => doc.status === 'NEEDS_REVIEW')}
+                  onOpen={openDocument}
+                  emptyTitle="Nessun documento da verificare"
+                  emptyHint="Sincronizza da Google Drive per popolare la coda."
+                />
               </>
             )}
 
@@ -116,13 +223,24 @@ export default function DocumentReviewShell() {
                     </div>
                   </div>
                 </div>
-                <DocumentTable documents={documents} onOpen={openDocument} />
+                <DocumentTable
+                  documents={documents}
+                  onOpen={openDocument}
+                  emptyTitle="Nessun documento sincronizzato"
+                  emptyHint="Accedi con Google e avvia la sincronizzazione da Drive."
+                />
               </>
             )}
 
-            {view === 'review' && selected && (
-              <ReviewView document={selected} onBack={() => setView('documents')} />
-            )}
+            {view === 'review' &&
+              (selected ? (
+                <ReviewView document={selected} onBack={() => setView('documents')} />
+              ) : (
+                <div className={cx(styles.card, styles.empty)}>
+                  <div className={styles.emptyTitle}>Nessun documento aperto</div>
+                  <div>Scegli un documento dalla tabella per iniziare la revisione.</div>
+                </div>
+              ))}
           </div>
         </main>
       </div>
@@ -147,167 +265,5 @@ function NavButton({
     >
       {children}
     </button>
-  )
-}
-
-function DocumentTable({
-  documents,
-  onOpen
-}: {
-  documents: ReviewDocument[]
-  onOpen: (id: string) => void
-}) {
-  return (
-    <div className={cx(styles.card, styles.tableWrap)}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Documento</th>
-            <th>Tipo</th>
-            <th>Testo</th>
-            <th>Confidence</th>
-            <th>Stato</th>
-            <th>Modificato</th>
-          </tr>
-        </thead>
-        <tbody>
-          {documents.map((doc) => (
-            <tr key={doc.id} onClick={() => onOpen(doc.id)}>
-              <td>
-                <div className={styles.fileName}>{doc.filename}</div>
-                <div className={styles.subtle}>{doc.source}</div>
-              </td>
-              <td>{typeLabel(doc.documentType, doc.documentTypeLabel)}</td>
-              <td>{textSourceLabel(doc.textSource)}</td>
-              <td>
-                <span className={cx(styles.badge, BAND_CLASS[doc.confidenceBand])}>
-                  {pct(doc.confidence)}
-                </span>
-              </td>
-              <td>
-                <span className={cx(styles.badge, styles.status)}>{STATUS_LABELS[doc.status]}</span>
-              </td>
-              <td>{formatDateTime(doc.receivedAt)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function ReviewView({ document, onBack }: { document: ReviewDocument; onBack: () => void }) {
-  return (
-    <>
-      <button type="button" className={styles.back} onClick={onBack}>
-        ← Torna ai documenti
-      </button>
-      <div className={styles.reviewLayout}>
-        <section className={cx(styles.card, styles.panel)}>
-          <div className={styles.panelTitle}>
-            <div>
-              <h2>{document.filename}</h2>
-              <div className={styles.subtle}>{document.driveFileId}</div>
-            </div>
-            <span className={cx(styles.badge, BAND_CLASS[document.confidenceBand])}>
-              {pct(document.confidence)}
-            </span>
-          </div>
-
-          <div className={styles.metaGrid}>
-            <div className={styles.meta}>
-              <div className={styles.metaLabel}>Tipo documento</div>
-              <div className={styles.metaValue}>
-                {typeLabel(document.documentType, document.documentTypeLabel)}
-              </div>
-            </div>
-            <div className={styles.meta}>
-              <div className={styles.metaLabel}>Sorgente testo</div>
-              <div className={styles.metaValue}>{textSourceLabel(document.textSource)}</div>
-            </div>
-            <div className={styles.meta}>
-              <div className={styles.metaLabel}>Modificato su Drive</div>
-              <div className={styles.metaValue}>{formatDateTime(document.receivedAt)}</div>
-            </div>
-          </div>
-
-          {document.warnings.map((warning) => (
-            <div className={styles.warning} key={warning}>
-              {warning}
-            </div>
-          ))}
-
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2>Dati estratti</h2>
-              <div className={styles.muted}>Ogni dato è collegato alla propria evidenza</div>
-            </div>
-          </div>
-          <div className={styles.fieldList}>
-            {document.fields.map((field) => (
-              <div className={styles.fieldRow} key={field.id}>
-                <div className={styles.fieldLabel}>{field.label}</div>
-                <div className={field.value ? styles.fieldValue : styles.fieldEmpty}>
-                  {field.value || 'Nessuna evidenza'}
-                </div>
-                <div className={styles.confidence}>{field.value ? pct(field.confidence) : '—'}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className={styles.actions}>
-            <button type="button" className={cx(styles.button, styles.buttonPrimary)} disabled>
-              Approva
-            </button>
-            <button type="button" className={styles.button} disabled>
-              Conferma con correzione
-            </button>
-            <button type="button" className={cx(styles.button, styles.buttonDanger)} disabled>
-              Rifiuta
-            </button>
-          </div>
-        </section>
-
-        <div style={{ display: 'grid', gap: 16 }}>
-          <section className={cx(styles.card, styles.panel)}>
-            <div className={styles.panelTitle}>
-              <h3>Evidenze</h3>
-              <span className={cx(styles.badge, styles.status)}>
-                {document.evidence.length} prove
-              </span>
-            </div>
-            {document.evidence.map((evidence) => (
-              <div className={styles.evidence} key={evidence.id}>
-                <div className={styles.evidenceTop}>
-                  <span>
-                    {evidence.label} · pag. {evidence.page}
-                  </span>
-                  <strong>{pct(evidence.confidence)}</strong>
-                </div>
-                <div className={styles.evidenceText}>{evidence.text}</div>
-              </div>
-            ))}
-          </section>
-
-          <section className={cx(styles.card, styles.panel)}>
-            <div className={styles.panelTitle}>
-              <h3>Timeline documento</h3>
-            </div>
-            <div className={styles.timeline}>
-              {document.timeline.map((item) => (
-                <div className={styles.timelineItem} key={item.id}>
-                  <div className={styles.dot} />
-                  <div>
-                    <div className={styles.timelineTitle}>{item.title}</div>
-                    <div className={styles.timelineDetail}>{item.detail}</div>
-                    <div className={styles.timelineAt}>{formatDateTime(item.at)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-      </div>
-    </>
   )
 }

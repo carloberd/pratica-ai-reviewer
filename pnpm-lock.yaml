@@ -11,6 +11,9 @@ importers:
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
+      google-auth-library:
+        specifier: ^11.0.2
+        version: 11.0.2(supports-color@7.2.0)
       googleapis:
         specifier: ^181.0.0
         version: 181.0.0(supports-color@7.2.0)
@@ -3673,7 +3676,7 @@ snapshots:
       es6-error: 4.1.1
       matcher: 3.0.0
       roarr: 2.15.4
-      semver: 7.7.4
+      semver: 7.8.5
       serialize-error: 7.0.1
     optional: true
 

@@ -176,6 +176,31 @@ export interface DashboardStats {
   kpis: DashboardKpi[]
 }
 
+/** File trovato su Drive, prima che diventi un documento locale. */
+export interface DriveFileSummary {
+  id: string
+  name: string
+  mimeType: string
+  modifiedTime: string | null
+  size: number | null
+  /** Esiste già una riga `documents` per questo file. */
+  known: boolean
+}
+
+export interface SearchHit {
+  documentId: string
+  filename: string
+  page: number
+  snippet: string
+}
+
+export interface SyncProgress {
+  phase: 'listing' | 'downloading' | 'extracting' | 'done'
+  current: number
+  total: number
+  filename?: string
+}
+
 export interface RegistryTypeOption {
   id: string
   label: string

@@ -5,10 +5,13 @@ import type {
   BoundingBox,
   DashboardStats,
   DocumentFilters,
+  DriveFileSummary,
   RegistryTypeOption,
   ReviewDocument,
   ReviewDocumentSummary,
   ReviewPayload,
+  SearchHit,
+  SyncProgress,
   SyncResult
 } from '../shared/types'
 
@@ -74,34 +77,13 @@ export const reviewerApi = {
   docx: {
     text: (documentId: string) => invoke<IpcResultOf<string>>('docx:text', { documentId })
   },
-  onSyncProgress: (listener: (progress: SyncProgress) => void) => {
+  onSyncProgress: (listener: (progress: SyncProgress) => void): (() => void) => {
     const handler = (_event: unknown, progress: SyncProgress) => listener(progress)
     ipcRenderer.on('drive:sync-progress', handler)
-    return () => ipcRenderer.off('drive:sync-progress', handler)
+    return () => {
+      ipcRenderer.off('drive:sync-progress', handler)
+    }
   }
-}
-
-export interface DriveFileSummary {
-  id: string
-  name: string
-  mimeType: string
-  modifiedTime: string | null
-  size: number | null
-  known: boolean
-}
-
-export interface SearchHit {
-  documentId: string
-  filename: string
-  page: number
-  snippet: string
-}
-
-export interface SyncProgress {
-  phase: 'listing' | 'downloading' | 'extracting' | 'done'
-  current: number
-  total: number
-  filename?: string
 }
 
 type IpcResultOf<T> =
