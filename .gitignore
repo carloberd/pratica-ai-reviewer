@@ -7,4 +7,4 @@ release/
 .env
 .env.local
 coverage/
-resources/tessdata/*.traineddata*
+*.tsbuildinfo

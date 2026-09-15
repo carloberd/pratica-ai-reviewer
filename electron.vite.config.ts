@@ -8,7 +8,8 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/main/index.ts')
+          index: resolve(__dirname, 'src/main/index.ts'),
+          'ocr-worker': resolve(__dirname, 'src/main/extract/ocr-worker.ts')
         },
         output: {
           // Il worker OCR viene lanciato per path: i nomi dei bundle devono restare stabili.

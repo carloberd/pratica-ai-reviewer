@@ -21,7 +21,7 @@ export type DocumentProcessor = (input: {
   cachedPath: string
   mime: string
   filename: string
-}) => Promise<void>
+}) => Promise<unknown>
 
 export interface SyncOptions {
   drive: DriveClient

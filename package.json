@@ -22,6 +22,7 @@
     "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.9",
     "better-sqlite3": "^13.0.3",
     "google-auth-library": "^11.0.2",
     "googleapis": "^181.0.0",

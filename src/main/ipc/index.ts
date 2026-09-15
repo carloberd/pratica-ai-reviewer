@@ -5,7 +5,7 @@ import { z } from 'zod'
 import type { AuthService } from '../auth/service'
 import type { Repository } from '../db/repository'
 import { createDriveClient } from '../drive/client'
-import { syncDrive } from '../drive/sync'
+import { type DocumentProcessor, syncDrive } from '../drive/sync'
 import { fail, logError, ok, ReviewerError } from '../errors'
 import { cachePathFor } from '../paths'
 import {
@@ -22,8 +22,10 @@ const noInput = z.unknown().optional()
 export interface IpcContext {
   repo: Repository
   auth: AuthService
-  /** Tipi del registry per il menu di assegnazione manuale. In F2 la lista è vuota. */
+  /** Tipi del registry per il menu di assegnazione manuale. */
   registryTypes?: () => RegistryTypeOption[]
+  /** Classificazione e precompilazione, eseguita su ogni documento scaricato. */
+  process?: DocumentProcessor
   /** Invia gli eventi di avanzamento della sincronizzazione al renderer. */
   sender?: () => WebContents | null
 }
@@ -81,6 +83,7 @@ export function registerIpcHandlers(context: IpcContext): void {
       drive,
       repo,
       cachePathFor,
+      ...(context.process ? { process: context.process } : {}),
       onProgress: (progress) => {
         const target = context.sender?.()
         if (target && !target.isDestroyed()) target.send('drive:sync-progress', progress)
