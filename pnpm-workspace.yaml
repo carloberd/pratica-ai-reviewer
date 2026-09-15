@@ -7,6 +7,17 @@ allowBuilds:
   esbuild: true
   tesseract.js: true
 
+# Il pacchetto va costruito per mac e Windows dalla stessa macchina: senza questo
+# pnpm scarica solo i binari nativi della piattaforma corrente e il build per
+# Windows resterebbe senza il renderer usato dall'OCR.
+supportedArchitectures:
+  os:
+    - darwin
+    - win32
+  cpu:
+    - x64
+    - arm64
+
 minimumReleaseAgeExclude:
   - '@vitest/mocker@5.0.1'
   - '@vitest/spy@5.0.1'

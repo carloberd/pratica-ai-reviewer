@@ -1,0 +1,50 @@
+appId: com.praticaai.reviewer
+productName: PraticaAI Reviewer
+copyright: Carlo Berdondini
+
+directories:
+  buildResources: build
+  output: release
+
+files:
+  - out/**
+  - package.json
+
+# Lo snapshot del registry e i modelli tesseract restano file su disco accanto
+# all'app: `src/main/paths.ts` li cerca in `process.resourcesPath` quando è
+# impacchettata, e in `resources/` quando gira da sorgente.
+extraResources:
+  - from: resources/registry
+    to: registry
+  - from: resources/tessdata
+    to: tessdata
+
+# Moduli nativi e worker che devono esistere come file veri: dentro l'archivio asar
+# non sono caricabili (il binding .node) o non sono eseguibili (il worker di tesseract).
+asarUnpack:
+  - '**/node_modules/better-sqlite3/**'
+  - '**/node_modules/@napi-rs/canvas*/**'
+  - '**/node_modules/tesseract.js/**'
+  - '**/node_modules/tesseract.js-core/**'
+
+mac:
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  category: public.app-category.business
+  darkModeSupport: false
+  # Nessuna firma: l'app è per due macchine conosciute, non per distribuzione.
+  identity: null
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: zip
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
