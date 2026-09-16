@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { bakedCredentials, parseEnvFile, resolveCredentials } from '../src/main/config'
+import {
+  bakedCredentials,
+  parseEngine,
+  parseEnvFile,
+  resolveCredentials,
+  resolveEngines
+} from '../src/main/config'
 import { ReviewerError, redact, toIpcError } from '../src/main/errors'
 
 describe('parsing del file .env', () => {
@@ -130,5 +136,52 @@ describe('precedenza delle credenziali', () => {
 
   it('fuori dal bundle non ci sono credenziali cucite', () => {
     expect(bakedCredentials()).toBeNull()
+  })
+})
+
+describe('motori di classificazione e di estrazione', () => {
+  it('senza variabili vale v2 per entrambi', () => {
+    expect(resolveEngines({ env: {}, envFiles: [] })).toEqual({
+      classifier: 'v2',
+      extraction: 'v2'
+    })
+  })
+
+  it('v1 si sceglie per ciascun motore separatamente', () => {
+    expect(resolveEngines({ env: { EXTRACTION_ENGINE: 'v1' }, envFiles: [] })).toEqual({
+      classifier: 'v2',
+      extraction: 'v1'
+    })
+  })
+
+  it('stessa precedenza delle credenziali: ambiente, poi i file .env in ordine', () => {
+    expect(
+      resolveEngines({
+        env: { CLASSIFIER_ENGINE: 'v1' },
+        envFiles: [
+          { CLASSIFIER_ENGINE: 'v2', EXTRACTION_ENGINE: 'v1' },
+          { EXTRACTION_ENGINE: 'v2' }
+        ]
+      })
+    ).toEqual({ classifier: 'v1', extraction: 'v1' })
+  })
+
+  it('un valore vuoto non nasconde quello del file successivo', () => {
+    expect(
+      resolveEngines({
+        env: { CLASSIFIER_ENGINE: '' },
+        envFiles: [{ CLASSIFIER_ENGINE: ' ' }, { CLASSIFIER_ENGINE: 'v1' }]
+      }).classifier
+    ).toBe('v1')
+  })
+
+  it('tollera maiuscole e spazi', () => {
+    expect(parseEngine('EXTRACTION_ENGINE', ' V1 ')).toBe('v1')
+  })
+
+  it('un valore sconosciuto è un errore d avvio, non un ripiego silenzioso', () => {
+    expect(() => parseEngine('EXTRACTION_ENGINE', 'v3')).toThrow(
+      'EXTRACTION_ENGINE=v3 non è valido: i valori ammessi sono v1 e v2.'
+    )
   })
 })

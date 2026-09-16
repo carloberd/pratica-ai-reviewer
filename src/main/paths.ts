@@ -24,6 +24,11 @@ export function registryDir(): string {
   return registryDirectory(app.getAppPath(), process.resourcesPath, app.isPackaged)
 }
 
+/** Registry v2 (profili, ontologia, segnali del classificatore): sottocartella dello snapshot. */
+export function registryV2Dir(): string {
+  return join(registryDir(), 'v2')
+}
+
 /** Modelli tesseract `ita` e `eng`, versionati nel repo. */
 export function tessdataDir(): string {
   return app.isPackaged
