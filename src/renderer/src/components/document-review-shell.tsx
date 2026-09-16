@@ -18,6 +18,7 @@ import AuthPanel from './auth-panel'
 import styles from './document-review.module.css'
 import DocumentTable from './document-table'
 import DriveFiles from './drive-files'
+import { KpiSkeleton } from './loading-skeleton'
 import ReviewView from './review-view'
 
 /**
@@ -47,6 +48,12 @@ export default function DocumentReviewShell() {
   const [driveLoaded, setDriveLoaded] = useState(false)
   const [fetchingId, setFetchingId] = useState<string | null>(null)
   const [cache, setCache] = useState<CacheUsage | null>(null)
+  /**
+   * La prima lettura del database è finita. Prima che lo sia, «nessun documento» non è
+   * una risposta: è una domanda ancora aperta, e darla per buona significa smentirsi
+   * un istante dopo, quando le righe arrivano.
+   */
+  const [loaded, setLoaded] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
@@ -60,6 +67,8 @@ export default function DocumentReviewShell() {
       setDocuments(list)
     } catch (caught) {
       setError(errorMessage(caught))
+    } finally {
+      setLoaded(true)
     }
   }, [])
 
@@ -248,15 +257,19 @@ export default function DocumentReviewShell() {
 
         {view === 'dashboard' && (
           <>
-            <section className={styles.kpiGrid}>
-              {kpis.map((kpi) => (
-                <article className={cx(styles.card, styles.kpi)} key={kpi.id}>
-                  <div className={styles.kpiLabel}>{kpi.label}</div>
-                  <div className={styles.kpiValue}>{kpi.value.toLocaleString('it-IT')}</div>
-                  <div className={styles.kpiHint}>{kpi.hint}</div>
-                </article>
-              ))}
-            </section>
+            {loaded ? (
+              <section className={styles.kpiGrid}>
+                {kpis.map((kpi) => (
+                  <article className={cx(styles.card, styles.kpi)} key={kpi.id}>
+                    <div className={styles.kpiLabel}>{kpi.label}</div>
+                    <div className={styles.kpiValue}>{kpi.value.toLocaleString('it-IT')}</div>
+                    <div className={styles.kpiHint}>{kpi.hint}</div>
+                  </article>
+                ))}
+              </section>
+            ) : (
+              <KpiSkeleton />
+            )}
 
             <div className={styles.sectionHeader}>
               <div>
@@ -267,6 +280,8 @@ export default function DocumentReviewShell() {
             <DocumentTable
               documents={queue}
               onOpen={(id) => openDocument(id, 'dashboard')}
+              loading={!loaded}
+              loadingLabel="Carico la coda di revisione…"
               emptyTitle="Nessun documento da revisionare"
               emptyHint="Apri un file da «Documenti» per popolare la coda."
             />
@@ -290,21 +305,24 @@ export default function DocumentReviewShell() {
                 </div>
               )}
             </div>
-            {!driveLoaded && !busy ? (
+            {driveLoaded || pending === 'drive' ? (
+              <DriveFiles
+                files={driveFiles}
+                fetchingId={fetchingId}
+                busy={busy}
+                loading={pending === 'drive'}
+                onOpen={openDriveFile}
+                emptyHint="L'account non ha PDF o DOCX fuori dal cestino."
+              />
+            ) : (
+              /* Un'operazione qualsiasi in corso non dice niente su Drive: finché
+                 l'elenco non è stato chiesto, la schermata resta questa. */
               <div className={cx(styles.card, styles.empty)}>
                 <div className={styles.emptyTitle}>Elenco non ancora caricato</div>
                 <div>
                   Usa «Aggiorna elenco Drive» dal menu dell&apos;account per leggere i file.
                 </div>
               </div>
-            ) : (
-              <DriveFiles
-                files={driveFiles}
-                fetchingId={fetchingId}
-                busy={busy}
-                onOpen={openDriveFile}
-                emptyHint="L'account non ha PDF o DOCX fuori dal cestino."
-              />
             )}
           </>
         )}

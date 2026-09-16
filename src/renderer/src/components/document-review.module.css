@@ -603,6 +603,65 @@
   font-size: 14px;
 }
 
+/* ---- caricamento ----
+   Lo scheletro occupa lo spazio delle righe che stanno arrivando: senza, la tabella
+   dichiara «nessun documento» e un istante dopo si contraddice. */
+
+.skeleton {
+  padding: 14px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.skeletonLabel {
+  color: #7d8991;
+  font-size: 13px;
+  font-weight: 650;
+}
+.skeletonRow {
+  display: grid;
+  grid-template-columns: 2.4fr 1.2fr 1fr 0.9fr 1fr 1.1fr;
+  gap: 16px;
+  align-items: center;
+}
+.skeletonBar {
+  display: block;
+  height: 11px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #edf0f2 25%, #f7f9fa 37%, #edf0f2 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+.skeletonKpiLabel {
+  width: 55%;
+}
+.skeletonKpiValue {
+  width: 40%;
+  height: 26px;
+  margin-top: 10px;
+  border-radius: 8px;
+}
+.skeletonKpiHint {
+  width: 70%;
+  height: 9px;
+  margin-top: 9px;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 50%;
+  }
+  to {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonBar {
+    animation: none;
+  }
+}
+
 .banner {
   display: flex;
   align-items: center;
