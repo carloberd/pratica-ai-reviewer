@@ -23,6 +23,11 @@ export function createEvidenceDao(db: Db) {
     /** Sostituisce in blocco le evidenze di un documento (ri-estrazione). */
     replaceForDocument(documentId: string, items: EvidenceInput[]): string[] {
       db.prepare('UPDATE fields SET evidence_id = NULL WHERE document_id = ?').run(documentId)
+      // Anche gli elementi dei campi `many` puntano alle evidenze: senza questo il
+      // DELETE qui sotto violerebbe la foreign key al secondo run.
+      db.prepare(
+        'UPDATE field_items SET evidence_id = NULL WHERE field_id IN (SELECT id FROM fields WHERE document_id = ?)'
+      ).run(documentId)
       db.prepare('DELETE FROM evidence WHERE document_id = ?').run(documentId)
       const ids: string[] = []
       for (const item of items) {
