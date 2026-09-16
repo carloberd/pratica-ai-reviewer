@@ -1,13 +1,16 @@
+import type { FieldReviewStatus, FieldRole } from '@shared/extraction-v2'
 import { fieldSemanticType } from '@shared/fields'
 import type {
   BoundingBox,
   ConfidenceBand,
   EvidenceItem,
   ExtractedField,
+  FieldItem,
   QueueStatus,
   SemanticType,
   TextSource,
-  TimelineItem
+  TimelineItem,
+  TypeClassification
 } from '@shared/types'
 
 export interface DocumentRow {
@@ -24,6 +27,9 @@ export interface DocumentRow {
   text_source: string | null
   received_at: string | null
   synced_at: string
+  /** JSON di `TypeClassification` senza etichette (migrazione 0005). */
+  classification_json: string | null
+  reviewed_at: string | null
 }
 
 export interface FieldRow {
@@ -55,6 +61,10 @@ export interface FieldItemRow {
   evidence_id: string | null
   validation_errors_json: string | null
   updated_at: string | null
+  /** `ENGINE` | `MANUAL` (migrazione 0005). */
+  origin: string
+  /** 1 = riga proposta tolta dal revisore. */
+  removed: number
 }
 
 export interface ExtractionRunRow {
@@ -143,7 +153,70 @@ export function semanticTypeOf(row: Pick<FieldRow, 'name' | 'semantic_type'>): S
     : 'string'
 }
 
-export function toExtractedField(row: FieldRow, required: boolean): ExtractedField {
+const ROLES: FieldRole[] = ['required', 'core', 'optional', 'conditional']
+const REVIEW_STATUSES: FieldReviewStatus[] = [
+  'AUTO_ACCEPTED',
+  'NEEDS_REVIEW',
+  'MISSING',
+  'CONFLICT'
+]
+
+/** I valori delle righe sono JSON: una stringa per riga, qualunque altra cosa diventa testo. */
+export function parseItemValue(json: string | null): string | null {
+  if (json === null) return null
+  try {
+    const parsed: unknown = JSON.parse(json)
+    if (parsed === null) return null
+    return typeof parsed === 'string' ? parsed : JSON.stringify(parsed)
+  } catch {
+    return json
+  }
+}
+
+export function toFieldItem(row: FieldItemRow): FieldItem {
+  const corrected = parseItemValue(row.corrected_value_json)
+  return {
+    id: row.id,
+    index: row.item_index,
+    value: parseItemValue(row.value_json) ?? '',
+    ...(corrected !== null ? { correctedValue: corrected } : {}),
+    confidence: row.confidence,
+    ...(row.evidence_id ? { evidenceId: row.evidence_id } : {}),
+    origin: row.origin === 'MANUAL' ? 'MANUAL' : 'ENGINE',
+    removed: row.removed === 1,
+    ...(row.updated_at ? { updatedAt: row.updated_at } : {})
+  }
+}
+
+/**
+ * La classificazione salvata. Un JSON illeggibile vale come assente: la scheda tipo
+ * perde i candidati, ma il documento resta apribile.
+ */
+export function parseClassification(
+  json: string | null,
+  labelOf: (documentType: string) => string | null
+): TypeClassification | null {
+  if (!json) return null
+  try {
+    const parsed = JSON.parse(json) as TypeClassification
+    if (!Array.isArray(parsed.candidates)) return null
+    return {
+      ...parsed,
+      candidates: parsed.candidates.map((candidate) => ({
+        ...candidate,
+        label: labelOf(candidate.documentType)
+      }))
+    }
+  } catch {
+    return null
+  }
+}
+
+export function toExtractedField(
+  row: FieldRow,
+  required: boolean,
+  items: FieldItemRow[] = []
+): ExtractedField {
   return {
     id: row.id,
     name: row.name,
@@ -154,7 +227,11 @@ export function toExtractedField(row: FieldRow, required: boolean): ExtractedFie
     ...(row.evidence_id ? { evidenceId: row.evidence_id } : {}),
     required,
     semanticType: semanticTypeOf(row),
-    ...(row.updated_at ? { updatedAt: row.updated_at } : {})
+    ...(row.updated_at ? { updatedAt: row.updated_at } : {}),
+    cardinality: row.cardinality === 'many' ? 'many' : 'one',
+    role: ROLES.find((role) => role === row.role) ?? null,
+    reviewStatus: REVIEW_STATUSES.find((status) => status === row.review_status) ?? null,
+    items: row.cardinality === 'many' ? items.map(toFieldItem) : []
   }
 }
 

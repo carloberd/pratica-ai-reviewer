@@ -1,3 +1,5 @@
+import { type EvidenceTarget, targetOfEvidence } from '@shared/evidence-locate'
+import { documentCorrections } from '@shared/field-edits'
 import type { RegistryTypeOption, ReviewAction, ReviewDocument } from '@shared/types'
 import { useMemo, useState } from 'react'
 import { cx } from '../lib/cx'
@@ -5,8 +7,10 @@ import { formatDateTime, pct, STATUS_LABELS, textSourceLabel } from '../lib/form
 import DocumentPreview from './document-preview'
 import styles from './document-review.module.css'
 import { BAND_CLASS } from './document-table'
-import FieldEditor from './field-editor'
+import FieldsPanel, { type ActiveTarget } from './fields-panel'
+import type { EvidenceFocus } from './pdf-viewer'
 import SearchableSelect from './searchable-select'
+import TypeCandidates from './type-candidates'
 
 interface Props {
   document: ReviewDocument
@@ -14,6 +18,9 @@ interface Props {
   busy: boolean
   onBack: () => void
   onFieldCommit: (fieldId: string, value: string | null) => void
+  onItemCommit: (itemId: string, value: string | null) => void
+  onItemRemove: (itemId: string, removed: boolean) => void
+  onItemAdd: (fieldId: string, value: string) => void
   onDecide: (action: ReviewAction, note?: string) => void
   onAssignType: (documentType: string | null) => void
   /** Toglie la copia locale del file, lasciando i dati estratti. */
@@ -40,23 +47,25 @@ export default function ReviewView({
   busy,
   onBack,
   onFieldCommit,
+  onItemCommit,
+  onItemRemove,
+  onItemAdd,
   onDecide,
   onAssignType,
   onEvict
 }: Props) {
   const [note, setNote] = useState('')
   const [tab, setTab] = useState<Tab>('fields')
-  const [focusedEvidence, setFocusedEvidence] = useState<string | null>(null)
+  const [focus, setFocus] = useState<EvidenceFocus | null>(null)
   /**
-   * Campo che riceve il testo preso dal documento. Resta attivo anche quando
+   * Campo (o riga) che riceve il testo preso dal documento. Resta attivo anche quando
    * l'input perde il fuoco: selezionare sul documento lo fa perdere per forza.
    */
-  const [activeField, setActiveField] = useState<string | null>(null)
+  const [active, setActive] = useState<ActiveTarget | null>(null)
 
-  /** Da un'evidenza si salta alla pagina del documento da cui viene. */
-  function openEvidence(evidenceId: string) {
-    setFocusedEvidence(evidenceId)
-    setTab('evidence')
+  /** Da un'evidenza si va al punto del documento da cui viene, restando nella scheda. */
+  function focusEvidence(target: EvidenceTarget) {
+    setFocus((current) => ({ target, seq: (current?.seq ?? 0) + 1 }))
   }
 
   const typeOptions = useMemo(
@@ -64,19 +73,39 @@ export default function ReviewView({
     [types]
   )
 
-  const active = document.fields.find((field) => field.id === activeField) ?? null
+  const activeField = active
+    ? (document.fields.find((field) => field.id === active.fieldId) ?? null)
+    : null
+  const activeItem =
+    active?.kind === 'item'
+      ? (activeField?.items.find((item) => item.id === active.itemId) ?? null)
+      : null
+  const captureTarget = !activeField
+    ? null
+    : active?.kind === 'new-item'
+      ? `${activeField.label} · nuova riga`
+      : activeItem
+        ? `${activeField.label} · riga ${activeItem.index + 1}`
+        : active?.kind === 'field'
+          ? activeField.label
+          : null
 
-  /** Quello che il revisore ha selezionato sul documento finisce nel campo attivo. */
+  /**
+   * Quello che il revisore ha selezionato sul documento finisce nel campo attivo; con la
+   * riga nuova attiva, ogni selezione aggiunge una riga.
+   */
   function capture(text: string) {
-    if (!active) return
+    if (!active || !captureTarget) return
     const value = text.replace(/\s+/g, ' ').trim()
-    if (value) onFieldCommit(active.id, value)
+    if (!value) return
+    if (active.kind === 'field') onFieldCommit(active.fieldId, value)
+    else if (active.kind === 'item') onItemCommit(active.itemId, value)
+    else onItemAdd(active.fieldId, value)
   }
 
-  const corrections = document.fields.filter(
-    (field) => field.correctedValue !== undefined && field.correctedValue !== field.value
-  ).length
+  const corrections = documentCorrections(document.fields).length
   const decided = document.status !== 'NEEDS_REVIEW'
+  const shownEvidenceId = focus?.target.evidenceId ?? null
 
   return (
     <div className={styles.reviewShell}>
@@ -152,9 +181,18 @@ export default function ReviewView({
                   <div className={styles.muted}>
                     {document.typeConfidence !== null
                       ? `Classificato dal registry al ${pct(document.typeConfidence)}. `
-                      : ''}
-                    Cambiando tipo cambiano i campi richiesti alla prossima elaborazione.
+                      : document.documentType
+                        ? 'Scelto dal revisore. '
+                        : ''}
+                    Cambiando tipo il documento si rielabora coi campi del nuovo tipo; le correzioni
+                    fatte restano.
                   </div>
+                  <TypeCandidates
+                    document={document}
+                    disabled={busy}
+                    onAssign={onAssignType}
+                    onFocusEvidence={focusEvidence}
+                  />
                 </div>
 
                 <div className={styles.panelSection}>
@@ -170,22 +208,26 @@ export default function ReviewView({
                   {document.fields.length === 0 ? (
                     <div className={styles.empty}>
                       <div className={styles.emptyTitle}>Nessun campo da compilare</div>
-                      <div>La precompilazione non è ancora stata eseguita su questo documento.</div>
+                      <div>
+                        {document.documentType
+                          ? 'Il profilo di questo tipo non chiede campi, o il documento non è ancora stato elaborato.'
+                          : 'Senza tipo non c’è un profilo di campi: assegna il tipo e il documento si precompila.'}
+                      </div>
                     </div>
                   ) : (
-                    <div className={styles.fieldList}>
-                      {document.fields.map((field) => (
-                        <FieldEditor
-                          key={field.id}
-                          field={field}
-                          disabled={busy}
-                          active={field.id === activeField}
-                          onActivate={() => setActiveField(field.id)}
-                          onCommit={(value) => onFieldCommit(field.id, value)}
-                          onFocusEvidence={openEvidence}
-                        />
-                      ))}
-                    </div>
+                    <FieldsPanel
+                      fields={document.fields}
+                      evidence={document.evidence}
+                      disabled={busy}
+                      active={active}
+                      shownEvidenceId={shownEvidenceId}
+                      onActivate={setActive}
+                      onFieldCommit={onFieldCommit}
+                      onItemCommit={onItemCommit}
+                      onItemRemove={onItemRemove}
+                      onItemAdd={onItemAdd}
+                      onFocusEvidence={focusEvidence}
+                    />
                   )}
                 </div>
               </>
@@ -216,9 +258,9 @@ export default function ReviewView({
                     key={evidence.id}
                     className={cx(
                       styles.evidenceButton,
-                      focusedEvidence === evidence.id && styles.evidenceActive
+                      shownEvidenceId === evidence.id && styles.evidenceActive
                     )}
-                    onClick={() => setFocusedEvidence(evidence.id)}
+                    onClick={() => focusEvidence(targetOfEvidence(evidence))}
                   >
                     <div className={styles.evidenceTop}>
                       <span>
@@ -272,8 +314,8 @@ export default function ReviewView({
           <DocumentPreview
             document={document}
             evidence={document.evidence}
-            focusedEvidenceId={focusedEvidence}
-            captureTarget={active?.label ?? null}
+            focus={focus}
+            captureTarget={captureTarget}
             onCapture={capture}
           />
         </section>

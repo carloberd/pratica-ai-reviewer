@@ -15,7 +15,9 @@ import { createSearchDao } from './dao/search'
 import type { Db } from './index'
 import {
   type DocumentRow,
+  type FieldItemRow,
   type FieldRow,
+  parseClassification,
   toBand,
   toEvidenceItem,
   toExtractedField,
@@ -128,11 +130,21 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
 
       const fieldRows = fields.listForDocument(id)
       const required = new Set(requiredFields(row.document_type))
+      const itemsByField = new Map<string, FieldItemRow[]>()
+      for (const item of fields.listItemsForDocument(id)) {
+        itemsByField.set(item.field_id, [...(itemsByField.get(item.field_id) ?? []), item])
+      }
 
       // L'etichetta di un'evidenza è quella del campo che la cita: nello schema del
-      // task la tabella `evidence` non ha una colonna label.
+      // task la tabella `evidence` non ha una colonna label. Le righe dei campi ripetuti
+      // hanno ciascuna la sua.
       const labelByEvidence = new Map<string, string>()
       for (const field of fieldRows) {
+        for (const item of itemsByField.get(field.id) ?? []) {
+          if (item.evidence_id && !labelByEvidence.has(item.evidence_id)) {
+            labelByEvidence.set(item.evidence_id, `${field.label} · riga ${item.item_index + 1}`)
+          }
+        }
         if (field.evidence_id && !labelByEvidence.has(field.evidence_id)) {
           labelByEvidence.set(field.evidence_id, field.label)
         }
@@ -157,11 +169,15 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
         textSource: toTextSource(row.text_source),
         cachedPath: row.cached_path,
         warnings: warningsFor(row, missing),
-        fields: fieldRows.map((field) => toExtractedField(field, isRequired(field, required))),
+        fields: fieldRows.map((field) =>
+          toExtractedField(field, isRequired(field, required), itemsByField.get(field.id))
+        ),
         evidence: evidence
           .listForDocument(id)
           .map((item) => toEvidenceItem(item, labelByEvidence.get(item.id) ?? 'Evidenza')),
-        timeline: events.listForDocument(id).map(toTimelineItem)
+        timeline: events.listForDocument(id).map(toTimelineItem),
+        classification: parseClassification(row.classification_json, typeLabel),
+        reviewedAt: row.reviewed_at
       }
     },
 

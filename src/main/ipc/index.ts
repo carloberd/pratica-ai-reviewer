@@ -1,9 +1,11 @@
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import type { IpcResult, RegistryTypeOption } from '@shared/types'
+import { type DatasetManifestInput, datasetFileName } from '@shared/dataset'
+import type { DatasetExportResult, IpcResult, RegistryTypeOption } from '@shared/types'
 import { ipcMain, type WebContents } from 'electron'
 import { z } from 'zod'
 import type { AuthService } from '../auth/service'
+import { collectDataset, writeDatasetFile } from '../dataset-export'
 import type { Repository } from '../db/repository'
 import { toStatus } from '../db/rows'
 import { createDriveClient, DOCX_MIME, PDF_MIME } from '../drive/client'
@@ -11,18 +13,27 @@ import { cacheUsage, type DocumentProcessor, evictCachedFile, fetchDriveFile } f
 import { fail, logError, ok, ReviewerError } from '../errors'
 import { extractDocxPages } from '../extract/docx'
 import type { OcrService } from '../extract/ocr'
+import {
+  addFieldItem,
+  setFieldItemRemoved,
+  updateFieldItem,
+  updateFieldValue
+} from '../field-edits'
 import { cachePathFor } from '../paths'
 import { assignDocumentType } from '../reprocess'
-import { buildReviewPayload, describeReview, statusForAction } from '../review'
+import { submitReview } from '../review'
 import {
+  addFieldItemSchema,
   documentFiltersSchema,
   documentIdSchema,
   documentRefSchema,
   fetchDriveFileSchema,
   ocrRegionSchema,
+  removeFieldItemSchema,
   reviewSubmissionSchema,
   searchSchema,
   setTypeSchema,
+  updateFieldItemSchema,
   updateFieldSchema
 } from './schemas'
 
@@ -40,6 +51,12 @@ export interface IpcContext {
   ocr?: OcrService
   /** Invia gli eventi di avanzamento della sincronizzazione al renderer. */
   sender?: () => WebContents | null
+  /** Export del dataset annotato: versioni per il manifest e scelta del file. */
+  dataset?: {
+    manifest: () => Omit<DatasetManifestInput, 'exportedAt'>
+    /** Percorso scelto dal revisore, `null` se annulla. */
+    choosePath: (defaultName: string) => Promise<string | null>
+  }
 }
 
 /**
@@ -149,36 +166,56 @@ export function registerIpcHandlers(context: IpcContext): void {
   )
 
   // ---- campi e revisione ---------------------------------------------------
-  handle('fields:update', updateFieldSchema, ({ documentId, fieldId, correctedValue }) => {
-    const field = repo.fields.get(fieldId)
-    if (!field || field.document_id !== documentId) {
-      throw new ReviewerError('NOT_FOUND', 'Campo non trovato su questo documento.')
-    }
-
-    // Solo i campi davvero cambiati diventano una correzione: riscrivere lo stesso
-    // valore non deve apparire come intervento del revisore.
-    const trimmed = correctedValue?.trim() ?? null
-    const next = trimmed === null || trimmed === (field.value ?? '') ? null : trimmed
-    repo.fields.setCorrectedValue(fieldId, next)
-
-    return repo.getReviewDocument(documentId)!
+  // Solo i campi davvero cambiati diventano una correzione: riscrivere lo stesso valore
+  // non deve apparire come intervento del revisore. Le regole stanno in `field-edits`.
+  handle('fields:update', updateFieldSchema, (input) => {
+    updateFieldValue(repo, input)
+    return repo.getReviewDocument(input.documentId)!
   })
 
-  handle('review:submit', reviewSubmissionSchema, ({ documentId, payload }) => {
-    const document = repo.getReviewDocument(documentId)
-    if (!document) throw new ReviewerError('NOT_FOUND', 'Documento non trovato.')
+  handle('fields:item-add', addFieldItemSchema, (input) => {
+    addFieldItem(repo, input)
+    return repo.getReviewDocument(input.documentId)!
+  })
 
-    // I campi sono già a database — `fields:update` li scrive appena vengono toccati.
-    // Qui si registra solo l'esito: dentro o fuori dal dataset, e perché.
-    const full = buildReviewPayload(document, payload.action, payload.note)
-    const { title, detail } = describeReview(full)
+  handle('fields:item-update', updateFieldItemSchema, (input) => {
+    updateFieldItem(repo, input)
+    return repo.getReviewDocument(input.documentId)!
+  })
 
-    repo.transaction(() => {
-      repo.documents.setStatus(documentId, statusForAction(payload.action))
-      repo.events.add(documentId, title, detail)
+  handle('fields:item-remove', removeFieldItemSchema, (input) => {
+    setFieldItemRemoved(repo, input)
+    return repo.getReviewDocument(input.documentId)!
+  })
+
+  // I campi sono già a database — ogni modifica li scrive appena avviene. Qui si
+  // registra solo l'esito: dentro o fuori dal dataset, e perché.
+  handle('review:submit', reviewSubmissionSchema, ({ documentId, payload }) =>
+    submitReview(repo, { documentId, action: payload.action, note: payload.note })
+  )
+
+  // ---- dataset annotato ----------------------------------------------------
+  handle('dataset:export', noInput, async (): Promise<DatasetExportResult> => {
+    if (!context.dataset) {
+      throw new ReviewerError('UNSUPPORTED', 'Export non disponibile su questa istanza.')
+    }
+    const now = new Date()
+    const dataset = collectDataset(repo, {
+      ...context.dataset.manifest(),
+      exportedAt: now.toISOString()
     })
+    const { documents, corrections } = dataset.manifest.counts
+    if (documents === 0) {
+      throw new ReviewerError(
+        'NOT_FOUND',
+        'Nessun documento da esportare: il dataset contiene solo documenti salvati o scartati.'
+      )
+    }
 
-    return repo.getReviewDocument(documentId)!
+    const path = await context.dataset.choosePath(datasetFileName(now))
+    if (!path) return { saved: false, path: null, documents, corrections }
+    await writeDatasetFile(path, dataset)
+    return { saved: true, path, documents, corrections }
   })
 
   // ---- ricerca -------------------------------------------------------------

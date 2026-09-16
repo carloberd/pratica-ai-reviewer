@@ -1,18 +1,27 @@
-import type { ExtractedField } from '@shared/types'
+import { type EvidenceTarget, targetOfEvidence } from '@shared/evidence-locate'
+import type { EvidenceItem, ExtractedField } from '@shared/types'
 import { useEffect, useState } from 'react'
 import { cx } from '../lib/cx'
 import { pct } from '../lib/format'
 import styles from './document-review.module.css'
+import EvidenceLink from './evidence-link'
 
 interface Props {
   field: ExtractedField
+  /** L'evidenza del valore proposto, se il motore ne ha trovata una. */
+  evidence: EvidenceItem | undefined
   disabled: boolean
   /** Il campo è quello che riceve il testo selezionato sul documento. */
   active: boolean
+  /** L'evidenza di questo campo è quella mostrata nel documento. */
+  evidenceShown: boolean
   onActivate: () => void
-  /** `null` annulla la correzione e riporta il campo al valore precompilato. */
+  /**
+   * Quello che il revisore ha scritto. `null` annulla la correzione e riporta il campo
+   * al valore precompilato; il main decide se il resto è una correzione.
+   */
   onCommit: (value: string | null) => void
-  onFocusEvidence: (evidenceId: string) => void
+  onFocusEvidence: (target: EvidenceTarget) => void
 }
 
 const PLACEHOLDER: Record<ExtractedField['semanticType'], string> = {
@@ -26,15 +35,18 @@ const PLACEHOLDER: Record<ExtractedField['semanticType'], string> = {
  *
  * È il pezzo che mancava nel modulo v5.2, dove «Conferma con correzione» inviava una
  * decisione senza mai chiedere cosa correggere. Qui il valore precompilato resta
- * visibile accanto a quello corretto: il revisore vede sempre da cosa è partito.
+ * visibile accanto a quello corretto: il revisore vede sempre da cosa è partito, e
+ * l'evidenza porta al punto del documento da cui il valore è stato letto.
  *
  * Il campo sta in una colonna stretta accanto al documento, quindi etichetta, valore
  * e provenienza si impilano invece di stare in riga.
  */
 export default function FieldEditor({
   field,
+  evidence,
   disabled,
   active,
+  evidenceShown,
   onActivate,
   onCommit,
   onFocusEvidence
@@ -50,19 +62,30 @@ export default function FieldEditor({
 
   const dirty = draft !== current
   const corrected = field.correctedValue !== undefined && field.correctedValue !== field.value
+  const cleared = corrected && field.correctedValue === ''
 
   function commit() {
     if (!dirty) return
-    onCommit(draft.trim() === '' ? null : draft)
+    // Svuotare un valore proposto è una correzione: il motore aveva letto qualcosa che
+    // nel documento non c'è.
+    onCommit(draft)
   }
 
   return (
-    <div className={cx(styles.fieldCard, active && styles.fieldCardActive)}>
+    <div className={cx(styles.fieldCard, active && styles.fieldCardActive)} data-field={field.name}>
       <div className={styles.fieldHead}>
         <span className={styles.fieldLabel}>
           {field.label}
           {field.required && (
             <span className={cx(styles.pill, styles.pillRequired)}>obbligatorio</span>
+          )}
+          {field.reviewStatus === 'CONFLICT' && !corrected && (
+            <span
+              className={cx(styles.pill, styles.pillConflict)}
+              title="Due letture diverse per questo campo: controlla il documento."
+            >
+              conflitto
+            </span>
           )}
         </span>
         <span className={styles.confidence}>{field.value ? pct(field.confidence) : '—'}</span>
@@ -73,7 +96,11 @@ export default function FieldEditor({
         value={draft}
         disabled={disabled}
         placeholder={
-          field.value ? PLACEHOLDER[field.semanticType] : 'Nessuna evidenza: compila a mano'
+          cleared
+            ? 'Svuotato: il valore proposto non c’è nel documento'
+            : field.value
+              ? PLACEHOLDER[field.semanticType]
+              : 'Nessuna evidenza: compila a mano'
         }
         onChange={(event) => setDraft(event.target.value)}
         onFocus={onActivate}
@@ -84,31 +111,31 @@ export default function FieldEditor({
         }}
       />
 
-      {(corrected || field.evidenceId) && (
-        <div className={styles.fieldFoot}>
-          {corrected && <span className={cx(styles.pill, styles.pillChanged)}>corretto</span>}
-          {field.evidenceId && (
-            <button
-              type="button"
-              className={styles.iconButton}
-              onClick={() => field.evidenceId && onFocusEvidence(field.evidenceId)}
-            >
-              evidenza
-            </button>
-          )}
-        </div>
+      {evidence && (
+        <EvidenceLink
+          target={targetOfEvidence(evidence)}
+          active={evidenceShown}
+          onFocus={onFocusEvidence}
+        />
       )}
 
       {corrected && (
         <div className={styles.beforeAfter}>
-          precompilato: <s>{field.value || '(vuoto)'}</s> → {field.correctedValue}
+          <span className={cx(styles.pill, styles.pillChanged)}>
+            {field.value ? 'corretto' : 'compilato a mano'}
+          </span>
+          {field.value && (
+            <span>
+              proposto: <s>{field.value}</s>
+            </span>
+          )}
           <button
             type="button"
             className={styles.iconButton}
             disabled={disabled}
             onClick={() => onCommit(null)}
           >
-            annulla correzione
+            {field.value ? 'torna alla proposta' : 'svuota'}
           </button>
         </div>
       )}
