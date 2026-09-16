@@ -1,4 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { ProfileEdit } from '../shared/profile-edit'
+import type {
+  ProfileEditOutcome,
+  ProfileReportResult,
+  ProfileWorkspace,
+  TypeRerunResult
+} from '../shared/profile-workspace'
 import type {
   AuthStatus,
   CacheUsage,
@@ -73,6 +80,24 @@ export const reviewerApi = {
   dataset: {
     /** Chiede dove salvare e scrive il dataset annotato. */
     export: () => invoke<IpcResultOf<DatasetExportResult>>('dataset:export')
+  },
+  /** Misure e correzione delle istruzioni di estrazione, tipo per tipo. */
+  profiles: {
+    list: () => invoke<IpcResultOf<ProfileWorkspace>>('profiles:list'),
+    /** Corregge i JSON sorgente del registry e ne fa un commit dedicato. */
+    edit: (edit: ProfileEdit) =>
+      invoke<IpcResultOf<{ outcome: ProfileEditOutcome; workspace: ProfileWorkspace }>>(
+        'profiles:edit',
+        { edit }
+      ),
+    /** Rielabora dalla cache i documenti annotati di un tipo e confronta i numeri. */
+    rerun: (documentType: string) =>
+      invoke<IpcResultOf<{ rerun: TypeRerunResult; workspace: ProfileWorkspace }>>(
+        'profiles:rerun',
+        { documentType }
+      ),
+    export: (format: 'json' | 'csv') =>
+      invoke<IpcResultOf<ProfileReportResult>>('profiles:export', { format })
   },
   review: {
     submit: (input: { documentId: string; payload: ReviewSubmission }) =>

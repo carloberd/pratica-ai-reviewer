@@ -1,4 +1,5 @@
 import { mkdirSync } from 'node:fs'
+import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { app, BrowserWindow, dialog } from 'electron'
 import { createAuthService } from './auth/service'
@@ -8,9 +9,9 @@ import { createRepository } from './db/repository'
 import { logError } from './errors'
 import { createOcrService } from './extract/ocr'
 import {
-  createExtractionRegistryV2,
-  type ExtractionRegistryV2,
-  loadLegacyFieldMap
+  createReloadableExtractionRegistryV2,
+  loadLegacyFieldMap,
+  type ReloadableExtractionRegistryV2
 } from './extract/v2/profile-loader'
 import { registerIpcHandlers } from './ipc'
 import {
@@ -83,18 +84,35 @@ function start(): void {
           schemaVersion: v2.extractionRegistryV2?.schemaVersion() ?? null
         }
       }),
-      choosePath: async (defaultName) => {
-        const options = {
-          title: 'Esporta il dataset annotato',
-          defaultPath: join(app.getPath('documents'), defaultName),
-          filters: [{ name: 'JSON', extensions: ['json'] }]
+      choosePath: (defaultName) => chooseSavePath('Esporta il dataset annotato', defaultName)
+    },
+    // Senza profili v2 non c'è niente da misurare: la voce di menu resta, e i canali
+    // rispondono che la schermata non è disponibile su questa istanza.
+    ...(v2.extractionRegistryV2
+      ? {
+          profiles: {
+            refinement: {
+              registry: v2.extractionRegistryV2,
+              registryDirectory: registryV2Dir(),
+              typeLabel: (documentType: string) => registry.label(documentType),
+              exportFile: async (file: { name: string; content: string }) => {
+                const path = await chooseSavePath(
+                  `Esporta ${file.name} da sostituire a mano`,
+                  file.name
+                )
+                if (path) await writeFile(path, file.content, 'utf8')
+                return path
+              }
+            },
+            manifest: () => ({
+              app: { name: app.getName(), version: app.getVersion() },
+              schemaVersion: v2.extractionRegistryV2?.schemaVersion() ?? null
+            }),
+            choosePath: (defaultName: string) =>
+              chooseSavePath('Esporta il report delle istruzioni per tipo', defaultName)
+          }
         }
-        const result = mainWindow
-          ? await dialog.showSaveDialog(mainWindow, options)
-          : await dialog.showSaveDialog(options)
-        return result.canceled || !result.filePath ? null : result.filePath
-      }
-    }
+      : {})
   })
 
   mainWindow = createMainWindow()
@@ -124,7 +142,7 @@ function start(): void {
  */
 function loadRegistryV2(engines: EngineSelection): {
   classifierConfigV2: ReturnType<typeof loadClassifierConfigV2> | undefined
-  extractionRegistryV2: ExtractionRegistryV2 | undefined
+  extractionRegistryV2: ReloadableExtractionRegistryV2 | undefined
   legacyFieldMap: Record<string, string>
 } {
   const usesV2 = engines.classifier === 'v2' || engines.extraction === 'v2'
@@ -141,10 +159,24 @@ function loadRegistryV2(engines: EngineSelection): {
       engines.classifier === 'v2' ? loadClassifierConfigV2(registryV2Dir()) : undefined,
     extractionRegistryV2:
       engines.extraction === 'v2'
-        ? createExtractionRegistryV2(registryV2Dir(), registryDir())
+        ? createReloadableExtractionRegistryV2(registryV2Dir(), registryDir())
         : undefined,
     legacyFieldMap
   }
+}
+
+/** Finestra «salva con nome», sulla finestra principale quando c'è. */
+async function chooseSavePath(title: string, defaultName: string): Promise<string | null> {
+  const extension = defaultName.split('.').pop() ?? 'json'
+  const options = {
+    title,
+    defaultPath: join(app.getPath('documents'), defaultName),
+    filters: [{ name: extension.toUpperCase(), extensions: [extension] }]
+  }
+  const result = mainWindow
+    ? await dialog.showSaveDialog(mainWindow, options)
+    : await dialog.showSaveDialog(options)
+  return result.canceled || !result.filePath ? null : result.filePath
 }
 
 /**
