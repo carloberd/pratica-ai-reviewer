@@ -72,6 +72,11 @@ export function createDocumentsDao(db: Db) {
       return selectByDriveId.get(driveFileId) as DocumentRow | undefined
     },
 
+    /** Impronta del layout: si calcola una volta sola, al primo export che la chiede. */
+    setTemplateFingerprint(id: string, fingerprint: string): void {
+      db.prepare('UPDATE documents SET template_fingerprint = ? WHERE id = ?').run(fingerprint, id)
+    },
+
     setCachedPath(id: string, cachedPath: string | null): void {
       db.prepare('UPDATE documents SET cached_path = ? WHERE id = ?').run(cachedPath, id)
     },

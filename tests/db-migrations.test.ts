@@ -150,7 +150,7 @@ describe('migrazioni', () => {
     // Correzione rimasta senza la riga proposta: la 0004 la teneva con valore nullo.
     item.run('orfana', 'f', 2, null, '"Trasporto"', 0)
 
-    expect(migrate(db)).toEqual(['0005'])
+    expect(migrate(db)).toEqual(['0005', '0006'])
 
     expect(
       db.prepare('SELECT id, origin, removed FROM field_items ORDER BY item_index').all()
@@ -162,6 +162,25 @@ describe('migrazioni', () => {
     expect(db.prepare('SELECT classification_json, reviewed_at FROM documents').get()).toEqual({
       classification_json: null,
       reviewed_at: null
+    })
+    db.close()
+  })
+
+  it('la 0006 aggiunge l’impronta del layout, vuota sui documenti già a database', () => {
+    const db = databaseAt('0005')
+    db.prepare(
+      "INSERT INTO documents (id, drive_file_id, filename, mime, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', '2026-01-01')"
+    ).run()
+
+    expect(migrate(db)).toEqual(['0006'])
+
+    // NULL = da calcolare al primo export, non «documento senza impronta».
+    expect(db.prepare('SELECT template_fingerprint FROM documents').get()).toEqual({
+      template_fingerprint: null
+    })
+    db.prepare("UPDATE documents SET template_fingerprint = 'a1b2c3d4e5f60718'").run()
+    expect(db.prepare('SELECT template_fingerprint FROM documents').get()).toEqual({
+      template_fingerprint: 'a1b2c3d4e5f60718'
     })
     db.close()
   })
@@ -212,7 +231,7 @@ describe('migrazione 0004 su un database esistente', () => {
     const db = databaseAt('0003')
     seedV1(db)
 
-    expect(migrate(db)).toEqual(['0004', '0005'])
+    expect(migrate(db)).toEqual(['0004', '0005', '0006'])
 
     const rows = db
       .prepare(
