@@ -28,6 +28,11 @@ const invoke = <T>(channel: string, payload?: unknown): Promise<T> =>
   ipcRenderer.invoke(channel, payload) as Promise<T>
 
 export const reviewerApi = {
+  /**
+   * Serve alla UI per lasciare spazio ai semafori di macOS, che su quella
+   * piattaforma stanno sopra al contenuto.
+   */
+  platform: process.platform,
   auth: {
     login: () => invoke<IpcResultOf<AuthStatus>>('auth:login'),
     status: () => invoke<IpcResultOf<AuthStatus>>('auth:status'),

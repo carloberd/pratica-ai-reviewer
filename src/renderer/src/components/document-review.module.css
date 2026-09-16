@@ -19,7 +19,13 @@
   flex-direction: column;
   gap: 26px;
 }
+
+/* I semafori di macOS stanno sopra al contenuto: il marchio scende sotto di loro. */
+:global(body[data-platform="darwin"]) .sidebar {
+  padding-top: 52px;
+}
 .brand {
+  -webkit-app-region: drag;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -81,6 +87,17 @@
   position: sticky;
   top: 0;
   z-index: 10;
+  /* Senza barra del titolo, è questa l'area da cui si trascina la finestra. */
+  -webkit-app-region: drag;
+}
+
+/* Tutto ciò che si clicca deve restare cliccabile: il trascinamento si ferma qui.
+   L'avatar non è interattivo, quindi resta area di trascinamento. */
+.topbar button,
+.topbar input,
+.topbar select,
+.topbar a {
+  -webkit-app-region: no-drag;
 }
 .titleWrap h1 {
   margin: 0;

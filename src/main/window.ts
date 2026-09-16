@@ -10,7 +10,11 @@ export function createMainWindow(): BrowserWindow {
     show: false,
     backgroundColor: '#f4f6f8',
     title: 'PraticaAI Reviewer',
+    // Su macOS la barra del titolo sparisce e il contenuto arriva fino in cima: le
+    // zone trascinabili le dichiara la UI con `-webkit-app-region: drag`, altrimenti
+    // la finestra non si potrebbe più spostare.
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 18, y: 24 },
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       // D1: nessun token e nessuna credenziale possono raggiungere il renderer.
