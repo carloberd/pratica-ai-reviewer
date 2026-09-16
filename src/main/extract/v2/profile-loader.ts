@@ -211,3 +211,38 @@ export function createExtractionRegistryV2(
 function unique(values: Array<string | null>): string[] {
   return [...new Set(values.filter((value): value is string => value !== null))]
 }
+
+export interface ReloadableExtractionRegistryV2 extends ExtractionRegistryV2 {
+  /**
+   * Rilegge i JSON dei profili dal disco. Serve dopo una correzione fatta dalla
+   * schermata «Istruzioni per tipo»: senza, il re-run girerebbe con i profili caricati
+   * all'avvio e il prima/dopo non mostrerebbe niente.
+   *
+   * Se i nuovi file non sono validi l'errore risale al chiamante e resta in uso il
+   * registry di prima: un JSON scritto male non deve lasciare l'app senza profili.
+   */
+  reload(): void
+}
+
+/**
+ * Il registry v2 dietro un riferimento sostituibile. La pipeline lo tiene per tutta la
+ * vita del processo, quindi non può essere l'istanza: deve poter cambiare sotto.
+ */
+export function createReloadableExtractionRegistryV2(
+  v2Directory: string,
+  legacyRegistryDirectory: string
+): ReloadableExtractionRegistryV2 {
+  let current = createExtractionRegistryV2(v2Directory, legacyRegistryDirectory)
+
+  return {
+    profile: (documentType) => current.profile(documentType),
+    field: (fieldId) => current.field(fieldId),
+    hints: (fieldId) => current.hints(fieldId),
+    profileSource: (documentType) => current.profileSource(documentType),
+    legacyNames: (fieldId) => current.legacyNames(fieldId),
+    schemaVersion: () => current.schemaVersion(),
+    reload() {
+      current = createExtractionRegistryV2(v2Directory, legacyRegistryDirectory)
+    }
+  }
+}
