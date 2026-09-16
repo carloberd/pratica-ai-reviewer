@@ -2,9 +2,24 @@ import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 
+/**
+ * Credenziali OAuth cucite nel bundle del main a build time.
+ *
+ * Restano confinate al processo main: il renderer non le vede mai (D1). Se non sono
+ * presenti nell'ambiente di compilazione vale `null`, e l'app chiede all'avvio di
+ * creare un `.env`, come prima.
+ */
+const bakedGoogleCredentials =
+  process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    ? { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET }
+    : null
+
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
+    define: {
+      __BAKED_GOOGLE_CREDENTIALS__: JSON.stringify(bakedGoogleCredentials)
+    },
     build: {
       rollupOptions: {
         input: {

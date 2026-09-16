@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseEnvFile } from '../src/main/config'
+import { bakedCredentials, parseEnvFile, resolveCredentials } from '../src/main/config'
 import { ReviewerError, redact, toIpcError } from '../src/main/errors'
 
 describe('parsing del file .env', () => {
@@ -71,5 +71,64 @@ describe('errori verso il renderer', () => {
 
   it('gestisce un throw che non è un Error', () => {
     expect(toIpcError('boom')).toEqual({ code: 'INTERNAL', message: 'Errore imprevisto.' })
+  })
+})
+
+describe('precedenza delle credenziali', () => {
+  const baked = { clientId: 'baked.apps.googleusercontent.com', clientSecret: 'GOCSPX-baked' }
+
+  it('le variabili d ambiente vincono su tutto', () => {
+    expect(
+      resolveCredentials({
+        env: { GOOGLE_CLIENT_ID: 'env-id', GOOGLE_CLIENT_SECRET: 'env-secret' },
+        envFiles: [{ GOOGLE_CLIENT_ID: 'file-id', GOOGLE_CLIENT_SECRET: 'file-secret' }],
+        baked
+      })
+    ).toEqual({ clientId: 'env-id', clientSecret: 'env-secret' })
+  })
+
+  it('il file .env vince su quelle cucite nel pacchetto', () => {
+    expect(
+      resolveCredentials({
+        env: {},
+        envFiles: [{ GOOGLE_CLIENT_ID: 'file-id', GOOGLE_CLIENT_SECRET: 'file-secret' }],
+        baked
+      })
+    ).toEqual({ clientId: 'file-id', clientSecret: 'file-secret' })
+  })
+
+  it('senza nient altro usa quelle cucite nel pacchetto', () => {
+    expect(resolveCredentials({ env: {}, envFiles: [], baked })).toEqual(baked)
+  })
+
+  it('senza nessuna sorgente non inventa credenziali', () => {
+    expect(resolveCredentials({ env: {}, envFiles: [], baked: null })).toBeNull()
+  })
+
+  /**
+   * Un .env a metà non deve mescolarsi con quelle del pacchetto: id di un client e
+   * secret di un altro produrrebbero un `invalid_client` incomprensibile.
+   */
+  it('una coppia incompleta non si mescola fra sorgenti diverse', () => {
+    expect(
+      resolveCredentials({ env: { GOOGLE_CLIENT_ID: 'solo-id' }, envFiles: [], baked: null })
+    ).toBeNull()
+  })
+
+  it('il primo file .env che ha la coppia completa vince sui successivi', () => {
+    expect(
+      resolveCredentials({
+        env: {},
+        envFiles: [
+          { GOOGLE_CLIENT_ID: 'primo-id', GOOGLE_CLIENT_SECRET: 'primo-secret' },
+          { GOOGLE_CLIENT_ID: 'secondo-id', GOOGLE_CLIENT_SECRET: 'secondo-secret' }
+        ],
+        baked: null
+      })
+    ).toEqual({ clientId: 'primo-id', clientSecret: 'primo-secret' })
+  })
+
+  it('fuori dal bundle non ci sono credenziali cucite', () => {
+    expect(bakedCredentials()).toBeNull()
   })
 })

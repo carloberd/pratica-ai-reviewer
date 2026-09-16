@@ -48,10 +48,35 @@ GOOGLE_CLIENT_ID=...apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=...
 ```
 
-Il `.env` è in `.gitignore`. Nell'app impacchettata lo stesso file va in
-`~/Library/Application Support/praticaai-reviewer/.env` (macOS) o
-`%APPDATA%\praticaai-reviewer\.env` (Windows). Senza credenziali l'app si apre lo
-stesso e mostra in chiaro cosa manca e dove metterlo.
+Il `.env` è in `.gitignore`. Per i pacchetti costruiti in CI non serve: le credenziali
+ci finiscono dentro a build time, vedi sotto.
+
+### Dove stanno le credenziali
+
+Tre sorgenti, in ordine di precedenza:
+
+| Sorgente | Quando |
+|---|---|
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` nell'ambiente | override al volo |
+| file `.env` | sviluppo (radice del repo) e installazioni manuali (cartella dati utente) |
+| cucite nel bundle a build time | pacchetti costruiti dai workflow |
+
+L'ordine conta: un pacchetto già installato si può puntare su credenziali diverse con
+un `.env` nella cartella dati, senza ricompilarlo.
+
+Per i pacchetti, i workflow leggono i secret `GOOGLE_CLIENT_ID` e
+`GOOGLE_CLIENT_SECRET` del repository (*Settings → Secrets and variables → Actions*) e
+`electron.vite.config.ts` li scrive dentro il bundle del **processo main soltanto**: nel
+preload e nel renderer non arrivano mai (D1). Su una release senza quei secret il
+workflow si ferma — un'app che non può fare login è peggio di una build fallita. Su una
+run manuale sono facoltativi, e il pacchetto che ne esce mostra la schermata di setup.
+
+Un client OAuth di tipo desktop **non può custodire un segreto**: è la ragione per cui
+esiste PKCE, e Google prevede che finisca dentro il binario. Chi apre un artefatto può
+comunque estrarlo, quindi: repository privato, pacchetti non pubblicati in giro. Se un
+segreto esce, si rigenera dalla Cloud Console e si ritaglia una release — non c'è dato
+del Drive a rischio, perché la schermata di consenso in modalità test autorizza solo gli
+utenti di test elencati.
 
 > **Consenso in modalità test: il refresh token scade dopo 7 giorni.** È una regola di
 > Google, non dell'app: il collega dovrà rifare l'accesso una volta a settimana finché

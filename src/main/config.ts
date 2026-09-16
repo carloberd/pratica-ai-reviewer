@@ -45,22 +45,61 @@ export function envFileCandidates(): string[] {
   return candidates
 }
 
-export function loadGoogleCredentials(): GoogleCredentials | null {
-  let clientId = process.env.GOOGLE_CLIENT_ID ?? ''
-  let clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? ''
+/**
+ * Credenziali cucite nel bundle a build time da `electron.vite.config.ts`, prese
+ * dall'ambiente di compilazione (in CI, dai secret del repository).
+ *
+ * Un client OAuth di tipo desktop non può custodire un segreto — è esattamente la
+ * ragione per cui esiste PKCE — quindi Google prevede che finisca dentro il binario.
+ * Chi apre l'artefatto può comunque estrarlo: va bene per questa app perché il repo è
+ * privato e la schermata di consenso è in modalità test con due soli utenti
+ * autorizzati, ma resta un motivo per non rendere pubblici i pacchetti.
+ *
+ * Fuori dal bundle (test, script) l'identificatore non esiste: `typeof` su un nome non
+ * dichiarato è lecito in JavaScript e vale 'undefined'.
+ */
+declare const __BAKED_GOOGLE_CREDENTIALS__: GoogleCredentials | null
 
-  if (!clientId || !clientSecret) {
-    for (const candidate of envFileCandidates()) {
-      if (!existsSync(candidate)) continue
-      const values = parseEnvFile(readFileSync(candidate, 'utf8'))
-      clientId = clientId || (values.GOOGLE_CLIENT_ID ?? '')
-      clientSecret = clientSecret || (values.GOOGLE_CLIENT_SECRET ?? '')
-      if (clientId && clientSecret) break
-    }
+export function bakedCredentials(): GoogleCredentials | null {
+  if (typeof __BAKED_GOOGLE_CREDENTIALS__ === 'undefined') return null
+  return __BAKED_GOOGLE_CREDENTIALS__
+}
+
+/**
+ * Sceglie le credenziali fra le sorgenti disponibili, in ordine di precedenza:
+ * variabili d'ambiente, poi i file `.env`, poi quelle cucite nel pacchetto.
+ *
+ * L'ordine conta: un pacchetto già distribuito deve poter essere puntato su
+ * credenziali diverse senza ricompilarlo.
+ */
+export function resolveCredentials(sources: {
+  env: Record<string, string | undefined>
+  envFiles: Array<Record<string, string>>
+  baked: GoogleCredentials | null
+}): GoogleCredentials | null {
+  let clientId = sources.env.GOOGLE_CLIENT_ID ?? ''
+  let clientSecret = sources.env.GOOGLE_CLIENT_SECRET ?? ''
+
+  for (const values of sources.envFiles) {
+    if (clientId && clientSecret) break
+    clientId = clientId || (values.GOOGLE_CLIENT_ID ?? '')
+    clientSecret = clientSecret || (values.GOOGLE_CLIENT_SECRET ?? '')
   }
+
+  if (!clientId && !clientSecret && sources.baked) return sources.baked
+  clientId = clientId || (sources.baked?.clientId ?? '')
+  clientSecret = clientSecret || (sources.baked?.clientSecret ?? '')
 
   if (!clientId || !clientSecret) return null
   return { clientId, clientSecret }
+}
+
+export function loadGoogleCredentials(): GoogleCredentials | null {
+  const envFiles = envFileCandidates()
+    .filter((candidate) => existsSync(candidate))
+    .map((candidate) => parseEnvFile(readFileSync(candidate, 'utf8')))
+
+  return resolveCredentials({ env: process.env, envFiles, baked: bakedCredentials() })
 }
 
 export function setupHint(): string {

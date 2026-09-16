@@ -74,7 +74,24 @@ jobs:
       # `identity: null` in electron-builder.yml salta la firma: non ci sono
       # certificati in CI e i pacchetti sono per due macchine conosciute. Al primo
       # avvio macOS chiede conferma.
+      # Le credenziali OAuth vengono cucite nel bundle del main a build time. Una
+      # release senza non riuscirebbe a fare login, ed è peggio di una build fallita:
+      # meglio fermarsi qui. Su una run manuale restano facoltative.
+      - name: Check the OAuth credentials are configured
+        if: github.event_name == 'release'
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          if [ -z "$GOOGLE_CLIENT_ID" ] || [ -z "$GOOGLE_CLIENT_SECRET" ]; then
+            echo "::error::Mancano i secret GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET. Impostali in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
       - name: Build macOS app
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: pnpm dist:mac
 
       # `electron-builder.yml` fissa gli artifactName, quindi i percorsi sono
