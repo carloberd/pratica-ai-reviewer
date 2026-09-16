@@ -235,7 +235,9 @@ prima pagina (0,90) e sul nome del file (0,70); sotto 0,75 il tipo resta da asse
 (`class_extraction_profiles_v2.json`, 500 profili su un'ontologia di 248 campi), ognuno
 col suo ruolo: obbligatorio, principale, opzionale, condizionale. I 16 tipi del registry
 senza profilo esplicito ricevono un profilo ricavato dal loro schema v1
-(`LEGACY_FALLBACK`). **Senza tipo non si estrae niente**: la scheda resta vuota finché il
+(`LEGACY_FALLBACK`). Quei profili sono quasi tutti bozze mai verificate: quanto valgano lo
+dicono le annotazioni, e si correggono dalla schermata «Istruzioni per tipo» (sotto).
+**Senza tipo non si estrae niente**: la scheda resta vuota finché il
 tipo non viene assegnato a mano, e l'assegnazione rielabora subito il documento. Il
 valore si cerca dopo l'etichetta sulla stessa riga o, se la riga finisce con
 l'etichetta, sulla successiva, con un lettore per tipo (date, importi, interi, decimali,
@@ -380,6 +382,95 @@ quando il dataset è pronto, quindi il formato resta semplice e versionato
 
 Il test `tests/dataset-export.test.ts` elabora le fixture con la pipeline v2, le corregge,
 le rielabora, le chiude e confronta il file con `tests/fixtures/dataset-export.expected.json`.
+
+---
+
+## Istruzioni per tipo
+
+Le istruzioni di estrazione per tipo — `resources/registry/v2/class_extraction_profiles_v2.json`
+e `extraction_hints_v2.json` — sono per lo più bozze: **481 profili su 500 li ha proposti
+l'AI e nessuno li ha verificati**, e da lì nascono difetti come il «numero» chiesto a tipi
+che non lo prevedono. La terza voce della navbar rende il ciclo misurabile: le annotazioni
+già fatte dicono quali istruzioni funzionano, la correzione dei JSON diventa un lavoro
+guidato dai numeri, e il re-run dice se è servita.
+
+Il confine è quello di sempre: qui si misura **l'utilità della precompilazione**, cioè
+delle regole fisse offline. L'IA di pratica-ai si valida col dataset esportato, sul
+benchmark della monorepo: altro lavoro, altro posto.
+
+**Le tre misure**, per tipo documento e per campo, calcolate sui soli documenti `REVIEWED`
+— i `DISCARDED` non votano, e nemmeno quelli ancora in coda:
+
+| Misura | Cosa vuol dire |
+|---|---|
+| **confermato** | il motore ha proposto un valore e il revisore non l'ha toccato |
+| **corretto** | il motore ha proposto un valore e il revisore ne ha messo un altro (o l'ha svuotato) |
+| **a mano** | il campo era vuoto e il revisore l'ha riempito: il motore lo chiede ma non lo trova |
+| **mai usato** | il profilo lo chiede, ma su tutti i documenti annotati di quel tipo non ha mai avuto un valore — candidato alla rimozione |
+| **assente dal profilo** | il revisore lo aggiunge ai documenti di quel tipo e il profilo non lo prevede — candidato all'aggiunta |
+
+Per il singolo campo il denominatore è il numero di documenti annotati del tipo. Per il
+tipo sono i campi che hanno finito per avere un valore (`confermati + corretti + a mano`):
+un campo vuoto da entrambe le parti non dice niente sull'utilità della precompilazione, e
+conta invece come «mai usato». Le regole di cosa sia una correzione sono le stesse della
+revisione (`@shared/field-edits`): riscrivere il valore proposto non è una correzione.
+
+**L'editor guidato.** Ogni pulsante sta accanto al numero che lo motiva: «mai usato» →
+toglilo dal profilo; «assente dal profilo» → aggiungilo, col peso scelto; «a mano» →
+insegna al motore l'etichetta con cui il campo compare nei documenti veri. Si può anche
+cambiare il peso di un campo (obbligatorio, principale, opzionale, condizionale).
+
+La scrittura va sui JSON sorgente del repo — niente fork, niente copia locale — e ogni
+correzione è **un commit dedicato** che dice perché:
+
+```
+profile(accounting.fattura): rimuove procurement.cig, mai usato su 2 documenti
+
+Il campo era condizionale nel profilo, ma su nessuno dei documenti annotati di questo
+tipo ha avuto un valore: non appartiene al tipo.
+
+Numeri su 2 documenti annotati: 0 confermati, 0 corretti, 0 a mano.
+Correzione fatta dalla schermata «Istruzioni per tipo» di praticaai-reviewer, guidata
+dalle annotazioni del revisore.
+```
+
+Il commit porta come pathspec solo i file toccati: quello che c'era già in staging resta
+dov'è. Se la cartella dei profili non è scrivibile — l'app impacchettata legge il registry
+da `process.resourcesPath` — la correzione **non è un errore**: il pulsante produce il JSON
+corretto da salvare e sostituire a mano, e la schermata lo dice prima di provarci e dopo
+averlo fatto. Se la cartella è scrivibile ma non versionata, il file viene scritto e
+l'esito dice che non c'è nessun commit.
+
+**Re-run e delta.** Dopo una correzione, un pulsante rilancia l'estrazione sui documenti
+già annotati di quel tipo, **dalla cache, senza riscaricare niente**. Le correzioni umane
+sopravvivono — è la pipeline di sempre, con il meccanismo della v1 — e la schermata mostra
+il prima/dopo: «a mano sul campo X: 70% → 20%». Se i numeri non si muovono lo dice, invece
+di lasciar cercare la differenza. I documenti senza copia locale restano fuori, elencati
+col motivo.
+
+**Le due cornici restano marcate.** I 15 profili con `EXTRACTION_SCHEMA_READY_FOR_FIELD_TEST`,
+costruiti su documenti reali, hanno il badge «verificato su documenti reali» e una loro
+modifica chiede conferma esplicita. I tipi senza profilo esplicito (`LEGACY_FALLBACK`)
+appaiono come tali: si correggono allo stesso modo, e alla prima correzione il profilo
+viene scritto nel file con `schema_state` `EXTRACTION_SCHEMA_DRAFT_FROM_LEGACY_FALLBACK`,
+perché resti visibile che non è uno schema verificato.
+
+**Report d'insieme.** «Report JSON» e «Report CSV» salvano tutte le misure per tipo e per
+campo, da mandare al collega che annota o da tenere accanto al dataset esportato. Il CSV ha
+una riga per coppia tipo/campo, con le stesse parole della schermata.
+
+**Portabilità.** Le misure (`src/shared/profile-metrics.ts`) e la correzione dei profili
+(`src/shared/profile-edit.ts`) sono moduli puri, senza Electron, senza database e senza
+UI: destinazione pratica-ai. Il livello che legge dal database
+(`src/main/profile-insights.ts`) tiene tutte le query in un posto solo — nella UI non ce
+n'è nemmeno una. `tests/profile-refinement.test.ts` fa il giro intero su documenti veri e
+su un repo git usa e getta: annota, misura, corregge con un commit, rielabora e guarda il
+delta.
+
+**Quando cambia un profilo.** Il re-run copre i documenti annotati di quel tipo. I
+documenti ancora in coda prendono il profilo nuovo alla prossima elaborazione: la versione
+dei profili (`version` nel JSON) non viene toccata da una correzione, quindi la
+rielaborazione in sottofondo all'avvio non riparte da sola.
 
 ---
 
