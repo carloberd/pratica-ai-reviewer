@@ -183,6 +183,35 @@ export default function DocumentReviewShell() {
     })
   }
 
+  /** Le modifiche alle righe dei campi ripetuti: ogni risposta è il documento aggiornato. */
+  const editDocument = (label: string, work: (documentId: string) => Promise<ReviewDocument>) => {
+    if (!selected) return
+    const documentId = selected.id
+    void run(label, async () => {
+      setSelected(await work(documentId))
+    })
+  }
+
+  const commitItem = (itemId: string, value: string | null) =>
+    editDocument('field', (documentId) => api.fields.updateItem(documentId, itemId, value))
+
+  const removeItem = (itemId: string, removed: boolean) =>
+    editDocument('field', (documentId) => api.fields.removeItem(documentId, itemId, removed))
+
+  const addItem = (fieldId: string, value: string) =>
+    editDocument('field', (documentId) => api.fields.addItem(documentId, fieldId, value))
+
+  /** Salva il dataset annotato dove sceglie il revisore. */
+  const exportDataset = () =>
+    run('export', async () => {
+      const result = await api.dataset.export()
+      if (!result.saved) return
+      const documents = result.documents === 1 ? '1 documento' : `${result.documents} documenti`
+      const corrections =
+        result.corrections === 1 ? '1 correzione' : `${result.corrections} correzioni`
+      setMessage(`Dataset esportato in ${result.path}: ${documents}, ${corrections}.`)
+    })
+
   const decide = (action: ReviewAction, note?: string) => {
     if (!selected) return
     const documentId = selected.id
@@ -276,6 +305,15 @@ export default function DocumentReviewShell() {
                 <h2>Coda di revisione</h2>
                 <div className={styles.muted}>Documenti che richiedono controllo umano</div>
               </div>
+              <button
+                type="button"
+                className={styles.button}
+                disabled={busy}
+                title="Salva in un file JSON i documenti revisionati e scartati, con i valori confermati e le correzioni prima/dopo."
+                onClick={() => void exportDataset()}
+              >
+                {pending === 'export' ? 'Esporto…' : 'Esporta dataset annotato'}
+              </button>
             </div>
             <DocumentTable
               documents={queue}
@@ -335,6 +373,9 @@ export default function DocumentReviewShell() {
               busy={busy}
               onBack={() => setView(origin)}
               onFieldCommit={commitField}
+              onItemCommit={commitItem}
+              onItemRemove={removeItem}
+              onItemAdd={addItem}
               onDecide={decide}
               onAssignType={assignType}
               onEvict={() => evictDocument(selected.id)}

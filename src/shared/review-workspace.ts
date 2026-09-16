@@ -1,6 +1,6 @@
 import type { FieldRole } from './extraction-v2'
 import { confirmedItems, currentFieldValue } from './field-edits'
-import type { ExtractedField, ReviewDocument } from './types'
+import type { ExtractedField, ReviewDocument, TypeMatchReason, TypeSignalSource } from './types'
 
 /**
  * Regole della schermata di revisione che non dipendono da React: quali campi vanno
@@ -78,4 +78,23 @@ export function shouldSuggestCandidates(
     classification.minimumMargin !== null &&
     classification.margin < classification.minimumMargin * LOW_MARGIN_FACTOR
   )
+}
+
+/** Perché il classificatore non ha assegnato il tipo, come lo legge il revisore. */
+export const TYPE_MATCH_REASON_LABELS: Record<Exclude<TypeMatchReason, 'OK'>, string> = {
+  BELOW_THRESHOLD: 'il punteggio non raggiunge la soglia',
+  LOW_MARGIN: 'il margine sul secondo candidato è troppo stretto',
+  FILENAME_ONLY: 'la frase compare solo nel nome del file',
+  HARD_NEGATIVE: 'il testo contiene un segnale che esclude il tipo',
+  NO_SIGNAL: 'nessun alias o segnale del registry compare nel testo'
+}
+
+/** Dove il classificatore ha trovato un indizio. */
+export const TYPE_SIGNAL_SOURCE_LABELS: Record<TypeSignalSource, string> = {
+  'title-zone': 'nel titolo',
+  page: 'nel testo',
+  filename: 'nel nome del file',
+  'positive-signal': 'segnale a favore',
+  'negative-signal': 'segnale contrario',
+  'hard-negative-signal': 'segnale che esclude'
 }
