@@ -28,7 +28,9 @@ asarUnpack:
   - '**/node_modules/tesseract.js-core/**'
 
 mac:
-  artifactName: praticaai-reviewer-${version}-${arch}.${ext}
+  # La piattaforma sta nel nome: senza, lo zip mac x64 e lo zip Windows x64
+  # finirebbero sullo stesso file in `release/`.
+  artifactName: praticaai-reviewer-${version}-mac-${arch}.${ext}
   target:
     - target: dmg
       arch: [arm64, x64]
@@ -40,7 +42,7 @@ mac:
   identity: null
 
 win:
-  artifactName: praticaai-reviewer-${version}-${arch}.${ext}
+  artifactName: praticaai-reviewer-${version}-win-${arch}.${ext}
   target:
     - target: nsis
       arch: [x64]

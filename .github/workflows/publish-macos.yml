@@ -1,23 +1,24 @@
-name: Build Windows Release
+name: Build macOS Release
 
 on:
   release:
     types: [published]
   workflow_dispatch:
 
-# Mai due installer per lo stesso ref insieme, ma una build di release in corso
-# deve arrivare in fondo: annullarla lascerebbe la release senza allegati.
+# Mai due build per lo stesso ref insieme, ma una build di release in corso deve
+# arrivare in fondo: annullarla lascerebbe la release senza allegati.
 concurrency:
-  group: publish-windows-${{ github.ref }}
+  group: publish-macos-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
-  contents: write # serve per allegare l'installer alla GitHub Release
+  contents: write # serve per allegare i pacchetti alla GitHub Release
 
 jobs:
-  build-windows:
-    # electron-builder compila l'installer NSIS nativamente qui: niente wine.
-    runs-on: windows-latest
+  build-macos:
+    # Runner arm64. Da qui electron-builder produce entrambe le architetture:
+    # per la x64 scarica l'Electron corrispondente, non serve un runner Intel.
+    runs-on: macos-latest
 
     steps:
       - name: Checkout repository
@@ -53,17 +54,15 @@ jobs:
 
       - name: Read version from package.json
         id: package-version
-        shell: bash
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       # Il nome dell'artefatto contiene la versione di package.json, non il tag: se
-      # i due divergono la release finirebbe con un allegato che dichiara la
-      # versione sbagliata. Meglio fermarsi qui e dirlo.
+      # i due divergono la release finirebbe con allegati che dichiarano la versione
+      # sbagliata. Meglio fermarsi qui e dirlo.
       - name: Check the tag matches package.json
         if: github.event_name == 'release'
-        shell: bash
         run: |
           TAG="${{ github.event.release.tag_name }}"
           VERSION="${{ steps.package-version.outputs.version }}"
@@ -72,25 +71,30 @@ jobs:
             exit 1
           fi
 
-      - name: Build Windows app
-        run: pnpm dist:win
+      # `identity: null` in electron-builder.yml salta la firma: non ci sono
+      # certificati in CI e i pacchetti sono per due macchine conosciute. Al primo
+      # avvio macOS chiede conferma.
+      - name: Build macOS app
+        run: pnpm dist:mac
 
       # `electron-builder.yml` fissa gli artifactName, quindi i percorsi sono
       # deterministici: si verificano invece di cercarli, e se un giorno il maker
       # cambiasse posto il fallimento è esplicito.
       - name: Locate artifacts
         id: artifacts
-        shell: bash
         run: |
           VERSION="${{ steps.package-version.outputs.version }}"
-          SETUP="release/praticaai-reviewer-${VERSION}-setup.exe"
-          PORTABLE="release/praticaai-reviewer-${VERSION}-win-x64.zip"
           MISSING=0
-          for FILE in "$SETUP" "$PORTABLE"; do
-            if [ ! -f "$FILE" ]; then
-              echo "::error::Artefatto atteso non trovato: $FILE"
-              MISSING=1
-            fi
+          FILES=""
+          for ARCH in arm64 x64; do
+            for EXT in dmg zip; do
+              FILE="release/praticaai-reviewer-${VERSION}-mac-${ARCH}.${EXT}"
+              if [ ! -f "$FILE" ]; then
+                echo "::error::Artefatto atteso non trovato: $FILE"
+                MISSING=1
+              fi
+              FILES="${FILES}${FILE}"$'\n'
+            done
           done
           if [ "$MISSING" = "1" ]; then
             echo "Contenuto di release/:"
@@ -98,26 +102,23 @@ jobs:
             exit 1
           fi
           {
-            echo "setup=$SETUP"
-            echo "portable=$PORTABLE"
+            echo "files<<EOF"
+            printf '%s' "$FILES"
+            echo "EOF"
           } >> "$GITHUB_OUTPUT"
-          echo "Trovati: $SETUP, $PORTABLE"
+          printf 'Trovati:\n%s' "$FILES"
 
       - name: Upload artifacts to GitHub Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            ${{ steps.artifacts.outputs.setup }}
-            ${{ steps.artifacts.outputs.portable }}
+          files: ${{ steps.artifacts.outputs.files }}
           fail_on_unmatched_files: true
 
       - name: Upload artifacts for manual runs
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: praticaai-reviewer-${{ steps.package-version.outputs.version }}-win32-x64
-          path: |
-            ${{ steps.artifacts.outputs.setup }}
-            ${{ steps.artifacts.outputs.portable }}
+          name: praticaai-reviewer-${{ steps.package-version.outputs.version }}-macos
+          path: ${{ steps.artifacts.outputs.files }}
           if-no-files-found: error

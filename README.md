@@ -76,23 +76,34 @@ stesso e mostra in chiaro cosa manca e dove metterlo.
 
 Il gate è `pnpm typecheck && pnpm lint && pnpm test`.
 
-### Release per Windows
+### Release
 
-`.github/workflows/publish-windows.yml` costruisce l'installer su un runner
-`windows-latest` (NSIS nativo, niente wine). Parte in due modi:
+Due workflow, uno per piattaforma, che girano ognuno sul proprio runner perché
+entrambi gli installer si costruiscono nativamente:
 
-- **Su una GitHub Release pubblicata**: esegue il gate, compila e allega alla release
-  `praticaai-reviewer-<versione>-setup.exe` e `praticaai-reviewer-<versione>-x64.zip`.
+| Workflow | Runner | Cosa produce |
+|---|---|---|
+| `.github/workflows/publish-windows.yml` | `windows-latest` | `praticaai-reviewer-<v>-setup.exe`, `praticaai-reviewer-<v>-win-x64.zip` |
+| `.github/workflows/publish-macos.yml` | `macos-latest` | `praticaai-reviewer-<v>-mac-{arm64,x64}.{dmg,zip}` |
+
+Il runner macOS è arm64 e produce comunque entrambe le architetture: per la x64
+electron-builder scarica l'Electron corrispondente, non serve un runner Intel.
+
+Entrambi partono in due modi:
+
+- **Su una GitHub Release pubblicata**: eseguono il gate, compilano e allegano i
+  pacchetti alla release.
 - **A mano** (`workflow_dispatch`): stessi passi, ma gli artefatti restano allegati alla
   run invece che alla release — utile per provare una build senza pubblicare nulla.
 
 La versione degli artefatti viene da `package.json`, non dal tag: prima di taggare
 allinea `package.json`, altrimenti il workflow si ferma e lo dice. I nomi sono fissati
-da `artifactName` in `electron-builder.yml`, così il workflow li verifica invece di
-cercarli.
+da `artifactName` in `electron-builder.yml` — piattaforma compresa, altrimenti lo zip
+mac x64 e quello Windows x64 si sovrascriverebbero — così i workflow li verificano
+invece di cercarli.
 
-I pacchetti non sono firmati: al primo avvio Windows mostra l'avviso SmartScreen e
-serve «Ulteriori informazioni → Esegui comunque».
+I pacchetti non sono firmati: al primo avvio macOS chiede conferma e Windows mostra
+SmartScreen.
 
 ---
 
