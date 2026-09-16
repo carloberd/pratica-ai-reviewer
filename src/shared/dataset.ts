@@ -152,11 +152,26 @@ function evidenceOf(
   return { page: evidence.page, text: evidence.text, bbox: evidence.bbox ?? null }
 }
 
-function itemOrigin(item: FieldItem): DatasetValueOrigin {
+/** Chi ha messo il valore di una riga. La usa anche l'export XLSX, con la stessa semantica. */
+export function itemOrigin(item: FieldItem): DatasetValueOrigin {
   if (item.origin === 'MANUAL') return 'REVIEWER'
   return item.correctedValue === undefined || item.correctedValue === item.value
     ? 'ENGINE'
     : 'REVIEWER'
+}
+
+/** Quello che il motore aveva proposto per un campo singolo, `null` se non ha proposto niente. */
+export function proposedFieldValue(field: Pick<ExtractedField, 'value'>): string | null {
+  return field.value.trim() === '' ? null : field.value
+}
+
+/** Chi ha messo il valore confermato di un campo singolo; `null` se è rimasto vuoto. */
+export function fieldOrigin(
+  field: Pick<ExtractedField, 'value' | 'correctedValue'>
+): DatasetValueOrigin | null {
+  const value = currentFieldValue(field)
+  if (value === null) return null
+  return value === proposedFieldValue(field) ? 'ENGINE' : 'REVIEWER'
 }
 
 function toDatasetField(field: ExtractedField, byId: Map<string, EvidenceItem>): DatasetField {
@@ -171,13 +186,11 @@ function toDatasetField(field: ExtractedField, byId: Map<string, EvidenceItem>):
     return { ...common, cardinality: 'many', value: items.map((item) => item.value), items }
   }
 
-  const value = currentFieldValue(field)
-  const proposed = field.value.trim() === '' ? null : field.value
   return {
     ...common,
     cardinality: 'one',
-    value,
-    origin: value === null ? null : value === proposed ? 'ENGINE' : 'REVIEWER',
+    value: currentFieldValue(field),
+    origin: fieldOrigin(field),
     evidence: evidenceOf(byId, field.evidenceId)
   }
 }

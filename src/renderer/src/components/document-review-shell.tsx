@@ -263,6 +263,16 @@ export default function DocumentReviewShell() {
       setMessage(`Dataset esportato in ${result.path}: ${documents}, ${corrections}.`)
     })
 
+  /** Lo stesso dataset in foglio di calcolo: due tabelle invece di un JSON annidato. */
+  const exportDatasetXlsx = () =>
+    run('export-xlsx', async () => {
+      const result = await api.dataset.exportXlsx()
+      if (!result.saved) return
+      const documents = result.documents === 1 ? '1 documento' : `${result.documents} documenti`
+      const fields = result.fields === 1 ? '1 riga campo' : `${result.fields} righe campo`
+      setMessage(`Foglio esportato in ${result.path}: ${documents}, ${fields}.`)
+    })
+
   const decide = (action: ReviewAction, note?: string) => {
     if (!selected) return
     const documentId = selected.id
@@ -359,15 +369,26 @@ export default function DocumentReviewShell() {
                 <h2>Coda di revisione</h2>
                 <div className={styles.muted}>Documenti che richiedono controllo umano</div>
               </div>
-              <button
-                type="button"
-                className={styles.button}
-                disabled={busy}
-                title="Salva in un file JSON i documenti revisionati e scartati, con i valori confermati e le correzioni prima/dopo."
-                onClick={() => void exportDataset()}
-              >
-                {pending === 'export' ? 'Esporto…' : 'Esporta dataset annotato'}
-              </button>
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={styles.button}
+                  disabled={busy}
+                  title="Salva in un file JSON i documenti revisionati e scartati, con i valori confermati e le correzioni prima/dopo."
+                  onClick={() => void exportDataset()}
+                >
+                  {pending === 'export' ? 'Esporto…' : 'Esporta dataset annotato'}
+                </button>
+                <button
+                  type="button"
+                  className={styles.button}
+                  disabled={busy}
+                  title="Gli stessi documenti in un file Excel: un foglio per documento, un foglio per campo."
+                  onClick={() => void exportDatasetXlsx()}
+                >
+                  {pending === 'export-xlsx' ? 'Esporto…' : 'Esporta in Excel'}
+                </button>
+              </div>
             </div>
             <DocumentTable
               documents={queue}

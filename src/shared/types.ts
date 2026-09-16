@@ -356,4 +356,13 @@ export interface DatasetExportResult {
   corrections: number
 }
 
+/** v2 reviewer: esito dell'export XLSX, con le righe scritte nei due fogli. */
+export interface XlsxExportResult {
+  /** `false` se il revisore ha annullato la scelta del file. */
+  saved: boolean
+  path: string | null
+  documents: number
+  fields: number
+}
+
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: IpcError }

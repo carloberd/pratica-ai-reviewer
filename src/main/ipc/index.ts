@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { type DatasetManifestInput, datasetFileName } from '@shared/dataset'
+import { datasetXlsxFileName } from '@shared/dataset-xlsx'
 import { profileReportFileName } from '@shared/profile-report'
 import type {
   ProfileEditOutcome,
@@ -8,7 +9,12 @@ import type {
   ProfileWorkspace,
   TypeRerunResult
 } from '@shared/profile-workspace'
-import type { DatasetExportResult, IpcResult, RegistryTypeOption } from '@shared/types'
+import type {
+  DatasetExportResult,
+  IpcResult,
+  RegistryTypeOption,
+  XlsxExportResult
+} from '@shared/types'
 import { ipcMain, type WebContents } from 'electron'
 import { z } from 'zod'
 import type { AuthService } from '../auth/service'
@@ -36,6 +42,7 @@ import { editTypeProfile, type RefinementDeps, rerunTypeExtraction } from '../pr
 import { profileStoreStatus } from '../profile-store'
 import { assignDocumentType } from '../reprocess'
 import { submitReview } from '../review'
+import { collectXlsxRows, writeXlsxFile } from '../xlsx-export'
 import {
   addFieldItemSchema,
   documentFiltersSchema,
@@ -73,6 +80,8 @@ export interface IpcContext {
     manifest: () => Omit<DatasetManifestInput, 'exportedAt'>
     /** Percorso scelto dal revisore, `null` se annulla. */
     choosePath: (defaultName: string) => Promise<string | null>
+    /** Percorso per il foglio di calcolo, con il suo filtro `.xlsx`. */
+    chooseXlsxPath: (defaultName: string) => Promise<string | null>
   }
   /**
    * Schermata «Istruzioni per tipo»: misure sui profili, correzione dei JSON sorgente e
@@ -246,6 +255,28 @@ export function registerIpcHandlers(context: IpcContext): void {
     if (!path) return { saved: false, path: null, documents, corrections }
     await writeDatasetFile(path, dataset)
     return { saved: true, path, documents, corrections }
+  })
+
+  // Lo stesso dataset in forma di foglio di calcolo: due tabelle invece di un JSON
+  // annidato. Il formato JSON non cambia — questo è un secondo export, parallelo.
+  handle('dataset:export-xlsx', noInput, async (): Promise<XlsxExportResult> => {
+    if (!context.dataset) {
+      throw new ReviewerError('UNSUPPORTED', 'Export non disponibile su questa istanza.')
+    }
+    const rows = await collectXlsxRows(repo)
+    const documents = rows.documents.length
+    const fields = rows.fields.length
+    if (documents === 0) {
+      throw new ReviewerError(
+        'NOT_FOUND',
+        'Nessun documento da esportare: il dataset contiene solo documenti salvati o scartati.'
+      )
+    }
+
+    const path = await context.dataset.chooseXlsxPath(datasetXlsxFileName(new Date()))
+    if (!path) return { saved: false, path: null, documents, fields }
+    await writeXlsxFile(path, rows)
+    return { saved: true, path, documents, fields }
   })
 
   // ---- istruzioni per tipo -------------------------------------------------
