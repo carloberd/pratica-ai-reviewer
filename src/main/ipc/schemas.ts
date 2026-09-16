@@ -35,6 +35,25 @@ export const updateFieldSchema = z.object({
   correctedValue: z.string().max(2000).nullable()
 })
 
+/** Righe dei campi ripetuti: stesso tetto dei campi singoli. */
+export const addFieldItemSchema = z.object({
+  documentId: z.string().min(1),
+  fieldId: z.string().min(1),
+  value: z.string().min(1).max(2000)
+})
+
+export const updateFieldItemSchema = z.object({
+  documentId: z.string().min(1),
+  itemId: z.string().min(1),
+  correctedValue: z.string().max(2000).nullable()
+})
+
+export const removeFieldItemSchema = z.object({
+  documentId: z.string().min(1),
+  itemId: z.string().min(1),
+  removed: z.boolean()
+})
+
 /** Il renderer manda l'azione scelta dal revisore: la `decision` la deriva il main. */
 export const reviewSubmissionSchema = z.object({
   documentId: z.string().min(1),

@@ -32,5 +32,6 @@
     "src/preload/**/*",
     "src/shared/**/*",
     "tests/**/*"
-  ]
+  ],
+  "exclude": ["tests/renderer/**/*"]
 }

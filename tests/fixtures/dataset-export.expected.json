@@ -1,0 +1,501 @@
+{
+  "manifest": {
+    "format": "praticaai-reviewer/annotated-dataset",
+    "formatVersion": "1.0.0",
+    "exportedAt": "2026-09-16T18:00:00.000Z",
+    "app": {
+      "name": "praticaai-reviewer",
+      "version": "1.1.0"
+    },
+    "engines": {
+      "classifier": "v2",
+      "extraction": "v2",
+      "classifierVersion": "2.0.0-draft.1",
+      "extractionEngineVersion": "extraction-brain-v2/2.1.0-draft.1",
+      "schemaVersion": "2.0.0"
+    },
+    "counts": {
+      "documents": 3,
+      "reviewed": 2,
+      "discarded": 1,
+      "corrections": 7
+    }
+  },
+  "documents": [
+    {
+      "driveFileId": "drive-contratto-consulenza.docx",
+      "filename": "contratto-consulenza.docx",
+      "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "status": "DISCARDED",
+      "reviewedAt": "2026-09-16T12:00:00.000Z",
+      "textSource": "DOCX",
+      "documentType": {
+        "id": "contracts_general.contratto_consulenza",
+        "label": "contratto consulenza",
+        "chosenBy": "ENGINE",
+        "proposed": "contracts_general.contratto_consulenza",
+        "proposedConfidence": 0.945,
+        "corrected": false
+      },
+      "extraction": {
+        "engineVersion": "extraction-brain-v2/2.1.0-draft.1",
+        "schemaVersion": "2.0.0",
+        "status": "COMPLETED",
+        "completedAt": "2026-09-16T12:00:00.000Z"
+      },
+      "fields": [],
+      "corrections": []
+    },
+    {
+      "driveFileId": "drive-fattura-righe.pdf",
+      "filename": "fattura-righe.pdf",
+      "mime": "application/pdf",
+      "status": "REVIEWED",
+      "reviewedAt": "2026-09-16T10:00:00.000Z",
+      "textSource": "NATIVE_TEXT",
+      "documentType": {
+        "id": "accounting.fattura",
+        "label": "fattura",
+        "chosenBy": "ENGINE",
+        "proposed": "accounting.fattura",
+        "proposedConfidence": 0.8267,
+        "corrected": false
+      },
+      "extraction": {
+        "engineVersion": "extraction-brain-v2/2.1.0-draft.1",
+        "schemaVersion": "2.0.0",
+        "status": "COMPLETED",
+        "completedAt": "2026-09-16T10:00:00.000Z"
+      },
+      "fields": [
+        {
+          "name": "document.number",
+          "label": "Numero documento",
+          "role": "required",
+          "cardinality": "one",
+          "value": "27/2026/B",
+          "origin": "REVIEWER",
+          "evidence": {
+            "page": 1,
+            "text": "FATTURA n. 27/2026 del 14/09/2026",
+            "bbox": {
+              "x": 56,
+              "y": 91,
+              "w": 181.6,
+              "h": 11
+            }
+          }
+        },
+        {
+          "name": "document.issue_date",
+          "label": "Data emissione",
+          "role": "required",
+          "cardinality": "one",
+          "value": "2026-09-14",
+          "origin": "ENGINE",
+          "evidence": {
+            "page": 1,
+            "text": "FATTURA n. 27/2026 del 14/09/2026",
+            "bbox": {
+              "x": 56,
+              "y": 91,
+              "w": 181.6,
+              "h": 11
+            }
+          }
+        },
+        {
+          "name": "issuer.name",
+          "label": "Emittente",
+          "role": "required",
+          "cardinality": "one",
+          "value": "Beta Costruzioni S.p.A.",
+          "origin": "ENGINE",
+          "evidence": {
+            "page": 1,
+            "text": "Emittente: Beta Costruzioni S.p.A.",
+            "bbox": {
+              "x": 56,
+              "y": 131,
+              "w": 166.3,
+              "h": 11
+            }
+          }
+        },
+        {
+          "name": "recipient.name",
+          "label": "Destinatario",
+          "role": "required",
+          "cardinality": "one",
+          "value": "Gamma Immobiliare S.r.l.",
+          "origin": "ENGINE",
+          "evidence": {
+            "page": 1,
+            "text": "Destinatario: Gamma Immobiliare S.r.l.",
+            "bbox": {
+              "x": 56,
+              "y": 151,
+              "w": 189.49,
+              "h": 11
+            }
+          }
+        },
+        {
+          "name": "money.total",
+          "label": "Totale",
+          "role": "required",
+          "cardinality": "one",
+          "value": "6710.00",
+          "origin": "ENGINE",
+          "evidence": {
+            "page": 1,
+            "text": "Totale documento EUR 6.710,00",
+            "bbox": {
+              "x": 56,
+              "y": 331,
+              "w": 166.31,
+              "h": 11
+            }
+          }
+        },
+        {
+          "name": "issuer.tax_id",
+          "label": "CF/P.IVA emittente",
+          "role": "core",
+          "cardinality": "one",
+          "value": "09876543210",
+          "origin": "REVIEWER",
+          "evidence": null
+        },
+        {
+          "name": "recipient.tax_id",
+          "label": "CF/P.IVA destinatario",
+          "role": "core",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null
+        },
+        {
+          "name": "money.taxable",
+          "label": "Imponibile",
+          "role": "core",
+          "cardinality": "one",
+          "value": "5500.00",
+          "origin": "ENGINE",
+          "evidence": {
+            "page": 1,
+            "text": "Totale imponibile EUR 5.500,00",
+            "bbox": {
+              "x": 56,
+              "y": 291,
+              "w": 158.34,
+              "h": 11
+            }
+          }
+        },
+        {
+          "name": "money.tax",
+          "label": "Imposta/IVA",
+          "role": "core",
+          "cardinality": "one",
+          "value": "1210.00",
+          "origin": "ENGINE",
+          "evidence": {
+            "page": 1,
+            "text": "IVA 22% EUR 1.210,00",
+            "bbox": {
+              "x": 56,
+              "y": 311,
+              "w": 148.59,
+              "h": 11
+            }
+          }
+        },
+        {
+          "name": "money.currency",
+          "label": "Valuta",
+          "role": "core",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": {
+            "page": 1,
+            "text": "Valuta: EUR",
+            "bbox": {
+              "x": 56,
+              "y": 171,
+              "w": 60.52,
+              "h": 11
+            }
+          }
+        },
+        {
+          "name": "payment.due_date",
+          "label": "Scadenza pagamento",
+          "role": "core",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null
+        },
+        {
+          "name": "line_items",
+          "label": "Righe documento",
+          "role": "core",
+          "cardinality": "many",
+          "value": [
+            "Demolizione tramezzi - EUR 3.200,00",
+            "Smaltimento macerie in discarica - EUR 850,00",
+            "Tinteggiatura pareti e soffitti - EUR 1.450,00"
+          ],
+          "items": [
+            {
+              "value": "Demolizione tramezzi - EUR 3.200,00",
+              "origin": "ENGINE",
+              "evidence": {
+                "page": 1,
+                "text": "Righe documento: Demolizione tramezzi - EUR 3.200,00",
+                "bbox": {
+                  "x": 56,
+                  "y": 211,
+                  "w": 276.32,
+                  "h": 11
+                }
+              }
+            },
+            {
+              "value": "Smaltimento macerie in discarica - EUR 850,00",
+              "origin": "REVIEWER",
+              "evidence": {
+                "page": 1,
+                "text": "Righe documento: Smaltimento macerie - EUR 850,00",
+                "bbox": {
+                  "x": 56,
+                  "y": 231,
+                  "w": 265.32,
+                  "h": 11
+                }
+              }
+            },
+            {
+              "value": "Tinteggiatura pareti e soffitti - EUR 1.450,00",
+              "origin": "REVIEWER",
+              "evidence": null
+            }
+          ]
+        },
+        {
+          "name": "bank.iban",
+          "label": "IBAN",
+          "role": "conditional",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null
+        },
+        {
+          "name": "procurement.cig",
+          "label": "CIG",
+          "role": "conditional",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null
+        },
+        {
+          "name": "procurement.cup",
+          "label": "CUP",
+          "role": "conditional",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null
+        }
+      ],
+      "corrections": [
+        {
+          "field": "document.number",
+          "label": "Numero documento",
+          "item": null,
+          "kind": "CHANGED",
+          "before": "27/2026",
+          "after": "27/2026/B"
+        },
+        {
+          "field": "issuer.tax_id",
+          "label": "CF/P.IVA emittente",
+          "item": null,
+          "kind": "FILLED",
+          "before": null,
+          "after": "09876543210"
+        },
+        {
+          "field": "money.currency",
+          "label": "Valuta",
+          "item": null,
+          "kind": "CLEARED",
+          "before": "EUR",
+          "after": null
+        },
+        {
+          "field": "line_items",
+          "label": "Righe documento",
+          "item": 1,
+          "kind": "CHANGED",
+          "before": "Smaltimento macerie - EUR 850,00",
+          "after": "Smaltimento macerie in discarica - EUR 850,00"
+        },
+        {
+          "field": "line_items",
+          "label": "Righe documento",
+          "item": 2,
+          "kind": "REMOVED",
+          "before": "Tinteggiatura pareti - EUR 1.450,00",
+          "after": null
+        },
+        {
+          "field": "line_items",
+          "label": "Righe documento",
+          "item": 3,
+          "kind": "ADDED",
+          "before": null,
+          "after": "Tinteggiatura pareti e soffitti - EUR 1.450,00"
+        }
+      ]
+    },
+    {
+      "driveFileId": "drive-promemoria-ignoto.pdf",
+      "filename": "promemoria-ignoto.pdf",
+      "mime": "application/pdf",
+      "status": "REVIEWED",
+      "reviewedAt": "2026-09-16T11:00:00.000Z",
+      "textSource": "NATIVE_TEXT",
+      "documentType": {
+        "id": "payments_treasury.richiesta_pagamento",
+        "label": "richiesta pagamento",
+        "chosenBy": "REVIEWER",
+        "proposed": null,
+        "proposedConfidence": null,
+        "corrected": true
+      },
+      "extraction": {
+        "engineVersion": "extraction-brain-v2/2.1.0-draft.1",
+        "schemaVersion": "2.0.0",
+        "status": "COMPLETED",
+        "completedAt": "2026-09-16T11:00:00.000Z"
+      },
+      "fields": [
+        {
+          "name": "document.issue_date",
+          "label": "Data emissione",
+          "role": "core",
+          "cardinality": "one",
+          "value": "2026-09-12",
+          "origin": "REVIEWER",
+          "evidence": null
+        },
+        {
+          "name": "payment.date",
+          "label": "Data pagamento",
+          "role": "core",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null
+        },
+        {
+          "name": "payment.reference",
+          "label": "Riferimento pagamento",
+          "role": "core",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null
+        },
+        {
+          "name": "payment.method",
+          "label": "Metodo pagamento",
+          "role": "core",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null
+        },
+        {
+          "name": "money.amount",
+          "label": "Importo",
+          "role": "core",
+          "cardinality": "one",
+          "value": "1250.00",
+          "origin": "ENGINE",
+          "evidence": {
+            "page": 1,
+            "text": "Importo complessivo EUR 1.250,00",
+            "bbox": {
+              "x": 56,
+              "y": 111,
+              "w": 173.01,
+              "h": 11
+            }
+          }
+        },
+        {
+          "name": "money.currency",
+          "label": "Valuta",
+          "role": "core",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null
+        },
+        {
+          "name": "bank.iban",
+          "label": "IBAN",
+          "role": "core",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null
+        },
+        {
+          "name": "document.number",
+          "label": "Numero documento",
+          "role": "core",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null
+        },
+        {
+          "name": "issuer.name",
+          "label": "Emittente",
+          "role": "optional",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null
+        },
+        {
+          "name": "recipient.name",
+          "label": "Destinatario",
+          "role": "optional",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null
+        }
+      ],
+      "corrections": [
+        {
+          "field": "document.issue_date",
+          "label": "Data emissione",
+          "item": null,
+          "kind": "FILLED",
+          "before": null,
+          "after": "2026-09-12"
+        }
+      ]
+    }
+  ]
+}

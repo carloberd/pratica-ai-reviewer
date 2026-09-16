@@ -125,9 +125,44 @@ describe('migrazioni', () => {
       'confidence',
       'evidence_id',
       'validation_errors_json',
-      'updated_at'
+      'updated_at',
+      // 0005
+      'origin',
+      'removed'
     ])
     expect(columns('extraction_runs')).toContain('metrics_json')
+    db.close()
+  })
+
+  it('la 0005 salva classificazione ed esito, e distingue le righe del revisore', () => {
+    const db = databaseAt('0004')
+    db.prepare(
+      "INSERT INTO documents (id, drive_file_id, filename, mime, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', '2026-01-01')"
+    ).run()
+    db.prepare(
+      "INSERT INTO fields (id, document_id, name, label, confidence, cardinality) VALUES ('f', 'd', 'line_items', 'Righe documento', 0, 'many')"
+    ).run()
+    const item = db.prepare(
+      'INSERT INTO field_items (id, field_id, item_index, value_json, corrected_value_json, confidence) VALUES (?, ?, ?, ?, ?, ?)'
+    )
+    item.run('proposta', 'f', 0, '"Fornitura"', null, 0.85)
+    item.run('corretta', 'f', 1, '"Posa"', '"Posa in opera"', 0.85)
+    // Correzione rimasta senza la riga proposta: la 0004 la teneva con valore nullo.
+    item.run('orfana', 'f', 2, null, '"Trasporto"', 0)
+
+    expect(migrate(db)).toEqual(['0005'])
+
+    expect(
+      db.prepare('SELECT id, origin, removed FROM field_items ORDER BY item_index').all()
+    ).toEqual([
+      { id: 'proposta', origin: 'ENGINE', removed: 0 },
+      { id: 'corretta', origin: 'ENGINE', removed: 0 },
+      { id: 'orfana', origin: 'MANUAL', removed: 0 }
+    ])
+    expect(db.prepare('SELECT classification_json, reviewed_at FROM documents').get()).toEqual({
+      classification_json: null,
+      reviewed_at: null
+    })
     db.close()
   })
 })
@@ -177,7 +212,7 @@ describe('migrazione 0004 su un database esistente', () => {
     const db = databaseAt('0003')
     seedV1(db)
 
-    expect(migrate(db)).toEqual(['0004'])
+    expect(migrate(db)).toEqual(['0004', '0005'])
 
     const rows = db
       .prepare(

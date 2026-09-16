@@ -782,8 +782,43 @@
   outline: 1px solid #2a8f66;
 }
 .pdfHighlightFlash {
+  background: rgba(255, 214, 102, 0.42);
+  outline: 2px solid #d99b16;
+  animation: evidencePulse 1.2s ease-out;
+}
+/* Pagina raggiunta senza una riga da evidenziare: si segnala la pagina intera. */
+.pdfPageFlash {
+  position: absolute;
+  inset: 0;
+  outline: 3px solid #d99b16;
+  outline-offset: 2px;
+  pointer-events: none;
+  animation: evidencePulse 1.2s ease-out;
+}
+@keyframes evidencePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(217, 155, 22, 0.7);
+  }
+  60% {
+    box-shadow: 0 0 0 12px rgba(217, 155, 22, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 155, 22, 0);
+  }
+}
+.viewerNote {
+  margin: 8px 14px 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: #fff8e9;
+  color: #765519;
+  font-size: 12px;
+}
+.docxMark {
   background: rgba(255, 214, 102, 0.55);
   outline: 2px solid #d99b16;
+  border-radius: 2px;
+  animation: evidencePulse 1.2s ease-out;
 }
 
 .iconButton {
@@ -801,6 +836,7 @@
 }
 
 .docxText {
+  position: relative;
   white-space: pre-wrap;
   font-size: 13px;
   line-height: 1.65;
@@ -947,4 +983,199 @@
   padding: 10px 8px;
   color: #7d8991;
   font-size: 12px;
+}
+
+/* ---- review workspace v2 ---- */
+
+/* Origine di un valore: pagina e riga, cliccabile. */
+.evidenceLink {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  border: 0;
+  border-left: 2px solid #61d19f;
+  background: #f8fbfa;
+  border-radius: 0 6px 6px 0;
+  padding: 4px 7px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  color: #53646d;
+}
+.evidenceLink:hover {
+  background: #eef7f2;
+  color: #243139;
+}
+.evidenceLinkActive {
+  background: #fff4dc;
+  border-left-color: #d99b16;
+  color: #243139;
+}
+.evidenceLinkPage {
+  flex: none;
+  font-weight: 700;
+  color: #2a8f66;
+}
+.evidenceLinkActive .evidenceLinkPage {
+  color: #8b5d10;
+}
+.evidenceLinkText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pillConflict {
+  background: #fde9e7;
+  color: #9f3f36;
+  margin-left: 6px;
+}
+
+.fieldGroup {
+  display: grid;
+  gap: 8px;
+}
+.fieldGroup + .fieldGroup {
+  margin-top: 18px;
+}
+.fieldGroup[data-group="to-fill"] > .fieldList {
+  padding-left: 8px;
+  border-left: 3px solid #f1dfae;
+}
+.fieldInputActive {
+  outline: 2px solid #61d19f;
+  outline-offset: 1px;
+}
+
+/* Righe dei campi ripetuti. */
+.itemTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+.itemIndex,
+.itemCell {
+  padding: 7px 0;
+  border-top: 1px solid #eef1f3;
+  vertical-align: top;
+}
+.itemIndex {
+  width: 20px;
+  padding-top: 14px;
+  color: #8b969d;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.itemTable tr:first-child > td {
+  border-top: 0;
+}
+.itemBody {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.itemRemoved .itemBody {
+  opacity: 0.6;
+}
+.itemFoot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.itemFoot .evidenceLink {
+  flex: 1 1 auto;
+  width: auto;
+}
+.itemFoot .spacer {
+  flex: 0 1 auto;
+}
+.itemRemovedText {
+  display: block;
+  padding: 7px 0;
+  font-size: 13px;
+  color: #8a949b;
+}
+.itemAdd {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.itemAdd .fieldInput {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Candidati di tipo. */
+.candidates {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+.candidates[data-suggested="true"] {
+  padding: 10px;
+  border: 1px solid #f1dfae;
+  border-radius: 10px;
+  background: #fffdf6;
+}
+.candidatesTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #243139;
+  cursor: default;
+}
+details > .candidatesTitle {
+  cursor: pointer;
+}
+.candidateList {
+  display: grid;
+  gap: 8px;
+}
+.candidate {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #e7ebee;
+  border-radius: 9px;
+  padding: 9px 10px;
+  background: #fff;
+}
+.candidateCurrent {
+  border-color: #61d19f;
+}
+.candidateHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.candidateLabel {
+  font-size: 13px;
+  font-weight: 700;
+}
+.candidateScore {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 12px;
+}
+.signalList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+  color: #53646d;
+}
+.signalList li {
+  display: grid;
+  gap: 3px;
+}
+.signalNegative {
+  color: #9f3f36;
+}
+.candidate > .button {
+  justify-self: start;
 }
