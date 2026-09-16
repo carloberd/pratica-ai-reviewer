@@ -158,6 +158,10 @@ describe('documenti da rielaborare col motore v2', () => {
     // Profili aggiornati: di nuovo da rielaborare.
     const newer = { ...testRegistryV2(), schemaVersion: () => '2.1.0' }
     expect(needsV2Extraction(r, newer)(r.documents.get(id)!)).toBe(true)
+
+    // Elaborato prima che la classificazione si salvasse: senza candidati da proporre.
+    r.documents.setClassification(id, null)
+    expect(isStale(r.documents.get(id)!)).toBe(true)
   })
 
   it('i documenti revisionati o scartati non si toccano', () => {

@@ -52,7 +52,16 @@ export const api = {
   },
   fields: {
     update: (documentId: string, fieldId: string, correctedValue: string | null) =>
-      call(() => window.reviewer.fields.update({ documentId, fieldId, correctedValue }))
+      call(() => window.reviewer.fields.update({ documentId, fieldId, correctedValue })),
+    addItem: (documentId: string, fieldId: string, value: string) =>
+      call(() => window.reviewer.fields.addItem({ documentId, fieldId, value })),
+    updateItem: (documentId: string, itemId: string, correctedValue: string | null) =>
+      call(() => window.reviewer.fields.updateItem({ documentId, itemId, correctedValue })),
+    removeItem: (documentId: string, itemId: string, removed: boolean) =>
+      call(() => window.reviewer.fields.removeItem({ documentId, itemId, removed }))
+  },
+  dataset: {
+    export: () => call(() => window.reviewer.dataset.export())
   },
   review: {
     submit: (documentId: string, action: ReviewAction, note?: string) =>

@@ -349,6 +349,31 @@ describe('motore v2 — PDF con testo nativo', () => {
       missing_required_json: '[]',
       conflicts_json: '[]'
     })
+    // La proposta del classificatore resta sul documento, con la riga da cui viene.
+    expect(document.classification).toMatchObject({
+      engine: 'v2',
+      decision: 'ASSIGN',
+      reason: 'OK',
+      proposedType: 'accounting.fattura',
+      minimumMargin: 0.08,
+      candidates: [
+        {
+          documentType: 'accounting.fattura',
+          label: 'fattura',
+          signals: [
+            {
+              source: 'title-zone',
+              phrase: 'fattura',
+              location: { page: 1, text: 'FATTURA n. 114/2026 del 08/09/2026' }
+            },
+            // Il nome del file (fixture «fattura-nativa.pdf») conferma, ma non ha una riga.
+            { source: 'filename', phrase: 'fattura' }
+          ]
+        }
+      ]
+    })
+    expect(document.classification?.candidates[0]?.signals[0]?.location?.bbox?.w).toBeGreaterThan(0)
+
     expect(JSON.parse(run!.metrics_json!)).toMatchObject({
       profileSource: 'V2_EXPLICIT',
       coverage: 0.53,
@@ -492,6 +517,13 @@ describe('motore v2 — documento non classificabile', () => {
     expect(repo.events.listForDocument(id).map((e) => e.title)).toContain('Tipo confermato')
     expect(JSON.parse(repo.extractionRuns.listForDocument(id)[0]!.metrics_json!)).toMatchObject({
       classifier: { manualType: true, reason: 'NO_SIGNAL' }
+    })
+    // Il tipo è del revisore, la proposta del motore resta quella: nessuna.
+    expect(repo.getReviewDocument(id)!.classification).toMatchObject({
+      decision: 'UNKNOWN',
+      reason: 'NO_SIGNAL',
+      proposedType: null,
+      candidates: []
     })
     repo.close()
   })

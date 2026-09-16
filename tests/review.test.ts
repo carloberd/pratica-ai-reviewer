@@ -1,6 +1,7 @@
 import type { ReviewDocument } from '@shared/types'
 import { describe, expect, it } from 'vitest'
 import { buildReviewPayload, describeReview, statusForAction } from '../src/main/review'
+import { item, listField, reviewDocument } from './helpers/review-document'
 
 function document(overrides: Partial<ReviewDocument> = {}): ReviewDocument {
   return {
@@ -30,7 +31,11 @@ function document(overrides: Partial<ReviewDocument> = {}): ReviewDocument {
         confidence: 0.7,
         evidenceId: 'ev1',
         required: false,
-        semanticType: 'string'
+        semanticType: 'string',
+        cardinality: 'one',
+        role: null,
+        reviewStatus: null,
+        items: []
       },
       {
         id: 'f2',
@@ -40,11 +45,17 @@ function document(overrides: Partial<ReviewDocument> = {}): ReviewDocument {
         confidence: 0.85,
         evidenceId: 'ev2',
         required: true,
-        semanticType: 'date'
+        semanticType: 'date',
+        cardinality: 'one',
+        role: null,
+        reviewStatus: null,
+        items: []
       }
     ],
     evidence: [],
     timeline: [],
+    classification: null,
+    reviewedAt: null,
     ...overrides
   }
 }
@@ -80,7 +91,11 @@ describe('payload della review', () => {
           value: '2026-09-08',
           confidence: 0.85,
           required: true,
-          semanticType: 'date'
+          semanticType: 'date',
+          cardinality: 'one',
+          role: null,
+          reviewStatus: null,
+          items: []
         }
       ]
     })
@@ -98,7 +113,11 @@ describe('payload della review', () => {
           correctedValue: '114/2026',
           confidence: 0,
           required: true,
-          semanticType: 'string'
+          semanticType: 'string',
+          cardinality: 'one',
+          role: null,
+          reviewStatus: null,
+          items: []
         }
       ]
     })
@@ -127,5 +146,32 @@ describe('payload della review', () => {
       title: 'Documento scartato',
       detail: 'Nessun campo modificato. Nota: documento illeggibile'
     })
+  })
+
+  it('porta le righe dei campi ripetuti fra le modifiche, fuori da `corrections`', () => {
+    const payload = buildReviewPayload(
+      reviewDocument({
+        fields: [
+          listField([
+            item({ id: 'a', index: 0, value: 'Fornitura', evidenceId: 'ev-a' }),
+            item({ id: 'b', index: 1, value: 'Posa', removed: true }),
+            item({ id: 'c', index: 2, origin: 'MANUAL', value: '', correctedValue: 'Trasporto' })
+          ])
+        ]
+      }),
+      'SAVE'
+    )
+
+    expect(payload.decision).toBe('CORRECT')
+    expect(payload.corrections).toBeUndefined()
+    expect(
+      payload.changes?.map(({ name, itemIndex, before, after }) => [name, itemIndex, before, after])
+    ).toEqual([
+      ['line_items', 1, 'Posa', ''],
+      ['line_items', 2, '', 'Trasporto']
+    ])
+    expect(describeReview(payload).detail).toBe(
+      '2 campi corretti: Righe documento riga 2 «Posa» → «(vuoto)»; Righe documento riga 3 «(vuoto)» → «Trasporto»'
+    )
   })
 })
