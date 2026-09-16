@@ -96,10 +96,17 @@ indirizzo, e l'app non la vede mai passare. Il redirect torna comunque sul loopb
 scambio codice→token avviene nel main. Se il consenso non arriva entro cinque minuti la
 porta si chiude e il login va ripetuto.
 
-**Sincronizzazione.** `files.list` paginata su PDF e DOCX fuori dal cestino, ordinati
-per `modifiedTime`. Ogni file viene deduplicato per `drive_file_id` e scaricato nella
-cache locale; si riscarica solo se Drive ha una versione più recente o se il file in
-cache non c'è più. Un documento che fallisce non ferma gli altri.
+**Download su richiesta.** «File su Drive» mostra l'elenco dell'account — `files.list`
+paginata su PDF e DOCX fuori dal cestino — e basta: è solo metadato, non scarica niente.
+Il contenuto arriva al doppio clic su una riga, un file per volta, che lo scarica in
+cache, lo analizza e apre la revisione. Tirare giù l'intero Drive in un colpo
+riempirebbe il disco di documenti che nessuno aprirà.
+
+Ogni file è deduplicato per `drive_file_id`: riaprirlo non riscarica nulla, a meno che
+su Drive non ci sia una versione più recente. «Libera spazio», nella vista di revisione,
+toglie la copia locale e lascia intatti dati estratti, evidenze e annotazioni: il file si
+riscarica riaprendolo. L'elenco mostra, per ogni riga, se il file è in locale, da
+aggiornare o solo analizzato, e in testa quanto spazio occupa la cache.
 
 **Classificazione** (deterministica, nessun LLM). Phrase match di `canonical_name`,
 `aliases` e `synonyms` del registry sul testo normalizzato della prima pagina (0,90) e
@@ -197,8 +204,8 @@ Non implementato in v1, per scelta:
 - **Invio della review al Document Brain.** `buildReviewPayload` produce già il payload
   compatibile con `POST /v1/document-understandings/{id}/reviews`; manca solo la
   chiamata.
-- **Multi-account** e **sincronizzazione automatica in background.** La sync è manuale,
-  su un account per volta.
+- **Multi-account** e **download in blocco.** Un account per volta, e un file per volta:
+  non esiste un comando che scarica tutto il Drive.
 
 ---
 

@@ -2,21 +2,25 @@ import type {
   Annotation,
   AuthStatus,
   BoundingBox,
+  CacheUsage,
   DashboardKpi,
   DocumentFilters,
+  DriveFileSummary,
+  FetchProgress,
   RegistryTypeOption,
   ReviewDecision,
   ReviewDocument,
-  ReviewDocumentSummary,
-  SyncProgress
+  ReviewDocumentSummary
 } from '@shared/types'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { cx } from '../lib/cx'
+import { formatBytes } from '../lib/format'
 import { api, errorMessage, needsLogin } from '../lib/ipc'
 import AuthPanel from './auth-panel'
 import DocumentFiltersBar from './document-filters'
 import styles from './document-review.module.css'
 import DocumentTable from './document-table'
+import DriveFiles from './drive-files'
 import ReviewView from './review-view'
 
 /**
@@ -25,7 +29,7 @@ import ReviewView from './review-view'
  * timeline) è quella originale; i dati arrivano dal main attraverso i canali IPC:
  * i KPI da query SQL, la tabella dal database, la ricerca da FTS5.
  */
-type View = 'dashboard' | 'documents' | 'review'
+type View = 'dashboard' | 'drive' | 'documents' | 'review'
 
 export default function DocumentReviewShell() {
   const [view, setView] = useState<View>('dashboard')
@@ -40,7 +44,11 @@ export default function DocumentReviewShell() {
   const [pending, setPending] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const [progress, setProgress] = useState<SyncProgress | null>(null)
+  const [progress, setProgress] = useState<FetchProgress | null>(null)
+  const [driveFiles, setDriveFiles] = useState<DriveFileSummary[]>([])
+  const [driveLoaded, setDriveLoaded] = useState(false)
+  const [fetchingId, setFetchingId] = useState<string | null>(null)
+  const [cache, setCache] = useState<CacheUsage | null>(null)
 
   const refresh = useCallback(async (current: DocumentFilters) => {
     try {
@@ -68,7 +76,7 @@ export default function DocumentReviewShell() {
       .types()
       .then(setTypes)
       .catch(() => setTypes([]))
-    return window.reviewer.onSyncProgress((update) => {
+    return window.reviewer.onFetchProgress((update) => {
       setProgress(update.phase === 'done' ? null : update)
     })
   }, [])
@@ -110,18 +118,52 @@ export default function DocumentReviewShell() {
       setAuth(await api.auth.logout())
     })
 
-  const sync = () =>
-    run('sync', async () => {
-      const result = await api.drive.sync()
-      await refresh(filters)
-      setMessage(
-        `Sincronizzazione completata: ${result.added} nuovi, ${result.updated} aggiornati, ${result.skipped} invariati.`
-      )
-      if (result.errors.length > 0) {
-        setError(
-          `${result.errors.length} documenti non sincronizzati. Primo: ${result.errors[0]?.filename} — ${result.errors[0]?.message}`
-        )
+  /** Solo metadati: aggiornare l'elenco non scarica nessun file. */
+  const loadDriveFiles = () =>
+    run('drive', async () => {
+      const [files, usage] = await Promise.all([api.drive.list(), api.drive.cacheUsage()])
+      setDriveFiles(files)
+      setCache(usage)
+      setDriveLoaded(true)
+    })
+
+  /** Doppio clic su un file: lo scarica, lo analizza e apre la revisione. */
+  const openDriveFile = (file: DriveFileSummary) =>
+    run('fetch', async () => {
+      setFetchingId(file.id)
+      try {
+        const { documentId } = await api.drive.fetch(file.id)
+        const [document, marks, files, usage] = await Promise.all([
+          api.docs.get(documentId),
+          api.annotations.list(documentId),
+          api.drive.list(),
+          api.drive.cacheUsage()
+        ])
+        setSelected(document)
+        setAnnotations(marks)
+        setDriveFiles(files)
+        setCache(usage)
+        setView('review')
+        await refresh(filters)
+      } finally {
+        setFetchingId(null)
       }
+    })
+
+  const evictDocument = (documentId: string) =>
+    run('evict', async () => {
+      const { freedBytes } = await api.docs.evict(documentId)
+      const [document, files, usage] = await Promise.all([
+        api.docs.get(documentId),
+        driveLoaded ? api.drive.list() : Promise.resolve(driveFiles),
+        api.drive.cacheUsage()
+      ])
+      setSelected(document)
+      setDriveFiles(files)
+      setCache(usage)
+      setMessage(
+        `Copia locale rimossa: ${formatBytes(freedBytes)} liberati. I dati estratti e le annotazioni restano.`
+      )
     })
 
   const openDocument = (id: string) =>
@@ -213,6 +255,15 @@ export default function DocumentReviewShell() {
             <NavButton active={view === 'dashboard'} onClick={() => setView('dashboard')}>
               Dashboard
             </NavButton>
+            <NavButton
+              active={view === 'drive'}
+              onClick={() => {
+                setView('drive')
+                if (!driveLoaded) void loadDriveFiles()
+              }}
+            >
+              File su Drive
+            </NavButton>
             <NavButton active={view === 'documents'} onClick={() => setView('documents')}>
               Documenti
             </NavButton>
@@ -243,9 +294,11 @@ export default function DocumentReviewShell() {
               <h1>
                 {view === 'dashboard'
                   ? 'Revisione documenti'
-                  : view === 'documents'
-                    ? 'Documenti'
-                    : 'Revisione documento'}
+                  : view === 'drive'
+                    ? 'File su Google Drive'
+                    : view === 'documents'
+                      ? 'Documenti'
+                      : 'Revisione documento'}
               </h1>
               <p>Controllo documentale con evidenze e human review</p>
             </div>
@@ -255,9 +308,12 @@ export default function DocumentReviewShell() {
                   type="button"
                   className={cx(styles.button, styles.buttonPrimary)}
                   disabled={busy}
-                  onClick={sync}
+                  onClick={() => {
+                    setView('drive')
+                    void loadDriveFiles()
+                  }}
                 >
-                  {pending === 'sync' ? 'Sincronizzo…' : 'Sincronizza da Drive'}
+                  {pending === 'drive' ? 'Leggo Drive…' : 'Aggiorna elenco Drive'}
                 </button>
               )}
               <div className={styles.avatar}>AI</div>
@@ -270,16 +326,11 @@ export default function DocumentReviewShell() {
             {progress && (
               <div className={styles.banner}>
                 <span className={styles.bannerTitle}>
-                  {progress.phase === 'listing'
-                    ? 'Leggo i file su Drive…'
-                    : progress.phase === 'downloading'
-                      ? 'Scarico i documenti…'
-                      : 'Estraggo il testo…'}
+                  {progress.phase === 'downloading'
+                    ? 'Scarico il documento…'
+                    : 'Analizzo il documento…'}
                 </span>
-                <span>
-                  {progress.total > 0 && `${progress.current} di ${progress.total}`}
-                  {progress.filename && ` · ${progress.filename}`}
-                </span>
+                <span>{progress.filename}</span>
               </div>
             )}
 
@@ -318,8 +369,42 @@ export default function DocumentReviewShell() {
                   documents={documents.filter((doc) => doc.status === 'NEEDS_REVIEW').slice(0, 10)}
                   onOpen={openDocument}
                   emptyTitle="Nessun documento da verificare"
-                  emptyHint="Sincronizza da Google Drive per popolare la coda."
+                  emptyHint="Apri un file dall’elenco «File su Drive» per popolare la coda."
                 />
+              </>
+            )}
+
+            {view === 'drive' && (
+              <>
+                <div className={styles.sectionHeader}>
+                  <div>
+                    <h2>File su Google Drive</h2>
+                    <div className={styles.muted}>
+                      Solo l&apos;elenco: doppio clic su un file per scaricarlo, analizzarlo e
+                      aprirlo in revisione.
+                    </div>
+                  </div>
+                  {cache && (
+                    <div className={styles.muted}>
+                      {cache.files === 1 ? '1 file in locale' : `${cache.files} file in locale`} ·{' '}
+                      {formatBytes(cache.bytes)} in cache
+                    </div>
+                  )}
+                </div>
+                {!driveLoaded && !busy ? (
+                  <div className={cx(styles.card, styles.empty)}>
+                    <div className={styles.emptyTitle}>Elenco non ancora caricato</div>
+                    <div>Usa «Aggiorna elenco Drive» per leggere i file dell&apos;account.</div>
+                  </div>
+                ) : (
+                  <DriveFiles
+                    files={driveFiles}
+                    fetchingId={fetchingId}
+                    busy={busy}
+                    onOpen={openDriveFile}
+                    emptyHint="L'account non ha PDF o DOCX fuori dal cestino."
+                  />
+                )}
               </>
             )}
 
@@ -348,7 +433,7 @@ export default function DocumentReviewShell() {
                   }
                   emptyHint={
                     total === 0
-                      ? 'Accedi con Google e avvia la sincronizzazione da Drive.'
+                      ? 'Apri un file dall’elenco «File su Drive» per analizzarlo.'
                       : 'Prova ad allargare i filtri o a cambiare la ricerca.'
                   }
                 />
@@ -370,6 +455,7 @@ export default function DocumentReviewShell() {
                   onUpdateAnnotation={updateAnnotation}
                   onDeleteAnnotation={deleteAnnotation}
                   onExportAnnotated={exportAnnotated}
+                  onEvict={() => evictDocument(selected.id)}
                 />
               ) : (
                 <div className={cx(styles.card, styles.empty)}>

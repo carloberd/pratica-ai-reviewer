@@ -3,16 +3,17 @@ import type {
   Annotation,
   AuthStatus,
   BoundingBox,
+  CacheUsage,
   DashboardStats,
   DocumentFilters,
   DriveFileSummary,
+  FetchProgress,
+  FetchResult,
   RegistryTypeOption,
   ReviewDocument,
   ReviewDocumentSummary,
   ReviewPayload,
-  SearchHit,
-  SyncProgress,
-  SyncResult
+  SearchHit
 } from '../shared/types'
 
 /**
@@ -33,8 +34,15 @@ export const reviewerApi = {
     logout: () => invoke<IpcResultOf<AuthStatus>>('auth:logout')
   },
   drive: {
+    /** Solo metadati: nessun file viene scaricato. */
     list: () => invoke<IpcResultOf<DriveFileSummary[]>>('drive:list'),
-    sync: () => invoke<IpcResultOf<SyncResult>>('drive:sync')
+    /** Scarica ed elabora un singolo file, su richiesta. */
+    fetch: (driveFileId: string, options?: { force?: boolean }) =>
+      invoke<IpcResultOf<FetchResult>>('drive:fetch', {
+        driveFileId,
+        force: options?.force ?? false
+      }),
+    cacheUsage: () => invoke<IpcResultOf<CacheUsage>>('drive:cache-usage')
   },
   docs: {
     list: (filters?: DocumentFilters) =>
@@ -43,6 +51,8 @@ export const reviewerApi = {
     stats: () => invoke<IpcResultOf<DashboardStats>>('docs:stats'),
     setType: (id: string, documentType: string | null) =>
       invoke<IpcResultOf<ReviewDocument>>('docs:set-type', { id, documentType }),
+    /** Toglie dalla cache la copia locale, lasciando intatti dati estratti e annotazioni. */
+    evict: (id: string) => invoke<IpcResultOf<{ freedBytes: number }>>('docs:evict', { id }),
     types: () => invoke<IpcResultOf<RegistryTypeOption[]>>('docs:types')
   },
   fields: {
@@ -80,11 +90,11 @@ export const reviewerApi = {
   docx: {
     text: (documentId: string) => invoke<IpcResultOf<string>>('docx:text', { documentId })
   },
-  onSyncProgress: (listener: (progress: SyncProgress) => void): (() => void) => {
-    const handler = (_event: unknown, progress: SyncProgress) => listener(progress)
-    ipcRenderer.on('drive:sync-progress', handler)
+  onFetchProgress: (listener: (progress: FetchProgress) => void): (() => void) => {
+    const handler = (_event: unknown, progress: FetchProgress) => listener(progress)
+    ipcRenderer.on('drive:fetch-progress', handler)
     return () => {
-      ipcRenderer.off('drive:sync-progress', handler)
+      ipcRenderer.off('drive:fetch-progress', handler)
     }
   }
 }

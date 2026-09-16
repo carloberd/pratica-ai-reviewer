@@ -47,7 +47,8 @@ export const api = {
     stats: () => call(() => window.reviewer.docs.stats()),
     types: () => call(() => window.reviewer.docs.types()),
     setType: (id: string, documentType: string | null) =>
-      call(() => window.reviewer.docs.setType(id, documentType))
+      call(() => window.reviewer.docs.setType(id, documentType)),
+    evict: (id: string) => call(() => window.reviewer.docs.evict(id))
   },
   fields: {
     update: (documentId: string, fieldId: string, correctedValue: string | null) =>
@@ -63,7 +64,10 @@ export const api = {
       )
   },
   drive: {
-    sync: () => call(() => window.reviewer.drive.sync())
+    list: () => call(() => window.reviewer.drive.list()),
+    fetch: (driveFileId: string, options?: { force?: boolean }) =>
+      call(() => window.reviewer.drive.fetch(driveFileId, options)),
+    cacheUsage: () => call(() => window.reviewer.drive.cacheUsage())
   },
   search: {
     query: (text: string) => call(() => window.reviewer.search.query(text))

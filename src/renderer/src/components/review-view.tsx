@@ -26,6 +26,8 @@ interface Props {
   onUpdateAnnotation: (id: string, note: string) => void
   onDeleteAnnotation: (id: string) => void
   onExportAnnotated: () => void
+  /** Toglie la copia locale del file, lasciando dati estratti e annotazioni. */
+  onEvict: () => void
 }
 
 type Tab = 'fields' | 'document'
@@ -42,7 +44,8 @@ export default function ReviewView({
   onCreateAnnotation,
   onUpdateAnnotation,
   onDeleteAnnotation,
-  onExportAnnotated
+  onExportAnnotated,
+  onEvict
 }: Props) {
   const [note, setNote] = useState('')
   const [tab, setTab] = useState<Tab>('fields')
@@ -120,6 +123,18 @@ export default function ReviewView({
             <span className={styles.muted}>
               Cambiando tipo cambiano i campi richiesti alla prossima elaborazione.
             </span>
+            <span className={styles.spacer} />
+            {document.cachedPath && (
+              <button
+                type="button"
+                className={cx(styles.button, styles.buttonSmall)}
+                disabled={busy}
+                onClick={onEvict}
+                title="Elimina il file dalla cache locale. I dati estratti e le annotazioni restano, il file si riscarica riaprendolo da Drive."
+              >
+                Libera spazio
+              </button>
+            )}
           </div>
 
           <div className={styles.tabs}>

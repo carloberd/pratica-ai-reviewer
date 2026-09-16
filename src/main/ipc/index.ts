@@ -1,12 +1,13 @@
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import type { IpcResult, RegistryTypeOption } from '@shared/types'
 import { BrowserWindow, dialog, ipcMain, type WebContents } from 'electron'
 import { z } from 'zod'
 import type { AuthService } from '../auth/service'
 import type { Repository } from '../db/repository'
-import { toAnnotation } from '../db/rows'
+import { toAnnotation, toStatus } from '../db/rows'
 import { createDriveClient, DOCX_MIME, PDF_MIME } from '../drive/client'
-import { type DocumentProcessor, syncDrive } from '../drive/sync'
+import { cacheUsage, type DocumentProcessor, evictCachedFile, fetchDriveFile } from '../drive/fetch'
 import { fail, logError, ok, ReviewerError } from '../errors'
 import { exportAnnotatedPdf, writeAnnotatedPdf } from '../export/annotated-pdf'
 import { extractDocxPages } from '../extract/docx'
@@ -17,6 +18,7 @@ import {
   documentFiltersSchema,
   documentIdSchema,
   documentRefSchema,
+  fetchDriveFileSchema,
   reviewPayloadSchema,
   searchSchema,
   setTypeSchema,
@@ -72,32 +74,60 @@ export function registerIpcHandlers(context: IpcContext): void {
   handle('auth:logout', noInput, () => auth.logout())
 
   // ---- drive ---------------------------------------------------------------
+  // Solo metadati: l'elenco non scarica niente.
   handle('drive:list', noInput, async () => {
     const drive = createDriveClient(await auth.client())
     const files = await drive.listFiles()
-    return files.map((file) => ({
-      id: file.id,
-      name: file.name,
-      mimeType: file.mimeType,
-      modifiedTime: file.modifiedTime,
-      size: file.size,
-      known: repo.documents.getByDriveFileId(file.id) !== undefined
-    }))
-  })
-
-  handle('drive:sync', noInput, async () => {
-    const drive = createDriveClient(await auth.client())
-    return syncDrive({
-      drive,
-      repo,
-      cachePathFor,
-      ...(context.process ? { process: context.process } : {}),
-      onProgress: (progress) => {
-        const target = context.sender?.()
-        if (target && !target.isDestroyed()) target.send('drive:sync-progress', progress)
+    return files.map((file) => {
+      const local = repo.documents.getByDriveFileId(file.id)
+      const cached = Boolean(local?.cached_path && existsSync(local.cached_path))
+      const stale = Boolean(
+        local &&
+          file.modifiedTime &&
+          (local.received_at === null || file.modifiedTime > local.received_at)
+      )
+      return {
+        id: file.id,
+        name: file.name,
+        mimeType: file.mimeType,
+        modifiedTime: file.modifiedTime,
+        size: file.size,
+        documentId: local?.id ?? null,
+        cached: cached && !stale,
+        stale,
+        status: local ? toStatus(local.status) : null
       }
     })
   })
+
+  /** Scarica ed elabora un file solo quando il revisore lo apre davvero. */
+  handle('drive:fetch', fetchDriveFileSchema, async ({ driveFileId, force }) => {
+    const drive = createDriveClient(await auth.client())
+    const files = await drive.listFiles()
+    const file = files.find((candidate) => candidate.id === driveFileId)
+    if (!file) {
+      throw new ReviewerError('NOT_FOUND', 'Il file non è più presente su Google Drive.')
+    }
+
+    return fetchDriveFile({
+      drive,
+      repo,
+      file,
+      cachePathFor,
+      force,
+      ...(context.process ? { process: context.process } : {}),
+      onProgress: (progress) => {
+        const target = context.sender?.()
+        if (target && !target.isDestroyed()) target.send('drive:fetch-progress', progress)
+      }
+    })
+  })
+
+  handle('drive:cache-usage', noInput, () => cacheUsage(repo))
+
+  handle('docs:evict', documentIdSchema, async ({ id }) => ({
+    freedBytes: await evictCachedFile(repo, id)
+  }))
 
   // ---- documenti -----------------------------------------------------------
   handle('docs:list', documentFiltersSchema, (filters) => repo.listSummaries(filters))

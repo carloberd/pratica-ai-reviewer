@@ -163,28 +163,39 @@ export interface AuthStatus {
   setupHint?: string
 }
 
-export interface SyncResult {
-  scanned: number
-  added: number
-  updated: number
-  skipped: number
-  processed: number
-  errors: Array<{ driveFileId: string; filename: string; message: string }>
+/** Esito dell'apertura di un file di Drive. */
+export interface FetchResult {
+  documentId: string
+  downloaded: boolean
+  processed: boolean
+}
+
+export interface CacheUsage {
+  files: number
+  bytes: number
 }
 
 export interface DashboardStats {
   kpis: DashboardKpi[]
 }
 
-/** File trovato su Drive, prima che diventi un documento locale. */
+/**
+ * File visto su Drive. È solo metadato: il contenuto non viene scaricato finché
+ * qualcuno non apre il documento.
+ */
 export interface DriveFileSummary {
   id: string
   name: string
   mimeType: string
   modifiedTime: string | null
   size: number | null
-  /** Esiste già una riga `documents` per questo file. */
-  known: boolean
+  /** Id del documento locale, se questo file è già stato aperto almeno una volta. */
+  documentId: string | null
+  /** La copia locale c'è ed è allineata a quella su Drive. */
+  cached: boolean
+  /** Su Drive c'è una versione più recente di quella elaborata in locale. */
+  stale: boolean
+  status: QueueStatus | null
 }
 
 export interface SearchHit {
@@ -194,11 +205,9 @@ export interface SearchHit {
   snippet: string
 }
 
-export interface SyncProgress {
-  phase: 'listing' | 'downloading' | 'extracting' | 'done'
-  current: number
-  total: number
-  filename?: string
+export interface FetchProgress {
+  phase: 'downloading' | 'extracting' | 'done'
+  filename: string
 }
 
 export interface RegistryTypeOption {

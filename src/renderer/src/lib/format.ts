@@ -45,3 +45,25 @@ export function typeLabel(documentType: string | null, label: string | null): st
   if (!documentType) return 'Da assegnare'
   return label ? `${label} (${documentType})` : documentType
 }
+
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
+export function mimeLabel(mime: string): string {
+  if (mime === 'application/pdf') return 'PDF'
+  if (mime === DOCX_MIME) return 'DOCX'
+  return mime
+}
+
+/** Dimensioni leggibili: il punto è capire quanto disco costa, non il byte esatto. */
+export function formatBytes(bytes: number | null): string {
+  if (bytes === null) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  const units = ['kB', 'MB', 'GB']
+  let value = bytes / 1024
+  let unit = 0
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024
+    unit += 1
+  }
+  return `${value.toFixed(value >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`
+}

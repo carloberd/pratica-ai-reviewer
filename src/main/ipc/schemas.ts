@@ -64,5 +64,10 @@ export const updateAnnotationSchema = z.object({
   note: z.string().max(2000).nullable().optional()
 })
 
+export const fetchDriveFileSchema = z.object({
+  driveFileId: z.string().min(1).max(200),
+  force: z.boolean().default(false)
+})
+
 export const searchSchema = z.object({ text: z.string().max(500) })
 export const emptySchema = z.unknown().optional()
