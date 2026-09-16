@@ -1,8 +1,9 @@
-# Normalizza i fine riga nei sorgenti, ma lascia stare i binari: su Windows una
-# conversione CRLF corromperebbe le fixture e i modelli OCR, e i test fallirebbero
-# in modo incomprensibile.
-* text=auto
+# Fine riga LF ovunque, anche nel working tree su Windows: il formatter usa LF, e un
+# checkout in CRLF farebbe fallire `pnpm lint` in CI su ogni file del repo.
+* text=auto eol=lf
 
+# I binari restano intatti: una conversione dei fine riga corromperebbe le fixture e i
+# modelli OCR, e i test fallirebbero in modo incomprensibile.
 *.pdf binary
 *.docx binary
 *.png binary
