@@ -1,18 +1,32 @@
-import type { FieldChange, ReviewDecision, ReviewDocument, ReviewPayload } from '@shared/types'
+import type {
+  FieldChange,
+  QueueStatus,
+  ReviewAction,
+  ReviewDecision,
+  ReviewDocument,
+  ReviewPayload
+} from '@shared/types'
+
+/** Lo stato in cui l'azione lascia il documento, cioè se entrerà nel dataset o no. */
+export function statusForAction(action: ReviewAction): QueueStatus {
+  return action === 'DISCARD' ? 'DISCARDED' : 'REVIEWED'
+}
 
 /**
  * Costruisce il payload della review.
  *
- * Chiude il gap dichiarato dal modulo v5.2, dove «Conferma con correzione» inviava
- * una decisione `CORRECT` senza alcun editor: qui `corrections` contiene solo i campi
- * realmente modificati e `changes` porta before/after e provenienza del valore di
- * partenza. La forma di `decision`/`corrections`/`note` resta quella che si aspetta
- * `POST /v1/document-understandings/{id}/reviews`; `changes` è un'aggiunta che un
- * backend fermo al contratto v5.2 può semplicemente ignorare.
+ * Il revisore sceglie fra due sole azioni — salvare o scartare — perché la terza del
+ * modulo v5.2 («Conferma con correzione») non portava informazione: `APPROVE` e
+ * `CORRECT` finivano nello stesso stato, e quale delle due fosse dipendeva solo dai
+ * campi toccati. Qui la `decision` la deriviamo da quelli, così la forma
+ * `decision`/`corrections`/`note` attesa da
+ * `POST /v1/document-understandings/{id}/reviews` resta valida senza chiedere a nessuno
+ * di ricalcolarla a mano. `changes` porta before/after e provenienza del valore di
+ * partenza: è un'aggiunta che un backend fermo al contratto v5.2 può ignorare.
  */
 export function buildReviewPayload(
   document: ReviewDocument,
-  decision: ReviewDecision,
+  action: ReviewAction,
   note?: string
 ): ReviewPayload {
   const changes: FieldChange[] = document.fields
@@ -31,6 +45,8 @@ export function buildReviewPayload(
     }))
 
   const corrections = Object.fromEntries(changes.map((change) => [change.name, change.after]))
+  const decision: ReviewDecision =
+    action === 'DISCARD' ? 'REJECT' : changes.length > 0 ? 'CORRECT' : 'APPROVE'
 
   return {
     decision,
@@ -43,10 +59,10 @@ export function buildReviewPayload(
 export function describeReview(payload: ReviewPayload): { title: string; detail: string } {
   const title =
     payload.decision === 'REJECT'
-      ? 'Documento rifiutato'
+      ? 'Documento scartato'
       : payload.decision === 'CORRECT'
-        ? 'Approvato con correzioni'
-        : 'Documento approvato'
+        ? 'Revisionato con correzioni'
+        : 'Documento revisionato'
 
   const changes = payload.changes ?? []
   const parts: string[] = []

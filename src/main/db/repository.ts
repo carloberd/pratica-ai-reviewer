@@ -6,7 +6,6 @@ import type {
   ReviewDocument,
   ReviewDocumentSummary
 } from '@shared/types'
-import { createAnnotationsDao } from './dao/annotations'
 import { createDocumentsDao } from './dao/documents'
 import { createEventsDao } from './dao/events'
 import { createEvidenceDao } from './dao/evidence'
@@ -15,7 +14,6 @@ import { createSearchDao } from './dao/search'
 import type { Db } from './index'
 import {
   type DocumentRow,
-  toAnnotation,
   toBand,
   toEvidenceItem,
   toExtractedField,
@@ -35,7 +33,6 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
   const documents = createDocumentsDao(db)
   const fields = createFieldsDao(db)
   const evidence = createEvidenceDao(db)
-  const annotations = createAnnotationsDao(db)
   const events = createEventsDao(db)
   const search = createSearchDao(db)
 
@@ -97,7 +94,6 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
     documents,
     fields,
     evidence,
-    annotations,
     events,
     search,
 
@@ -155,10 +151,6 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
       }
     },
 
-    listAnnotations(documentId: string) {
-      return annotations.listForDocument(documentId).map(toAnnotation)
-    },
-
     /** Ricalcola confidence e banda del documento come media dei campi valorizzati. */
     recomputeConfidence(documentId: string): void {
       const rows = fields.listForDocument(documentId).filter((field) => field.value)
@@ -180,7 +172,7 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
         },
         {
           id: 'review',
-          label: 'Da verificare',
+          label: 'Da revisionare',
           value: counts.needsReview,
           hint: 'in attesa di controllo umano'
         },

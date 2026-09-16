@@ -2,12 +2,15 @@ import type { DriveFileSummary } from '@shared/types'
 import { cx } from '../lib/cx'
 import { formatBytes, formatDateTime, mimeLabel, STATUS_LABELS } from '../lib/format'
 import styles from './document-review.module.css'
+import { TableSkeleton } from './loading-skeleton'
 
 interface Props {
   files: DriveFileSummary[]
   /** Id Drive del file che si sta scaricando in questo momento. */
   fetchingId: string | null
   busy: boolean
+  /** `files.list` è in corso: l'elenco non è ancora né pieno né vuoto. */
+  loading?: boolean
   onOpen: (file: DriveFileSummary) => void
   emptyHint: string
 }
@@ -19,7 +22,20 @@ interface Props {
  * clic su una riga, un file per volta: tirare giù l'intero Drive riempirebbe il disco
  * di documenti che nessuno aprirà.
  */
-export default function DriveFiles({ files, fetchingId, busy, onOpen, emptyHint }: Props) {
+export default function DriveFiles({
+  files,
+  fetchingId,
+  busy,
+  loading = false,
+  onOpen,
+  emptyHint
+}: Props) {
+  // L'elenco già letto resta a schermo durante un aggiornamento: sparire e ricomparire
+  // è peggio di una riga stantia per il tempo di una `files.list`.
+  if (loading && files.length === 0) {
+    return <TableSkeleton label="Leggo l'elenco dei file su Drive…" rows={6} />
+  }
+
   if (files.length === 0) {
     return (
       <div className={cx(styles.card, styles.empty)}>

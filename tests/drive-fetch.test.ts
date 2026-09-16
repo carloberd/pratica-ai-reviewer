@@ -177,20 +177,12 @@ describe('gestione della cache', () => {
     repo.fields.replaceForDocument(documentId, [
       { name: 'total_amount', label: 'Totale', value: '86420.00', confidence: 0.85 }
     ])
-    repo.annotations.add({
-      documentId,
-      page: 1,
-      bbox: { x: 1, y: 2, w: 3, h: 4 },
-      kind: 'highlight'
-    })
-
     const freed = await evictCachedFile(repo, documentId)
 
     expect(freed).toBeGreaterThan(0)
     expect(existsSync(cachePathFor('f1', PDF))).toBe(false)
     expect(repo.documents.get(documentId)?.cached_path).toBeNull()
     expect(repo.fields.listForDocument(documentId)).toHaveLength(1)
-    expect(repo.listAnnotations(documentId)).toHaveLength(1)
     expect(repo.events.listForDocument(documentId).at(-1)?.title).toBe('Copia locale rimossa')
     repo.close()
   })

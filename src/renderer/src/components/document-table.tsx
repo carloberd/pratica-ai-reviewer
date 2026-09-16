@@ -2,6 +2,7 @@ import type { ConfidenceBand, ReviewDocumentSummary } from '@shared/types'
 import { cx } from '../lib/cx'
 import { formatDateTime, pct, STATUS_LABELS, textSourceLabel, typeLabel } from '../lib/format'
 import styles from './document-review.module.css'
+import { TableSkeleton } from './loading-skeleton'
 
 export const BAND_CLASS: Record<ConfidenceBand, string | undefined> = {
   HIGH: styles.high,
@@ -12,11 +13,26 @@ export const BAND_CLASS: Record<ConfidenceBand, string | undefined> = {
 interface Props {
   documents: ReviewDocumentSummary[]
   onOpen: (id: string) => void
+  /** La prima lettura non è ancora finita: finché dura non si sa se la lista è vuota. */
+  loading?: boolean
+  loadingLabel?: string
   emptyTitle: string
   emptyHint: string
 }
 
-export default function DocumentTable({ documents, onOpen, emptyTitle, emptyHint }: Props) {
+export default function DocumentTable({
+  documents,
+  onOpen,
+  loading = false,
+  loadingLabel = 'Carico i documenti…',
+  emptyTitle,
+  emptyHint
+}: Props) {
+  // Con dei documenti già a schermo un ricaricamento non deve svuotare la tabella.
+  if (loading && documents.length === 0) {
+    return <TableSkeleton label={loadingLabel} />
+  }
+
   if (documents.length === 0) {
     return (
       <div className={cx(styles.card, styles.empty)}>
