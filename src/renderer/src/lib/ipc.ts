@@ -1,3 +1,4 @@
+import type { ProfileEdit } from '@shared/profile-edit'
 import type { IpcErrorCode, ReviewAction } from '@shared/types'
 
 /**
@@ -62,6 +63,12 @@ export const api = {
   },
   dataset: {
     export: () => call(() => window.reviewer.dataset.export())
+  },
+  profiles: {
+    list: () => call(() => window.reviewer.profiles.list()),
+    edit: (edit: ProfileEdit) => call(() => window.reviewer.profiles.edit(edit)),
+    rerun: (documentType: string) => call(() => window.reviewer.profiles.rerun(documentType)),
+    export: (format: 'json' | 'csv') => call(() => window.reviewer.profiles.export(format))
   },
   review: {
     submit: (documentId: string, action: ReviewAction, note?: string) =>
