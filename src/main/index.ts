@@ -84,7 +84,9 @@ function start(): void {
           schemaVersion: v2.extractionRegistryV2?.schemaVersion() ?? null
         }
       }),
-      choosePath: (defaultName) => chooseSavePath('Esporta il dataset annotato', defaultName)
+      choosePath: (defaultName) => chooseSavePath('Esporta il dataset annotato', defaultName),
+      chooseXlsxPath: (defaultName) =>
+        chooseSavePath('Esporta il dataset annotato in Excel', defaultName)
     },
     // Senza profili v2 non c'è niente da misurare: la voce di menu resta, e i canali
     // rispondono che la schermata non è disponibile su questa istanza.
