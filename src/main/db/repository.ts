@@ -1,5 +1,5 @@
 import { bandOf } from '@shared/confidence'
-import { fieldLabel, UNIVERSAL_FIELDS } from '@shared/fields'
+import { UNIVERSAL_FIELDS } from '@shared/fields'
 import type {
   DashboardKpi,
   DocumentFilters,
@@ -9,11 +9,13 @@ import type {
 import { createDocumentsDao } from './dao/documents'
 import { createEventsDao } from './dao/events'
 import { createEvidenceDao } from './dao/evidence'
+import { createExtractionRunsDao } from './dao/extraction-runs'
 import { createFieldsDao } from './dao/fields'
 import { createSearchDao } from './dao/search'
 import type { Db } from './index'
 import {
   type DocumentRow,
+  type FieldRow,
   toBand,
   toEvidenceItem,
   toExtractedField,
@@ -35,11 +37,12 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
   const evidence = createEvidenceDao(db)
   const events = createEventsDao(db)
   const search = createSearchDao(db)
+  const extractionRuns = createExtractionRunsDao(db)
 
   const requiredFields = deps.requiredFields ?? (() => [...UNIVERSAL_FIELDS])
   const typeLabel = deps.typeLabel ?? (() => null)
 
-  function warningsFor(row: DocumentRow, missingRequired: string[]): string[] {
+  function warningsFor(row: DocumentRow, missingRequired: FieldRow[]): string[] {
     const warnings: string[] = []
     if (!row.document_type) {
       warnings.push('Tipo da assegnare a mano: nessun alias del registry supera la soglia.')
@@ -48,7 +51,7 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
       warnings.push('Testo ricavato da OCR: la confidence dei campi è ridotta di 0,10.')
     }
     if (missingRequired.length > 0) {
-      const labels = missingRequired.map(fieldLabel).join(', ')
+      const labels = missingRequired.map((field) => field.label).join(', ')
       warnings.push(
         missingRequired.length === 1
           ? `Campo obbligatorio senza evidenza: ${labels}.`
@@ -58,13 +61,26 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
     return warnings
   }
 
+  /**
+   * Un campo scritto dal motore v2 porta il proprio ruolo; per le righe v1 decide lo
+   * schema del registry, come prima.
+   */
+  function isRequired(field: FieldRow, requiredByRegistry: Set<string>): boolean {
+    return field.role ? field.role === 'required' : requiredByRegistry.has(field.name)
+  }
+
+  function isFilled(field: FieldRow): boolean {
+    if (field.cardinality === 'many') return fields.countFilledItems(field.id) > 0
+    return Boolean(field.corrected_value ?? field.value)
+  }
+
+  function missingRequiredOf(fieldRows: FieldRow[], documentType: string | null): FieldRow[] {
+    const required = new Set(requiredFields(documentType))
+    return fieldRows.filter((field) => isRequired(field, required) && !isFilled(field))
+  }
+
   function summaryOf(row: DocumentRow): ReviewDocumentSummary {
-    const required = new Set(requiredFields(row.document_type))
-    const missing = fields
-      .listForDocument(row.id)
-      .filter((field) => required.has(field.name))
-      .filter((field) => !(field.corrected_value ?? field.value))
-      .map((field) => field.name)
+    const missing = missingRequiredOf(fields.listForDocument(row.id), row.document_type)
 
     return {
       id: row.id,
@@ -96,6 +112,7 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
     evidence,
     events,
     search,
+    extractionRuns,
 
     listSummaries(filters: DocumentFilters = {}): ReviewDocumentSummary[] {
       const ftsIds = filters.query?.trim()
@@ -121,10 +138,7 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
         }
       }
 
-      const missing = fieldRows
-        .filter((field) => required.has(field.name))
-        .filter((field) => !(field.corrected_value ?? field.value))
-        .map((field) => field.name)
+      const missing = missingRequiredOf(fieldRows, row.document_type)
 
       return {
         id: row.id,
@@ -143,7 +157,7 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
         textSource: toTextSource(row.text_source),
         cachedPath: row.cached_path,
         warnings: warningsFor(row, missing),
-        fields: fieldRows.map((field) => toExtractedField(field, required.has(field.name))),
+        fields: fieldRows.map((field) => toExtractedField(field, isRequired(field, required))),
         evidence: evidence
           .listForDocument(id)
           .map((item) => toEvidenceItem(item, labelByEvidence.get(item.id) ?? 'Evidenza')),
