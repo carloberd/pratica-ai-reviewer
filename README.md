@@ -315,10 +315,17 @@ quello su Drive.
 
 ## Export del dataset annotato
 
-«Esporta dataset annotato», nella dashboard, salva in un file JSON i documenti chiusi
-dal revisore. È l'input del benchmark di pratica-ai; l'allineamento col benchmark si fa
-quando il dataset è pronto, quindi il formato resta semplice e versionato
-(`formatVersion`, in `src/shared/dataset.ts`).
+Gli stessi documenti chiusi dal revisore escono in due forme, dai due pulsanti della
+dashboard: **JSON** per il benchmark, **XLSX** per chi i dati li lavora in foglio. Sono
+due export paralleli sugli stessi dati — il formato JSON non cambia perché esiste anche
+quello Excel.
+
+### JSON
+
+«Esporta dataset annotato» salva in un file JSON i documenti chiusi dal revisore. È
+l'input del benchmark di pratica-ai; l'allineamento col benchmark si fa quando il dataset
+è pronto, quindi il formato resta semplice e versionato (`formatVersion`, in
+`src/shared/dataset.ts`).
 
 ```jsonc
 {
@@ -382,6 +389,57 @@ quando il dataset è pronto, quindi il formato resta semplice e versionato
 
 Il test `tests/dataset-export.test.ts` elabora le fixture con la pipeline v2, le corregge,
 le rielabora, le chiude e confronta il file con `tests/fixtures/dataset-export.expected.json`.
+
+### XLSX
+
+«Esporta in Excel» salva gli stessi documenti come foglio di calcolo: due tabelle legate
+da `document_id`, invece di un JSON annidato. Le righe le costruisce `buildXlsxRows` in
+`src/shared/dataset-xlsx.ts` — funzione pura, senza database né exceljs — e il file lo
+scrive `src/main/xlsx-export.ts`.
+
+Il foglio **`documents`**, una riga per documento chiuso:
+
+| Colonna | Cosa contiene |
+|---|---|
+| `document_id` | id locale del documento, chiave verso il foglio `fields` |
+| `drive_file_id` | id del file su Drive: `https://drive.google.com/file/d/<id>/view` |
+| `document_type_predicted` | il tipo assegnato dal classificatore; vuoto se `UNKNOWN` o scelto a mano |
+| `document_type_final` | il tipo che resta, cioè la verità del revisore |
+| `classifier_confidence` | punteggio del classificatore sul tipo proposto |
+| `runner_up` | secondo candidato del classificatore v2 |
+| `margin` | distacco fra primo e secondo candidato |
+| `template_fingerprint` | impronta del layout della prima pagina |
+| `review_status` | `REVIEWED` o `DISCARDED` |
+
+Il foglio **`fields`**, una riga per campo — e una riga per ogni riga dei campi ripetuti,
+che `item_index` ordina: `document_id`, `field_name`, `label`, `role`, `cardinality`,
+`item_index` (vuoto sui campi singoli), `value_predicted` (la proposta del motore),
+`value_final` (il valore confermato), `origin` (`ENGINE` o `REVIEWER`), `confidence`,
+`evidence_page`, `evidence_text` (verbatim) ed `evidence_bbox` (JSON del riquadro).
+
+- `runner_up` e `margin` restano vuoti sui documenti classificati col motore v1, che non
+  li calcola: non si inventano. Vengono dall'audit dell'**ultimo** run del documento,
+  che è quello che corrisponde ai campi di adesso.
+- Degli scartati resta la riga in `documents` col loro stato, senza campi: nessuno ne ha
+  confermato i valori, come nell'export JSON.
+- A differenza del JSON, le righe **tolte** dal revisore ci sono, con `value_final`
+  vuoto: quello che il motore aveva proposto è una misura e non si perde, esattamente
+  come per un campo singolo svuotato.
+- Un re-run dell'estrazione non duplica righe né perde correzioni: i due fogli si
+  ricostruiscono ogni volta dallo stato corrente del documento.
+
+`template_fingerprint` è l'impronta del **layout** della prima pagina, e serve a
+riconoscere i documenti usciti dallo stesso stampato: si collassano gli spazi, ogni
+sequenza di lettere diventa `A` e ogni sequenza di cifre `9`, la riga si tronca a 120
+caratteri e la lista di righe si riassume nei primi 16 caratteri di uno SHA-256
+(`src/shared/template-fingerprint.ts`). Stesso stampato con dati diversi, stessa
+impronta. Si calcola dalla copia in cache al primo export che ne ha bisogno e resta sulla
+colonna `documents.template_fingerprint` (migrazione `0006`), perché il layout di un
+documento non cambia. Un documento la cui copia locale non c'è più esce con l'impronta
+vuota: per un export non si riscarica niente da Drive.
+
+Il test `tests/xlsx-export.test.ts` scrive il file dalle fixture e lo rilegge con
+exceljs: intestazioni, conteggi, impronte e valori confermati.
 
 ---
 

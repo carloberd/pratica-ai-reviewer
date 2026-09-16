@@ -25,6 +25,7 @@
   "dependencies": {
     "@napi-rs/canvas": "^1.0.9",
     "better-sqlite3": "^13.0.3",
+    "exceljs": "^4.4.0",
     "google-auth-library": "^11.0.2",
     "googleapis": "^181.0.0",
     "mammoth": "^1.12.3",

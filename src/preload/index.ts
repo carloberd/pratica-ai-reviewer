@@ -19,7 +19,8 @@ import type {
   ReviewDocument,
   ReviewDocumentSummary,
   ReviewSubmission,
-  SearchHit
+  SearchHit,
+  XlsxExportResult
 } from '../shared/types'
 
 /**
@@ -79,7 +80,9 @@ export const reviewerApi = {
   },
   dataset: {
     /** Chiede dove salvare e scrive il dataset annotato. */
-    export: () => invoke<IpcResultOf<DatasetExportResult>>('dataset:export')
+    export: () => invoke<IpcResultOf<DatasetExportResult>>('dataset:export'),
+    /** Lo stesso dataset in foglio di calcolo: due tabelle, `documents` e `fields`. */
+    exportXlsx: () => invoke<IpcResultOf<XlsxExportResult>>('dataset:export-xlsx')
   },
   /** Misure e correzione delle istruzioni di estrazione, tipo per tipo. */
   profiles: {

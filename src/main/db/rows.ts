@@ -30,6 +30,8 @@ export interface DocumentRow {
   /** JSON di `TypeClassification` senza etichette (migrazione 0005). */
   classification_json: string | null
   reviewed_at: string | null
+  /** Impronta del layout della prima pagina (migrazione 0006); NULL = non ancora calcolata. */
+  template_fingerprint: string | null
 }
 
 export interface FieldRow {

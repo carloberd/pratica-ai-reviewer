@@ -62,7 +62,8 @@ export const api = {
       call(() => window.reviewer.fields.removeItem({ documentId, itemId, removed }))
   },
   dataset: {
-    export: () => call(() => window.reviewer.dataset.export())
+    export: () => call(() => window.reviewer.dataset.export()),
+    exportXlsx: () => call(() => window.reviewer.dataset.exportXlsx())
   },
   profiles: {
     list: () => call(() => window.reviewer.profiles.list()),
