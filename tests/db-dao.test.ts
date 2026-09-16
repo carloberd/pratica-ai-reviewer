@@ -82,9 +82,9 @@ describe('documents dao', () => {
       confidenceBand: 'LOW',
       textSource: 'OCR'
     })
-    r.documents.setStatus(c, 'APPROVED')
+    r.documents.setStatus(c, 'REVIEWED')
 
-    expect(r.documents.list({ status: 'APPROVED' }).map((d) => d.id)).toEqual([c])
+    expect(r.documents.list({ status: 'REVIEWED' }).map((d) => d.id)).toEqual([c])
     expect(r.documents.list({ documentType: 'accounting.fattura' })).toHaveLength(2)
     expect(r.documents.list({ documentType: '__none__' }).map((d) => d.id)).toEqual([c])
     expect(r.documents.list({ band: 'HIGH' }).map((d) => d.id)).toEqual([a])
@@ -123,7 +123,7 @@ describe('documents dao', () => {
       confidenceBand: 'HIGH',
       textSource: 'NATIVE_TEXT'
     })
-    r.documents.setStatus(b, 'APPROVED')
+    r.documents.setStatus(b, 'REVIEWED')
 
     expect(r.documents.counts()).toEqual({
       total: 2,

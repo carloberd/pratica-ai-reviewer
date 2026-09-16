@@ -41,6 +41,28 @@ describe('migrazioni', () => {
     db.close()
   })
 
+  it('la 0003 porta i vecchi stati sul vocabolario del dataset', () => {
+    const db = openDatabase({ file: ':memory:' })
+    const insert = db.prepare(
+      'INSERT INTO documents (id, drive_file_id, filename, mime, status, synced_at) VALUES (?, ?, ?, ?, ?, ?)'
+    )
+    insert.run('a', 'x1', 'a.pdf', 'application/pdf', 'APPROVED', '2026-01-01')
+    insert.run('b', 'x2', 'b.pdf', 'application/pdf', 'REJECTED', '2026-01-01')
+    insert.run('c', 'x3', 'c.pdf', 'application/pdf', 'NEEDS_REVIEW', '2026-01-01')
+
+    // Le righe sono state inserite dopo la migrazione: la si rigioca come su un db
+    // già installato, dove gli stati vecchi ci sono davvero.
+    db.prepare("DELETE FROM schema_migrations WHERE version = '0003'").run()
+    expect(migrate(db)).toEqual(['0003'])
+
+    const status = (id: string) =>
+      (db.prepare('SELECT status FROM documents WHERE id = ?').get(id) as { status: string }).status
+    expect(status('a')).toBe('REVIEWED')
+    expect(status('b')).toBe('DISCARDED')
+    expect(status('c')).toBe('NEEDS_REVIEW')
+    db.close()
+  })
+
   it('applica le pragma attese', () => {
     const db = openDatabase({ file: ':memory:' })
     expect(db.pragma('foreign_keys', { simple: true })).toBe(1)

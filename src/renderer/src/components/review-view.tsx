@@ -1,4 +1,4 @@
-import type { RegistryTypeOption, ReviewDecision, ReviewDocument } from '@shared/types'
+import type { RegistryTypeOption, ReviewAction, ReviewDocument } from '@shared/types'
 import { useMemo, useState } from 'react'
 import { cx } from '../lib/cx'
 import { formatDateTime, pct, STATUS_LABELS, textSourceLabel } from '../lib/format'
@@ -14,7 +14,7 @@ interface Props {
   busy: boolean
   onBack: () => void
   onFieldCommit: (fieldId: string, value: string | null) => void
-  onDecide: (decision: ReviewDecision, note?: string) => void
+  onDecide: (action: ReviewAction, note?: string) => void
   onAssignType: (documentType: string | null) => void
   /** Toglie la copia locale del file, lasciando i dati estratti. */
   onEvict: () => void
@@ -244,34 +244,24 @@ export default function ReviewView({
               <button
                 type="button"
                 className={cx(styles.button, styles.buttonPrimary)}
-                disabled={busy || corrections > 0}
-                title={
-                  corrections > 0 ? 'Ci sono correzioni: usa «Conferma con correzione».' : undefined
-                }
-                onClick={() => onDecide('APPROVE', note || undefined)}
+                disabled={busy}
+                title="Chiude il documento come revisionato: tipo e campi restano a database ed entrano nel dataset."
+                onClick={() => onDecide('SAVE', note || undefined)}
               >
-                Approva
-              </button>
-              <button
-                type="button"
-                className={styles.button}
-                disabled={busy || corrections === 0}
-                title={corrections === 0 ? 'Modifica almeno un campo per correggere.' : undefined}
-                onClick={() => onDecide('CORRECT', note || undefined)}
-              >
-                Conferma con correzione
+                Salva
               </button>
               <button
                 type="button"
                 className={cx(styles.button, styles.buttonDanger)}
                 disabled={busy}
-                onClick={() => onDecide('REJECT', note || undefined)}
+                title="Tiene il documento fuori dal dataset dei test futuri. I dati estratti restano, non vengono usati."
+                onClick={() => onDecide('DISCARD', note || undefined)}
               >
-                Rifiuta
+                Scarta
               </button>
               {decided && (
                 <span className={cx(styles.badge, styles.status)}>
-                  {document.status === 'APPROVED' ? 'Già approvato' : 'Già rifiutato'}
+                  {document.status === 'REVIEWED' ? 'Già revisionato' : 'Già scartato'}
                 </span>
               )}
             </div>

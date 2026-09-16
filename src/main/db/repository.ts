@@ -172,7 +172,7 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
         },
         {
           id: 'review',
-          label: 'Da verificare',
+          label: 'Da revisionare',
           value: counts.needsReview,
           hint: 'in attesa di controllo umano'
         },

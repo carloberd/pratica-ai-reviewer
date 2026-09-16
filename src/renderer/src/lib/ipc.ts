@@ -1,4 +1,4 @@
-import type { IpcErrorCode, ReviewDecision } from '@shared/types'
+import type { IpcErrorCode, ReviewAction } from '@shared/types'
 
 /**
  * Il main risponde sempre con `{ ok: true, data }` oppure `{ ok: false, error }`:
@@ -55,11 +55,11 @@ export const api = {
       call(() => window.reviewer.fields.update({ documentId, fieldId, correctedValue }))
   },
   review: {
-    submit: (documentId: string, decision: ReviewDecision, note?: string) =>
+    submit: (documentId: string, action: ReviewAction, note?: string) =>
       call(() =>
         window.reviewer.review.submit({
           documentId,
-          payload: { decision, ...(note ? { note } : {}) }
+          payload: { action, ...(note ? { note } : {}) }
         })
       )
   },

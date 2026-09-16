@@ -10,7 +10,7 @@ import type {
   RegistryTypeOption,
   ReviewDocument,
   ReviewDocumentSummary,
-  ReviewPayload,
+  ReviewSubmission,
   SearchHit
 } from '../shared/types'
 
@@ -63,7 +63,7 @@ export const reviewerApi = {
       invoke<IpcResultOf<ReviewDocument>>('fields:update', input)
   },
   review: {
-    submit: (input: { documentId: string; payload: ReviewPayload }) =>
+    submit: (input: { documentId: string; payload: ReviewSubmission }) =>
       invoke<IpcResultOf<ReviewDocument>>('review:submit', input)
   },
   search: {

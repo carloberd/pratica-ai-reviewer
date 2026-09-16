@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { buildReviewPayload, describeReview } from '../src/main/review'
+import { buildReviewPayload, describeReview, statusForAction } from '../src/main/review'
 import { createTestRepository, seedDocument } from './helpers/db'
 
 let repo: ReturnType<typeof createTestRepository> | null = null
@@ -51,7 +51,7 @@ describe('flusso di revisione', () => {
     correct(r, id, 'issuer_name', 'Alfa S.r.l.')
 
     const document = r.getReviewDocument(id)!
-    const payload = buildReviewPayload(document, 'CORRECT', 'ragione sociale per esteso')
+    const payload = buildReviewPayload(document, 'SAVE', 'ragione sociale per esteso')
 
     expect(payload.corrections).toEqual({ issuer_name: 'Alfa S.r.l.' })
     expect(payload.changes?.[0]?.before).toBe('ALFA SRL')
@@ -65,21 +65,20 @@ describe('flusso di revisione', () => {
 
     const document = r.getReviewDocument(id)!
     expect(document.fields.find((f) => f.name === 'issuer_name')?.correctedValue).toBeUndefined()
-    expect(buildReviewPayload(document, 'APPROVE')).toEqual({ decision: 'APPROVE' })
+    expect(buildReviewPayload(document, 'SAVE')).toEqual({ decision: 'APPROVE' })
   })
 
-  it('APPROVE e CORRECT approvano, REJECT rifiuta, e la timeline lo registra', () => {
-    for (const [decision, status] of [
-      ['APPROVE', 'APPROVED'],
-      ['CORRECT', 'APPROVED'],
-      ['REJECT', 'REJECTED']
+  it('SAVE manda il documento nel dataset, DISCARD lo tiene fuori, e la timeline lo registra', () => {
+    for (const [action, status] of [
+      ['SAVE', 'REVIEWED'],
+      ['DISCARD', 'DISCARDED']
     ] as const) {
       const { repo: r, id } = setup()
-      const payload = buildReviewPayload(r.getReviewDocument(id)!, decision)
+      const payload = buildReviewPayload(r.getReviewDocument(id)!, action)
       const { title, detail } = describeReview(payload)
 
       r.transaction(() => {
-        r.documents.setStatus(id, decision === 'REJECT' ? 'REJECTED' : 'APPROVED')
+        r.documents.setStatus(id, statusForAction(action))
         r.events.add(id, title, detail)
       })
 
@@ -93,9 +92,9 @@ describe('flusso di revisione', () => {
   it('il valore corretto è quello che la UI mostra e che i filtri vedono', () => {
     const { repo: r, id } = setup()
     correct(r, id, 'issuer_name', 'Alfa S.r.l.')
-    r.documents.setStatus(id, 'APPROVED')
+    r.documents.setStatus(id, 'REVIEWED')
 
-    const summary = r.listSummaries({ status: 'APPROVED' })
+    const summary = r.listSummaries({ status: 'REVIEWED' })
     expect(summary.map((doc) => doc.id)).toEqual([id])
     expect(r.listSummaries({ status: 'NEEDS_REVIEW' })).toEqual([])
 

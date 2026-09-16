@@ -5,7 +5,7 @@ import type {
   DriveFileSummary,
   FetchProgress,
   RegistryTypeOption,
-  ReviewDecision,
+  ReviewAction,
   ReviewDocument,
   ReviewDocumentSummary
 } from '@shared/types'
@@ -174,14 +174,16 @@ export default function DocumentReviewShell() {
     })
   }
 
-  const decide = (decision: ReviewDecision, note?: string) => {
+  const decide = (action: ReviewAction, note?: string) => {
     if (!selected) return
     const documentId = selected.id
     void run('decide', async () => {
-      setSelected(await api.review.submit(documentId, decision, note))
+      setSelected(await api.review.submit(documentId, action, note))
       await refresh()
       setMessage(
-        decision === 'REJECT' ? 'Revisione registrata come rifiutata.' : 'Revisione registrata.'
+        action === 'DISCARD'
+          ? 'Documento scartato: resta fuori dal dataset.'
+          : 'Documento revisionato: tipo e campi sono a database.'
       )
     })
   }
@@ -265,7 +267,7 @@ export default function DocumentReviewShell() {
             <DocumentTable
               documents={queue}
               onOpen={(id) => openDocument(id, 'dashboard')}
-              emptyTitle="Nessun documento da verificare"
+              emptyTitle="Nessun documento da revisionare"
               emptyHint="Apri un file da «Documenti» per popolare la coda."
             />
           </>

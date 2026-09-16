@@ -73,7 +73,7 @@ export function parseBbox(json: string | null): BoundingBox | undefined {
 }
 
 export function toStatus(value: string): QueueStatus {
-  return value === 'APPROVED' || value === 'REJECTED' ? value : 'NEEDS_REVIEW'
+  return value === 'REVIEWED' || value === 'DISCARDED' ? value : 'NEEDS_REVIEW'
 }
 
 export function toBand(value: string | null): ConfidenceBand {

@@ -12,14 +12,14 @@ import { fail, logError, ok, ReviewerError } from '../errors'
 import { extractDocxPages } from '../extract/docx'
 import type { OcrService } from '../extract/ocr'
 import { cachePathFor } from '../paths'
-import { buildReviewPayload, describeReview } from '../review'
+import { buildReviewPayload, describeReview, statusForAction } from '../review'
 import {
   documentFiltersSchema,
   documentIdSchema,
   documentRefSchema,
   fetchDriveFileSchema,
   ocrRegionSchema,
-  reviewPayloadSchema,
+  reviewSubmissionSchema,
   searchSchema,
   setTypeSchema,
   updateFieldSchema
@@ -179,15 +179,17 @@ export function registerIpcHandlers(context: IpcContext): void {
     return repo.getReviewDocument(documentId)!
   })
 
-  handle('review:submit', reviewPayloadSchema, ({ documentId, payload }) => {
+  handle('review:submit', reviewSubmissionSchema, ({ documentId, payload }) => {
     const document = repo.getReviewDocument(documentId)
     if (!document) throw new ReviewerError('NOT_FOUND', 'Documento non trovato.')
 
-    const full = buildReviewPayload(document, payload.decision, payload.note)
+    // I campi sono già a database — `fields:update` li scrive appena vengono toccati.
+    // Qui si registra solo l'esito: dentro o fuori dal dataset, e perché.
+    const full = buildReviewPayload(document, payload.action, payload.note)
     const { title, detail } = describeReview(full)
 
     repo.transaction(() => {
-      repo.documents.setStatus(documentId, payload.decision === 'REJECT' ? 'REJECTED' : 'APPROVED')
+      repo.documents.setStatus(documentId, statusForAction(payload.action))
       repo.events.add(documentId, title, detail)
     })
 

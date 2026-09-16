@@ -5,7 +5,7 @@ import { z } from 'zod'
  * renderer è codice fidato, ma il ponte IPC resta un confine e va trattato come tale.
  */
 export const documentFiltersSchema = z.object({
-  status: z.enum(['NEEDS_REVIEW', 'APPROVED', 'REJECTED']).optional(),
+  status: z.enum(['NEEDS_REVIEW', 'REVIEWED', 'DISCARDED']).optional(),
   documentType: z.string().min(1).max(200).optional(),
   band: z.enum(['HIGH', 'MEDIUM', 'LOW']).optional(),
   query: z.string().max(500).optional()
@@ -35,10 +35,11 @@ export const updateFieldSchema = z.object({
   correctedValue: z.string().max(2000).nullable()
 })
 
-export const reviewPayloadSchema = z.object({
+/** Il renderer manda l'azione scelta dal revisore: la `decision` la deriva il main. */
+export const reviewSubmissionSchema = z.object({
   documentId: z.string().min(1),
   payload: z.object({
-    decision: z.enum(['APPROVE', 'CORRECT', 'REJECT']),
+    action: z.enum(['SAVE', 'DISCARD']),
     note: z.string().max(2000).optional()
   })
 })
