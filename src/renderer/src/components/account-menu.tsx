@@ -40,7 +40,7 @@ export default function AccountMenu({ auth, busy, refreshing, onRefreshDrive, on
   }, [open])
 
   return (
-    <div className={styles.account} ref={root}>
+    <div className={styles.menuAnchor} ref={root}>
       <button
         type="button"
         className={styles.avatar}
@@ -54,12 +54,12 @@ export default function AccountMenu({ auth, busy, refreshing, onRefreshDrive, on
       </button>
 
       {open && (
-        <div className={cx(styles.card, styles.accountMenu)} role="menu">
+        <div className={cx(styles.card, styles.menu, styles.accountMenu)} role="menu">
           <div className={styles.accountMail}>{auth.email ?? 'Account Google collegato'}</div>
           <button
             type="button"
             role="menuitem"
-            className={styles.accountItem}
+            className={styles.menuItem}
             disabled={busy}
             onClick={() => {
               setOpen(false)
@@ -71,7 +71,7 @@ export default function AccountMenu({ auth, busy, refreshing, onRefreshDrive, on
           <button
             type="button"
             role="menuitem"
-            className={styles.accountItem}
+            className={styles.menuItem}
             disabled={busy}
             onClick={() => {
               setOpen(false)
