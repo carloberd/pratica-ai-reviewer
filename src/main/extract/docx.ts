@@ -3,7 +3,7 @@ import type { ExtractedPage } from './types'
 
 /**
  * D4: dei DOCX si estrae solo il testo, con mammoth. In v1 non c'è resa di pagina,
- * quindi non ci sono coordinate e non ci sono annotazioni: tutto il documento è
+ * quindi non ci sono coordinate per le evidenze: tutto il documento è
  * modellato come una pagina sola.
  */
 export async function extractDocxPages(filePath: string): Promise<ExtractedPage[]> {

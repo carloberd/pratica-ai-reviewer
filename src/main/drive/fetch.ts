@@ -97,7 +97,7 @@ export async function fetchDriveFile(options: FetchOptions): Promise<FetchResult
 /**
  * Toglie dalla cache la copia locale di un documento.
  *
- * Quello che è stato estratto — tipo, campi, evidenze, annotazioni, timeline — resta
+ * Quello che è stato estratto — tipo, campi, evidenze, timeline — resta
  * nel database: si perde solo il file, che si riscarica al prossimo doppio clic.
  */
 export async function evictCachedFile(repo: Repository, documentId: string): Promise<number> {
@@ -117,7 +117,7 @@ export async function evictCachedFile(repo: Repository, documentId: string): Pro
   repo.events.add(
     documentId,
     'Copia locale rimossa',
-    `Il file è stato tolto dalla cache. I dati estratti e le annotazioni restano; il file si riscarica aprendolo di nuovo.`
+    `Il file è stato tolto dalla cache. I dati estratti restano; il file si riscarica aprendolo di nuovo.`
   )
   return freed
 }
