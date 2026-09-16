@@ -93,3 +93,53 @@ export function imageByteLength(value: unknown): number {
   if (value instanceof Uint8Array) return value.byteLength
   return 0
 }
+
+// ---------------------------------------------------------------------------
+// Istruzioni per tipo
+// ---------------------------------------------------------------------------
+
+/** Id di un campo dell'ontologia v2, es. `document.number`. */
+const fieldIdSchema = z
+  .string()
+  .min(2)
+  .max(120)
+  .regex(/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/, 'Un id di campo è fatto di minuscole, numeri e punti.')
+
+const fieldRoleSchema = z.enum(['required', 'core', 'optional', 'conditional'])
+
+/**
+ * Una correzione al profilo di un tipo. Il ponte IPC è un confine: un id di campo
+ * inventato o un ruolo che non esiste si ferma qui, prima di arrivare a un JSON che il
+ * motore deve poter rileggere all'avvio.
+ */
+export const profileEditSchema = z.object({
+  edit: z.discriminatedUnion('kind', [
+    z.object({
+      kind: z.literal('REMOVE_FIELD'),
+      documentType: documentTypeSlugSchema,
+      fieldId: fieldIdSchema
+    }),
+    z.object({
+      kind: z.literal('ADD_FIELD'),
+      documentType: documentTypeSlugSchema,
+      fieldId: fieldIdSchema,
+      role: fieldRoleSchema
+    }),
+    z.object({
+      kind: z.literal('SET_ROLE'),
+      documentType: documentTypeSlugSchema,
+      fieldId: fieldIdSchema,
+      role: fieldRoleSchema
+    }),
+    z.object({
+      kind: z.literal('ADD_HINT_LABEL'),
+      documentType: documentTypeSlugSchema,
+      fieldId: fieldIdSchema,
+      label: z.string().min(2).max(120)
+    })
+  ])
+})
+
+export const profileTypeSchema = z.object({ documentType: documentTypeSlugSchema })
+
+export const profileReportSchema = z.object({ format: z.enum(['json', 'csv']) })

@@ -1179,3 +1179,124 @@ details > .candidatesTitle {
 .candidate > .button {
   justify-self: start;
 }
+
+/* Istruzioni per tipo: elenco dei tipi a sinistra, profilo e numeri a destra. */
+.profileShell {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.profileList {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+}
+.profileType {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #e4e8eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.profileType:hover {
+  background: #f8fafb;
+}
+.profileTypeActive {
+  border-color: #1f6feb;
+  background: #f2f7ff;
+}
+.profileTypeHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.profileDetail {
+  padding: 4px 18px 18px;
+  min-width: 0;
+}
+.profileTotals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+  margin: 10px 0;
+  font-size: 13px;
+  color: #4d5b64;
+}
+.profileTotal strong {
+  font-size: 15px;
+  color: #22303a;
+}
+
+/* Le tre quote come una barra sola: si capisce a colpo d'occhio dove sta il lavoro. */
+.rateBar {
+  display: flex;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #eef2f4;
+  margin-top: 6px;
+}
+.rateBar span {
+  display: block;
+  flex-basis: 0;
+}
+.rateConfirmed {
+  background: #3fa877;
+}
+.rateCorrected {
+  background: #e0a63a;
+}
+.rateManual {
+  background: #c9584c;
+}
+
+.profileTable {
+  min-width: 760px;
+}
+.profileTable tbody tr {
+  cursor: default;
+}
+.profileActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 240px;
+}
+.hintForm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.hintForm .input {
+  min-width: 200px;
+}
+
+.deltaPanel {
+  padding: 14px 16px;
+  margin: 12px 0;
+  border-color: #cfe0f8;
+  background: #f7faff;
+}
+.deltaList {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: #4d5b64;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

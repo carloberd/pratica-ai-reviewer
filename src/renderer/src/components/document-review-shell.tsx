@@ -1,3 +1,9 @@
+import type { ProfileEdit } from '@shared/profile-edit'
+import {
+  describeWriteOutcome,
+  type ProfileWorkspace,
+  type TypeRerunResult
+} from '@shared/profile-workspace'
 import type {
   AuthStatus,
   CacheUsage,
@@ -19,6 +25,7 @@ import styles from './document-review.module.css'
 import DocumentTable from './document-table'
 import DriveFiles from './drive-files'
 import { KpiSkeleton } from './loading-skeleton'
+import ProfileInsights from './profile-insights'
 import ReviewView from './review-view'
 
 /**
@@ -26,10 +33,11 @@ import ReviewView from './review-view'
  *
  * I menu stanno in cima perché la revisione ha bisogno di tutta l'altezza della
  * finestra per il documento: una colonna laterale se ne mangerebbe una parte senza
- * dare niente in cambio. Restano due voci — la dashboard e i documenti su Drive —
- * mentre la revisione si apre da una riga e non è una destinazione a sé.
+ * dare niente in cambio. Le voci sono tre — la dashboard, i documenti su Drive e le
+ * istruzioni per tipo — mentre la revisione si apre da una riga e non è una
+ * destinazione a sé.
  */
-type View = 'dashboard' | 'documents' | 'review'
+type View = 'dashboard' | 'documents' | 'profiles' | 'review'
 
 export default function DocumentReviewShell() {
   const [view, setView] = useState<View>('dashboard')
@@ -48,6 +56,10 @@ export default function DocumentReviewShell() {
   const [driveLoaded, setDriveLoaded] = useState(false)
   const [fetchingId, setFetchingId] = useState<string | null>(null)
   const [cache, setCache] = useState<CacheUsage | null>(null)
+  const [profiles, setProfiles] = useState<ProfileWorkspace | null>(null)
+  const [profilesLoaded, setProfilesLoaded] = useState(false)
+  const [profileType, setProfileType] = useState<string | null>(null)
+  const [rerun, setRerun] = useState<TypeRerunResult | null>(null)
   /**
    * La prima lettura del database è finita. Prima che lo sia, «nessun documento» non è
    * una risposta: è una domanda ancora aperta, e darla per buona significa smentirsi
@@ -129,6 +141,45 @@ export default function DocumentReviewShell() {
     setView('documents')
     if (!driveLoaded && auth?.signedIn && !pending) void loadDriveFiles()
   }
+
+  /** Le misure si calcolano sul database locale: non servono né Drive né login. */
+  const loadProfiles = () =>
+    run('profiles', async () => {
+      setProfiles(await api.profiles.list())
+      setProfilesLoaded(true)
+    })
+
+  const showProfiles = () => {
+    setView('profiles')
+    if (!profilesLoaded && !pending) void loadProfiles()
+  }
+
+  const editProfile = (edit: ProfileEdit) =>
+    run('profile-edit', async () => {
+      const { outcome, workspace } = await api.profiles.edit(edit)
+      setProfiles(workspace)
+      setProfileType(edit.documentType)
+      // Il re-run di prima parlava del profilo di prima: il prima/dopo si rifà.
+      setRerun(null)
+      setMessage(describeWriteOutcome(outcome.write))
+    })
+
+  const rerunProfile = (documentType: string) =>
+    run('profile-rerun', async () => {
+      const result = await api.profiles.rerun(documentType)
+      setProfiles(result.workspace)
+      setRerun(result.rerun)
+      await refresh()
+    })
+
+  const exportProfileReport = (format: 'json' | 'csv') =>
+    run('profile-export', async () => {
+      const result = await api.profiles.export(format)
+      if (!result.saved) return
+      setMessage(
+        `Report salvato in ${result.path}: ${result.types} tipi, ${result.documents} documenti annotati.`
+      )
+    })
 
   /** Doppio clic su un file: lo scarica, lo analizza e apre la revisione. */
   const openDriveFile = (file: DriveFileSummary) =>
@@ -251,6 +302,9 @@ export default function DocumentReviewShell() {
           <NavButton active={view === 'documents'} onClick={showDocuments}>
             Documenti
           </NavButton>
+          <NavButton active={view === 'profiles'} onClick={showProfiles}>
+            Istruzioni per tipo
+          </NavButton>
         </nav>
         <span className={styles.spacer} />
         {auth?.signedIn && (
@@ -362,6 +416,35 @@ export default function DocumentReviewShell() {
                 </div>
               </div>
             )}
+          </>
+        )}
+
+        {view === 'profiles' && (
+          <>
+            <div className={styles.sectionHeader}>
+              <div>
+                <h2>Istruzioni per tipo</h2>
+                <div className={styles.muted}>
+                  Quanto aiuta la precompilazione, tipo per tipo e campo per campo, secondo i
+                  documenti già revisionati. Gli scartati non contano.
+                </div>
+              </div>
+            </div>
+            <ProfileInsights
+              workspace={profiles}
+              loading={pending === 'profiles'}
+              busy={busy}
+              selected={profileType}
+              rerun={rerun}
+              onSelect={(documentType) => {
+                setProfileType(documentType)
+                setRerun(null)
+              }}
+              onEdit={editProfile}
+              onRerun={rerunProfile}
+              onExport={exportProfileReport}
+              onOpenDocument={(id) => openDocument(id, 'profiles')}
+            />
           </>
         )}
 
