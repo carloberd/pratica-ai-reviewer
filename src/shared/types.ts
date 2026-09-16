@@ -5,12 +5,27 @@
  * i nomi originali (`ReviewDocument`, `ExtractedField`, `EvidenceItem`, `TimelineItem`,
  * `ReviewDecision`, bande HIGH/MEDIUM/LOW) sono mantenuti così come sono, per poter
  * riusare la shell senza riscriverla. Le aggiunte necessarie a questa app desktop
- * (drive, annotazioni, correzioni con before/after) sono marcate con `// v1 reviewer`.
+ * (drive, correzioni con before/after) sono marcate con `// v1 reviewer`.
  */
 
+/**
+ * v1 reviewer: quello che il revisore sceglie davvero. `SAVE` chiude il documento come
+ * revisionato — tipo e campi sono a database, il documento entra nel dataset; `DISCARD`
+ * lo toglie di mezzo. La distinzione fra approvare e correggere non è una scelta umana:
+ * è la conseguenza dei campi toccati, e la calcola `buildReviewPayload`.
+ */
+export type ReviewAction = 'SAVE' | 'DISCARD'
+
+/** Decisione nella forma del contratto v5.2. Derivata da `ReviewAction`, mai chiesta all'utente. */
 export type ReviewDecision = 'APPROVE' | 'CORRECT' | 'REJECT'
 export type ConfidenceBand = 'HIGH' | 'MEDIUM' | 'LOW'
-export type QueueStatus = 'NEEDS_REVIEW' | 'APPROVED' | 'REJECTED'
+
+/**
+ * v1 reviewer: `REVIEWED` = annotato e buono per il dataset, `DISCARDED` = da tenere
+ * fuori dai test futuri. Sostituiscono `APPROVED`/`REJECTED` del v5.2, che parlavano
+ * di approvazione di una pratica invece che di idoneità di un dato.
+ */
+export type QueueStatus = 'NEEDS_REVIEW' | 'REVIEWED' | 'DISCARDED'
 
 /** v1 reviewer: da dove viene il testo su cui si è fatta la precompilazione. */
 export type TextSource = 'NATIVE_TEXT' | 'OCR' | 'DOCX'
@@ -68,17 +83,6 @@ export interface TimelineItem {
   detail: string
 }
 
-export interface Annotation {
-  id: string
-  documentId: string
-  page: number
-  bbox: BoundingBox
-  kind: 'highlight' | 'note'
-  note?: string
-  createdAt: string
-  updatedAt: string
-}
-
 export interface ReviewDocument {
   id: string
   /** v1 reviewer: id del file su Google Drive (sostituisce `understandingId` del v5.2). */
@@ -131,6 +135,12 @@ export interface ReviewPayload {
   corrections?: Record<string, string>
   note?: string
   changes?: FieldChange[]
+}
+
+/** Quello che il renderer manda al main: l'azione, non la decisione. */
+export interface ReviewSubmission {
+  action: ReviewAction
+  note?: string
 }
 
 export interface FieldChange {

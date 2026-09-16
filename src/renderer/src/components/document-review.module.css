@@ -6,36 +6,44 @@
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: 238px minmax(0, 1fr);
-  min-height: 100vh;
-}
-.sidebar {
+.navbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: 60px;
+  padding: 0 20px;
   background: #0d1b20;
   color: #fff;
-  padding: 22px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 26px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  /* Senza barra del titolo, è questa l'area da cui si trascina la finestra. */
+  -webkit-app-region: drag;
 }
 
-/* I semafori di macOS stanno sopra al contenuto: il marchio scende sotto di loro. */
-:global(body[data-platform="darwin"]) .sidebar {
-  padding-top: 52px;
+/* I semafori di macOS stanno sopra al contenuto: la navbar comincia dopo di loro. */
+:global(body[data-platform="darwin"]) .navbar {
+  padding-left: 92px;
+}
+
+/* Tutto ciò che si clicca deve restare cliccabile: il trascinamento si ferma qui. */
+.navbar button,
+.navbar input,
+.navbar select,
+.navbar a {
+  -webkit-app-region: no-drag;
 }
 .brand {
-  -webkit-app-region: drag;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 10px;
   font-weight: 750;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 .logo {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 8px;
   background: #61d19f;
   color: #0d1b20;
@@ -44,19 +52,20 @@
   font-weight: 900;
 }
 .nav {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .navButton {
   border: 0;
-  width: 100%;
-  text-align: left;
   background: transparent;
   color: #bdc8cc;
   border-radius: 9px;
-  padding: 10px 12px;
+  padding: 8px 14px;
   cursor: pointer;
   font: inherit;
+  font-weight: 650;
+  font-size: 13px;
 }
 .navButton:hover {
   background: rgba(255, 255, 255, 0.06);
@@ -66,48 +75,9 @@
   background: rgba(97, 209, 159, 0.14);
   color: #8be5bc;
 }
-.sidebarFooter {
-  margin-top: auto;
-  color: #849399;
-  font-size: 12px;
-  padding: 0 10px;
-}
 
-.main {
-  min-width: 0;
-}
-.topbar {
-  height: 68px;
-  background: #fff;
-  border-bottom: 1px solid #e5e9ec;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 28px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  /* Senza barra del titolo, è questa l'area da cui si trascina la finestra. */
-  -webkit-app-region: drag;
-}
-
-/* Tutto ciò che si clicca deve restare cliccabile: il trascinamento si ferma qui.
-   L'avatar non è interattivo, quindi resta area di trascinamento. */
-.topbar button,
-.topbar input,
-.topbar select,
-.topbar a {
-  -webkit-app-region: no-drag;
-}
-.titleWrap h1 {
-  margin: 0;
-  font-size: 20px;
-  letter-spacing: -0.02em;
-}
-.titleWrap p {
-  margin: 3px 0 0;
-  color: #77828b;
-  font-size: 12px;
+.account {
+  position: relative;
 }
 .avatar {
   width: 34px;
@@ -115,13 +85,70 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #e9eef0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
   font-weight: 700;
+  cursor: pointer;
 }
+.avatar:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+.accountMenu {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  min-width: 232px;
+  padding: 6px;
+  color: #171a1f;
+  box-shadow: 0 10px 26px rgba(10, 20, 30, 0.18);
+  display: grid;
+  gap: 2px;
+  z-index: 30;
+}
+.accountMail {
+  padding: 8px 10px 10px;
+  color: #6f7b84;
+  font-size: 12px;
+  word-break: break-all;
+  border-bottom: 1px solid #eef1f3;
+  margin-bottom: 4px;
+}
+.accountItem {
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  color: #243139;
+}
+.accountItem:hover:not(:disabled) {
+  background: #f3f6f7;
+}
+.accountItem:disabled {
+  color: #9aa5ac;
+  cursor: default;
+}
+
 .content {
   padding: 26px 28px 38px;
   max-width: 1480px;
   margin: 0 auto;
+}
+
+/* La revisione usa tutta l'altezza della finestra: il documento deve starci dentro. */
+.contentReview {
+  max-width: none;
+  padding: 16px 20px 20px;
+  height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
 }
 
 .kpiGrid {
@@ -237,75 +264,105 @@
   color: #4d5b64;
 }
 
-.reviewLayout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.75fr);
-  gap: 16px;
-  align-items: start;
-}
-.panel {
-  padding: 18px;
-}
-.panelTitle {
+.reviewShell {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 12px;
-  margin-bottom: 16px;
+  flex: 1;
+  min-height: 0;
 }
-.panelTitle h2,
-.panelTitle h3 {
+.reviewHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.reviewTitle h2 {
   margin: 0;
+  font-size: 17px;
+  letter-spacing: -0.02em;
 }
-.panelTitle h2 {
-  font-size: 19px;
-}
-.panelTitle h3 {
-  font-size: 15px;
-}
-.metaGrid {
+.reviewBody {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin: 14px 0 18px;
+  grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
 }
-.meta {
-  background: #f7f9fa;
-  border: 1px solid #e9edef;
-  border-radius: 10px;
-  padding: 10px;
+.reviewSidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
-.metaLabel {
-  color: #879199;
+/* Solo il contenuto della scheda scorre: tab e decisione restano dove sono. */
+.tabPanel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 16px 16px;
+}
+.reviewDecision {
+  border-top: 1px solid #e8ecef;
+  padding: 12px 16px;
+  display: grid;
+  gap: 8px;
+  background: #fbfcfd;
+}
+/* Il documento riempie la sua colonna e scorre al proprio interno. */
+.reviewDocument {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #e9edf0;
+}
+.panelSection {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+}
+.panelLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-}
-.metaValue {
-  margin-top: 4px;
-  font-weight: 650;
-  font-size: 13px;
+  color: #7c878e;
 }
 
 .fieldList {
   display: grid;
   gap: 9px;
 }
-.fieldRow {
+.fieldCard {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr) 72px;
-  align-items: center;
-  gap: 12px;
+  gap: 6px;
   border: 1px solid #e7ebee;
   border-radius: 10px;
-  padding: 11px 12px;
+  padding: 10px 11px;
+}
+/* Il campo che riceve quello che si seleziona sul documento. */
+.fieldCardActive {
+  border-color: #61d19f;
+  box-shadow: 0 0 0 3px rgba(97, 209, 159, 0.16);
+}
+.fieldHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 .fieldLabel {
   color: #68747c;
   font-size: 12px;
 }
-.fieldValue {
-  font-weight: 650;
-  font-size: 13px;
+.fieldFoot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .confidence {
   text-align: right;
@@ -322,13 +379,6 @@
   border-radius: 10px;
   font-size: 12px;
   margin-bottom: 8px;
-}
-.evidence {
-  border-left: 3px solid #61d19f;
-  padding: 9px 11px;
-  background: #f8fbfa;
-  border-radius: 0 9px 9px 0;
-  margin-bottom: 9px;
 }
 .evidenceTop {
   display: flex;
@@ -372,7 +422,6 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 18px;
 }
 .button {
   border: 1px solid #d9e0e4;
@@ -430,47 +479,25 @@
   .kpiGrid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .reviewLayout {
+  .reviewBody {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 760px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  .sidebar {
-    display: none;
-  }
   .content {
     padding: 18px 14px 28px;
   }
-  .topbar {
+  .navbar {
     padding: 0 14px;
   }
   .kpiGrid {
     grid-template-columns: 1fr 1fr;
   }
-  .metaGrid {
-    grid-template-columns: 1fr;
-  }
-  .fieldRow {
-    grid-template-columns: 1fr 72px;
-  }
-  .fieldLabel {
-    grid-column: 1 / -1;
-  }
 }
 
 /* ---- aggiunte praticaai-reviewer v1 (non presenti nel modulo v5.2) ---- */
 
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin: 18px 0 6px;
-}
 .input,
 .select {
   border: 1px solid #d9e0e4;
@@ -487,17 +514,10 @@
   outline: 2px solid #61d19f;
   outline-offset: 1px;
 }
-.search {
-  flex: 1 1 240px;
-  min-width: 200px;
-}
 .spacer {
   flex: 1 1 auto;
 }
 
-.fieldRowEditable {
-  grid-template-columns: 180px minmax(0, 1fr) 96px 72px;
-}
 .fieldInput {
   border: 1px solid #dde3e7;
   border-radius: 8px;
@@ -516,17 +536,6 @@
 .fieldDirty {
   border-color: #e0b95f;
   background: #fffdf6;
-}
-.fieldEmpty {
-  color: #97a2a9;
-  font-weight: 500;
-  font-style: italic;
-}
-.fieldMeta {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  align-items: flex-end;
 }
 .pill {
   display: inline-flex;
@@ -549,10 +558,12 @@
   color: #8b5d10;
 }
 .beforeAfter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   font-size: 11px;
   color: #8a949b;
-  margin-top: 4px;
-  grid-column: 2 / -1;
 }
 .beforeAfter s {
   color: #b0898a;
@@ -592,6 +603,65 @@
   font-size: 14px;
 }
 
+/* ---- caricamento ----
+   Lo scheletro occupa lo spazio delle righe che stanno arrivando: senza, la tabella
+   dichiara «nessun documento» e un istante dopo si contraddice. */
+
+.skeleton {
+  padding: 14px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.skeletonLabel {
+  color: #7d8991;
+  font-size: 13px;
+  font-weight: 650;
+}
+.skeletonRow {
+  display: grid;
+  grid-template-columns: 2.4fr 1.2fr 1fr 0.9fr 1fr 1.1fr;
+  gap: 16px;
+  align-items: center;
+}
+.skeletonBar {
+  display: block;
+  height: 11px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #edf0f2 25%, #f7f9fa 37%, #edf0f2 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+.skeletonKpiLabel {
+  width: 55%;
+}
+.skeletonKpiValue {
+  width: 40%;
+  height: 26px;
+  margin-top: 10px;
+  border-radius: 8px;
+}
+.skeletonKpiHint {
+  width: 70%;
+  height: 9px;
+  margin-top: 9px;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 50%;
+  }
+  to {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonBar {
+    animation: none;
+  }
+}
+
 .banner {
   display: flex;
   align-items: center;
@@ -614,22 +684,13 @@
   font-weight: 750;
 }
 
-.pdfPane {
-  display: grid;
-  gap: 10px;
-}
-.pdfToolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
 .pdfCanvasWrap {
   position: relative;
   background: #e9edf0;
-  border-radius: 10px;
+  border-radius: 14px;
   padding: 12px;
-  max-height: 72vh;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
 }
 .pdfPage {
@@ -644,29 +705,61 @@
 .pdfOverlay {
   position: absolute;
   inset: 0;
+  pointer-events: none;
 }
-.pdfHighlight {
+.viewerBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 14px 0;
+}
+
+/*
+  Text layer di pdf.js: trasparente sopra al canvas, è quello che rende
+  selezionabile il testo della pagina. Le regole ricalcano `pdf_viewer.css`
+  (posizioni in percentuale, dimensione del font legata a --total-scale-factor):
+  senza, le righe finirebbero tutte nell'angolo in alto a sinistra.
+*/
+.textLayer {
   position: absolute;
-  border-radius: 2px;
-  pointer-events: auto;
-  cursor: pointer;
+  inset: 0;
+  text-align: initial;
+  overflow: clip;
+  line-height: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  z-index: 1;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
 }
-.pdfHighlightEvidence {
-  background: rgba(97, 209, 159, 0.34);
-  outline: 1px solid #2a8f66;
+.textLayer span,
+.textLayer br {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
 }
-.pdfHighlightFlash {
-  background: rgba(255, 214, 102, 0.55);
-  outline: 2px solid #d99b16;
+.textLayer > :not(:global(.markedContent)),
+.textLayer :global(.markedContent) span:not(:global(.markedContent)) {
+  z-index: 1;
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
 }
-.pdfAnnotation {
-  background: rgba(255, 214, 102, 0.34);
-  outline: 1px solid #d99b16;
+.textLayer :global(.markedContent) {
+  display: contents;
 }
-.pdfAnnotationNote {
-  background: rgba(126, 169, 255, 0.3);
-  outline: 1px solid #3f6fd0;
+.textLayer ::selection {
+  background: rgba(97, 209, 159, 0.45);
 }
+
 .pdfSelection {
   position: absolute;
   background: rgba(97, 209, 159, 0.22);
@@ -676,27 +769,23 @@
 .pdfDrawLayer {
   position: absolute;
   inset: 0;
+  z-index: 2;
   cursor: crosshair;
 }
+.pdfHighlight {
+  position: absolute;
+  border-radius: 2px;
+  pointer-events: none;
+}
+.pdfHighlightEvidence {
+  background: rgba(97, 209, 159, 0.34);
+  outline: 1px solid #2a8f66;
+}
+.pdfHighlightFlash {
+  background: rgba(255, 214, 102, 0.55);
+  outline: 2px solid #d99b16;
+}
 
-.annotationRow {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-  align-items: start;
-  border: 1px solid #e7ebee;
-  border-radius: 10px;
-  padding: 10px 11px;
-  margin-bottom: 8px;
-}
-.annotationMeta {
-  font-size: 11px;
-  color: #7e8991;
-  margin-top: 4px;
-}
-.annotationNote {
-  font-size: 13px;
-}
 .iconButton {
   border: 1px solid #e3e8eb;
   background: #fff;
@@ -716,10 +805,10 @@
   font-size: 13px;
   line-height: 1.65;
   background: #fff;
-  border: 1px solid #e7ebee;
-  border-radius: 10px;
-  padding: 16px;
-  max-height: 72vh;
+  border-radius: 14px;
+  padding: 20px 24px;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
 }
 
@@ -748,21 +837,6 @@
   padding: 6px 10px;
   font-size: 11px;
 }
-.navSpacer {
-  margin-top: auto;
-}
-.userBox {
-  padding: 0 10px;
-  color: #849399;
-  font-size: 12px;
-  display: grid;
-  gap: 8px;
-}
-.userMail {
-  color: #cfd9dd;
-  word-break: break-all;
-  font-size: 11px;
-}
 
 /* ---- schede della vista di revisione ---- */
 
@@ -770,7 +844,7 @@
   display: flex;
   gap: 4px;
   border-bottom: 1px solid #e8ecef;
-  margin: 18px 0 16px;
+  padding: 0 8px;
 }
 .tab {
   border: 0;
@@ -793,4 +867,84 @@
   margin-left: 6px;
   color: #8b969d;
   font-weight: 500;
+}
+
+/* ---- select con ricerca ---- */
+
+.combo {
+  position: relative;
+}
+.comboButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid #d9e0e4;
+  background: #fff;
+  color: #243139;
+  padding: 8px 10px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  text-align: left;
+}
+.comboButton:disabled {
+  color: #9aa5ac;
+  cursor: default;
+}
+.comboPlaceholder {
+  color: #8b969d;
+  font-weight: 500;
+}
+.comboCaret {
+  color: #8b969d;
+}
+.comboPanel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 25;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+  box-shadow: 0 10px 26px rgba(10, 20, 30, 0.18);
+}
+.comboPanel .input {
+  width: 100%;
+  min-width: 0;
+}
+.comboList {
+  max-height: 260px;
+  overflow: auto;
+  display: grid;
+  gap: 2px;
+}
+.comboOption {
+  display: grid;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  color: #243139;
+}
+.comboOptionActive {
+  background: #eef7f2;
+}
+.comboHint {
+  color: #8b969d;
+  font-size: 11px;
+}
+.comboEmpty {
+  padding: 10px 8px;
+  color: #7d8991;
+  font-size: 12px;
 }

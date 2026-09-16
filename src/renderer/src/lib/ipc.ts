@@ -1,4 +1,4 @@
-import type { IpcErrorCode, ReviewDecision } from '@shared/types'
+import type { IpcErrorCode, ReviewAction } from '@shared/types'
 
 /**
  * Il main risponde sempre con `{ ok: true, data }` oppure `{ ok: false, error }`:
@@ -55,11 +55,11 @@ export const api = {
       call(() => window.reviewer.fields.update({ documentId, fieldId, correctedValue }))
   },
   review: {
-    submit: (documentId: string, decision: ReviewDecision, note?: string) =>
+    submit: (documentId: string, action: ReviewAction, note?: string) =>
       call(() =>
         window.reviewer.review.submit({
           documentId,
-          payload: { decision, ...(note ? { note } : {}) }
+          payload: { action, ...(note ? { note } : {}) }
         })
       )
   },
@@ -72,19 +72,13 @@ export const api = {
   search: {
     query: (text: string) => call(() => window.reviewer.search.query(text))
   },
-  annotations: {
-    list: (documentId: string) => call(() => window.reviewer.annotations.list(documentId)),
-    add: (input: Parameters<typeof window.reviewer.annotations.add>[0]) =>
-      call(() => window.reviewer.annotations.add(input)),
-    update: (id: string, note: string) =>
-      call(() => window.reviewer.annotations.update({ id, note })),
-    delete: (id: string) => call(() => window.reviewer.annotations.delete(id)),
-    export: (documentId: string) => call(() => window.reviewer.annotations.export(documentId))
-  },
   pdf: {
     read: (documentId: string) => call(() => window.reviewer.pdf.read(documentId))
   },
   docx: {
     text: (documentId: string) => call(() => window.reviewer.docx.text(documentId))
+  },
+  ocr: {
+    region: (image: Uint8Array) => call(() => window.reviewer.ocr.region(image))
   }
 }

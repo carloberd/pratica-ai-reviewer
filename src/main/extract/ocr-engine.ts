@@ -17,6 +17,8 @@ export interface OcrEngine {
     pdfPath: string,
     pages: number[]
   ): Promise<Array<{ page: number; text: string }>>
+  /** Testo di una singola immagine già pronta, es. il ritaglio di una pagina. */
+  recognizeImage(image: Uint8Array): Promise<string>
   dispose(): Promise<void>
 }
 
@@ -171,6 +173,12 @@ export function createOcrEngine(options: OcrEngineOptions): OcrEngine {
         results.push({ page: entry.page, text: parts.join('\n') })
       }
       return results
+    },
+
+    async recognizeImage(image) {
+      tesseract ??= await startTesseract()
+      const { data } = await tesseract.recognize(Buffer.from(image))
+      return data.text?.trim() ?? ''
     },
 
     async dispose() {

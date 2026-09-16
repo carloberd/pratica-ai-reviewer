@@ -1,6 +1,6 @@
 import type { ReviewDocument } from '@shared/types'
 import { describe, expect, it } from 'vitest'
-import { buildReviewPayload, describeReview } from '../src/main/review'
+import { buildReviewPayload, describeReview, statusForAction } from '../src/main/review'
 
 function document(overrides: Partial<ReviewDocument> = {}): ReviewDocument {
   return {
@@ -51,8 +51,9 @@ function document(overrides: Partial<ReviewDocument> = {}): ReviewDocument {
 
 describe('payload della review', () => {
   it('include solo i campi realmente modificati, con before/after e provenienza', () => {
-    const payload = buildReviewPayload(document(), 'CORRECT', 'verificato con il cliente')
+    const payload = buildReviewPayload(document(), 'SAVE', 'verificato con il cliente')
 
+    // Il revisore ha premuto «Salva»: `CORRECT` esce dai campi toccati, non da un tasto.
     expect(payload.decision).toBe('CORRECT')
     expect(payload.note).toBe('verificato con il cliente')
     // `corrections` resta la mappa campo -> valore finale del contratto v5.2.
@@ -83,7 +84,7 @@ describe('payload della review', () => {
         }
       ]
     })
-    expect(buildReviewPayload(clean, 'APPROVE')).toEqual({ decision: 'APPROVE' })
+    expect(buildReviewPayload(clean, 'SAVE')).toEqual({ decision: 'APPROVE' })
   })
 
   it('registra anche il riempimento di un campo che era vuoto', () => {
@@ -101,17 +102,29 @@ describe('payload della review', () => {
         }
       ]
     })
-    const payload = buildReviewPayload(filled, 'CORRECT')
+    const payload = buildReviewPayload(filled, 'SAVE')
     expect(payload.changes?.[0]).toMatchObject({ before: '', after: '114/2026' })
   })
 
+  it('scartare non guarda le correzioni: la decisione resta REJECT', () => {
+    const payload = buildReviewPayload(document(), 'DISCARD', 'documento illeggibile')
+    expect(payload.decision).toBe('REJECT')
+    // Le correzioni già fatte restano nel payload: raccontano cosa si era provato a leggere.
+    expect(payload.corrections).toEqual({ issuer_name: 'Alfa S.r.l.' })
+  })
+
+  it("l'azione decide se il documento entra nel dataset", () => {
+    expect(statusForAction('SAVE')).toBe('REVIEWED')
+    expect(statusForAction('DISCARD')).toBe('DISCARDED')
+  })
+
   it('descrive la decisione per la timeline', () => {
-    expect(describeReview(buildReviewPayload(document(), 'CORRECT'))).toEqual({
-      title: 'Approvato con correzioni',
+    expect(describeReview(buildReviewPayload(document(), 'SAVE'))).toEqual({
+      title: 'Revisionato con correzioni',
       detail: '1 campo corretto: Emittente «ALFA SRL» → «Alfa S.r.l.»'
     })
     expect(describeReview({ decision: 'REJECT', note: 'documento illeggibile' })).toEqual({
-      title: 'Documento rifiutato',
+      title: 'Documento scartato',
       detail: 'Nessun campo modificato. Nota: documento illeggibile'
     })
   })

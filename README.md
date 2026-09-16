@@ -3,7 +3,7 @@
 App desktop (Electron + React) per rivedere i documenti di un Google Drive: legge i
 PDF e i DOCX in sola lettura, li classifica con il `documentType` del registry
 PraticaAI, precompila i campi dichiarati dallo schema del tipo con evidenza verbatim,
-e offre una UI di revisione con campi correggibili, evidenze e annotazioni.
+e offre una UI di revisione con campi correggibili ed evidenze.
 
 Tutto resta in locale: SQLite nella cartella dati dell'utente, PDF in cache su disco,
 token Google cifrato nel portachiavi di sistema. Nessun dato esce dalla macchina.
@@ -198,17 +198,20 @@ indirizzo, e l'app non la vede mai passare. Il redirect torna comunque sul loopb
 scambio codice→token avviene nel main. Se il consenso non arriva entro cinque minuti la
 porta si chiude e il login va ripetuto.
 
-**Download su richiesta.** «File su Drive» mostra l'elenco dell'account — `files.list`
+**Download su richiesta.** «Documenti» mostra l'elenco dell'account — `files.list`
 paginata su PDF e DOCX fuori dal cestino — e basta: è solo metadato, non scarica niente.
 Il contenuto arriva al doppio clic su una riga, un file per volta, che lo scarica in
 cache, lo analizza e apre la revisione. Tirare giù l'intero Drive in un colpo
 riempirebbe il disco di documenti che nessuno aprirà.
 
-Ogni file è deduplicato per `drive_file_id`: riaprirlo non riscarica nulla, a meno che
-su Drive non ci sia una versione più recente. «Libera spazio», nella vista di revisione,
-toglie la copia locale e lascia intatti dati estratti, evidenze e annotazioni: il file si
-riscarica riaprendolo. L'elenco mostra, per ogni riga, se il file è in locale, da
-aggiornare o solo analizzato, e in testa quanto spazio occupa la cache.
+Ogni file è deduplicato per `drive_file_id` — l'id che Drive dà al file, salvato
+`UNIQUE NOT NULL` su `documents` e mai riscritto dalle sincronizzazioni successive.
+È la chiave con cui ogni riga del dataset si risale al file originale, anche fuori
+dall'app: `https://drive.google.com/file/d/<drive_file_id>/view`. Riaprire un file non
+riscarica nulla, a meno che su Drive non ci sia una versione più recente. «Libera spazio», nella vista di revisione,
+toglie la copia locale e lascia intatti dati estratti ed evidenze: il file si riscarica
+riaprendolo. L'elenco mostra, per ogni riga, se il file è in locale, da aggiornare o
+solo analizzato, e in testa quanto spazio occupa la cache.
 
 **Classificazione** (deterministica, nessun LLM). Phrase match di `canonical_name`,
 `aliases` e `synonyms` del registry sul testo normalizzato della prima pagina (0,90) e
@@ -233,15 +236,28 @@ bande sono HIGH ≥ 0,90, MEDIUM ≥ 0,75, LOW sotto. Sono euristiche dichiarate
 calibrare sui documenti veri.
 
 **Revisione.** I campi sono modificabili: il valore precompilato resta accanto a quello
-corretto, e riscrivere lo stesso valore non conta come correzione. Il payload della
-decisione porta solo i campi cambiati, con before/after e provenienza (sorgente del
-testo, evidenza, confidence), e mantiene la forma
-`{ decision, corrections, note }` attesa da
-`POST /v1/document-understandings/{id}/reviews`.
+corretto, e riscrivere lo stesso valore non conta come correzione. Ogni modifica è già a
+database nel momento in cui si esce dal campo — i tasti in fondo non salvano i dati,
+dichiarano l'esito.
 
-**Annotazioni.** Evidenziazioni e note si disegnano sul PDF e vivono in SQLite: il file
-in cache resta identico byte per byte a quello su Drive. «Esporta PDF annotato» scrive
-una copia separata con i riquadri numerati e una pagina finale che elenca le note.
+Gli esiti sono due. **Salva** porta il documento a `REVIEWED`: tipo e campi sono a
+database e il documento entra nel dataset dei test futuri. **Scarta** lo porta a
+`DISCARDED`: i dati estratti restano, ma il documento resta fuori dal dataset. Non c'è
+un terzo tasto perché non c'è una terza scelta: approvare e «confermare con correzione»
+finivano nello stesso stato, e quale delle due fosse dipendeva solo dai campi toccati.
+Quella differenza la calcola `buildReviewPayload`, che emette
+`decision: APPROVE | CORRECT | REJECT` e porta solo i campi cambiati, con before/after e
+provenienza (sorgente del testo, evidenza, confidence): la forma
+`{ decision, corrections, note }` attesa da
+`POST /v1/document-understandings/{id}/reviews` resta valida senza chiederla a nessuno.
+
+**Compilare dal documento.** Il campo su cui sta il cursore resta attivo anche dopo
+aver perso il fuoco, perché selezionare sul documento glielo fa perdere per forza: quello
+che si seleziona sulla pagina ci finisce dentro come correzione. Sui PDF con testo nativo
+basta la selezione, sulle scansioni — dove non c'è testo da selezionare — si evidenzia
+un'area, che viene rasterizzata a scala 3 e letta dallo stesso worker tesseract della
+precompilazione. Il PDF in cache non viene mai toccato: resta identico byte per byte a
+quello su Drive.
 
 ---
 
@@ -253,14 +269,14 @@ Tutto sotto la cartella dati dell'app
 
 | File | Contenuto |
 |---|---|
-| `praticaai-reviewer.db` | documenti, campi, evidenze, annotazioni, eventi, indice FTS5 |
+| `praticaai-reviewer.db` | documenti, campi, evidenze, eventi, indice FTS5 |
 | `cache/<drive_file_id>.pdf\|.docx` | copia locale dei file di Drive |
 | `tokens.bin` | refresh token, cifrato con `safeStorage` (Keychain / DPAPI) |
 | `tessdata-cache/` | modelli tesseract scompattati |
 | `.env` | credenziali OAuth, se l'app è impacchettata |
 
 Per ripartire da zero basta cancellare la cartella. Per disconnettere l'account c'è
-«Esci» nella barra laterale, che revoca il token oltre a cancellarlo.
+«Esci» nel menu dell'avatar, che revoca il token oltre a cancellarlo.
 
 ---
 
@@ -285,8 +301,9 @@ assegnato a mano, che non viene sovrascritto da un match automatico.
 l'immagine che la pagina già contiene invece di ri-rasterizzarla. Una pagina senza testo
 e senza immagini (per esempio solo grafica vettoriale) non produce testo.
 
-**Accessibilità.** Le annotazioni si creano trascinando con il mouse; in v1 non c'è un
-equivalente da tastiera.
+**Accessibilità.** L'area da leggere con OCR si evidenzia trascinando con il mouse; in
+v1 non c'è un equivalente da tastiera. Sui PDF con testo nativo la selezione funziona
+anche da tastiera, perché è la selezione normale del browser.
 
 **Pacchetti non firmati.** `pnpm dist` produce dmg e installer non firmati: al primo
 avvio macOS chiede conferma e Windows mostra SmartScreen. È deliberato — l'app è per due
@@ -299,7 +316,8 @@ macchine note, non per distribuzione.
 Non implementato in v1, per scelta:
 
 - **Scrittura su Drive.** Lo scope richiesto è solo `drive.readonly`.
-- **DOCX con resa di pagina.** Solo testo estratto, quindi niente annotazioni sui DOCX.
+- **DOCX con resa di pagina.** Solo testo estratto, quindi niente evidenze con
+  coordinate né OCR su area per i DOCX; la selezione del testo compila comunque i campi.
 - **Estrazione con LLM.** Il modulo di precompilazione
   (`src/main/extract/heuristics.ts`) ha già la forma giusta per essere sostituito dal
   fact reader del Document Brain: prende i campi richiesti, restituisce candidati con
@@ -314,11 +332,15 @@ Non implementato in v1, per scelta:
 
 ## Origine del codice
 
-La UI di revisione è il porting del modulo **PraticaAI Document Review v5.2**
+La UI di revisione parte dal modulo **PraticaAI Document Review v5.2**
 (`document-review-shell.tsx`, il suo CSS e i contratti di `types/document-review.ts`),
 adattato ai dati di questa app: Drive al posto di pratica e cliente, IPC al posto di
 `fetch('/api/...')`. Il gap che quel modulo dichiarava aperto — «Conferma con
-correzione» senza editor dei campi — qui è chiuso.
+correzione» senza editor dei campi — qui è chiuso, e con l'editor quel tasto non serviva
+più: le tre decisioni del v5.2 sono diventate le due azioni che il revisore prende
+davvero, Salva e Scarta. Il guscio è poi cambiato: i menu
+stanno in una navbar orizzontale invece che in una sidebar, e in revisione il documento
+è sempre visibile accanto alle schede Dati, History ed Evidenze.
 
 I file in `resources/registry/` sono uno **snapshot** del registry PraticaAI
 (511 tipi, vedi `SNAPSHOT.txt`). Il repo non dipende dal monorepo PraticaAI e non ne

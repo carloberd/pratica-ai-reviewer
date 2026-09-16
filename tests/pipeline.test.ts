@@ -20,6 +20,7 @@ const engine = createOcrEngine({ tessdataDir: TESSDATA_DIR, cachePath })
 const ocr: OcrService = {
   recognize: async (pdfPath, pages) =>
     new Map((await engine.recognizePdfPages(pdfPath, pages)).map((p) => [p.page, p.text])),
+  recognizeImage: (image) => engine.recognizeImage(image),
   dispose: () => engine.dispose()
 }
 

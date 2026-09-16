@@ -32,7 +32,7 @@ CREATE TABLE fields (
   name TEXT NOT NULL,                   -- campo del registry
   label TEXT NOT NULL,                  -- etichetta UI italiana
   value TEXT,                           -- valore precompilato
-  corrected_value TEXT,                 -- correzione umana (CORRECT)
+  corrected_value TEXT,                 -- correzione umana
   confidence REAL NOT NULL,
   evidence_id TEXT REFERENCES evidence(id),
   updated_at TEXT

@@ -1,8 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type {
-  Annotation,
   AuthStatus,
-  BoundingBox,
   CacheUsage,
   DashboardStats,
   DocumentFilters,
@@ -12,7 +10,7 @@ import type {
   RegistryTypeOption,
   ReviewDocument,
   ReviewDocumentSummary,
-  ReviewPayload,
+  ReviewSubmission,
   SearchHit
 } from '../shared/types'
 
@@ -56,7 +54,7 @@ export const reviewerApi = {
     stats: () => invoke<IpcResultOf<DashboardStats>>('docs:stats'),
     setType: (id: string, documentType: string | null) =>
       invoke<IpcResultOf<ReviewDocument>>('docs:set-type', { id, documentType }),
-    /** Toglie dalla cache la copia locale, lasciando intatti dati estratti e annotazioni. */
+    /** Toglie dalla cache la copia locale, lasciando intatti dati estratti ed evidenze. */
     evict: (id: string) => invoke<IpcResultOf<{ freedBytes: number }>>('docs:evict', { id }),
     types: () => invoke<IpcResultOf<RegistryTypeOption[]>>('docs:types')
   },
@@ -65,25 +63,8 @@ export const reviewerApi = {
       invoke<IpcResultOf<ReviewDocument>>('fields:update', input)
   },
   review: {
-    submit: (input: { documentId: string; payload: ReviewPayload }) =>
+    submit: (input: { documentId: string; payload: ReviewSubmission }) =>
       invoke<IpcResultOf<ReviewDocument>>('review:submit', input)
-  },
-  annotations: {
-    list: (documentId: string) =>
-      invoke<IpcResultOf<Annotation[]>>('annotations:list', { documentId }),
-    add: (input: {
-      documentId: string
-      page: number
-      bbox: BoundingBox
-      kind: 'highlight' | 'note'
-      note?: string
-    }) => invoke<IpcResultOf<Annotation>>('annotations:add', input),
-    update: (input: { id: string; bbox?: BoundingBox; note?: string | null }) =>
-      invoke<IpcResultOf<Annotation>>('annotations:update', input),
-    delete: (id: string) => invoke<IpcResultOf<{ id: string }>>('annotations:delete', { id }),
-    /** Copia del PDF con le annotazioni sopra: l'originale in cache resta intatto. */
-    export: (documentId: string) =>
-      invoke<IpcResultOf<{ path: string | null }>>('annotations:export', { documentId })
   },
   search: {
     query: (text: string) => invoke<IpcResultOf<SearchHit[]>>('search:query', { text })
@@ -94,6 +75,10 @@ export const reviewerApi = {
   },
   docx: {
     text: (documentId: string) => invoke<IpcResultOf<string>>('docx:text', { documentId })
+  },
+  ocr: {
+    /** Testo di un ritaglio di pagina (PNG) evidenziato durante la revisione. */
+    region: (image: Uint8Array) => invoke<IpcResultOf<{ text: string }>>('ocr:region', { image })
   },
   onFetchProgress: (listener: (progress: FetchProgress) => void): (() => void) => {
     const handler = (_event: unknown, progress: FetchProgress) => listener(progress)

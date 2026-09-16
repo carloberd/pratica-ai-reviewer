@@ -20,9 +20,9 @@ export function formatDateTime(iso: string | null | undefined): string {
 }
 
 export const STATUS_LABELS: Record<QueueStatus, string> = {
-  NEEDS_REVIEW: 'Da verificare',
-  APPROVED: 'Approvato',
-  REJECTED: 'Rifiutato'
+  NEEDS_REVIEW: 'Da revisionare',
+  REVIEWED: 'Revisionato',
+  DISCARDED: 'Scartato'
 }
 
 export const BAND_LABELS: Record<ConfidenceBand, string> = {

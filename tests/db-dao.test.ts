@@ -82,9 +82,9 @@ describe('documents dao', () => {
       confidenceBand: 'LOW',
       textSource: 'OCR'
     })
-    r.documents.setStatus(c, 'APPROVED')
+    r.documents.setStatus(c, 'REVIEWED')
 
-    expect(r.documents.list({ status: 'APPROVED' }).map((d) => d.id)).toEqual([c])
+    expect(r.documents.list({ status: 'REVIEWED' }).map((d) => d.id)).toEqual([c])
     expect(r.documents.list({ documentType: 'accounting.fattura' })).toHaveLength(2)
     expect(r.documents.list({ documentType: '__none__' }).map((d) => d.id)).toEqual([c])
     expect(r.documents.list({ band: 'HIGH' }).map((d) => d.id)).toEqual([a])
@@ -123,7 +123,7 @@ describe('documents dao', () => {
       confidenceBand: 'HIGH',
       textSource: 'NATIVE_TEXT'
     })
-    r.documents.setStatus(b, 'APPROVED')
+    r.documents.setStatus(b, 'REVIEWED')
 
     expect(r.documents.counts()).toEqual({
       total: 2,
@@ -240,37 +240,6 @@ describe('fields ed evidence dao', () => {
     const row = r.documents.get(id)!
     expect(row.confidence).toBeCloseTo(0.85, 4)
     expect(row.confidence_band).toBe('MEDIUM')
-  })
-})
-
-describe('annotations dao', () => {
-  it('crea, aggiorna ed elimina una nota', () => {
-    const r = makeRepo()
-    const id = seedDocument(r)
-    const created = r.annotations.add({
-      documentId: id,
-      page: 2,
-      bbox: { x: 1, y: 2, w: 3, h: 4 },
-      kind: 'note',
-      note: 'da verificare'
-    })
-
-    expect(r.listAnnotations(id)).toHaveLength(1)
-
-    r.annotations.update(created.id, { note: 'verificato', bbox: { x: 5, y: 6, w: 7, h: 8 } })
-    const updated = r.listAnnotations(id)[0]!
-    expect(updated.note).toBe('verificato')
-    expect(updated.bbox).toEqual({ x: 5, y: 6, w: 7, h: 8 })
-    expect(updated.updatedAt >= updated.createdAt).toBe(true)
-
-    expect(r.annotations.delete(created.id)).toBe(true)
-    expect(r.listAnnotations(id)).toHaveLength(0)
-  })
-
-  it('non modifica un id inesistente', () => {
-    const r = makeRepo()
-    expect(r.annotations.update('manca', { note: 'x' })).toBeUndefined()
-    expect(r.annotations.delete('manca')).toBe(false)
   })
 })
 
