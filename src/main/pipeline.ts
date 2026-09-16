@@ -2,15 +2,24 @@ import { randomUUID } from 'node:crypto'
 import { averageConfidence, bandOf } from '@shared/confidence'
 import type { RegistryFieldName } from '@shared/fields'
 import { fieldLabel, sortFieldNames, UNIVERSAL_FIELDS } from '@shared/fields'
+import type { EngineSelection } from './config'
 import type { EvidenceInput } from './db/dao/evidence'
+import type { ExtractionRunInput } from './db/dao/extraction-runs'
 import type { FieldInput } from './db/dao/fields'
 import type { Repository } from './db/repository'
 import { prefillFields } from './extract/heuristics'
 import type { OcrService } from './extract/ocr'
 import { extractText } from './extract/text'
 import type { ExtractedText } from './extract/types'
+import { extractFactsV2 } from './extract/v2/fact-reader'
+import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
 import type { Registry } from './registry'
-import { matchDocumentType } from './registry/classify'
+import type { TypeMatchV2 } from './registry/v2/classify-v2'
+import type { ClassifierConfigV2 } from './registry/v2/config'
+import { type Classification, classifyWithSelectedEngine } from './registry/v2/engine'
+
+/** Versione del motore v2 registrata in `extraction_runs.engine_version`. */
+export const EXTRACTION_ENGINE_V2_VERSION = 'extraction-brain-v2/2.1.0-draft.1'
 
 export interface ProcessDocumentInput {
   documentId: string
@@ -23,6 +32,13 @@ export interface ProcessorDeps {
   repo: Repository
   registry: Registry
   ocr?: OcrService | undefined
+  engines: EngineSelection
+  /** Obbligatoria con `CLASSIFIER_ENGINE=v2`. */
+  classifierConfigV2?: ClassifierConfigV2 | undefined
+  /** Obbligatorio con `EXTRACTION_ENGINE=v2`. */
+  extractionRegistryV2?: ExtractionRegistryV2 | undefined
+  /** Nomi campo v1 -> id dell'ontologia: le correzioni si ritrovano cambiando motore. */
+  legacyFieldMap?: Record<string, string> | undefined
 }
 
 export interface ProcessOutcome {
@@ -35,87 +51,91 @@ export interface ProcessOutcome {
   ocrPages: number[]
 }
 
+interface PreparedExtraction {
+  evidence: EvidenceInput[]
+  fields: FieldInput[]
+  confidence: number
+  filled: number
+  total: number
+  event: { title: string; detail: string }
+  /** Solo col motore v2. */
+  run?: ExtractionRunInput
+}
+
 /**
  * Classificazione e precompilazione di un documento.
  *
  * Tutte le scritture (tipo, campi, evidenze, righe FTS, eventi) stanno in una sola
  * transazione: un'estrazione interrotta a metà lascerebbe un documento con evidenze
  * che non corrispondono ai campi, ed è lo stato peggiore possibile per chi revisiona.
+ *
+ * Il motore di classificazione e quello di estrazione si scelgono separatamente. Col v2
+ * un tipo non riconosciuto non produce campi: senza tipo non c'è un profilo, e i 4
+ * campi universali della v1 chiedevano valori che molti tipi non hanno.
  */
 export function createDocumentProcessor(deps: ProcessorDeps) {
-  const { repo, registry } = deps
+  const { repo, registry, engines } = deps
+
+  if (engines.classifier === 'v2' && !deps.classifierConfigV2) {
+    throw new Error('CLASSIFIER_ENGINE=v2 richiede classifier_signals_v2.json.')
+  }
+  if (engines.extraction === 'v2' && !deps.extractionRegistryV2) {
+    throw new Error('EXTRACTION_ENGINE=v2 richiede i profili di estrazione v2.')
+  }
+  const correctionAliases = aliasesFromLegacyMap(deps.legacyFieldMap ?? {})
 
   return async function processDocument(input: ProcessDocumentInput): Promise<ProcessOutcome> {
+    const startedAt = new Date().toISOString()
     const extracted = await extractText({
       filePath: input.cachedPath,
       mime: input.mime,
       ocr: deps.ocr
     })
 
-    const firstPageText = extracted.pages[0]?.text ?? ''
-    const match = matchDocumentType(registry.aliases(), firstPageText, input.filename)
+    const classification = classifyWithSelectedEngine({
+      engine: engines.classifier,
+      aliases: registry.aliases(),
+      pages: extracted.pages.map((page) => page.text),
+      filename: input.filename,
+      configV2: deps.classifierConfigV2
+    })
 
     // Un tipo assegnato a mano dal revisore non va sovrascritto da un match automatico.
     const existing = repo.documents.get(input.documentId)
     const manualType =
       existing?.document_type && existing.type_confidence === null ? existing.document_type : null
 
-    const documentType = manualType ?? match?.documentType ?? null
-    const typeConfidence = manualType ? null : (match?.confidence ?? null)
+    const documentType = manualType ?? classification.documentType
+    const typeConfidence = manualType ? null : classification.confidence
 
-    // Solo i campi dichiarati dallo schema del tipo. Senza tipo restano i 4 universali,
-    // dichiarati da tutti e 511 gli schemi del registry.
-    const declared = documentType ? registry.fieldsFor(documentType) : []
-    const names = (declared.length > 0 ? declared : UNIVERSAL_FIELDS) as RegistryFieldName[]
-    const ordered = sortFieldNames(names) as RegistryFieldName[]
+    const prepared =
+      engines.extraction === 'v2'
+        ? prepareV2({
+            registry: deps.extractionRegistryV2!,
+            documentType,
+            extracted,
+            classification,
+            manualType: manualType !== null,
+            startedAt
+          })
+        : prepareV1(registry, documentType, extracted)
 
-    const candidates = prefillFields({
-      fields: ordered,
-      pages: extracted.pages,
-      fromOcr: extracted.source === 'OCR'
-    })
-    const byName = new Map(candidates.map((candidate) => [candidate.name, candidate]))
-
-    const evidenceInputs: EvidenceInput[] = []
-    const fieldInputs: FieldInput[] = []
-
-    for (const name of ordered) {
-      const candidate = byName.get(name)
-      if (!candidate) {
-        fieldInputs.push({ name, label: fieldLabel(name), value: null, confidence: 0 })
-        continue
-      }
-      const evidenceId = randomUUID()
-      evidenceInputs.push({
-        id: evidenceId,
-        page: candidate.evidence.page,
-        text: candidate.evidence.text,
-        bbox: candidate.evidence.bbox ?? null,
-        confidence: candidate.confidence
-      })
-      fieldInputs.push({
-        name,
-        label: fieldLabel(name),
-        value: candidate.value,
-        confidence: candidate.confidence,
-        evidenceId
-      })
-    }
-
-    const confidence = averageConfidence(candidates.map((candidate) => candidate.confidence))
-    const band = bandOf(confidence)
+    const band = bandOf(prepared.confidence)
 
     repo.transaction(() => {
       repo.documents.setExtraction(input.documentId, {
         documentType,
         typeConfidence,
-        confidence,
+        confidence: prepared.confidence,
         confidenceBand: band,
         textSource: extracted.source
       })
       // L'ordine conta: le evidenze prima, perché i campi ci puntano.
-      repo.evidence.replaceForDocument(input.documentId, evidenceInputs)
-      repo.fields.replaceForDocument(input.documentId, fieldInputs)
+      repo.evidence.replaceForDocument(input.documentId, prepared.evidence)
+      repo.fields.replaceForDocument(input.documentId, prepared.fields, {
+        correctionAliases,
+        keepUnmatchedCorrections: engines.extraction === 'v2'
+      })
       repo.search.replaceForDocument(
         input.documentId,
         input.filename,
@@ -136,37 +156,359 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
           'Tipo confermato',
           `Mantenuto il tipo «${manualType}» assegnato a mano dal revisore.`
         )
-      } else if (match) {
-        repo.events.add(
-          input.documentId,
-          'Tipo riconosciuto',
-          `${match.documentType} al ${Math.round(match.confidence * 100)}% da «${match.phrase}» ${
-            match.source === 'first-page' ? 'in prima pagina' : 'nel nome del file'
-          }.`
-        )
       } else {
-        repo.events.add(
-          input.documentId,
-          'Tipo non riconosciuto',
-          'Nessun alias del registry supera la soglia di 0,75: il tipo va assegnato a mano.'
-        )
+        const { title, detail } = describeClassification(classification, deps.classifierConfigV2)
+        repo.events.add(input.documentId, title, detail)
       }
 
-      repo.events.add(
-        input.documentId,
-        'Campi precompilati',
-        `${candidates.length} campi su ${ordered.length} con evidenza verbatim.`
-      )
+      repo.events.add(input.documentId, prepared.event.title, prepared.event.detail)
+
+      if (prepared.run) repo.extractionRuns.add(input.documentId, prepared.run)
     })
 
     return {
       documentType,
       typeConfidence,
-      confidence,
-      filledFields: candidates.length,
-      totalFields: ordered.length,
+      confidence: prepared.confidence,
+      filledFields: prepared.filled,
+      totalFields: prepared.total,
       textSource: extracted.source,
       ocrPages: extracted.ocrPages
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// v1: i campi dello schema del registry, i 4 universali senza tipo
+// ---------------------------------------------------------------------------
+
+function prepareV1(
+  registry: Registry,
+  documentType: string | null,
+  extracted: ExtractedText
+): PreparedExtraction {
+  // Solo i campi dichiarati dallo schema del tipo. Senza tipo restano i 4 universali,
+  // dichiarati da tutti e 511 gli schemi del registry.
+  const declared = documentType ? registry.fieldsFor(documentType) : []
+  const names = (declared.length > 0 ? declared : UNIVERSAL_FIELDS) as RegistryFieldName[]
+  const ordered = sortFieldNames(names) as RegistryFieldName[]
+
+  const candidates = prefillFields({
+    fields: ordered,
+    pages: extracted.pages,
+    fromOcr: extracted.source === 'OCR'
+  })
+  const byName = new Map(candidates.map((candidate) => [candidate.name, candidate]))
+
+  const evidence: EvidenceInput[] = []
+  const fields: FieldInput[] = []
+
+  for (const name of ordered) {
+    const candidate = byName.get(name)
+    if (!candidate) {
+      fields.push({ name, label: fieldLabel(name), value: null, confidence: 0 })
+      continue
+    }
+    const evidenceId = randomUUID()
+    evidence.push({
+      id: evidenceId,
+      page: candidate.evidence.page,
+      text: candidate.evidence.text,
+      bbox: candidate.evidence.bbox ?? null,
+      confidence: candidate.confidence
+    })
+    fields.push({
+      name,
+      label: fieldLabel(name),
+      value: candidate.value,
+      confidence: candidate.confidence,
+      evidenceId
+    })
+  }
+
+  return {
+    evidence,
+    fields,
+    confidence: averageConfidence(candidates.map((candidate) => candidate.confidence)),
+    filled: candidates.length,
+    total: ordered.length,
+    event: {
+      title: 'Campi precompilati',
+      detail: `${candidates.length} campi su ${ordered.length} con evidenza verbatim.`
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// v2: il profilo del tipo, niente campi senza tipo
+// ---------------------------------------------------------------------------
+
+function prepareV2(input: {
+  registry: ExtractionRegistryV2
+  documentType: string | null
+  extracted: ExtractedText
+  classification: Classification
+  manualType: boolean
+  startedAt: string
+}): PreparedExtraction {
+  const { registry, documentType, extracted } = input
+  const run = (
+    status: ExtractionRunInput['status'],
+    extra: Partial<ExtractionRunInput> & { metrics?: Record<string, unknown> } = {}
+  ): ExtractionRunInput => ({
+    engineVersion: EXTRACTION_ENGINE_V2_VERSION,
+    schemaVersion: registry.schemaVersion(),
+    documentType: documentType ?? '',
+    startedAt: input.startedAt,
+    completedAt: new Date().toISOString(),
+    status,
+    missingRequired: extra.missingRequired ?? [],
+    conflicts: extra.conflicts ?? [],
+    metrics: {
+      textSource: extracted.source,
+      classifier: classifierAudit(input.classification, input.manualType),
+      ...extra.metrics
+    }
+  })
+  const skipped = (detail: string, status: ExtractionRunInput['status']): PreparedExtraction => ({
+    evidence: [],
+    fields: [],
+    confidence: 0,
+    filled: 0,
+    total: 0,
+    event: { title: 'Campi non estratti', detail },
+    run: run(status)
+  })
+
+  if (!documentType) {
+    return skipped(
+      'Tipo non riconosciuto: senza tipo non c’è un profilo di campi da cercare. I campi si precompilano quando il tipo viene assegnato a mano.',
+      'SKIPPED_UNKNOWN_TYPE'
+    )
+  }
+
+  const profileSource = registry.profileSource(documentType)
+  if (profileSource === 'MISSING') {
+    return skipped(
+      `Nessun profilo di estrazione per «${documentType}»: il tipo non ha un profilo v2 né uno schema nel registry.`,
+      'SKIPPED_NO_PROFILE'
+    )
+  }
+
+  const result = extractFactsV2({
+    documentType,
+    pages: extracted.pages,
+    registry,
+    fromOcr: extracted.source === 'OCR'
+  })
+
+  const evidence: EvidenceInput[] = []
+  const fields: FieldInput[] = []
+  const addEvidence = (
+    item: (typeof result.facts)[number]['evidence'][number],
+    confidence: number
+  ) => {
+    const id = randomUUID()
+    evidence.push({ id, page: item.page, text: item.text, bbox: item.bbox ?? null, confidence })
+    return id
+  }
+
+  for (const fact of result.facts) {
+    const spec = registry.field(fact.fieldId)
+    const common = {
+      name: fact.fieldId,
+      label: spec?.label_it ?? fact.fieldId,
+      confidence: fact.confidence,
+      semanticType: spec?.type ?? null,
+      role: fact.role,
+      cardinality: fact.cardinality,
+      reviewStatus: fact.reviewStatus,
+      validationErrors: fact.validationErrors
+    }
+
+    if (fact.cardinality === 'many') {
+      const values = Array.isArray(fact.value) ? (fact.value as string[]) : []
+      const items = values.map((value, itemIndex) => {
+        const source = fact.evidence[itemIndex]
+        return {
+          itemIndex,
+          value,
+          confidence: fact.confidence,
+          evidenceId: source ? addEvidence(source, fact.confidence) : null
+        }
+      })
+      fields.push({ ...common, value: null, evidenceId: items[0]?.evidenceId ?? null, items })
+      continue
+    }
+
+    const source = fact.evidence[0]
+    if (fact.value === null || !source) {
+      fields.push({ ...common, value: null })
+      continue
+    }
+    fields.push({
+      ...common,
+      value: String(fact.value),
+      evidenceId: addEvidence(source, fact.confidence)
+    })
+  }
+
+  const filled = result.facts.filter((fact) => fact.value !== null).length
+  const labelOf = (fieldId: string) => registry.field(fieldId)?.label_it ?? fieldId
+  const profile =
+    profileSource === 'LEGACY_FALLBACK'
+      ? 'profilo ricavato dallo schema v1 (LEGACY_FALLBACK)'
+      : `profilo v2 ${result.schemaState}`
+  const parts = [`${filled} campi su ${result.facts.length} con evidenza verbatim, ${profile}.`]
+  if (result.missingRequired.length > 0) {
+    parts.push(`Obbligatori senza evidenza: ${result.missingRequired.map(labelOf).join(', ')}.`)
+  }
+  if (result.conflicts.length > 0) {
+    parts.push(
+      result.conflicts.length === 1
+        ? 'Un conflitto fra candidati da verificare.'
+        : `${result.conflicts.length} conflitti fra candidati da verificare.`
+    )
+  }
+
+  return {
+    evidence,
+    fields,
+    confidence: result.confidence,
+    filled,
+    total: result.facts.length,
+    event: { title: 'Campi precompilati', detail: parts.join(' ') },
+    run: run('COMPLETED', {
+      missingRequired: result.missingRequired,
+      conflicts: result.conflicts,
+      metrics: {
+        profileSource,
+        schemaState: result.schemaState,
+        coverage: result.coverage,
+        confidence: result.confidence,
+        filledFields: filled,
+        totalFields: result.facts.length,
+        reviewStatus: countBy(result.facts.map((fact) => fact.reviewStatus))
+      }
+    })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Timeline e audit
+// ---------------------------------------------------------------------------
+
+const REASONS: Record<Exclude<TypeMatchV2['reason'], 'OK'>, string> = {
+  BELOW_THRESHOLD: 'il punteggio non raggiunge la soglia',
+  LOW_MARGIN: 'il margine sul secondo candidato è troppo stretto',
+  FILENAME_ONLY: 'la frase compare solo nel nome del file',
+  HARD_NEGATIVE: 'il testo contiene un segnale che esclude il tipo',
+  NO_SIGNAL: 'nessun alias o segnale del registry compare nel testo'
+}
+
+function percent(value: number): string {
+  return `${Math.round(value * 100)}%`
+}
+
+function decimal(value: number): string {
+  return value.toFixed(2).replace('.', ',')
+}
+
+export function describeClassification(
+  classification: Classification,
+  config?: ClassifierConfigV2
+): { title: string; detail: string } {
+  if (classification.engine === 'v1') {
+    const match = classification.match
+    if (!match) {
+      return {
+        title: 'Tipo non riconosciuto',
+        detail: 'Nessun alias del registry supera la soglia di 0,75: il tipo va assegnato a mano.'
+      }
+    }
+    return {
+      title: 'Tipo riconosciuto',
+      detail: `${match.documentType} al ${Math.round(match.confidence * 100)}% da «${match.phrase}» ${
+        match.source === 'first-page' ? 'in prima pagina' : 'nel nome del file'
+      }.`
+    }
+  }
+
+  const match = classification.match
+  const top = match.candidates[0]
+  const runnerUp = match.runnerUp
+    ? `secondo candidato ${match.runnerUp.documentType} al ${percent(match.runnerUp.confidence)}`
+    : 'nessun altro candidato'
+
+  if (match.decision === 'ASSIGN') {
+    const phrases = match.evidence
+      .filter((item) => item.delta > 0 && item.phrase !== '__corroboration__')
+      .map((item) => `«${item.phrase}»`)
+    const unique = [...new Set(phrases)].slice(0, 3).join(', ')
+    return {
+      title: 'Tipo riconosciuto',
+      detail: `${match.documentType} al ${percent(match.confidence)} col classificatore v2 da ${unique}; ${runnerUp}, margine ${decimal(match.margin)}.`
+    }
+  }
+
+  const reason = match.reason as Exclude<TypeMatchV2['reason'], 'OK'>
+  const thresholds = config
+    ? ` Soglia ${decimal(config.defaults.auto_assign_threshold)}, margine minimo ${decimal(config.defaults.minimum_margin)}.`
+    : ''
+  const candidates = top
+    ? ` Miglior candidato ${top.documentType} al ${percent(top.score)}; ${runnerUp}, margine ${decimal(match.margin)}.`
+    : ''
+  return {
+    title: 'Tipo non riconosciuto',
+    detail: `Classificatore v2: ${REASONS[reason]} (${reason}).${candidates}${top ? thresholds : ''} Il tipo va assegnato a mano.`
+  }
+}
+
+function classifierAudit(
+  classification: Classification,
+  manualType: boolean
+): Record<string, unknown> {
+  if (classification.engine === 'v1') {
+    return {
+      engine: 'v1',
+      manualType,
+      documentType: classification.match?.documentType ?? null,
+      confidence: classification.match?.confidence ?? null,
+      phrase: classification.match?.phrase ?? null,
+      source: classification.match?.source ?? null
+    }
+  }
+  const match = classification.match
+  return {
+    engine: 'v2',
+    manualType,
+    decision: match.decision,
+    reason: match.reason,
+    top: match.candidates[0]
+      ? { documentType: match.candidates[0].documentType, score: match.candidates[0].score }
+      : null,
+    runnerUp: match.runnerUp,
+    margin: match.margin
+  }
+}
+
+function countBy(values: string[]): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const value of values) counts[value] = (counts[value] ?? 0) + 1
+  return counts
+}
+
+/**
+ * Per un nome campo, gli altri nomi con cui la stessa correzione può essere stata
+ * salvata: l'id dell'ontologia per un nome v1, i nomi v1 per un id dell'ontologia.
+ */
+export function aliasesFromLegacyMap(map: Record<string, string>): (name: string) => string[] {
+  const legacyByField = new Map<string, string[]>()
+  for (const [legacy, fieldId] of Object.entries(map)) {
+    legacyByField.set(fieldId, [...(legacyByField.get(fieldId) ?? []), legacy])
+  }
+  return (name) => {
+    const fieldId = map[name]
+    return [...(fieldId ? [fieldId] : []), ...(legacyByField.get(name) ?? [])]
   }
 }

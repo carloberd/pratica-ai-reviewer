@@ -5,6 +5,7 @@ import type {
   EvidenceItem,
   ExtractedField,
   QueueStatus,
+  SemanticType,
   TextSource,
   TimelineItem
 } from '@shared/types'
@@ -35,6 +36,39 @@ export interface FieldRow {
   confidence: number
   evidence_id: string | null
   updated_at: string | null
+  /** Colonne v2 (migrazione 0004): nulle sulle righe scritte dal motore v1. */
+  semantic_type: string | null
+  cardinality: string
+  review_status: string | null
+  validation_errors_json: string | null
+  role: string | null
+}
+
+/** Un elemento di un campo `many` (righe fattura, rate, ...). I valori sono JSON. */
+export interface FieldItemRow {
+  id: string
+  field_id: string
+  item_index: number
+  value_json: string | null
+  corrected_value_json: string | null
+  confidence: number
+  evidence_id: string | null
+  validation_errors_json: string | null
+  updated_at: string | null
+}
+
+export interface ExtractionRunRow {
+  id: string
+  document_id: string
+  engine_version: string
+  schema_version: string
+  document_type: string
+  started_at: string
+  completed_at: string | null
+  status: string
+  missing_required_json: string | null
+  conflicts_json: string | null
+  metrics_json: string | null
 }
 
 export interface EvidenceRow {
@@ -96,6 +130,19 @@ export function toEvidenceItem(row: EvidenceRow, label: string): EvidenceItem {
   }
 }
 
+/**
+ * Il tipo semantico della UI: dalla colonna v2 quando c'è, altrimenti dal closed set dei
+ * 40 campi v1. Gli altri tipi dell'ontologia (identificativi, numeri) si editano come testo.
+ */
+export function semanticTypeOf(row: Pick<FieldRow, 'name' | 'semantic_type'>): SemanticType {
+  if (row.semantic_type === null || row.semantic_type === undefined) {
+    return fieldSemanticType(row.name)
+  }
+  return row.semantic_type === 'date' || row.semantic_type === 'money'
+    ? row.semantic_type
+    : 'string'
+}
+
 export function toExtractedField(row: FieldRow, required: boolean): ExtractedField {
   return {
     id: row.id,
@@ -106,7 +153,7 @@ export function toExtractedField(row: FieldRow, required: boolean): ExtractedFie
     confidence: row.confidence,
     ...(row.evidence_id ? { evidenceId: row.evidence_id } : {}),
     required,
-    semanticType: fieldSemanticType(row.name),
+    semanticType: semanticTypeOf(row),
     ...(row.updated_at ? { updatedAt: row.updated_at } : {})
   }
 }

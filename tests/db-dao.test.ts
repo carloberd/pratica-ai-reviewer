@@ -243,6 +243,302 @@ describe('fields ed evidence dao', () => {
   })
 })
 
+describe('campi v2: metadati, elementi ripetuti, correzioni fra motori', () => {
+  it('persiste ruolo, tipo, cardinalità, stato di revisione ed errori', () => {
+    // Lo stub del registry dice «issue_date»: per i campi v2 decide il ruolo salvato.
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, [
+      {
+        name: 'document.issue_date',
+        label: 'Data emissione',
+        value: '2026-09-08',
+        confidence: 0.85,
+        semanticType: 'date',
+        role: 'required',
+        cardinality: 'one',
+        reviewStatus: 'AUTO_ACCEPTED',
+        validationErrors: []
+      },
+      {
+        name: 'bank.iban',
+        label: 'IBAN',
+        value: 'IT00X',
+        confidence: 0.67,
+        semanticType: 'identifier',
+        role: 'optional',
+        reviewStatus: 'NEEDS_REVIEW',
+        validationErrors: ['INVALID_IBAN']
+      },
+      {
+        name: 'money.total',
+        label: 'Totale',
+        value: null,
+        confidence: 0,
+        semanticType: 'money',
+        role: 'required',
+        reviewStatus: 'MISSING'
+      }
+    ])
+
+    const [date, iban, total] = r.fields.listForDocument(id)
+    expect(date).toMatchObject({ semantic_type: 'date', role: 'required', cardinality: 'one' })
+    expect(date?.validation_errors_json).toBeNull()
+    expect(iban).toMatchObject({ review_status: 'NEEDS_REVIEW', cardinality: 'one' })
+    expect(JSON.parse(iban!.validation_errors_json!)).toEqual(['INVALID_IBAN'])
+
+    const doc = r.getReviewDocument(id)!
+    expect(doc.fields.map((f) => [f.name, f.required, f.semanticType])).toEqual([
+      ['document.issue_date', true, 'date'],
+      ['bank.iban', false, 'string'],
+      ['money.total', true, 'money']
+    ])
+    expect(total?.review_status).toBe('MISSING')
+    expect(doc.warnings).toContain('Campo obbligatorio senza evidenza: Totale.')
+  })
+
+  it('le righe del motore v1 lasciano vuote le colonne nuove', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, [
+      { name: 'issue_date', label: 'Data di emissione', value: '2026-09-08', confidence: 0.85 }
+    ])
+    expect(r.fields.listForDocument(id)[0]).toMatchObject({
+      semantic_type: null,
+      role: null,
+      review_status: null,
+      validation_errors_json: null,
+      cardinality: 'one'
+    })
+  })
+
+  it('scrive gli elementi di un campo many con le loro evidenze', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    const [first, second] = r.evidence.replaceForDocument(id, [
+      { id: 'ev-1', page: 1, text: 'Garanzia: Incendio', confidence: 0.85 },
+      { id: 'ev-2', page: 1, text: 'Garanzia: Furto', confidence: 0.85 }
+    ])
+    r.fields.replaceForDocument(id, [
+      {
+        name: 'insurance.coverages',
+        label: 'Garanzie',
+        value: null,
+        confidence: 0.85,
+        evidenceId: first,
+        cardinality: 'many',
+        role: 'required',
+        items: [
+          { itemIndex: 0, value: 'Incendio', confidence: 0.85, evidenceId: first },
+          { itemIndex: 1, value: 'Furto', confidence: 0.85, evidenceId: second }
+        ]
+      }
+    ])
+
+    const field = r.fields.listForDocument(id)[0]!
+    const items = r.fields.listItems(field.id)
+    expect(items.map((item) => [item.item_index, item.value_json, item.evidence_id])).toEqual([
+      [0, '"Incendio"', 'ev-1'],
+      [1, '"Furto"', 'ev-2']
+    ])
+    // Un campo many obbligatorio con elementi non è «senza evidenza».
+    expect(r.getReviewDocument(id)!.warnings.filter((w) => w.includes('obbligator'))).toEqual([])
+
+    // Senza elementi invece sì.
+    r.fields.replaceForDocument(id, [
+      {
+        name: 'insurance.coverages',
+        label: 'Garanzie',
+        value: null,
+        confidence: 0,
+        cardinality: 'many',
+        role: 'required',
+        items: []
+      }
+    ])
+    expect(r.getReviewDocument(id)!.warnings).toContain(
+      'Campo obbligatorio senza evidenza: Garanzie.'
+    )
+  })
+
+  it('la correzione di un elemento torna sullo stesso item_index, anche se il run ne trova meno', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    const many = (values: string[]) => [
+      {
+        name: 'line_items',
+        label: 'Righe documento',
+        value: null,
+        confidence: 0.85,
+        cardinality: 'many' as const,
+        items: values.map((value, itemIndex) => ({ itemIndex, value, confidence: 0.85 }))
+      }
+    ]
+    r.fields.replaceForDocument(id, many(['riga A', 'riga B', 'riga C']))
+    const [, second, third] = r.fields.listItems(r.fields.listForDocument(id)[0]!.id)
+    r.fields.setItemCorrectedValue(second!.id, 'riga B corretta')
+    r.fields.setItemCorrectedValue(third!.id, 'riga C corretta')
+
+    r.fields.replaceForDocument(id, many(['riga A', 'riga B bis']))
+
+    const items = r.fields.listItems(r.fields.listForDocument(id)[0]!.id)
+    expect(
+      items.map((item) => [item.item_index, item.value_json, item.corrected_value_json])
+    ).toEqual([
+      [0, '"riga A"', null],
+      [1, '"riga B bis"', '"riga B corretta"'],
+      [2, null, '"riga C corretta"']
+    ])
+    expect(items[1]?.updated_at).toBeTruthy()
+
+    r.fields.setItemCorrectedValue(items[1]!.id, null)
+    expect(r.fields.listItems(items[1]!.field_id)[1]).toMatchObject({
+      corrected_value_json: null,
+      updated_at: null
+    })
+  })
+
+  it('sostituire le evidenze non lascia elementi che puntano nel vuoto', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    const [evidenceId] = r.evidence.replaceForDocument(id, [
+      { page: 1, text: 'Rata 1: 100,00', confidence: 0.85 }
+    ])
+    r.fields.replaceForDocument(id, [
+      {
+        name: 'finance.installments',
+        label: 'Rate',
+        value: null,
+        confidence: 0.85,
+        evidenceId,
+        cardinality: 'many',
+        items: [{ itemIndex: 0, value: '100,00', confidence: 0.85, evidenceId }]
+      }
+    ])
+
+    expect(() =>
+      r.evidence.replaceForDocument(id, [{ page: 1, text: 'altro', confidence: 0.8 }])
+    ).not.toThrow()
+    expect(r.fields.listItems(r.fields.listForDocument(id)[0]!.id)[0]?.evidence_id).toBeNull()
+  })
+
+  it('ritrova una correzione salvata con l’altro nome del campo', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    const aliases = (name: string) =>
+      name === 'document.number'
+        ? ['document_number']
+        : name === 'document_number'
+          ? ['document.number']
+          : []
+
+    r.fields.replaceForDocument(id, [
+      { name: 'document_number', label: 'Numero documento', value: '114', confidence: 0.85 }
+    ])
+    r.fields.setCorrectedValue(r.fields.listForDocument(id)[0]!.id, '114/2026')
+
+    r.fields.replaceForDocument(
+      id,
+      [{ name: 'document.number', label: 'Numero documento', value: '114', confidence: 0.85 }],
+      { correctionAliases: aliases }
+    )
+    expect(r.fields.listForDocument(id)[0]).toMatchObject({
+      name: 'document.number',
+      corrected_value: '114/2026'
+    })
+
+    // E all'indietro, tornando al motore v1.
+    r.fields.replaceForDocument(
+      id,
+      [{ name: 'document_number', label: 'Numero documento', value: '114', confidence: 0.85 }],
+      { correctionAliases: aliases }
+    )
+    expect(r.fields.listForDocument(id)[0]?.corrected_value).toBe('114/2026')
+  })
+
+  it('su richiesta conserva una correzione su un campo che il nuovo run non produce', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    const seedCorrection = () => {
+      r.fields.replaceForDocument(id, [
+        { name: 'tax_code', label: 'Codice fiscale', value: '0123', confidence: 0.7 },
+        { name: 'issue_date', label: 'Data', value: null, confidence: 0 }
+      ])
+      r.fields.setCorrectedValue(r.fields.listForDocument(id)[0]!.id, '01234567890')
+    }
+
+    seedCorrection()
+    r.fields.replaceForDocument(id, [], { keepUnmatchedCorrections: true })
+    expect(r.fields.listForDocument(id)).toMatchObject([
+      {
+        name: 'tax_code',
+        label: 'Codice fiscale',
+        value: '0123',
+        corrected_value: '01234567890',
+        evidence_id: null,
+        review_status: 'NEEDS_REVIEW',
+        role: 'optional'
+      }
+    ])
+
+    // Senza l'opzione vale il comportamento di sempre.
+    seedCorrection()
+    r.fields.replaceForDocument(id, [])
+    expect(r.fields.listForDocument(id)).toEqual([])
+  })
+})
+
+describe('extraction runs dao', () => {
+  it('accumula i run dal più recente e riconosce motore e profili già usati', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    const base = {
+      engineVersion: 'extraction-brain-v2/test',
+      schemaVersion: '2.0.0',
+      documentType: 'accounting.fattura',
+      completedAt: '2026-09-16T10:00:01.000Z',
+      status: 'COMPLETED' as const,
+      missingRequired: ['money.total'],
+      conflicts: [],
+      metrics: { coverage: 0.5 }
+    }
+    r.extractionRuns.add(id, { ...base, startedAt: '2026-09-16T10:00:00.000Z' })
+    r.extractionRuns.add(id, {
+      ...base,
+      startedAt: '2026-09-16T11:00:00.000Z',
+      status: 'SKIPPED_UNKNOWN_TYPE',
+      documentType: ''
+    })
+
+    const runs = r.extractionRuns.listForDocument(id)
+    expect(runs.map((run) => run.status)).toEqual(['SKIPPED_UNKNOWN_TYPE', 'COMPLETED'])
+    expect(JSON.parse(runs[1]!.missing_required_json!)).toEqual(['money.total'])
+    expect(JSON.parse(runs[1]!.metrics_json!)).toEqual({ coverage: 0.5 })
+
+    expect(r.extractionRuns.hasRun(id, 'extraction-brain-v2/test', '2.0.0')).toBe(true)
+    expect(r.extractionRuns.hasRun(id, 'extraction-brain-v2/test', '2.1.0')).toBe(false)
+    expect(r.extractionRuns.hasRun(id, 'altro', '2.0.0')).toBe(false)
+  })
+
+  it('i run spariscono col documento', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.extractionRuns.add(id, {
+      engineVersion: 'v2',
+      schemaVersion: '2.0.0',
+      documentType: '',
+      startedAt: '2026-09-16T10:00:00.000Z',
+      completedAt: '2026-09-16T10:00:00.000Z',
+      status: 'SKIPPED_UNKNOWN_TYPE',
+      missingRequired: [],
+      conflicts: [],
+      metrics: {}
+    })
+    r.documents.delete(id)
+    expect(r.extractionRuns.listForDocument(id)).toEqual([])
+  })
+})
+
 describe('events dao', () => {
   it('costruisce la timeline in ordine cronologico', () => {
     const r = makeRepo()
