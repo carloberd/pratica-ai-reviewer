@@ -5,6 +5,7 @@
   "private": true,
   "author": "Carlo Berdondini",
   "license": "UNLICENSED",
+  "packageManager": "pnpm@11.21.0",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

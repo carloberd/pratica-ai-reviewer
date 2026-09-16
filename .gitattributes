@@ -1,0 +1,12 @@
+# Normalizza i fine riga nei sorgenti, ma lascia stare i binari: su Windows una
+# conversione CRLF corromperebbe le fixture e i modelli OCR, e i test fallirebbero
+# in modo incomprensibile.
+* text=auto
+
+*.pdf binary
+*.docx binary
+*.png binary
+*.icns binary
+*.ico binary
+*.gz binary
+*.traineddata binary

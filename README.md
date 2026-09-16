@@ -70,10 +70,29 @@ stesso e mostra in chiaro cosa manca e dove metterlo.
 | `pnpm test` | Vitest: nessuna credenziale, nessuna rete |
 | `pnpm build` | Compila main, preload e renderer in `out/` |
 | `pnpm dist` | Pacchetti mac (dmg, zip) e Windows (nsis, zip) in `release/` |
+| `pnpm dist:mac` / `pnpm dist:win` | Solo una delle due piattaforme |
 | `node scripts/make-fixtures.mjs` | Rigenera le fixture di `tests/fixtures/` |
 | `node scripts/make-icon.mjs` | Rigenera `build/icon.png` |
 
 Il gate è `pnpm typecheck && pnpm lint && pnpm test`.
+
+### Release per Windows
+
+`.github/workflows/publish-windows.yml` costruisce l'installer su un runner
+`windows-latest` (NSIS nativo, niente wine). Parte in due modi:
+
+- **Su una GitHub Release pubblicata**: esegue il gate, compila e allega alla release
+  `praticaai-reviewer-<versione>-setup.exe` e `praticaai-reviewer-<versione>-x64.zip`.
+- **A mano** (`workflow_dispatch`): stessi passi, ma gli artefatti restano allegati alla
+  run invece che alla release — utile per provare una build senza pubblicare nulla.
+
+La versione degli artefatti viene da `package.json`, non dal tag: prima di taggare
+allinea `package.json`, altrimenti il workflow si ferma e lo dice. I nomi sono fissati
+da `artifactName` in `electron-builder.yml`, così il workflow li verifica invece di
+cercarli.
+
+I pacchetti non sono firmati: al primo avvio Windows mostra l'avviso SmartScreen e
+serve «Ulteriori informazioni → Esegui comunque».
 
 ---
 
@@ -187,7 +206,8 @@ e senza immagini (per esempio solo grafica vettoriale) non produce testo.
 equivalente da tastiera.
 
 **Pacchetti non firmati.** `pnpm dist` produce dmg e installer non firmati: al primo
-avvio macOS e Windows chiedono conferma. È deliberato — l'app è per due macchine note.
+avvio macOS chiede conferma e Windows mostra SmartScreen. È deliberato — l'app è per due
+macchine note, non per distribuzione.
 
 ---
 

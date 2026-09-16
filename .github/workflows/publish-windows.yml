@@ -1,0 +1,123 @@
+name: Build Windows Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+# Mai due installer per lo stesso ref insieme, ma una build di release in corso
+# deve arrivare in fondo: annullarla lascerebbe la release senza allegati.
+concurrency:
+  group: publish-windows-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write # serve per allegare l'installer alla GitHub Release
+
+jobs:
+  build-windows:
+    # electron-builder compila l'installer NSIS nativamente qui: niente wine.
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Prima pnpm, poi setup-node: la cache di setup-node ha bisogno di trovarlo
+      # già installato. La versione arriva dal campo `packageManager`.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # Il postinstall lancia @electron/rebuild su better-sqlite3. Con i prebuild
+      # N-API di better-sqlite3 13 è quasi sempre un no-op, ma resta la rete di
+      # sicurezza se un giorno servisse una compilazione vera.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # Nessuna credenziale Google e nessuna rete: Drive è mockato sulle fixture e
+      # l'OCR gira sui modelli versionati in resources/tessdata.
+      - name: Run test suite
+        run: pnpm test
+
+      - name: Read version from package.json
+        id: package-version
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # Il nome dell'artefatto contiene la versione di package.json, non il tag: se
+      # i due divergono la release finirebbe con un allegato che dichiara la
+      # versione sbagliata. Meglio fermarsi qui e dirlo.
+      - name: Check the tag matches package.json
+        if: github.event_name == 'release'
+        shell: bash
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${{ steps.package-version.outputs.version }}"
+          if [ "${TAG#v}" != "$VERSION" ]; then
+            echo "::error::Il tag $TAG non corrisponde alla versione $VERSION di package.json. Allinea package.json e ricrea il tag."
+            exit 1
+          fi
+
+      - name: Build Windows app
+        run: pnpm dist:win
+
+      # `electron-builder.yml` fissa gli artifactName, quindi i percorsi sono
+      # deterministici: si verificano invece di cercarli, e se un giorno il maker
+      # cambiasse posto il fallimento è esplicito.
+      - name: Locate artifacts
+        id: artifacts
+        shell: bash
+        run: |
+          VERSION="${{ steps.package-version.outputs.version }}"
+          SETUP="release/praticaai-reviewer-${VERSION}-setup.exe"
+          PORTABLE="release/praticaai-reviewer-${VERSION}-x64.zip"
+          MISSING=0
+          for FILE in "$SETUP" "$PORTABLE"; do
+            if [ ! -f "$FILE" ]; then
+              echo "::error::Artefatto atteso non trovato: $FILE"
+              MISSING=1
+            fi
+          done
+          if [ "$MISSING" = "1" ]; then
+            echo "Contenuto di release/:"
+            find release -maxdepth 1 -type f || true
+            exit 1
+          fi
+          {
+            echo "setup=$SETUP"
+            echo "portable=$PORTABLE"
+          } >> "$GITHUB_OUTPUT"
+          echo "Trovati: $SETUP, $PORTABLE"
+
+      - name: Upload artifacts to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ steps.artifacts.outputs.setup }}
+            ${{ steps.artifacts.outputs.portable }}
+          fail_on_unmatched_files: true
+
+      - name: Upload artifacts for manual runs
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: praticaai-reviewer-${{ steps.package-version.outputs.version }}-win32-x64
+          path: |
+            ${{ steps.artifacts.outputs.setup }}
+            ${{ steps.artifacts.outputs.portable }}
+          if-no-files-found: error
