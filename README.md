@@ -263,9 +263,32 @@ bande sono HIGH ≥ 0,90, MEDIUM ≥ 0,75, LOW sotto. Sono euristiche dichiarate
 calibrare sui documenti veri.
 
 **Revisione.** I campi sono modificabili: il valore precompilato resta accanto a quello
-corretto, e riscrivere lo stesso valore non conta come correzione. Ogni modifica è già a
-database nel momento in cui si esce dal campo — i tasti in fondo non salvano i dati,
-dichiarano l'esito.
+corretto, e riscrivere lo stesso valore non conta come correzione. Svuotare un valore
+proposto invece sì: il motore aveva letto qualcosa che nel documento non c'è. Ogni
+modifica è già a database nel momento in cui si esce dal campo — i tasti in fondo non
+salvano i dati, dichiarano l'esito.
+
+La scheda Dati è fatta per controllare in fretta, senza togliere niente al controllo:
+
+- **Evidenza cliccabile.** Sotto ogni valore proposto c'è la sua origine, pagina e riga.
+  Il clic porta il documento a quel punto senza cambiare scheda: col rettangolo salvato
+  si evidenzia la riga; senza coordinate si cerca la riga nel text layer della pagina;
+  su una scansione letta con OCR si arriva alla pagina e la si segnala intera. Nei DOCX,
+  che non hanno pagine, la riga si evidenzia nel testo.
+- **I campi vuoti in cima.** Quelli dove il motore non ha proposto niente stanno in un
+  gruppo a sé, obbligatori prima, col contatore di quanti restano vuoti. Il gruppo
+  dipende dalla proposta del motore, non dal valore: un campo compilato a mano non salta
+  altrove mentre ci si lavora. Nessun campo si nasconde.
+- **Candidati di tipo.** Quando il tipo resta `UNKNOWN`, o il classificatore l'ha
+  assegnato con un margine sotto il doppio del minimo, la scheda tipo mostra i primi
+  candidati col punteggio, il motivo e le frasi che li suggeriscono, ognuna cliccabile
+  come un'evidenza. Si assegna dalla lista o cercando fra tutti i tipi; la scelta del
+  revisore vale sempre. Negli altri casi i candidati restano consultabili, chiusi.
+- **Campi ripetuti.** Righe fattura, rate, garanzie: una voce per riga, ognuna con la
+  sua evidenza. Una riga proposta si corregge o si toglie — tolta resta barrata, per
+  poterla rimettere e perché l'export deve sapere che il motore l'aveva vista — e le
+  righe mancanti si aggiungono in fondo, scrivendole o, col cursore su «Nuova riga»,
+  selezionandole sul documento: ogni selezione è una riga.
 
 Gli esiti sono due. **Salva** porta il documento a `REVIEWED`: tipo e campi sono a
 database e il documento entra nel dataset dei test futuri. **Scarta** lo porta a
@@ -288,6 +311,78 @@ quello su Drive.
 
 ---
 
+## Export del dataset annotato
+
+«Esporta dataset annotato», nella dashboard, salva in un file JSON i documenti chiusi
+dal revisore. È l'input del benchmark di pratica-ai; l'allineamento col benchmark si fa
+quando il dataset è pronto, quindi il formato resta semplice e versionato
+(`formatVersion`, in `src/shared/dataset.ts`).
+
+```jsonc
+{
+  "manifest": {
+    "format": "praticaai-reviewer/annotated-dataset",
+    "formatVersion": "1.0.0",
+    "exportedAt": "2026-09-16T18:00:00.000Z",
+    "app": { "name": "praticaai-reviewer", "version": "1.1.0" },
+    // motori e versioni dell'app al momento dell'export
+    "engines": { "classifier": "v2", "extraction": "v2", "classifierVersion": "2.0.0-draft.1",
+                 "extractionEngineVersion": "extraction-brain-v2/2.1.0-draft.1", "schemaVersion": "2.0.0" },
+    "counts": { "documents": 3, "reviewed": 2, "discarded": 1, "corrections": 7 }
+  },
+  "documents": [{
+    "driveFileId": "…",               // chiave stabile: https://drive.google.com/file/d/<id>/view
+    "filename": "…", "mime": "…", "textSource": "NATIVE_TEXT",
+    "status": "REVIEWED",             // o DISCARDED
+    "reviewedAt": "…",
+    "documentType": {
+      "id": "accounting.fattura", "label": "fattura",
+      "chosenBy": "ENGINE",           // REVIEWER se scelto a mano
+      "proposed": "accounting.fattura", "proposedConfidence": 0.8267,
+      "corrected": false              // il revisore ha scelto un tipo diverso dalla proposta
+    },
+    "extraction": { "engineVersion": "…", "schemaVersion": "2.0.0", "status": "COMPLETED", "completedAt": "…" },
+    "fields": [
+      { "name": "document.number", "label": "Numero documento", "role": "required", "cardinality": "one",
+        "value": "27/2026/B", "origin": "REVIEWER",
+        "evidence": { "page": 1, "text": "FATTURA n. 27/2026 del 14/09/2026", "bbox": { "x": 56, "y": 91, "w": 181.6, "h": 11 } } },
+      { "name": "line_items", "label": "Righe documento", "role": "core", "cardinality": "many",
+        "value": ["Demolizione tramezzi - EUR 3.200,00", "…"],
+        "items": [{ "value": "Demolizione tramezzi - EUR 3.200,00", "origin": "ENGINE", "evidence": { … } }] }
+    ],
+    "corrections": [
+      { "field": "document.number", "label": "Numero documento", "item": null,
+        "kind": "CHANGED", "before": "27/2026", "after": "27/2026/B" },
+      { "field": "line_items", "label": "Righe documento", "item": 2,
+        "kind": "REMOVED", "before": "Tinteggiatura pareti - EUR 1.450,00", "after": null }
+    ]
+  }]
+}
+```
+
+- Entrano solo i documenti `REVIEWED` e `DISCARDED`, in ordine di nome file. Degli
+  scartati restano stato e tipo, con `fields` e `corrections` vuoti: nessuno ne ha
+  confermato i valori.
+- `value` è il valore confermato: la correzione del revisore dove c'è, altrimenti la
+  proposta del motore, `null` se il campo è vuoto. `origin` dice da chi viene. I campi
+  ripetuti hanno in `value` la lista dei valori e in `items` gli stessi con provenienza
+  ed evidenza; le righe tolte non ci sono.
+- `evidence` è la riga da cui il motore aveva letto la proposta, con `bbox` in unità di
+  pagina pdf.js a scala 1 (origine in alto a sinistra) o `null` senza coordinate.
+- `corrections` è la misura di quanto aiuta la precompilazione: una voce per campo
+  toccato, una per riga nei ripetuti. `kind` vale `CHANGED` (proposta diversa),
+  `FILLED` (il motore non aveva proposto niente), `CLEARED` (proposta svuotata), `ADDED`
+  e `REMOVED` (righe). `before` è la proposta dell'ultima estrazione, `after` il valore
+  del revisore; `item` è l'indice della riga nella tabella di revisione.
+- Una nuova estrazione dello stesso documento non tocca il lavoro del revisore, quindi
+  before/after restano validi anche dopo un re-run. Se il motore ora propone proprio il
+  valore corretto a mano, quella non è più una correzione.
+
+Il test `tests/dataset-export.test.ts` elabora le fixture con la pipeline v2, le corregge,
+le rielabora, le chiude e confronta il file con `tests/fixtures/dataset-export.expected.json`.
+
+---
+
 ## Dove finiscono i dati
 
 Tutto sotto la cartella dati dell'app
@@ -296,7 +391,7 @@ Tutto sotto la cartella dati dell'app
 
 | File | Contenuto |
 |---|---|
-| `praticaai-reviewer.db` | documenti, campi, evidenze, eventi, indice FTS5 |
+| `praticaai-reviewer.db` | documenti, campi e righe dei campi ripetuti, evidenze, classificazione, eventi, indice FTS5 |
 | `cache/<drive_file_id>.pdf\|.docx` | copia locale dei file di Drive |
 | `tokens.bin` | refresh token, cifrato con `safeStorage` (Keychain / DPAPI) |
 | `tessdata-cache/` | modelli tesseract scompattati |
@@ -326,9 +421,12 @@ assegnato a mano, che non viene sovrascritto da un match automatico. La migrazio
 rinomina i 40 campi v1 sugli id dell'ontologia (`document_number` → `document.number`),
 e la pipeline ritrova una correzione anche sotto l'altro nome, così cambiare motore non
 la perde. Col v2 una correzione su un campo che il nuovo profilo non chiede resta come
-campo a sé, e quella su un elemento ripetuto torna sullo stesso indice. All'avvio col v2
-i documenti in coda con la copia in cache che non sono mai passati da questa versione dei
-profili vengono rielaborati in sottofondo; quelli già revisionati o scartati no.
+campo a sé. Nei campi ripetuti correzione e rimozione di una riga proposta tornano sullo
+stesso indice, le righe aggiunte a mano restano in coda a quelle del nuovo run, e una riga
+corretta che il nuovo run non trova più diventa del revisore invece di sparire. All'avvio
+col v2 i documenti in coda con la copia in cache che non sono mai passati da questa
+versione dei profili, o che non hanno ancora i candidati di tipo salvati (migrazione
+0005), vengono rielaborati in sottofondo; quelli già revisionati o scartati no.
 
 **OCR.** Copre le pagine *scansionate*, cioè quelle fatte di immagini: il motore prende
 l'immagine che la pagina già contiene invece di ri-rasterizzarla. Una pagina senza testo
