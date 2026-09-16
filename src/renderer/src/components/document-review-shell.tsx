@@ -24,6 +24,7 @@ import AuthPanel from './auth-panel'
 import styles from './document-review.module.css'
 import DocumentTable from './document-table'
 import DriveFiles from './drive-files'
+import ExportMenu, { type ExportFormat } from './export-menu'
 import { KpiSkeleton } from './loading-skeleton'
 import ProfileInsights from './profile-insights'
 import ReviewView from './review-view'
@@ -252,25 +253,29 @@ export default function DocumentReviewShell() {
   const addItem = (fieldId: string, value: string) =>
     editDocument('field', (documentId) => api.fields.addItem(documentId, fieldId, value))
 
-  /** Salva il dataset annotato dove sceglie il revisore. */
-  const exportDataset = () =>
-    run('export', async () => {
-      const result = await api.dataset.export()
-      if (!result.saved) return
-      const documents = result.documents === 1 ? '1 documento' : `${result.documents} documenti`
-      const corrections =
-        result.corrections === 1 ? '1 correzione' : `${result.corrections} correzioni`
-      setMessage(`Dataset esportato in ${result.path}: ${documents}, ${corrections}.`)
-    })
+  /**
+   * Salva il dataset annotato dove sceglie il revisore, nella forma che ha scelto: lo
+   * stesso export, due file diversi.
+   */
+  const exportDataset = (format: ExportFormat) =>
+    run(`export-${format}`, async () => {
+      const documents = (count: number) => (count === 1 ? '1 documento' : `${count} documenti`)
 
-  /** Lo stesso dataset in foglio di calcolo: due tabelle invece di un JSON annidato. */
-  const exportDatasetXlsx = () =>
-    run('export-xlsx', async () => {
+      if (format === 'json') {
+        const result = await api.dataset.export()
+        if (!result.saved) return
+        const corrections =
+          result.corrections === 1 ? '1 correzione' : `${result.corrections} correzioni`
+        setMessage(
+          `Dataset esportato in ${result.path}: ${documents(result.documents)}, ${corrections}.`
+        )
+        return
+      }
+
       const result = await api.dataset.exportXlsx()
       if (!result.saved) return
-      const documents = result.documents === 1 ? '1 documento' : `${result.documents} documenti`
       const fields = result.fields === 1 ? '1 riga campo' : `${result.fields} righe campo`
-      setMessage(`Foglio esportato in ${result.path}: ${documents}, ${fields}.`)
+      setMessage(`Foglio esportato in ${result.path}: ${documents(result.documents)}, ${fields}.`)
     })
 
   const decide = (action: ReviewAction, note?: string) => {
@@ -369,26 +374,13 @@ export default function DocumentReviewShell() {
                 <h2>Coda di revisione</h2>
                 <div className={styles.muted}>Documenti che richiedono controllo umano</div>
               </div>
-              <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={styles.button}
-                  disabled={busy}
-                  title="Salva in un file JSON i documenti revisionati e scartati, con i valori confermati e le correzioni prima/dopo."
-                  onClick={() => void exportDataset()}
-                >
-                  {pending === 'export' ? 'Esporto…' : 'Esporta dataset annotato'}
-                </button>
-                <button
-                  type="button"
-                  className={styles.button}
-                  disabled={busy}
-                  title="Gli stessi documenti in un file Excel: un foglio per documento, un foglio per campo."
-                  onClick={() => void exportDatasetXlsx()}
-                >
-                  {pending === 'export-xlsx' ? 'Esporto…' : 'Esporta in Excel'}
-                </button>
-              </div>
+              <ExportMenu
+                busy={busy}
+                pending={
+                  pending === 'export-json' ? 'json' : pending === 'export-xlsx' ? 'xlsx' : null
+                }
+                onExport={(format) => void exportDataset(format)}
+              />
             </div>
             <DocumentTable
               documents={queue}

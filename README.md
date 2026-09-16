@@ -315,17 +315,17 @@ quello su Drive.
 
 ## Export del dataset annotato
 
-Gli stessi documenti chiusi dal revisore escono in due forme, dai due pulsanti della
-dashboard: **JSON** per il benchmark, **XLSX** per chi i dati li lavora in foglio. Sono
-due export paralleli sugli stessi dati — il formato JSON non cambia perché esiste anche
-quello Excel.
+Gli stessi documenti chiusi dal revisore escono in due forme: **JSON** per il benchmark,
+**XLSX** per chi i dati li lavora in foglio. Sono due export paralleli sugli stessi dati —
+il formato JSON non cambia perché esiste anche quello Excel. «Esporta», nella dashboard,
+apre un menu con le due voci: sono lo stesso export e cambia solo la forma del file,
+mentre due pulsanti affiancati facevano sembrare che fossero due cose diverse.
 
 ### JSON
 
-«Esporta dataset annotato» salva in un file JSON i documenti chiusi dal revisore. È
-l'input del benchmark di pratica-ai; l'allineamento col benchmark si fa quando il dataset
-è pronto, quindi il formato resta semplice e versionato (`formatVersion`, in
-`src/shared/dataset.ts`).
+La voce «JSON» salva in un file i documenti chiusi dal revisore. È l'input del benchmark
+di pratica-ai; l'allineamento col benchmark si fa quando il dataset è pronto, quindi il
+formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`).
 
 ```jsonc
 {
@@ -392,8 +392,8 @@ le rielabora, le chiude e confronta il file con `tests/fixtures/dataset-export.e
 
 ### XLSX
 
-«Esporta in Excel» salva gli stessi documenti come foglio di calcolo: due tabelle legate
-da `document_id`, invece di un JSON annidato. Le righe le costruisce `buildXlsxRows` in
+La voce «Excel» salva gli stessi documenti come foglio di calcolo: due tabelle legate da
+`document_id`, invece di un JSON annidato. Le righe le costruisce `buildXlsxRows` in
 `src/shared/dataset-xlsx.ts` — funzione pura, senza database né exceljs — e il file lo
 scrive `src/main/xlsx-export.ts`.
 
