@@ -1,0 +1,150 @@
+{
+  "version": "2.0.0-draft.1",
+  "defaults": {
+    "auto_assign_threshold": 0.74,
+    "minimum_margin": 0.08,
+    "filename_only_max_score": 0.45,
+    "max_pages": 2,
+    "max_chars_per_page": 30000,
+    "title_zone_chars": 1400,
+    "negative_penalty": 0.28,
+    "hard_negative_penalty": 0.6,
+    "positive_signal_bonus": 0.12,
+    "corroboration_bonus": 0.06,
+    "max_corroboration_bonus": 0.18
+  },
+  "classes": {
+    "fiscal_tax.certificazione_unica": {
+      "positive_phrases": [
+        "certificazione unica",
+        "certificazione lavoro dipendente"
+      ],
+      "negative_phrases": [],
+      "hard_negative_phrases": [],
+      "notes": "Normalization letter↔digit makes CERTIFICAZIONE UNICA2026 match without annual aliases."
+    },
+    "hr_employment.unilav_proroga": {
+      "positive_phrases": [
+        "comunicazione obbligatoria unificato lav proroga",
+        "unilav proroga"
+      ],
+      "negative_phrases": [
+        "cessazione",
+        "assunzione",
+        "trasformazione"
+      ],
+      "hard_negative_phrases": [],
+      "notes": "Real UNILAV module wording."
+    },
+    "hr_employment.unilav_cessazione": {
+      "positive_phrases": [
+        "comunicazione obbligatoria unificato lav cessazione",
+        "unilav cessazione"
+      ],
+      "negative_phrases": [
+        "proroga",
+        "assunzione",
+        "trasformazione"
+      ],
+      "hard_negative_phrases": [],
+      "notes": "Sibling discrimination."
+    },
+    "hr_employment.unilav_assunzione": {
+      "positive_phrases": [
+        "comunicazione obbligatoria unificato lav assunzione",
+        "unilav assunzione"
+      ],
+      "negative_phrases": [
+        "proroga",
+        "cessazione",
+        "trasformazione"
+      ],
+      "hard_negative_phrases": []
+    },
+    "hr_employment.unilav_trasformazione": {
+      "positive_phrases": [
+        "comunicazione obbligatoria unificato lav trasformazione",
+        "unilav trasformazione"
+      ],
+      "negative_phrases": [
+        "proroga",
+        "cessazione",
+        "assunzione"
+      ],
+      "hard_negative_phrases": []
+    },
+    "fiscal_tax.dichiarazione_redditi": {
+      "positive_phrases": [
+        "dichiarazione dei redditi",
+        "modello redditi"
+      ],
+      "negative_phrases": [
+        "comunicazione di irregolarita",
+        "cartella di pagamento"
+      ],
+      "hard_negative_phrases": [],
+      "notes": "Observed across multiple tax-form years."
+    },
+    "public_procurement.dichiarazione_requisiti_art_94": {
+      "positive_phrases": [
+        "dichiarazione sostitutiva art 94",
+        "dichiarazione sostitutiva articoli 94 95 98",
+        "possesso dei requisiti articoli 94 95 e 98"
+      ],
+      "negative_phrases": [
+        "documento di gara unico europeo",
+        "dgue"
+      ],
+      "hard_negative_phrases": [],
+      "notes": "Distinguishes self-declaration from DGUE and authority certificates."
+    },
+    "certifications_licenses.white_list_prefettura": {
+      "positive_phrases": [
+        "si dispone il rinnovo dell iscrizione",
+        "iscrizione nell elenco dei fornitori prestatori di servizi ed esecutori",
+        "prefettura white list"
+      ],
+      "negative_phrases": [
+        "istanza di rinnovo",
+        "richiesta di rinnovo",
+        "domanda di iscrizione"
+      ],
+      "hard_negative_phrases": [
+        "istanza di permanenza"
+      ],
+      "notes": "Official Prefecture decision versus company application."
+    },
+    "certifications_licenses.ricevuta_rilascio_patente_crediti": {
+      "positive_phrases": [
+        "ricevuta rilascio patente a crediti",
+        "ricevuta di presentazione dell istanza"
+      ],
+      "negative_phrases": [
+        "dichiarazione possesso crediti",
+        "patente a crediti stato"
+      ],
+      "hard_negative_phrases": []
+    },
+    "certifications_licenses.patente_a_crediti": {
+      "positive_phrases": [
+        "patente a crediti",
+        "punteggio patente"
+      ],
+      "negative_phrases": [
+        "ricevuta di presentazione dell istanza",
+        "dichiarazione possesso crediti"
+      ],
+      "hard_negative_phrases": []
+    },
+    "certifications_licenses.dichiarazione_crediti_patente_cantieri": {
+      "positive_phrases": [
+        "dichiarazione possesso crediti",
+        "dichiara di essere in possesso di un punteggio"
+      ],
+      "negative_phrases": [
+        "ricevuta di presentazione dell istanza"
+      ],
+      "hard_negative_phrases": []
+    }
+  }
+}

@@ -1,0 +1,2271 @@
+{
+  "version": "2.0.0",
+  "hints": {
+    "document.title": {
+      "labels": [
+        "Titolo documento",
+        "title"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "document.number": {
+      "labels": [
+        "Numero documento",
+        "number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "document.protocol_number": {
+      "labels": [
+        "Numero protocollo",
+        "protocol number",
+        "protocollo",
+        "prot.",
+        "prot n.",
+        "numero protocollo"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "document.issue_date": {
+      "labels": [
+        "Data emissione",
+        "issue date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "document.declaration_date": {
+      "labels": [
+        "Data dichiarazione",
+        "declaration date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "document.effective_date": {
+      "labels": [
+        "Data decorrenza",
+        "effective date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "document.expiry_date": {
+      "labels": [
+        "Data scadenza",
+        "expiry date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "document.version": {
+      "labels": [
+        "Versione/revisione",
+        "version"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "document.status": {
+      "labels": [
+        "Stato documento",
+        "status"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "document.legal_basis": {
+      "labels": [
+        "Base giuridica",
+        "legal basis"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "document.language": {
+      "labels": [
+        "Lingua",
+        "language"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "document.signer": {
+      "labels": [
+        "Firmatario",
+        "signer"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "document.signature_date": {
+      "labels": [
+        "Data firma",
+        "signature date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "issuer.name": {
+      "labels": [
+        "Emittente",
+        "name"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "issuer.tax_id": {
+      "labels": [
+        "CF/P.IVA emittente",
+        "tax id"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "issuer.address": {
+      "labels": [
+        "Indirizzo emittente",
+        "address"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "recipient.name": {
+      "labels": [
+        "Destinatario",
+        "name"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "recipient.tax_id": {
+      "labels": [
+        "CF/P.IVA destinatario",
+        "tax id"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "recipient.address": {
+      "labels": [
+        "Indirizzo destinatario",
+        "address"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "company.name": {
+      "labels": [
+        "Impresa/società",
+        "name"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "company.tax_id": {
+      "labels": [
+        "CF/P.IVA impresa",
+        "tax id",
+        "partita iva",
+        "p. iva",
+        "p iva",
+        "codice fiscale",
+        "c.f."
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "company.registration_number": {
+      "labels": [
+        "Numero REA/registro imprese",
+        "registration number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "company.register_office": {
+      "labels": [
+        "Registro/CCIAA competente",
+        "register office"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "company.address": {
+      "labels": [
+        "Sede impresa",
+        "address"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "person.name": {
+      "labels": [
+        "Nome persona",
+        "name"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "person.tax_code": {
+      "labels": [
+        "Codice fiscale persona",
+        "tax code",
+        "codice fiscale",
+        "c.f.",
+        "cf"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "person.birth_date": {
+      "labels": [
+        "Data nascita",
+        "birth date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "person.birth_place": {
+      "labels": [
+        "Luogo nascita",
+        "birth place"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "person.address": {
+      "labels": [
+        "Residenza/domicilio",
+        "address"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "person.role": {
+      "labels": [
+        "Ruolo/qualifica",
+        "role"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "money.amount": {
+      "labels": [
+        "Importo",
+        "amount"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "money.taxable": {
+      "labels": [
+        "Imponibile",
+        "taxable",
+        "imponibile",
+        "totale imponibile"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "money.tax": {
+      "labels": [
+        "Imposta/IVA",
+        "tax",
+        "iva",
+        "totale iva",
+        "imposta"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "money.total": {
+      "labels": [
+        "Totale",
+        "total",
+        "totale documento",
+        "totale fattura",
+        "totale da pagare",
+        "importo totale"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "money.currency": {
+      "labels": [
+        "Valuta",
+        "currency"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "money.net": {
+      "labels": [
+        "Netto",
+        "net"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "money.gross": {
+      "labels": [
+        "Lordo",
+        "gross"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "money.discount": {
+      "labels": [
+        "Sconto",
+        "discount"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "money.rate": {
+      "labels": [
+        "Aliquota",
+        "rate"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payment.due_date": {
+      "labels": [
+        "Scadenza pagamento",
+        "due date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payment.date": {
+      "labels": [
+        "Data pagamento",
+        "date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payment.reference": {
+      "labels": [
+        "Riferimento pagamento",
+        "reference"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payment.method": {
+      "labels": [
+        "Metodo pagamento",
+        "method"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "bank.iban": {
+      "labels": [
+        "IBAN",
+        "iban",
+        "coordinate bancarie"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "bank.account_number": {
+      "labels": [
+        "Numero conto",
+        "account number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "bank.bic": {
+      "labels": [
+        "BIC/SWIFT",
+        "bic"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "tax.period": {
+      "labels": [
+        "Periodo d'imposta",
+        "period"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "tax.year": {
+      "labels": [
+        "Anno d'imposta",
+        "year"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "tax.return_type": {
+      "labels": [
+        "Tipo dichiarazione fiscale",
+        "return type"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "tax.credit": {
+      "labels": [
+        "Credito fiscale",
+        "credit"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "tax.debit": {
+      "labels": [
+        "Debito fiscale",
+        "debit"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "contract.number": {
+      "labels": [
+        "Numero contratto",
+        "number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "contract.type": {
+      "labels": [
+        "Tipo contratto",
+        "type"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "contract.start_date": {
+      "labels": [
+        "Decorrenza contratto",
+        "start date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "contract.end_date": {
+      "labels": [
+        "Fine contratto",
+        "end date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "contract.duration": {
+      "labels": [
+        "Durata contratto",
+        "duration"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "contract.subject": {
+      "labels": [
+        "Oggetto contratto",
+        "subject"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "contract.value": {
+      "labels": [
+        "Valore contratto",
+        "value"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "contract.parties": {
+      "labels": [
+        "Parti contrattuali",
+        "parties"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "contract.renewal_terms": {
+      "labels": [
+        "Condizioni rinnovo",
+        "renewal terms"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "contract.termination_terms": {
+      "labels": [
+        "Condizioni recesso/risoluzione",
+        "termination terms"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "contract.payment_terms": {
+      "labels": [
+        "Condizioni di pagamento",
+        "payment terms"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "commercial.order_number": {
+      "labels": [
+        "Numero ordine",
+        "order number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "commercial.quote_number": {
+      "labels": [
+        "Numero preventivo/offerta",
+        "quote number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "commercial.customer_reference": {
+      "labels": [
+        "Riferimento cliente",
+        "customer reference"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "commercial.supplier_reference": {
+      "labels": [
+        "Riferimento fornitore",
+        "supplier reference"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "line_items": {
+      "labels": [
+        "Righe documento",
+        "line items"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.employer_name": {
+      "labels": [
+        "Datore di lavoro",
+        "employer name"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.employer_tax_id": {
+      "labels": [
+        "CF/P.IVA datore",
+        "employer tax id"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.employee_name": {
+      "labels": [
+        "Lavoratore",
+        "employee name"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.employee_tax_code": {
+      "labels": [
+        "CF lavoratore",
+        "employee tax code"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.start_date": {
+      "labels": [
+        "Data assunzione",
+        "start date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.end_date": {
+      "labels": [
+        "Data cessazione/fine rapporto",
+        "end date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.extension_end_date": {
+      "labels": [
+        "Nuova fine proroga",
+        "extension end date",
+        "data fine proroga",
+        "fine proroga"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.contract_type": {
+      "labels": [
+        "Tipologia contratto",
+        "contract type"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.ccnl": {
+      "labels": [
+        "CCNL",
+        "ccnl"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.level": {
+      "labels": [
+        "Livello/inquadramento",
+        "level"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.job_title": {
+      "labels": [
+        "Mansione/qualifica",
+        "job title"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.workplace": {
+      "labels": [
+        "Sede di lavoro",
+        "workplace"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.weekly_hours": {
+      "labels": [
+        "Ore settimanali",
+        "weekly hours"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.probation_end": {
+      "labels": [
+        "Fine periodo prova",
+        "probation end"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.termination_reason": {
+      "labels": [
+        "Causa cessazione",
+        "termination reason",
+        "causa cessazione",
+        "motivo cessazione"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.protocol": {
+      "labels": [
+        "Protocollo comunicazione",
+        "protocol"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "employment.submission_date": {
+      "labels": [
+        "Data invio comunicazione",
+        "submission date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payroll.period": {
+      "labels": [
+        "Periodo paga",
+        "period"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payroll.employee_count": {
+      "labels": [
+        "Numero dipendenti",
+        "employee count"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payroll.earnings": {
+      "labels": [
+        "Competenze",
+        "earnings"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payroll.deductions": {
+      "labels": [
+        "Trattenute",
+        "deductions"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payroll.contributions": {
+      "labels": [
+        "Contributi",
+        "contributions"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payroll.net_pay": {
+      "labels": [
+        "Netto paga",
+        "net pay"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payroll.tfr": {
+      "labels": [
+        "TFR",
+        "tfr"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payroll.leave_balances": {
+      "labels": [
+        "Ferie/permessi residui",
+        "leave balances"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "procurement.cig": {
+      "labels": [
+        "CIG",
+        "cig",
+        "codice identificativo gara"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "procurement.cup": {
+      "labels": [
+        "CUP",
+        "cup",
+        "codice unico progetto"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "procurement.procedure_number": {
+      "labels": [
+        "Numero procedura",
+        "procedure number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "procurement.procedure_title": {
+      "labels": [
+        "Oggetto procedura",
+        "procedure title"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "procurement.contracting_authority": {
+      "labels": [
+        "Stazione appaltante",
+        "contracting authority"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "procurement.lot": {
+      "labels": [
+        "Lotto",
+        "lot"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "procurement.tender_amount": {
+      "labels": [
+        "Importo gara",
+        "tender amount"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "procurement.deadline": {
+      "labels": [
+        "Scadenza procedura",
+        "deadline"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "procurement.exclusion_grounds": {
+      "labels": [
+        "Cause di esclusione",
+        "exclusion grounds"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "procurement.selection_criteria": {
+      "labels": [
+        "Criteri di selezione",
+        "selection criteria"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "procurement.declaration_scope": {
+      "labels": [
+        "Ambito dichiarazione",
+        "declaration scope"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.product_type": {
+      "labels": [
+        "Prodotto finanziario",
+        "product type"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.principal": {
+      "labels": [
+        "Capitale",
+        "principal"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.interest": {
+      "labels": [
+        "Interessi",
+        "interest"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.interest_rate": {
+      "labels": [
+        "Tasso interesse",
+        "interest rate"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.tan": {
+      "labels": [
+        "TAN",
+        "tan"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.taeg": {
+      "labels": [
+        "TAEG",
+        "taeg"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.installment_amount": {
+      "labels": [
+        "Importo rata",
+        "installment amount"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.residual_principal": {
+      "labels": [
+        "Capitale residuo",
+        "residual principal"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.final_value": {
+      "labels": [
+        "Valore finale/riscatto",
+        "final value"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.installments": {
+      "labels": [
+        "Rate/piano ammortamento",
+        "installments"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.transaction_date": {
+      "labels": [
+        "Data operazione",
+        "transaction date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.transactions": {
+      "labels": [
+        "Movimenti",
+        "transactions"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.balance_opening": {
+      "labels": [
+        "Saldo iniziale",
+        "balance opening"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "finance.balance_closing": {
+      "labels": [
+        "Saldo finale",
+        "balance closing"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.policy_number": {
+      "labels": [
+        "Numero polizza",
+        "policy number",
+        "numero polizza",
+        "polizza n.",
+        "n. polizza"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.product": {
+      "labels": [
+        "Prodotto assicurativo",
+        "product"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.coverage_start": {
+      "labels": [
+        "Inizio copertura",
+        "coverage start"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.coverage_end": {
+      "labels": [
+        "Fine copertura",
+        "coverage end"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.premium": {
+      "labels": [
+        "Premio",
+        "premium"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.insured": {
+      "labels": [
+        "Assicurato",
+        "insured"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.policyholder": {
+      "labels": [
+        "Contraente",
+        "policyholder"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.coverages": {
+      "labels": [
+        "Garanzie",
+        "coverages"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.claim_number": {
+      "labels": [
+        "Numero sinistro",
+        "claim number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.claim_date": {
+      "labels": [
+        "Data sinistro",
+        "claim date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.claim_amount": {
+      "labels": [
+        "Importo sinistro/liquidazione",
+        "claim amount"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.vehicle_plate": {
+      "labels": [
+        "Targa assicurata",
+        "vehicle plate"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.green_card_code": {
+      "labels": [
+        "Codice Carta Verde",
+        "green card code"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "insurance.territorial_validity": {
+      "labels": [
+        "Validità territoriale",
+        "territorial validity"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.site": {
+      "labels": [
+        "Cantiere/sito",
+        "site"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.assessment_date": {
+      "labels": [
+        "Data valutazione",
+        "assessment date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.risk_type": {
+      "labels": [
+        "Tipo rischio",
+        "risk type"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.risk_result": {
+      "labels": [
+        "Esito/livello rischio",
+        "risk result"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.worker_groups": {
+      "labels": [
+        "Gruppi omogenei/lavoratori",
+        "worker groups"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.measurements": {
+      "labels": [
+        "Misure/rilievi",
+        "measurements"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.preventive_measures": {
+      "labels": [
+        "Misure prevenzione/protezione",
+        "preventive measures"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.legal_basis": {
+      "labels": [
+        "Riferimento normativo",
+        "legal basis"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.appointed_person": {
+      "labels": [
+        "Soggetto nominato",
+        "appointed person"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.appointment_role": {
+      "labels": [
+        "Ruolo nominato",
+        "appointment role"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.appointment_date": {
+      "labels": [
+        "Data nomina",
+        "appointment date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.training_course": {
+      "labels": [
+        "Corso/formazione",
+        "training course"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.training_date": {
+      "labels": [
+        "Data formazione",
+        "training date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.training_expiry": {
+      "labels": [
+        "Scadenza formazione",
+        "training expiry"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.dpi_items": {
+      "labels": [
+        "DPI consegnati",
+        "dpi items"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "hse.controls": {
+      "labels": [
+        "Controlli/verifiche",
+        "controls"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "privacy.controller": {
+      "labels": [
+        "Titolare trattamento",
+        "controller"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "privacy.processor": {
+      "labels": [
+        "Responsabile trattamento",
+        "processor"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "privacy.dpo": {
+      "labels": [
+        "DPO",
+        "dpo"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "privacy.processing_purpose": {
+      "labels": [
+        "Finalità trattamento",
+        "processing purpose"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "privacy.legal_basis": {
+      "labels": [
+        "Base giuridica trattamento",
+        "legal basis"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "privacy.data_categories": {
+      "labels": [
+        "Categorie dati",
+        "data categories"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "privacy.data_subjects": {
+      "labels": [
+        "Interessati",
+        "data subjects"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "privacy.retention": {
+      "labels": [
+        "Conservazione",
+        "retention"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "privacy.recipients": {
+      "labels": [
+        "Destinatari dati",
+        "recipients"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "privacy.rights": {
+      "labels": [
+        "Diritti interessato",
+        "rights"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "privacy.breach_date": {
+      "labels": [
+        "Data violazione",
+        "breach date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "privacy.breach_impact": {
+      "labels": [
+        "Impatto violazione",
+        "breach impact"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "compliance.beneficial_owners": {
+      "labels": [
+        "Titolari effettivi",
+        "beneficial owners"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "compliance.pep_status": {
+      "labels": [
+        "Status PEP",
+        "pep status"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "compliance.source_of_funds": {
+      "labels": [
+        "Origine fondi",
+        "source of funds"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "compliance.relationship_purpose": {
+      "labels": [
+        "Scopo rapporto",
+        "relationship purpose"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "compliance.decision": {
+      "labels": [
+        "Esito compliance",
+        "decision"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "quality.standard": {
+      "labels": [
+        "Norma/standard",
+        "standard"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "quality.certificate_number": {
+      "labels": [
+        "Numero certificato",
+        "certificate number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "quality.scope": {
+      "labels": [
+        "Campo applicazione",
+        "scope"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "quality.valid_from": {
+      "labels": [
+        "Validità da",
+        "valid from"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "quality.valid_to": {
+      "labels": [
+        "Validità a",
+        "valid to"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "quality.findings": {
+      "labels": [
+        "Rilievi/non conformità",
+        "findings"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "quality.actions": {
+      "labels": [
+        "Azioni",
+        "actions"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "it.system": {
+      "labels": [
+        "Sistema/servizio",
+        "system"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "it.asset": {
+      "labels": [
+        "Asset IT",
+        "asset"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "it.incident_date": {
+      "labels": [
+        "Data incidente",
+        "incident date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "it.severity": {
+      "labels": [
+        "Gravità",
+        "severity"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "it.recovery_target": {
+      "labels": [
+        "Obiettivo ripristino",
+        "recovery target"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "it.findings": {
+      "labels": [
+        "Vulnerabilità/rilievi",
+        "findings"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "environment.material": {
+      "labels": [
+        "Materiale/prodotto",
+        "material"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "environment.criteria": {
+      "labels": [
+        "Criteri ambientali",
+        "criteria"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "environment.emissions": {
+      "labels": [
+        "Emissioni",
+        "emissions"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "environment.waste_code": {
+      "labels": [
+        "Codice EER/CER",
+        "waste code"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "environment.quantity": {
+      "labels": [
+        "Quantità",
+        "quantity"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "environment.unit": {
+      "labels": [
+        "Unità di misura",
+        "unit"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "logistics.shipment_date": {
+      "labels": [
+        "Data spedizione",
+        "shipment date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "logistics.carrier": {
+      "labels": [
+        "Vettore",
+        "carrier"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "logistics.origin": {
+      "labels": [
+        "Origine",
+        "origin"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "logistics.destination": {
+      "labels": [
+        "Destinazione",
+        "destination"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "logistics.goods": {
+      "labels": [
+        "Merci",
+        "goods"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "logistics.package_count": {
+      "labels": [
+        "Numero colli",
+        "package count"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "logistics.weight": {
+      "labels": [
+        "Peso",
+        "weight"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "vehicle.plate": {
+      "labels": [
+        "Targa",
+        "plate",
+        "targa",
+        "numero di immatricolazione"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "vehicle.vin": {
+      "labels": [
+        "Telaio/VIN",
+        "vin",
+        "telaio"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "vehicle.make": {
+      "labels": [
+        "Marca",
+        "make"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "vehicle.model": {
+      "labels": [
+        "Modello",
+        "model"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "vehicle.registration_date": {
+      "labels": [
+        "Data immatricolazione",
+        "registration date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "vehicle.revision_date": {
+      "labels": [
+        "Data revisione",
+        "revision date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "vehicle.revision_expiry": {
+      "labels": [
+        "Scadenza revisione",
+        "revision expiry"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "realestate.property_id": {
+      "labels": [
+        "Identificativo immobile",
+        "property id"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "realestate.address": {
+      "labels": [
+        "Indirizzo immobile",
+        "address"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "realestate.cadastral_data": {
+      "labels": [
+        "Dati catastali",
+        "cadastral data"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "realestate.energy_class": {
+      "labels": [
+        "Classe energetica",
+        "energy class"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "realestate.area": {
+      "labels": [
+        "Superficie",
+        "area"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "utility.account_id": {
+      "labels": [
+        "Codice utenza/cliente",
+        "account id"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "utility.pod": {
+      "labels": [
+        "POD",
+        "pod"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "utility.pdr": {
+      "labels": [
+        "PDR",
+        "pdr"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "utility.period_start": {
+      "labels": [
+        "Inizio periodo",
+        "period start"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "utility.period_end": {
+      "labels": [
+        "Fine periodo",
+        "period end"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "utility.consumption": {
+      "labels": [
+        "Consumo",
+        "consumption"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "utility.unit": {
+      "labels": [
+        "Unità consumo",
+        "unit"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "product.name": {
+      "labels": [
+        "Prodotto/materiale",
+        "name"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "product.code": {
+      "labels": [
+        "Codice prodotto",
+        "code"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "product.batch": {
+      "labels": [
+        "Lotto",
+        "batch"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "product.performance": {
+      "labels": [
+        "Prestazioni",
+        "performance"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "product.composition": {
+      "labels": [
+        "Composizione",
+        "composition"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "product.certifications": {
+      "labels": [
+        "Certificazioni",
+        "certifications"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "product.test_results": {
+      "labels": [
+        "Risultati prova",
+        "test results"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "legal.case_number": {
+      "labels": [
+        "Numero procedimento",
+        "case number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "legal.court": {
+      "labels": [
+        "Autorità/tribunale",
+        "court"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "legal.deadline": {
+      "labels": [
+        "Termine",
+        "deadline"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "legal.claim_amount": {
+      "labels": [
+        "Importo pretesa",
+        "claim amount"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "legal.parties": {
+      "labels": [
+        "Parti",
+        "parties"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "legal.request": {
+      "labels": [
+        "Domanda/richiesta",
+        "request"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "legal.outcome": {
+      "labels": [
+        "Esito",
+        "outcome"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "grant.program": {
+      "labels": [
+        "Programma/bando",
+        "program"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "grant.application_number": {
+      "labels": [
+        "Numero domanda",
+        "application number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "grant.amount_requested": {
+      "labels": [
+        "Importo richiesto",
+        "amount requested"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "grant.amount_granted": {
+      "labels": [
+        "Importo concesso",
+        "amount granted"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "grant.deadline": {
+      "labels": [
+        "Scadenza bando",
+        "deadline"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "grant.project": {
+      "labels": [
+        "Progetto",
+        "project"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "sales.customer": {
+      "labels": [
+        "Cliente",
+        "customer"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "sales.contact": {
+      "labels": [
+        "Contatto",
+        "contact"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "sales.subject": {
+      "labels": [
+        "Oggetto commerciale",
+        "subject"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "sales.amount": {
+      "labels": [
+        "Valore commerciale",
+        "amount"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "sales.next_action": {
+      "labels": [
+        "Prossima azione",
+        "next action"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "sales.intervention_date": {
+      "labels": [
+        "Data intervento",
+        "intervention date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "sales.activities": {
+      "labels": [
+        "Attività svolte",
+        "activities"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "identity.document_type": {
+      "labels": [
+        "Tipo documento identità",
+        "document type"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "identity.document_number": {
+      "labels": [
+        "Numero documento identità",
+        "document number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "identity.issue_date": {
+      "labels": [
+        "Data rilascio",
+        "issue date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "identity.expiry_date": {
+      "labels": [
+        "Scadenza",
+        "expiry date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "identity.issuing_authority": {
+      "labels": [
+        "Autorità rilascio",
+        "issuing authority"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "identity.nationality": {
+      "labels": [
+        "Cittadinanza",
+        "nationality"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "license.number": {
+      "labels": [
+        "Numero certificato/licenza",
+        "number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "license.issue_date": {
+      "labels": [
+        "Data rilascio",
+        "issue date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "license.expiry_date": {
+      "labels": [
+        "Data scadenza",
+        "expiry date"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "license.authority": {
+      "labels": [
+        "Autorità emittente",
+        "authority"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "license.scope": {
+      "labels": [
+        "Ambito/attività",
+        "scope"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "license.status": {
+      "labels": [
+        "Stato/esito",
+        "status"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    }
+  }
+}

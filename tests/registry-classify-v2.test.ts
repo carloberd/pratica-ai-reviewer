@@ -1,0 +1,232 @@
+import { describe, expect, it } from 'vitest'
+import type { RegistryAlias } from '../src/main/registry'
+import { matchDocumentTypeV2 } from '../src/main/registry/v2/classify-v2'
+import type { ClassifierConfigV2 } from '../src/main/registry/v2/config'
+import { containsPhraseV2, normalizeClassifierTextV2 } from '../src/main/registry/v2/normalize'
+import { testClassifierConfigV2, testRegistry } from './helpers/registry'
+
+const realConfig = testClassifierConfigV2()
+const realAliases = testRegistry().aliases()
+
+/** Stessi default del file reale, classi scritte a mano per isolare ogni regola. */
+function configWith(classes: ClassifierConfigV2['classes']): ClassifierConfigV2 {
+  return { version: 'test', defaults: { ...realConfig.defaults }, classes }
+}
+
+const alias = (documentType: string, phrase: string): RegistryAlias => ({ documentType, phrase })
+
+describe('normalizzazione v2', () => {
+  it('separa lettere e cifre, toglie accenti e punteggiatura', () => {
+    expect(normalizeClassifierTextV2('CERTIFICAZIONE UNICA2026')).toBe('certificazione unica 2026')
+    expect(normalizeClassifierTextV2('Regolarità   contributiva (DURC)')).toBe(
+      'regolarita contributiva durc'
+    )
+    expect(normalizeClassifierTextV2('dell’iscrizione')).toBe("dell'iscrizione")
+  })
+
+  it('cerca le frasi a confini di parola', () => {
+    expect(containsPhraseV2('Fattura n. 114', 'fattura')).toBe(true)
+    expect(containsPhraseV2('Fatturato annuo', 'fattura')).toBe(false)
+    expect(containsPhraseV2('qualunque testo', '  ')).toBe(false)
+  })
+})
+
+describe('decisione', () => {
+  it('assegna quando il punteggio supera la soglia e c’è margine sul secondo', () => {
+    const result = matchDocumentTypeV2({
+      aliases: realAliases,
+      pages: ['CERTIFICAZIONE UNICA2026\nCertificazione lavoro dipendente'],
+      filename: 'documento.pdf',
+      config: realConfig
+    })
+    expect(result.decision).toBe('ASSIGN')
+    expect(result.reason).toBe('OK')
+    expect(result.documentType).toBe('fiscal_tax.certificazione_unica')
+    expect(result.confidence).toBeGreaterThanOrEqual(realConfig.defaults.auto_assign_threshold)
+    expect(result.margin).toBeGreaterThanOrEqual(realConfig.defaults.minimum_margin)
+  })
+
+  it('un hard negative blocca l’assegnazione anche con un titolo esplicito', () => {
+    const config = configWith({
+      'certifications_licenses.white_list_prefettura': {
+        hard_negative_phrases: ['istanza di permanenza']
+      }
+    })
+    const aliases = [
+      alias('certifications_licenses.white_list_prefettura', 'white list prefettura')
+    ]
+
+    const decision = matchDocumentTypeV2({
+      aliases,
+      pages: ['WHITE LIST PREFETTURA\nSi dispone il rinnovo dell’iscrizione'],
+      filename: 'white-list.pdf',
+      config: configWith({})
+    })
+    const application = matchDocumentTypeV2({
+      aliases,
+      pages: ['WHITE LIST PREFETTURA\nIstanza di permanenza nell’elenco'],
+      filename: 'white-list.pdf',
+      config
+    })
+
+    expect(decision.confidence).toBeGreaterThan(application.confidence)
+    expect(application.decision).toBe('UNKNOWN')
+    expect(application.reason).toBe('HARD_NEGATIVE')
+    expect(application.documentType).toBe('')
+    expect(application.evidence.some((item) => item.source === 'hard-negative-signal')).toBe(true)
+  })
+
+  it('col file reale una richiesta di permanenza non diventa la white list', () => {
+    const result = matchDocumentTypeV2({
+      aliases: realAliases,
+      pages: ['PREFETTURA WHITE LIST\nIstanza di permanenza nell’elenco dei fornitori'],
+      filename: 'white-list.pdf',
+      config: realConfig
+    })
+    expect(result.decision).toBe('UNKNOWN')
+    expect(result.documentType).not.toBe('certifications_licenses.white_list_prefettura')
+  })
+
+  it('una frase solo nel nome del file non assegna mai', () => {
+    const result = matchDocumentTypeV2({
+      aliases: [alias('accounting.fattura', 'fattura')],
+      pages: ['testo senza indizi utili'],
+      filename: 'Fattura 114.pdf',
+      config: configWith({})
+    })
+    expect(result.decision).toBe('UNKNOWN')
+    expect(result.reason).toBe('FILENAME_ONLY')
+    expect(result.candidates[0]?.documentType).toBe('accounting.fattura')
+  })
+
+  it('due candidati quasi pari restano UNKNOWN per margine insufficiente', () => {
+    // Frasi lunghe uguali nel titolo: ciascuna supera la soglia da sola, ma nessuna
+    // stacca l'altra.
+    const result = matchDocumentTypeV2({
+      aliases: [
+        alias('contracts_general.contratto_fornitura', 'contratto quadro di fornitura beni'),
+        alias('contracts_general.contratto_quadro', 'contratto quadro di fornitura lavori')
+      ],
+      pages: ['CONTRATTO QUADRO DI FORNITURA BENI\nCONTRATTO QUADRO DI FORNITURA LAVORI'],
+      filename: 'contratto.pdf',
+      config: configWith({})
+    })
+    expect(result.confidence).toBeGreaterThanOrEqual(realConfig.defaults.auto_assign_threshold)
+    expect(result.decision).toBe('UNKNOWN')
+    expect(result.reason).toBe('LOW_MARGIN')
+    expect(result.margin).toBeLessThan(realConfig.defaults.minimum_margin)
+    expect(result.runnerUp).not.toBeNull()
+  })
+
+  it('una frase breve lontana dal titolo resta sotto la soglia', () => {
+    const filler = 'x '.repeat(realConfig.defaults.title_zone_chars)
+    const result = matchDocumentTypeV2({
+      aliases: [alias('payroll_contributions.durc', 'durc')],
+      pages: [`${filler}\nsi allega il durc`],
+      filename: 'allegato.pdf',
+      config: configWith({})
+    })
+    expect(result.evidence.map((item) => item.source)).toEqual(['page'])
+    expect(result.decision).toBe('UNKNOWN')
+    expect(result.reason).toBe('BELOW_THRESHOLD')
+  })
+
+  it('senza alcun segnale risponde NO_SIGNAL', () => {
+    const result = matchDocumentTypeV2({
+      aliases: realAliases,
+      pages: ['Promemoria interno\nDa archiviare a cura della segreteria.'],
+      filename: 'promemoria-ignoto.pdf',
+      config: realConfig
+    })
+    expect(result).toMatchObject({
+      decision: 'UNKNOWN',
+      reason: 'NO_SIGNAL',
+      documentType: '',
+      candidates: [],
+      runnerUp: null
+    })
+  })
+
+  it('più frasi concordanti aggiungono un bonus di corroborazione', () => {
+    const result = matchDocumentTypeV2({
+      aliases: [alias('payroll_contributions.durc', 'durc')],
+      pages: ['DURC\nDocumento unico di regolarità contributiva'],
+      filename: 'durc.pdf',
+      config: configWith({
+        'payroll_contributions.durc': {
+          positive_phrases: ['documento unico di regolarita contributiva']
+        }
+      })
+    })
+    const sources = result.evidence.map((item) => item.phrase)
+    expect(sources).toContain('__corroboration__')
+    expect(result.decision).toBe('ASSIGN')
+  })
+
+  it('un segnale contrario abbassa il fratello sbagliato', () => {
+    const scoreOf = (text: string) =>
+      matchDocumentTypeV2({
+        aliases: realAliases,
+        pages: [text],
+        filename: 'unilav.pdf',
+        config: realConfig
+      }).candidates.find((c) => c.documentType === 'hr_employment.unilav_proroga')
+
+    const clean = scoreOf('UNILAV PROROGA\nproroga del rapporto di lavoro')
+    const confused = scoreOf('UNILAV PROROGA\nproroga del rapporto di lavoro, data cessazione')
+
+    expect(confused?.evidence).toContainEqual({
+      source: 'negative-signal',
+      phrase: 'cessazione',
+      delta: -realConfig.defaults.negative_penalty
+    })
+    expect(clean!.score - confused!.score).toBeCloseTo(realConfig.defaults.negative_penalty, 5)
+  })
+
+  it('legge solo le prime max_pages pagine', () => {
+    const config = configWith({})
+    const pages = ['copertina', 'indice', 'FATTURA n. 114']
+    expect(config.defaults.max_pages).toBeLessThan(pages.length)
+    const result = matchDocumentTypeV2({
+      aliases: [alias('accounting.fattura', 'fattura')],
+      pages,
+      filename: 'documento.pdf',
+      config
+    })
+    expect(result.reason).toBe('NO_SIGNAL')
+  })
+})
+
+describe('profili di segnali delle classi problematiche', () => {
+  const classes = Object.entries(realConfig.classes)
+
+  it('il file reale ne configura 11', () => {
+    expect(classes).toHaveLength(11)
+  })
+
+  it.each(classes)('%s legge i propri segnali positivi, contrari ed esclusivi', (type, profile) => {
+    // Un titolo forte tiene il punteggio sopra zero anche dopo tutte le penalità:
+    // un candidato a zero non compare fra i candidati e le sue evidenze non si vedono.
+    const title = 'intestazione di prova numero uno'
+    const phrases = [
+      ...(profile.positive_phrases ?? []),
+      ...(profile.negative_phrases ?? []),
+      ...(profile.hard_negative_phrases ?? [])
+    ]
+    const result = matchDocumentTypeV2({
+      aliases: [alias(type, title)],
+      pages: [[title, ...phrases].join('\n')],
+      filename: 'documento.pdf',
+      config: { ...realConfig, classes: { [type]: profile } }
+    })
+    const candidate = result.candidates.find((c) => c.documentType === type)
+    const seen = (source: string) =>
+      candidate?.evidence.filter((item) => item.source === source).map((item) => item.phrase) ?? []
+
+    expect(seen('positive-signal').filter((p) => p !== '__corroboration__')).toEqual(
+      profile.positive_phrases ?? []
+    )
+    expect(seen('negative-signal')).toEqual(profile.negative_phrases ?? [])
+    expect(seen('hard-negative-signal')).toEqual(profile.hard_negative_phrases ?? [])
+  })
+})

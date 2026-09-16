@@ -1,0 +1,59 @@
+{
+  "version": "2.0.0",
+  "relations": [
+    {
+      "id": "document_issuer",
+      "from": "document",
+      "to": "issuer",
+      "type": "ISSUED_BY"
+    },
+    {
+      "id": "document_recipient",
+      "from": "document",
+      "to": "recipient",
+      "type": "ADDRESSED_TO"
+    },
+    {
+      "id": "employment_worker",
+      "from": "document",
+      "to": "employment.employee_name",
+      "type": "ABOUT_EMPLOYEE"
+    },
+    {
+      "id": "employment_employer",
+      "from": "document",
+      "to": "employment.employer_name",
+      "type": "ABOUT_EMPLOYER"
+    },
+    {
+      "id": "vehicle_policy",
+      "from": "insurance.policy_number",
+      "to": "vehicle.plate",
+      "type": "COVERS_VEHICLE"
+    },
+    {
+      "id": "procurement_project",
+      "from": "procurement.cig",
+      "to": "procurement.cup",
+      "type": "PROCUREMENT_PROJECT_LINK"
+    },
+    {
+      "id": "contract_parties",
+      "from": "document",
+      "to": "contract.parties",
+      "type": "BINDS_PARTIES"
+    },
+    {
+      "id": "beneficial_owner",
+      "from": "company.name",
+      "to": "compliance.beneficial_owners",
+      "type": "HAS_BENEFICIAL_OWNER"
+    },
+    {
+      "id": "invoice_order",
+      "from": "document.number",
+      "to": "commercial.order_number",
+      "type": "REFERENCES_ORDER"
+    }
+  ]
+}
