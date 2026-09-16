@@ -130,12 +130,20 @@ jobs:
             ${{ steps.artifacts.outputs.portable }}
           fail_on_unmatched_files: true
 
-      - name: Upload artifacts for manual runs
+      # Artefatti separati: chi vuole l'installer non deve scaricare anche il
+      # portabile, che pesa quanto lui.
+      - name: Upload installer for manual runs
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: praticaai-reviewer-${{ steps.package-version.outputs.version }}-win32-x64
-          path: |
-            ${{ steps.artifacts.outputs.setup }}
-            ${{ steps.artifacts.outputs.portable }}
+          name: praticaai-reviewer-${{ steps.package-version.outputs.version }}-win-setup
+          path: ${{ steps.artifacts.outputs.setup }}
+          if-no-files-found: error
+
+      - name: Upload portable build for manual runs
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: praticaai-reviewer-${{ steps.package-version.outputs.version }}-win-portable
+          path: ${{ steps.artifacts.outputs.portable }}
           if-no-files-found: error

@@ -6,6 +6,9 @@ directories:
   buildResources: build
   output: release
 
+# Firma ad-hoc del bundle macOS: senza, il pacchetto scaricato risulta danneggiato.
+afterPack: build/after-pack.js
+
 files:
   - out/**
   - package.json
@@ -31,15 +34,13 @@ mac:
   # La piattaforma sta nel nome: senza, lo zip mac x64 e lo zip Windows x64
   # finirebbero sullo stesso file in `release/`.
   artifactName: praticaai-reviewer-${version}-mac-${arch}.${ext}
+  # Solo dmg: lo zip su macOS serve agli aggiornamenti automatici di
+  # electron-updater, che qui non si usano, e raddoppierebbe il peso della release.
   target:
     - target: dmg
       arch: [arm64, x64]
-    - target: zip
-      arch: [arm64, x64]
   category: public.app-category.business
   darkModeSupport: false
-  # Nessuna firma: l'app è per due macchine conosciute, non per distribuzione.
-  identity: null
 
 win:
   artifactName: praticaai-reviewer-${version}-win-${arch}.${ext}

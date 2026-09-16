@@ -101,17 +101,14 @@ jobs:
         id: artifacts
         run: |
           VERSION="${{ steps.package-version.outputs.version }}"
+          ARM64="release/praticaai-reviewer-${VERSION}-mac-arm64.dmg"
+          X64="release/praticaai-reviewer-${VERSION}-mac-x64.dmg"
           MISSING=0
-          FILES=""
-          for ARCH in arm64 x64; do
-            for EXT in dmg zip; do
-              FILE="release/praticaai-reviewer-${VERSION}-mac-${ARCH}.${EXT}"
-              if [ ! -f "$FILE" ]; then
-                echo "::error::Artefatto atteso non trovato: $FILE"
-                MISSING=1
-              fi
-              FILES="${FILES}${FILE}"$'\n'
-            done
+          for FILE in "$ARM64" "$X64"; do
+            if [ ! -f "$FILE" ]; then
+              echo "::error::Artefatto atteso non trovato: $FILE"
+              MISSING=1
+            fi
           done
           if [ "$MISSING" = "1" ]; then
             echo "Contenuto di release/:"
@@ -119,11 +116,11 @@ jobs:
             exit 1
           fi
           {
-            echo "files<<EOF"
-            printf '%s' "$FILES"
-            echo "EOF"
+            echo "arm64=$ARM64"
+            echo "x64=$X64"
+            printf 'files<<EOF\n%s\n%s\nEOF\n' "$ARM64" "$X64"
           } >> "$GITHUB_OUTPUT"
-          printf 'Trovati:\n%s' "$FILES"
+          echo "Trovati: $ARM64, $X64"
 
       - name: Upload artifacts to GitHub Release
         if: github.event_name == 'release'
@@ -132,10 +129,21 @@ jobs:
           files: ${{ steps.artifacts.outputs.files }}
           fail_on_unmatched_files: true
 
-      - name: Upload artifacts for manual runs
+      # Un artefatto per architettura: in una run manuale GitHub li impacchetta in un
+      # unico zip, e mettere insieme arm64 e x64 obbligherebbe a scaricare il doppio
+      # per poi usarne metà.
+      - name: Upload arm64 artifact for manual runs
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: praticaai-reviewer-${{ steps.package-version.outputs.version }}-macos
-          path: ${{ steps.artifacts.outputs.files }}
+          name: praticaai-reviewer-${{ steps.package-version.outputs.version }}-mac-arm64
+          path: ${{ steps.artifacts.outputs.arm64 }}
+          if-no-files-found: error
+
+      - name: Upload x64 artifact for manual runs
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: praticaai-reviewer-${{ steps.package-version.outputs.version }}-mac-x64
+          path: ${{ steps.artifacts.outputs.x64 }}
           if-no-files-found: error

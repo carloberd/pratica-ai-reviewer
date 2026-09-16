@@ -129,7 +129,7 @@ entrambi gli installer si costruiscono nativamente:
 | Workflow | Runner | Cosa produce |
 |---|---|---|
 | `.github/workflows/publish-windows.yml` | `windows-latest` | `praticaai-reviewer-<v>-setup.exe`, `praticaai-reviewer-<v>-win-x64.zip` |
-| `.github/workflows/publish-macos.yml` | `macos-latest` | `praticaai-reviewer-<v>-mac-{arm64,x64}.{dmg,zip}` |
+| `.github/workflows/publish-macos.yml` | `macos-latest` | `praticaai-reviewer-<v>-mac-{arm64,x64}.dmg` |
 
 Il runner macOS è arm64 e produce comunque entrambe le architetture: per la x64
 electron-builder scarica l'Electron corrispondente, non serve un runner Intel.
@@ -137,9 +137,12 @@ electron-builder scarica l'Electron corrispondente, non serve un runner Intel.
 Entrambi partono in due modi:
 
 - **Su una GitHub Release pubblicata**: eseguono il gate, compilano e allegano i
-  pacchetti alla release.
-- **A mano** (`workflow_dispatch`): stessi passi, ma gli artefatti restano allegati alla
-  run invece che alla release — utile per provare una build senza pubblicare nulla.
+  pacchetti alla release, uno per riga nella pagina dei download. È l'unico modo per
+  avere una pagina di release: `make patch` la crea, e la creazione fa partire i due
+  workflow.
+- **A mano** (`workflow_dispatch`): stessi passi, ma i pacchetti restano allegati alla
+  run invece che alla release — utile per provare una build senza pubblicare nulla. Ogni
+  pacchetto è un artefatto a sé, così non si scarica anche quello che non serve.
 
 La versione degli artefatti viene da `package.json`, non dal tag: prima di taggare
 allinea `package.json`, altrimenti il workflow si ferma e lo dice. I nomi sono fissati
@@ -147,8 +150,32 @@ da `artifactName` in `electron-builder.yml` — piattaforma compresa, altrimenti
 mac x64 e quello Windows x64 si sovrascriverebbero — così i workflow li verificano
 invece di cercarli.
 
-I pacchetti non sono firmati: al primo avvio macOS chiede conferma e Windows mostra
-SmartScreen.
+### Primo avvio dei pacchetti
+
+Non ci sono firme di distribuzione: né un certificato Developer ID di Apple né uno di
+Authenticode. Il bundle macOS riceve comunque una **firma ad-hoc** (`build/after-pack.js`),
+senza la quale macOS presenterebbe l'app come *danneggiata* — non è un modo di dire: il
+pacchetto conserverebbe la sola firma del linker che arriva col binario di Electron
+mentre il bundle intorno è stato riscritto, e `codesign --verify` fallirebbe davvero.
+
+Con la firma ad-hoc l'app è valida ma lo sviluppatore resta non verificato, quindi al
+primo avvio serve un passaggio in più:
+
+**macOS** — dopo aver trascinato l'app in `Applicazioni`:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/PraticaAI Reviewer.app"
+```
+
+Toglie l'attributo di quarantena che macOS mette su tutto ciò che arriva da internet.
+In alternativa, al primo tentativo di apertura: *Impostazioni di Sistema → Privacy e
+sicurezza → Apri comunque*.
+
+**Windows** — SmartScreen mostra un avviso: *Ulteriori informazioni → Esegui comunque*.
+
+Per togliere di mezzo entrambi i passaggi servono un Apple Developer Program (99 $/anno,
+per firma Developer ID e notarizzazione) e un certificato Authenticode. Per due macchine
+conosciute non vale la spesa.
 
 ---
 
