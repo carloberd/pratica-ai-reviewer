@@ -1,7 +1,7 @@
 import type { RegistryTypeOption, ReviewDecision, ReviewDocument } from '@shared/types'
 import { useState } from 'react'
 import { cx } from '../lib/cx'
-import { formatDateTime, pct, textSourceLabel, typeLabel } from '../lib/format'
+import { formatDateTime, pct, STATUS_LABELS, textSourceLabel } from '../lib/format'
 import DocumentPreview from './document-preview'
 import styles from './document-review.module.css'
 import { BAND_CLASS } from './document-table'
@@ -15,12 +15,24 @@ interface Props {
   onFieldCommit: (fieldId: string, value: string | null) => void
   onDecide: (decision: ReviewDecision, note?: string) => void
   onAssignType: (documentType: string | null) => void
-  /** Toglie la copia locale del file, lasciando dati estratti e annotazioni. */
+  /** Toglie la copia locale del file, lasciando i dati estratti. */
   onEvict: () => void
 }
 
-type Tab = 'fields' | 'document'
+type Tab = 'fields' | 'history' | 'evidence'
 
+const TABS: Array<{ id: Tab; label: string }> = [
+  { id: 'fields', label: 'Dati' },
+  { id: 'history', label: 'History' },
+  { id: 'evidence', label: 'Evidenze' }
+]
+
+/**
+ * Vista di revisione: il documento sta sempre sotto gli occhi, a destra, e tutto il
+ * resto — tipo, campi, storia ed evidenze — vive nella colonna di sinistra divisa in
+ * schede. Prima documento e campi erano due tab che si escludevano a vicenda: per
+ * controllare un valore bisognava perdere di vista la pagina da cui era stato letto.
+ */
 export default function ReviewView({
   document,
   types,
@@ -35,10 +47,10 @@ export default function ReviewView({
   const [tab, setTab] = useState<Tab>('fields')
   const [focusedEvidence, setFocusedEvidence] = useState<string | null>(null)
 
-  /** Da un'evidenza si salta al documento, sulla pagina e sulla riga da cui viene. */
+  /** Da un'evidenza si salta alla pagina del documento da cui viene. */
   function openEvidence(evidenceId: string) {
     setFocusedEvidence(evidenceId)
-    setTab('document')
+    setTab('evidence')
   }
 
   const corrections = document.fields.filter(
@@ -47,250 +59,216 @@ export default function ReviewView({
   const decided = document.status !== 'NEEDS_REVIEW'
 
   return (
-    <>
-      <button type="button" className={styles.back} onClick={onBack}>
-        ← Torna ai documenti
-      </button>
-      <div className={styles.reviewLayout}>
-        <section className={cx(styles.card, styles.panel)}>
-          <div className={styles.panelTitle}>
-            <div>
-              <h2>{document.filename}</h2>
-              <div className={styles.subtle}>
-                {document.source} · sincronizzato il {formatDateTime(document.syncedAt)}
-              </div>
-            </div>
-            <span className={cx(styles.badge, BAND_CLASS[document.confidenceBand])}>
-              {pct(document.confidence)}
-            </span>
+    <div className={styles.reviewShell}>
+      <header className={styles.reviewHeader}>
+        <button type="button" className={styles.back} onClick={onBack}>
+          ← Indietro
+        </button>
+        <div className={styles.reviewTitle}>
+          <h2>{document.filename}</h2>
+          <div className={styles.subtle}>
+            {document.source} · sincronizzato il {formatDateTime(document.syncedAt)} ·{' '}
+            {textSourceLabel(document.textSource)}
+          </div>
+        </div>
+        <span className={styles.spacer} />
+        <span className={cx(styles.badge, styles.status)}>{STATUS_LABELS[document.status]}</span>
+        <span className={cx(styles.badge, BAND_CLASS[document.confidenceBand])}>
+          {pct(document.confidence)}
+        </span>
+        {document.cachedPath && (
+          <button
+            type="button"
+            className={cx(styles.button, styles.buttonSmall)}
+            disabled={busy}
+            onClick={onEvict}
+            title="Elimina il file dalla cache locale. I dati estratti restano, il file si riscarica riaprendolo da Drive."
+          >
+            Libera spazio
+          </button>
+        )}
+      </header>
+
+      <div className={styles.reviewBody}>
+        <aside className={cx(styles.card, styles.reviewSidebar)}>
+          <div className={styles.tabs}>
+            {TABS.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                className={cx(styles.tab, tab === entry.id && styles.tabActive)}
+                onClick={() => setTab(entry.id)}
+              >
+                {entry.label}
+                {entry.id === 'fields' && document.fields.length > 0 && (
+                  <span className={styles.tabCount}>{document.fields.length}</span>
+                )}
+                {entry.id === 'evidence' && document.evidence.length > 0 && (
+                  <span className={styles.tabCount}>{document.evidence.length}</span>
+                )}
+              </button>
+            ))}
           </div>
 
-          <div className={styles.metaGrid}>
-            <div className={styles.meta}>
-              <div className={styles.metaLabel}>Tipo documento</div>
-              <div className={styles.metaValue}>
-                {typeLabel(document.documentType, document.documentTypeLabel)}
-                {document.typeConfidence !== null && ` · ${pct(document.typeConfidence)}`}
+          <div className={styles.tabPanel}>
+            {tab === 'fields' && (
+              <>
+                {document.warnings.map((warning) => (
+                  <div className={styles.warning} key={warning}>
+                    {warning}
+                  </div>
+                ))}
+
+                <div className={styles.panelSection}>
+                  <div className={styles.panelLabel}>Tipo documento</div>
+                  <select
+                    className={styles.select}
+                    value={document.documentType ?? ''}
+                    disabled={busy}
+                    onChange={(event) => onAssignType(event.target.value || null)}
+                  >
+                    <option value="">Da assegnare</option>
+                    {types.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.label} · {type.id}
+                      </option>
+                    ))}
+                  </select>
+                  <div className={styles.muted}>
+                    {document.typeConfidence !== null
+                      ? `Classificato dal registry al ${pct(document.typeConfidence)}. `
+                      : ''}
+                    Cambiando tipo cambiano i campi richiesti alla prossima elaborazione.
+                  </div>
+                </div>
+
+                <div className={styles.panelSection}>
+                  <div className={styles.panelLabel}>
+                    Dati estratti
+                    {corrections > 0 && (
+                      <span className={cx(styles.badge, styles.medium)}>
+                        {corrections === 1 ? '1 correzione' : `${corrections} correzioni`}
+                      </span>
+                    )}
+                  </div>
+
+                  {document.fields.length === 0 ? (
+                    <div className={styles.empty}>
+                      <div className={styles.emptyTitle}>Nessun campo da compilare</div>
+                      <div>La precompilazione non è ancora stata eseguita su questo documento.</div>
+                    </div>
+                  ) : (
+                    <div className={styles.fieldList}>
+                      {document.fields.map((field) => (
+                        <FieldEditor
+                          key={field.id}
+                          field={field}
+                          disabled={busy}
+                          onCommit={(value) => onFieldCommit(field.id, value)}
+                          onFocusEvidence={openEvidence}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {tab === 'history' && (
+              <div className={styles.timeline}>
+                {document.timeline.map((item) => (
+                  <div className={styles.timelineItem} key={item.id}>
+                    <div className={styles.dot} />
+                    <div>
+                      <div className={styles.timelineTitle}>{item.title}</div>
+                      <div className={styles.timelineDetail}>{item.detail}</div>
+                      <div className={styles.timelineAt}>{formatDateTime(item.at)}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-            <div className={styles.meta}>
-              <div className={styles.metaLabel}>Sorgente testo</div>
-              <div className={styles.metaValue}>{textSourceLabel(document.textSource)}</div>
-            </div>
-            <div className={styles.meta}>
-              <div className={styles.metaLabel}>Modificato su Drive</div>
-              <div className={styles.metaValue}>{formatDateTime(document.receivedAt)}</div>
-            </div>
-          </div>
+            )}
 
-          {document.warnings.map((warning) => (
-            <div className={styles.warning} key={warning}>
-              {warning}
-            </div>
-          ))}
-
-          <div className={styles.toolbar}>
-            <span className={styles.muted}>Tipo documento</span>
-            <select
-              className={styles.select}
-              value={document.documentType ?? ''}
-              disabled={busy}
-              onChange={(event) => onAssignType(event.target.value || null)}
-            >
-              <option value="">Da assegnare</option>
-              {types.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.label} · {type.id}
-                </option>
+            {tab === 'evidence' &&
+              (document.evidence.length === 0 ? (
+                <div className={styles.muted}>Nessuna evidenza registrata.</div>
+              ) : (
+                document.evidence.map((evidence) => (
+                  <button
+                    type="button"
+                    key={evidence.id}
+                    className={cx(
+                      styles.evidenceButton,
+                      focusedEvidence === evidence.id && styles.evidenceActive
+                    )}
+                    onClick={() => setFocusedEvidence(evidence.id)}
+                  >
+                    <div className={styles.evidenceTop}>
+                      <span>
+                        {evidence.label} · pag. {evidence.page}
+                      </span>
+                      <strong>{pct(evidence.confidence)}</strong>
+                    </div>
+                    <div className={styles.evidenceText}>{evidence.text}</div>
+                  </button>
+                ))
               ))}
-            </select>
-            <span className={styles.muted}>
-              Cambiando tipo cambiano i campi richiesti alla prossima elaborazione.
-            </span>
-            <span className={styles.spacer} />
-            {document.cachedPath && (
+          </div>
+
+          <div className={styles.reviewDecision}>
+            <textarea
+              className={styles.textarea}
+              placeholder="Nota per la revisione (facoltativa)"
+              value={note}
+              disabled={busy}
+              onChange={(event) => setNote(event.target.value)}
+            />
+            <div className={styles.actions}>
               <button
                 type="button"
-                className={cx(styles.button, styles.buttonSmall)}
-                disabled={busy}
-                onClick={onEvict}
-                title="Elimina il file dalla cache locale. I dati estratti e le annotazioni restano, il file si riscarica riaprendolo da Drive."
+                className={cx(styles.button, styles.buttonPrimary)}
+                disabled={busy || corrections > 0}
+                title={
+                  corrections > 0 ? 'Ci sono correzioni: usa «Conferma con correzione».' : undefined
+                }
+                onClick={() => onDecide('APPROVE', note || undefined)}
               >
-                Libera spazio
+                Approva
               </button>
-            )}
-          </div>
-
-          <div className={styles.tabs}>
-            <button
-              type="button"
-              className={cx(styles.tab, tab === 'fields' && styles.tabActive)}
-              onClick={() => setTab('fields')}
-            >
-              Dati estratti<span className={styles.tabCount}>{document.fields.length}</span>
-            </button>
-            <button
-              type="button"
-              className={cx(styles.tab, tab === 'document' && styles.tabActive)}
-              onClick={() => setTab('document')}
-            >
-              Documento
-            </button>
-          </div>
-
-          {tab === 'document' && (
-            <DocumentPreview
-              document={document}
-              evidence={document.evidence}
-              focusedEvidenceId={focusedEvidence}
-            />
-          )}
-
-          {tab === 'fields' && (
-            <>
-              <div className={styles.sectionHeader}>
-                <div>
-                  <h2>Dati estratti</h2>
-                  <div className={styles.muted}>
-                    Modifica un valore per registrarlo come correzione: il precompilato resta
-                    visibile.
-                  </div>
-                </div>
-                {corrections > 0 && (
-                  <span className={cx(styles.badge, styles.medium)}>
-                    {corrections === 1 ? '1 correzione' : `${corrections} correzioni`}
-                  </span>
-                )}
-              </div>
-
-              {document.fields.length === 0 ? (
-                <div className={styles.empty}>
-                  <div className={styles.emptyTitle}>Nessun campo da compilare</div>
-                  <div>La precompilazione non è ancora stata eseguita su questo documento.</div>
-                </div>
-              ) : (
-                <div className={styles.fieldList}>
-                  {document.fields.map((field) => (
-                    <FieldEditor
-                      key={field.id}
-                      field={field}
-                      disabled={busy}
-                      onCommit={(value) => onFieldCommit(field.id, value)}
-                      onFocusEvidence={openEvidence}
-                    />
-                  ))}
-                </div>
-              )}
-
-              <div className={styles.sectionHeader}>
-                <div>
-                  <h2>Decisione</h2>
-                  <div className={styles.muted}>
-                    La nota viene registrata nella timeline insieme alla decisione.
-                  </div>
-                </div>
-              </div>
-              <textarea
-                className={styles.textarea}
-                placeholder="Nota per la revisione (facoltativa)"
-                value={note}
+              <button
+                type="button"
+                className={styles.button}
+                disabled={busy || corrections === 0}
+                title={corrections === 0 ? 'Modifica almeno un campo per correggere.' : undefined}
+                onClick={() => onDecide('CORRECT', note || undefined)}
+              >
+                Conferma con correzione
+              </button>
+              <button
+                type="button"
+                className={cx(styles.button, styles.buttonDanger)}
                 disabled={busy}
-                onChange={(event) => setNote(event.target.value)}
-              />
+                onClick={() => onDecide('REJECT', note || undefined)}
+              >
+                Rifiuta
+              </button>
+              {decided && (
+                <span className={cx(styles.badge, styles.status)}>
+                  {document.status === 'APPROVED' ? 'Già approvato' : 'Già rifiutato'}
+                </span>
+              )}
+            </div>
+          </div>
+        </aside>
 
-              <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={cx(styles.button, styles.buttonPrimary)}
-                  disabled={busy || corrections > 0}
-                  title={
-                    corrections > 0
-                      ? 'Ci sono correzioni: usa «Conferma con correzione».'
-                      : undefined
-                  }
-                  onClick={() => onDecide('APPROVE', note || undefined)}
-                >
-                  Approva
-                </button>
-                <button
-                  type="button"
-                  className={styles.button}
-                  disabled={busy || corrections === 0}
-                  title={corrections === 0 ? 'Modifica almeno un campo per correggere.' : undefined}
-                  onClick={() => onDecide('CORRECT', note || undefined)}
-                >
-                  Conferma con correzione
-                </button>
-                <button
-                  type="button"
-                  className={cx(styles.button, styles.buttonDanger)}
-                  disabled={busy}
-                  onClick={() => onDecide('REJECT', note || undefined)}
-                >
-                  Rifiuta
-                </button>
-                {decided && (
-                  <span className={cx(styles.badge, styles.status)}>
-                    {document.status === 'APPROVED' ? 'Già approvato' : 'Già rifiutato'}
-                  </span>
-                )}
-              </div>
-            </>
-          )}
+        <section className={cx(styles.card, styles.reviewDocument)}>
+          <DocumentPreview
+            document={document}
+            evidence={document.evidence}
+            focusedEvidenceId={focusedEvidence}
+          />
         </section>
-
-        <div style={{ display: 'grid', gap: 16 }}>
-          <section className={cx(styles.card, styles.panel)}>
-            <div className={styles.panelTitle}>
-              <h3>Evidenze</h3>
-              <span className={cx(styles.badge, styles.status)}>
-                {document.evidence.length} prove
-              </span>
-            </div>
-            {document.evidence.length === 0 ? (
-              <div className={styles.muted}>Nessuna evidenza registrata.</div>
-            ) : (
-              document.evidence.map((evidence) => (
-                <button
-                  type="button"
-                  key={evidence.id}
-                  className={cx(
-                    styles.evidenceButton,
-                    focusedEvidence === evidence.id && styles.evidenceActive
-                  )}
-                  onClick={() => openEvidence(evidence.id)}
-                >
-                  <div className={styles.evidenceTop}>
-                    <span>
-                      {evidence.label} · pag. {evidence.page}
-                    </span>
-                    <strong>{pct(evidence.confidence)}</strong>
-                  </div>
-                  <div className={styles.evidenceText}>{evidence.text}</div>
-                </button>
-              ))
-            )}
-          </section>
-
-          <section className={cx(styles.card, styles.panel)}>
-            <div className={styles.panelTitle}>
-              <h3>Timeline documento</h3>
-            </div>
-            <div className={styles.timeline}>
-              {document.timeline.map((item) => (
-                <div className={styles.timelineItem} key={item.id}>
-                  <div className={styles.dot} />
-                  <div>
-                    <div className={styles.timelineTitle}>{item.title}</div>
-                    <div className={styles.timelineDetail}>{item.detail}</div>
-                    <div className={styles.timelineAt}>{formatDateTime(item.at)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
       </div>
-    </>
+    </div>
   )
 }
