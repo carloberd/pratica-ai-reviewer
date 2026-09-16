@@ -1,11 +1,12 @@
 import type { RegistryTypeOption, ReviewDecision, ReviewDocument } from '@shared/types'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { cx } from '../lib/cx'
 import { formatDateTime, pct, STATUS_LABELS, textSourceLabel } from '../lib/format'
 import DocumentPreview from './document-preview'
 import styles from './document-review.module.css'
 import { BAND_CLASS } from './document-table'
 import FieldEditor from './field-editor'
+import SearchableSelect from './searchable-select'
 
 interface Props {
   document: ReviewDocument
@@ -52,6 +53,11 @@ export default function ReviewView({
     setFocusedEvidence(evidenceId)
     setTab('evidence')
   }
+
+  const typeOptions = useMemo(
+    () => types.map((type) => ({ id: type.id, label: type.label, hint: type.id })),
+    [types]
+  )
 
   const corrections = document.fields.filter(
     (field) => field.correctedValue !== undefined && field.correctedValue !== field.value
@@ -121,19 +127,14 @@ export default function ReviewView({
 
                 <div className={styles.panelSection}>
                   <div className={styles.panelLabel}>Tipo documento</div>
-                  <select
-                    className={styles.select}
-                    value={document.documentType ?? ''}
+                  <SearchableSelect
+                    value={document.documentType}
+                    options={typeOptions}
+                    emptyLabel="Da assegnare"
+                    searchPlaceholder="Cerca un tipo del registry…"
                     disabled={busy}
-                    onChange={(event) => onAssignType(event.target.value || null)}
-                  >
-                    <option value="">Da assegnare</option>
-                    {types.map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.label} · {type.id}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={onAssignType}
+                  />
                   <div className={styles.muted}>
                     {document.typeConfidence !== null
                       ? `Classificato dal registry al ${pct(document.typeConfidence)}. `
