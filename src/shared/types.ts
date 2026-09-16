@@ -8,6 +8,8 @@
  * (drive, correzioni con before/after) sono marcate con `// v1 reviewer`.
  */
 
+import type { Cardinality, FieldReviewStatus, FieldRole } from './extraction-v2'
+
 /**
  * v1 reviewer: quello che il revisore sceglie davvero. `SAVE` chiude il documento come
  * revisionato — tipo e campi sono a database, il documento entra nel dataset; `DISCARD`
@@ -74,6 +76,33 @@ export interface ExtractedField {
   required: boolean
   semanticType: SemanticType
   updatedAt?: string
+  /** v2 reviewer: `many` per i campi ripetuti (righe fattura, rate), che vivono in `items`. */
+  cardinality: Cardinality
+  /** v2 reviewer: ruolo nel profilo del tipo; `null` sulle righe scritte dal motore v1. */
+  role: FieldRole | null
+  reviewStatus: FieldReviewStatus | null
+  /** v2 reviewer: una voce per riga, solo per `cardinality = 'many'`. */
+  items: FieldItem[]
+}
+
+/** v2 reviewer: da dove viene una riga di un campo ripetuto. */
+export type FieldItemOrigin = 'ENGINE' | 'MANUAL'
+
+/** v2 reviewer: una riga di un campo ripetuto. */
+export interface FieldItem {
+  id: string
+  /** Posizione stabile della riga: le proposte del motore prima, le aggiunte a mano dopo. */
+  index: number
+  /** Valore proposto dal motore; stringa vuota per una riga aggiunta a mano. */
+  value: string
+  /** Correzione umana, o il valore di una riga aggiunta a mano. */
+  correctedValue?: string
+  confidence: number
+  evidenceId?: string
+  origin: FieldItemOrigin
+  /** Riga proposta che il revisore ha tolto: resta visibile per poterla ripristinare. */
+  removed: boolean
+  updatedAt?: string
 }
 
 export interface TimelineItem {
@@ -106,6 +135,77 @@ export interface ReviewDocument {
   fields: ExtractedField[]
   evidence: EvidenceItem[]
   timeline: TimelineItem[]
+  /** v2 reviewer: esito del classificatore sull'ultima elaborazione, coi candidati. */
+  classification: TypeClassification | null
+  /** v2 reviewer: quando il revisore ha salvato o scartato il documento. */
+  reviewedAt: string | null
+}
+
+/** v2 reviewer: motivo per cui il classificatore ha assegnato o no il tipo. */
+export type TypeMatchReason =
+  | 'OK'
+  | 'BELOW_THRESHOLD'
+  | 'LOW_MARGIN'
+  | 'FILENAME_ONLY'
+  | 'HARD_NEGATIVE'
+  | 'NO_SIGNAL'
+
+export type TypeSignalSource =
+  | 'title-zone'
+  | 'page'
+  | 'filename'
+  | 'positive-signal'
+  | 'negative-signal'
+  | 'hard-negative-signal'
+
+/** Riga del documento da cui viene un indizio: si raggiunge come un'evidenza. */
+export interface DocumentLocation {
+  page: number
+  /** Verbatim dal documento. */
+  text: string
+  bbox?: BoundingBox
+}
+
+/** Un indizio che ha spostato il punteggio di un candidato. */
+export interface TypeSignal {
+  source: TypeSignalSource
+  /** Frase del registry (normalizzata) che ha fatto scattare l'indizio. */
+  phrase: string
+  delta: number
+  /** Riga del documento che la contiene; assente per il nome del file o se non ritrovata. */
+  location?: DocumentLocation
+}
+
+export interface TypeCandidate {
+  documentType: string
+  /** Nome leggibile dal registry, aggiunto in lettura. */
+  label: string | null
+  score: number
+  signals: TypeSignal[]
+}
+
+/**
+ * v2 reviewer: quello che il classificatore ha proposto, indipendentemente da quello che
+ * il revisore ha poi scelto. `proposedType` è `null` quando il motore non ha assegnato.
+ */
+export interface TypeClassification {
+  engine: 'v1' | 'v2'
+  /** Versione dei segnali del classificatore v2; `null` col v1. */
+  version: string | null
+  decision: 'ASSIGN' | 'UNKNOWN'
+  reason: TypeMatchReason
+  proposedType: string | null
+  confidence: number
+  /** Distacco fra primo e secondo candidato; `null` col v1, che non lo calcola. */
+  margin: number | null
+  threshold: number | null
+  minimumMargin: number | null
+  candidates: TypeCandidate[]
+}
+
+/** Come la salva il main: le etichette dei tipi si aggiungono in lettura dal registry. */
+export type StoredTypeClassification = Omit<TypeClassification, 'candidates'> & {
+  candidates: Array<Omit<TypeCandidate, 'label'>>
 }
 
 /** Riga leggera per la tabella documenti: niente campi/evidenze/timeline. */
@@ -147,6 +247,8 @@ export interface FieldChange {
   fieldId: string
   name: string
   label: string
+  /** v2 reviewer: indice della riga, solo per i campi ripetuti. */
+  itemIndex?: number
   before: string
   after: string
   /** Provenienza del valore di partenza. */
@@ -244,5 +346,14 @@ export type IpcErrorCode =
   | 'EXTRACTION_FAILED'
   | 'UNSUPPORTED'
   | 'INTERNAL'
+
+/** v2 reviewer: esito dell'export del dataset annotato. */
+export interface DatasetExportResult {
+  /** `false` se il revisore ha annullato la scelta del file. */
+  saved: boolean
+  path: string | null
+  documents: number
+  corrections: number
+}
 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: IpcError }

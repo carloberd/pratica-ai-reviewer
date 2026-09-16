@@ -67,6 +67,25 @@ const CONTRATTO_LINES = [
   'Il corrispettivo pattuito ammonta a EUR 24.000,00 oltre IVA di legge.'
 ]
 
+/** Fattura con righe etichettate: il fact reader v2 ne legge una per riga in `line_items`. */
+const FATTURA_RIGHE_LINES = [
+  'BETA COSTRUZIONI S.P.A.',
+  '',
+  'FATTURA n. 27/2026 del 14/09/2026',
+  '',
+  'Emittente: Beta Costruzioni S.p.A.',
+  'Destinatario: Gamma Immobiliare S.r.l.',
+  'Valuta: EUR',
+  '',
+  'Righe documento: Demolizione tramezzi - EUR 3.200,00',
+  'Righe documento: Smaltimento macerie - EUR 850,00',
+  'Righe documento: Tinteggiatura pareti - EUR 1.450,00',
+  '',
+  'Totale imponibile  EUR 5.500,00',
+  'IVA 22%            EUR 1.210,00',
+  'Totale documento   EUR 6.710,00'
+]
+
 /** Documento che non corrisponde a nessun alias del registry: resta da classificare. */
 const IGNOTO_LINES = [
   'Promemoria interno',
@@ -165,6 +184,7 @@ function makeDocx(lines, outfile) {
 }
 
 await makeTextPdf(FATTURA_LINES, join(fixtures, 'fattura-nativa.pdf'))
+await makeTextPdf(FATTURA_RIGHE_LINES, join(fixtures, 'fattura-righe.pdf'))
 await makeScannedPdf(SCANSIONE_LINES, join(fixtures, 'durc-scansionato.pdf'))
 await makeTextPdf(IGNOTO_LINES, join(fixtures, 'promemoria-ignoto.pdf'))
 makeDocx(CONTRATTO_LINES, join(fixtures, 'contratto-consulenza.docx'))

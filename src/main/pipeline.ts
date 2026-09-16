@@ -17,6 +17,7 @@ import type { Registry } from './registry'
 import type { TypeMatchV2 } from './registry/v2/classify-v2'
 import type { ClassifierConfigV2 } from './registry/v2/config'
 import { type Classification, classifyWithSelectedEngine } from './registry/v2/engine'
+import { toTypeClassification } from './registry/v2/type-classification'
 
 /** Versione del motore v2 registrata in `extraction_runs.engine_version`. */
 export const EXTRACTION_ENGINE_V2_VERSION = 'extraction-brain-v2/2.1.0-draft.1'
@@ -130,6 +131,16 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
         confidenceBand: band,
         textSource: extracted.source
       })
+      // Anche con un tipo scelto a mano: è la proposta del motore, e l'export la mette
+      // accanto alla scelta del revisore.
+      repo.documents.setClassification(
+        input.documentId,
+        toTypeClassification({
+          classification,
+          pages: extracted.pages,
+          config: deps.classifierConfigV2
+        })
+      )
       // L'ordine conta: le evidenze prima, perché i campi ci puntano.
       repo.evidence.replaceForDocument(input.documentId, prepared.evidence)
       repo.fields.replaceForDocument(input.documentId, prepared.fields, {

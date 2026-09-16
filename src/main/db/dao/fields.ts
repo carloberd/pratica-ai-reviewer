@@ -53,9 +53,25 @@ type KeptCorrection = Pick<
   'name' | 'label' | 'value' | 'confidence' | 'updated_at' | 'semantic_type'
 > & { corrected_value: string }
 
-interface KeptItemCorrection {
+/** Intervento del revisore su una riga proposta: correzione, rimozione o entrambe. */
+interface KeptEngineItem {
+  corrected_value_json: string | null
+  removed: number
+  updated_at: string | null
+}
+
+/** Una riga che dopo il nuovo run appartiene al revisore: aggiunta a mano o rimasta orfana. */
+interface KeptReviewerItem {
+  sortIndex: number
   corrected_value_json: string
   updated_at: string | null
+}
+
+interface KeptItems {
+  label: string
+  semantic_type: string | null
+  engine: Map<number, KeptEngineItem>
+  manual: KeptReviewerItem[]
 }
 
 function errorsJson(errors: string[] | null | undefined): string | null {
@@ -70,16 +86,55 @@ export function createFieldsDao(db: Db) {
   `)
   const insertItem = db.prepare(`
     INSERT INTO field_items (id, field_id, item_index, value_json, corrected_value_json, confidence,
-                             evidence_id, validation_errors_json, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                             evidence_id, validation_errors_json, updated_at, origin, removed)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
+
+  /** Le righe del revisore vanno in coda, nell'ordine in cui stavano. */
+  function insertReviewerItems(fieldId: string, firstIndex: number, items: KeptReviewerItem[]) {
+    let index = firstIndex
+    for (const item of [...items].sort((a, b) => a.sortIndex - b.sortIndex)) {
+      insertItem.run(
+        randomUUID(),
+        fieldId,
+        index,
+        null,
+        item.corrected_value_json,
+        0,
+        null,
+        null,
+        item.updated_at,
+        'MANUAL',
+        0
+      )
+      index += 1
+    }
+  }
+
+  /** Correzioni su righe proposte che il nuovo run non trova più: ora sono del revisore. */
+  function orphanedCorrections(kept: KeptItems | undefined, written: Set<number>) {
+    const orphaned: KeptReviewerItem[] = []
+    for (const [sortIndex, item] of kept?.engine ?? []) {
+      if (written.has(sortIndex) || item.removed === 1 || item.corrected_value_json === null) {
+        continue
+      }
+      orphaned.push({
+        sortIndex,
+        corrected_value_json: item.corrected_value_json,
+        updated_at: item.updated_at
+      })
+    }
+    return orphaned
+  }
 
   return {
     /**
      * Sostituisce i campi di un documento. Le correzioni umane gia` salvate vengono
      * conservate per nome del campo: una ri-estrazione non deve cancellare il lavoro
-     * del revisore. Per i campi `many` la correzione di un elemento torna sullo stesso
-     * `item_index`; se il nuovo run ne trova meno, l'elemento corretto resta comunque.
+     * del revisore. Per i campi `many` correzione e rimozione di una riga proposta
+     * tornano sullo stesso `item_index`; le righe aggiunte a mano restano in coda a quelle
+     * del nuovo run, e una riga corretta che il nuovo run non trova più diventa del
+     * revisore invece di sparire.
      */
     replaceForDocument(
       documentId: string,
@@ -97,21 +152,43 @@ export function createFieldsDao(db: Db) {
 
       const previousItems = db
         .prepare(`
-          SELECT f.name, i.item_index, i.corrected_value_json, i.updated_at
+          SELECT f.name, f.label, f.semantic_type, i.item_index, i.origin, i.removed,
+                 i.corrected_value_json, i.updated_at
             FROM field_items i JOIN fields f ON f.id = i.field_id
-           WHERE f.document_id = ? AND i.corrected_value_json IS NOT NULL
+           WHERE f.document_id = ? AND (i.corrected_value_json IS NOT NULL OR i.removed = 1)
+        ORDER BY f.name, i.item_index
         `)
         .all(documentId) as Array<
-        { name: string } & Pick<FieldItemRow, 'item_index' | 'corrected_value_json' | 'updated_at'>
+        Pick<FieldRow, 'name' | 'label' | 'semantic_type'> &
+          Pick<
+            FieldItemRow,
+            'item_index' | 'origin' | 'removed' | 'corrected_value_json' | 'updated_at'
+          >
       >
-      const itemCorrections = new Map<string, Map<number, KeptItemCorrection>>()
+      const itemCorrections = new Map<string, KeptItems>()
       for (const row of previousItems) {
-        const byIndex = itemCorrections.get(row.name) ?? new Map<number, KeptItemCorrection>()
-        byIndex.set(row.item_index, {
-          corrected_value_json: row.corrected_value_json!,
-          updated_at: row.updated_at
-        })
-        itemCorrections.set(row.name, byIndex)
+        const kept = itemCorrections.get(row.name) ?? {
+          label: row.label,
+          semantic_type: row.semantic_type,
+          engine: new Map<number, KeptEngineItem>(),
+          manual: []
+        }
+        if (row.origin === 'MANUAL') {
+          if (row.corrected_value_json !== null && row.removed === 0) {
+            kept.manual.push({
+              sortIndex: row.item_index,
+              corrected_value_json: row.corrected_value_json,
+              updated_at: row.updated_at
+            })
+          }
+        } else {
+          kept.engine.set(row.item_index, {
+            corrected_value_json: row.corrected_value_json,
+            removed: row.removed,
+            updated_at: row.updated_at
+          })
+        }
+        itemCorrections.set(row.name, kept)
       }
 
       /** Il primo fra il nome e i suoi alias che ha una correzione salvata. */
@@ -124,6 +201,7 @@ export function createFieldsDao(db: Db) {
       db.prepare('DELETE FROM fields WHERE document_id = ?').run(documentId)
 
       const consumed = new Set<string>()
+      const consumedItems = new Set<string>()
       for (const field of fields) {
         const id = randomUUID()
         const keptName = matchName(corrections, field.name)
@@ -148,38 +226,32 @@ export function createFieldsDao(db: Db) {
 
         if (field.cardinality !== 'many') continue
         const itemsName = matchName(itemCorrections, field.name)
-        const keptItems =
-          (itemsName && itemCorrections.get(itemsName)) || new Map<number, KeptItemCorrection>()
+        const keptItems = itemsName ? itemCorrections.get(itemsName) : undefined
+        if (itemsName) consumedItems.add(itemsName)
         const written = new Set<number>()
+        let nextIndex = 0
         for (const item of field.items ?? []) {
-          const correction = keptItems.get(item.itemIndex)
+          const edit = keptItems?.engine.get(item.itemIndex)
           insertItem.run(
             randomUUID(),
             id,
             item.itemIndex,
             item.value === null ? null : JSON.stringify(item.value),
-            correction?.corrected_value_json ?? null,
+            edit?.corrected_value_json ?? null,
             item.confidence,
             item.evidenceId ?? null,
             errorsJson(item.validationErrors),
-            correction?.updated_at ?? null
+            edit?.updated_at ?? null,
+            'ENGINE',
+            edit?.removed ?? 0
           )
           written.add(item.itemIndex)
+          nextIndex = Math.max(nextIndex, item.itemIndex + 1)
         }
-        for (const [itemIndex, correction] of keptItems) {
-          if (written.has(itemIndex)) continue
-          insertItem.run(
-            randomUUID(),
-            id,
-            itemIndex,
-            null,
-            correction.corrected_value_json,
-            0,
-            null,
-            null,
-            correction.updated_at
-          )
-        }
+        insertReviewerItems(id, nextIndex, [
+          ...orphanedCorrections(keptItems, written),
+          ...(keptItems?.manual ?? [])
+        ])
       }
 
       if (!options.keepUnmatchedCorrections) return
@@ -202,6 +274,30 @@ export function createFieldsDao(db: Db) {
           null,
           'optional'
         )
+      }
+      // Lo stesso per un campo ripetuto: restano le righe che il revisore ha scritto.
+      for (const [name, kept] of itemCorrections) {
+        if (consumedItems.has(name)) continue
+        const rows = [...orphanedCorrections(kept, new Set()), ...kept.manual]
+        if (rows.length === 0) continue
+        const id = randomUUID()
+        insert.run(
+          id,
+          documentId,
+          name,
+          kept.label,
+          null,
+          null,
+          0,
+          null,
+          null,
+          kept.semantic_type,
+          'many',
+          'NEEDS_REVIEW',
+          null,
+          'optional'
+        )
+        insertReviewerItems(id, 0, rows)
       }
     },
 
@@ -244,10 +340,67 @@ export function createFieldsDao(db: Db) {
       const row = db
         .prepare(`
           SELECT COUNT(*) AS c FROM field_items
-           WHERE field_id = ? AND COALESCE(corrected_value_json, value_json) IS NOT NULL
+           WHERE field_id = ? AND removed = 0
+             AND COALESCE(corrected_value_json, value_json) IS NOT NULL
         `)
         .get(fieldId) as { c: number }
       return row.c
+    },
+
+    /** Tutte le righe dei campi ripetuti di un documento, in una query sola. */
+    listItemsForDocument(documentId: string): FieldItemRow[] {
+      return db
+        .prepare(`
+          SELECT i.* FROM field_items i JOIN fields f ON f.id = i.field_id
+           WHERE f.document_id = ?
+        ORDER BY i.field_id, i.item_index
+        `)
+        .all(documentId) as FieldItemRow[]
+    },
+
+    /** La riga col documento a cui appartiene, per verificare che l'id arrivi dal posto giusto. */
+    getItem(itemId: string): (FieldItemRow & { document_id: string }) | undefined {
+      return db
+        .prepare(
+          'SELECT i.*, f.document_id FROM field_items i JOIN fields f ON f.id = i.field_id WHERE i.id = ?'
+        )
+        .get(itemId) as (FieldItemRow & { document_id: string }) | undefined
+    },
+
+    /** Riga scritta dal revisore, in coda alle altre. */
+    addItem(fieldId: string, value: string): string {
+      const row = db
+        .prepare('SELECT MAX(item_index) AS last FROM field_items WHERE field_id = ?')
+        .get(fieldId) as { last: number | null }
+      const id = randomUUID()
+      insertItem.run(
+        id,
+        fieldId,
+        (row.last ?? -1) + 1,
+        null,
+        JSON.stringify(value),
+        0,
+        null,
+        null,
+        new Date().toISOString(),
+        'MANUAL',
+        0
+      )
+      return id
+    },
+
+    /** Toglie (o rimette) una riga proposta dal motore. La proposta resta a database. */
+    setItemRemoved(itemId: string, removed: boolean): void {
+      db.prepare('UPDATE field_items SET removed = ?, updated_at = ? WHERE id = ?').run(
+        removed ? 1 : 0,
+        new Date().toISOString(),
+        itemId
+      )
+    },
+
+    /** Solo per le righe aggiunte a mano: una proposta del motore si toglie, non si cancella. */
+    deleteItem(itemId: string): void {
+      db.prepare('DELETE FROM field_items WHERE id = ?').run(itemId)
     },
 
     /** Come `setCorrectedValue`, per un elemento di un campo `many`. */

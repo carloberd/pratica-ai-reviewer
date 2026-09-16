@@ -56,7 +56,9 @@ export async function assignDocumentType(input: {
 
 /**
  * Un documento ancora in coda che non è mai passato da questa versione del motore v2
- * con questi profili: tipicamente, estratto dal v1 prima dell'aggiornamento.
+ * con questi profili: tipicamente, estratto dal v1 prima dell'aggiornamento. Oppure
+ * elaborato prima che la classificazione venisse salvata: senza, la scheda tipo non ha
+ * candidati da proporre.
  *
  * I documenti già revisionati o scartati non si toccano: il loro tipo e i loro campi
  * sono il dato consegnato, e una riclassificazione potrebbe cambiarli.
@@ -67,7 +69,8 @@ export function needsV2Extraction(
 ): (row: DocumentRow) => boolean {
   return (row) =>
     row.status === 'NEEDS_REVIEW' &&
-    !repo.extractionRuns.hasRun(row.id, EXTRACTION_ENGINE_V2_VERSION, registry.schemaVersion())
+    (row.classification_json === null ||
+      !repo.extractionRuns.hasRun(row.id, EXTRACTION_ENGINE_V2_VERSION, registry.schemaVersion()))
 }
 
 /**

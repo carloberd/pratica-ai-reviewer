@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto'
-import type { ConfidenceBand, DocumentFilters, QueueStatus, TextSource } from '@shared/types'
+import type {
+  ConfidenceBand,
+  DocumentFilters,
+  QueueStatus,
+  StoredTypeClassification,
+  TextSource
+} from '@shared/types'
 import type { Db } from '../index'
 import type { DocumentRow } from '../rows'
 
@@ -97,6 +103,23 @@ export function createDocumentsDao(db: Db) {
 
     setStatus(id: string, status: QueueStatus): void {
       db.prepare('UPDATE documents SET status = ? WHERE id = ?').run(status, id)
+    },
+
+    /** Esito del revisore: lo stato e il momento in cui è stato deciso. */
+    setReviewOutcome(id: string, status: QueueStatus, reviewedAt: string): void {
+      db.prepare('UPDATE documents SET status = ?, reviewed_at = ? WHERE id = ?').run(
+        status,
+        reviewedAt,
+        id
+      )
+    },
+
+    /** Esito del classificatore, come JSON di `TypeClassification` senza etichette. */
+    setClassification(id: string, classification: StoredTypeClassification | null): void {
+      db.prepare('UPDATE documents SET classification_json = ? WHERE id = ?').run(
+        classification ? JSON.stringify(classification) : null,
+        id
+      )
     },
 
     setConfidence(id: string, confidence: number, band: ConfidenceBand): void {

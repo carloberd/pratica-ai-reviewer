@@ -3,6 +3,7 @@ import type {
   AuthStatus,
   CacheUsage,
   DashboardStats,
+  DatasetExportResult,
   DocumentFilters,
   DriveFileSummary,
   FetchProgress,
@@ -60,7 +61,18 @@ export const reviewerApi = {
   },
   fields: {
     update: (input: { documentId: string; fieldId: string; correctedValue: string | null }) =>
-      invoke<IpcResultOf<ReviewDocument>>('fields:update', input)
+      invoke<IpcResultOf<ReviewDocument>>('fields:update', input),
+    /** Riga aggiunta a mano a un campo ripetuto. */
+    addItem: (input: { documentId: string; fieldId: string; value: string }) =>
+      invoke<IpcResultOf<ReviewDocument>>('fields:item-add', input),
+    updateItem: (input: { documentId: string; itemId: string; correctedValue: string | null }) =>
+      invoke<IpcResultOf<ReviewDocument>>('fields:item-update', input),
+    removeItem: (input: { documentId: string; itemId: string; removed: boolean }) =>
+      invoke<IpcResultOf<ReviewDocument>>('fields:item-remove', input)
+  },
+  dataset: {
+    /** Chiede dove salvare e scrive il dataset annotato. */
+    export: () => invoke<IpcResultOf<DatasetExportResult>>('dataset:export')
   },
   review: {
     submit: (input: { documentId: string; payload: ReviewSubmission }) =>

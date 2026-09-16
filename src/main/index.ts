@@ -1,4 +1,5 @@
 import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { app, BrowserWindow, dialog } from 'electron'
 import { createAuthService } from './auth/service'
 import { type EngineSelection, loadEngines } from './config'
@@ -21,7 +22,7 @@ import {
   tessdataCacheDir,
   tessdataDir
 } from './paths'
-import { createDocumentProcessor } from './pipeline'
+import { createDocumentProcessor, EXTRACTION_ENGINE_V2_VERSION } from './pipeline'
 import { createRegistry } from './registry'
 import { loadClassifierConfigV2 } from './registry/v2/config'
 import { needsV2Extraction, reprocessCachedDocuments } from './reprocess'
@@ -69,7 +70,31 @@ function start(): void {
     registryTypes: () => registry.types(),
     process: processDocument,
     ocr,
-    sender: () => mainWindow?.webContents ?? null
+    sender: () => mainWindow?.webContents ?? null,
+    dataset: {
+      manifest: () => ({
+        app: { name: app.getName(), version: app.getVersion() },
+        engines: {
+          classifier: engines.classifier,
+          extraction: engines.extraction,
+          classifierVersion: v2.classifierConfigV2?.version ?? null,
+          extractionEngineVersion:
+            engines.extraction === 'v2' ? EXTRACTION_ENGINE_V2_VERSION : null,
+          schemaVersion: v2.extractionRegistryV2?.schemaVersion() ?? null
+        }
+      }),
+      choosePath: async (defaultName) => {
+        const options = {
+          title: 'Esporta il dataset annotato',
+          defaultPath: join(app.getPath('documents'), defaultName),
+          filters: [{ name: 'JSON', extensions: ['json'] }]
+        }
+        const result = mainWindow
+          ? await dialog.showSaveDialog(mainWindow, options)
+          : await dialog.showSaveDialog(options)
+        return result.canceled || !result.filePath ? null : result.filePath
+      }
+    }
   })
 
   mainWindow = createMainWindow()

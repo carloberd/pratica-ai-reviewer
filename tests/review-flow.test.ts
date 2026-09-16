@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { buildReviewPayload, describeReview, statusForAction } from '../src/main/review'
+import {
+  buildReviewPayload,
+  describeReview,
+  statusForAction,
+  submitReview
+} from '../src/main/review'
 import { createTestRepository, seedDocument } from './helpers/db'
 
 let repo: ReturnType<typeof createTestRepository> | null = null
@@ -111,5 +116,27 @@ describe('flusso di revisione', () => {
 
     const document = r.getReviewDocument(id)!
     expect(document.fields.find((f) => f.name === 'issuer_name')?.correctedValue).toBeUndefined()
+  })
+
+  it('submitReview fissa stato, momento della decisione e riga di timeline', () => {
+    const { repo: r, id } = setup()
+    correct(r, id, 'issuer_name', 'Alfa S.r.l.')
+
+    const document = submitReview(r, {
+      documentId: id,
+      action: 'SAVE',
+      note: 'ok',
+      now: new Date('2026-09-16T09:30:00.000Z')
+    })
+
+    expect(document.status).toBe('REVIEWED')
+    expect(document.reviewedAt).toBe('2026-09-16T09:30:00.000Z')
+    expect(document.timeline.at(-1)).toMatchObject({
+      at: '2026-09-16T09:30:00.000Z',
+      title: 'Revisionato con correzioni'
+    })
+    expect(() => submitReview(r, { documentId: 'nessuno', action: 'SAVE' })).toThrow(
+      'Documento non trovato'
+    )
   })
 })
