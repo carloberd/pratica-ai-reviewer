@@ -76,7 +76,27 @@ stesso e mostra in chiaro cosa manca e dove metterlo.
 
 Il gate è `pnpm typecheck && pnpm lint && pnpm test`.
 
-### Release
+### Tagliare una release
+
+```bash
+make patch    # 1.0.0 -> 1.0.1
+make minor    # 1.0.0 -> 1.1.0
+make major    # 1.0.0 -> 2.0.0
+```
+
+Il `Makefile` esegue il gate, bumpa `package.json`, committa, tagga, pusha e crea la
+GitHub Release con `gh`. Da lì in poi non fa altro: è l'evento di release a far partire
+i due workflow, che compilano sui rispettivi runner e allegano i pacchetti.
+
+Il gate gira **prima** del bump e non dentro un hook: se fallisce non viene toccato
+niente, né commit né tag né release da ritirare. Prima di muovere qualcosa controlla
+anche di essere su `main`, con working tree pulito, allineato a `origin/main`, e che il
+tag non esista già né in locale né su origin. Per tagliare da un altro ramo:
+`make patch RELEASE_BRANCH=<ramo>`.
+
+Serve la CLI [`gh`](https://cli.github.com/) autenticata.
+
+### I workflow di build
 
 Due workflow, uno per piattaforma, che girano ognuno sul proprio runner perché
 entrambi gli installer si costruiscono nativamente:
