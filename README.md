@@ -87,6 +87,15 @@ zod e risponde con `{ ok: true, data }` oppure `{ ok: false, error: { code, mess
 I messaggi d'errore vengono ripuliti da tutto ciò che somiglia a una credenziale prima
 di lasciare il main.
 
+**Accesso.** Il consenso Google si apre nel **browser di sistema**, non in una finestra
+dell'app: Google rifiuta il flusso OAuth dentro un browser incorporato («Questo browser
+o questa app potrebbero non essere sicuri») e riconosce come tale una finestra di
+Electron, qualunque user agent dichiari. È anche la scelta migliore per chi accede,
+perché la password finisce in una finestra di cui si possono verificare lucchetto e
+indirizzo, e l'app non la vede mai passare. Il redirect torna comunque sul loopback e lo
+scambio codice→token avviene nel main. Se il consenso non arriva entro cinque minuti la
+porta si chiude e il login va ripetuto.
+
 **Sincronizzazione.** `files.list` paginata su PDF e DOCX fuori dal cestino, ordinati
 per `modifiedTime`. Ogni file viene deduplicato per `drive_file_id` e scaricato nella
 cache locale; si riscarica solo se Drive ha una versione più recente o se il file in

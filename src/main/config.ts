@@ -34,8 +34,12 @@ export function parseEnvFile(content: string): Record<string, string> {
 /**
  * Percorsi dove cercare il `.env`, in ordine di precedenza:
  * la radice del repo in sviluppo, la cartella dei dati utente nell'app impacchettata.
+ *
+ * Fuori da Electron (i test del livello auth) `app` non esiste: in quel caso restano
+ * solo le variabili d'ambiente, che è esattamente quello che serve.
  */
 export function envFileCandidates(): string[] {
+  if (!app?.getPath) return []
   const candidates = [join(app.getPath('userData'), '.env')]
   if (!app.isPackaged) candidates.unshift(join(app.getAppPath(), '.env'))
   return candidates
@@ -60,10 +64,12 @@ export function loadGoogleCredentials(): GoogleCredentials | null {
 }
 
 export function setupHint(): string {
-  const paths = envFileCandidates().join('  oppure  ')
+  const paths = envFileCandidates()
   return [
     'Credenziali Google non configurate.',
-    `Crea un file .env con GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET in: ${paths}`,
+    paths.length > 0
+      ? `Crea un file .env con GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET in: ${paths.join('  oppure  ')}`
+      : 'Imposta GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET.',
     'Le istruzioni per generarle sono nel README, sezione "Setup Google Cloud".'
   ].join(' ')
 }

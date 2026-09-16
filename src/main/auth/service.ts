@@ -1,5 +1,5 @@
 import type { AuthStatus } from '@shared/types'
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, shell } from 'electron'
 import type { OAuth2Client } from 'google-auth-library'
 import { google } from 'googleapis'
 import { loadGoogleCredentials, setupHint } from '../config'
@@ -12,12 +12,24 @@ import { createTokenStore, type TokenStore } from './token-store'
 export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly'
 
 /**
- * Google rifiuta il flusso OAuth dentro uno "user agent incorporato". La finestra di
- * login si presenta quindi come un Chrome desktop: è una finestra dedicata, senza
- * preload e senza integrazione Node, che non condivide nulla con il renderer.
+ * Il consenso si apre nel browser di sistema, non in una finestra dell'app.
+ *
+ * Google rifiuta il flusso OAuth dentro uno "user agent incorporato" («Questo browser
+ * o questa app potrebbero non essere sicuri») e riconosce una BrowserWindow di Electron
+ * come tale, indipendentemente dallo user agent dichiarato. Il browser di sistema è
+ * anche la scelta migliore per chi accede: la password finisce in una finestra di cui
+ * l'utente può verificare il lucchetto e l'indirizzo, e l'app non la vede mai passare.
+ *
+ * Il resto del flusso non cambia: il redirect torna sempre sul loopback, e il codice
+ * viene scambiato con il token qui nel main.
  */
-const AUTH_USER_AGENT =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+const LOGIN_TIMEOUT_MS = 5 * 60_000
+
+export interface AuthDeps {
+  /** Come si apre la pagina di consenso. Iniettabile per poterla verificare nei test. */
+  openExternal?: (url: string) => Promise<void>
+  loginTimeoutMs?: number
+}
 
 export interface AuthService {
   status(): AuthStatus
@@ -27,7 +39,12 @@ export interface AuthService {
   client(): Promise<OAuth2Client>
 }
 
-export function createAuthService(store: TokenStore = createTokenStore()): AuthService {
+export function createAuthService(
+  store: TokenStore = createTokenStore(),
+  deps: AuthDeps = {}
+): AuthService {
+  const openExternal = deps.openExternal ?? ((url: string) => shell.openExternal(url))
+  const loginTimeoutMs = deps.loginTimeoutMs ?? LOGIN_TIMEOUT_MS
   let cachedClient: OAuth2Client | null = null
   let cachedEmail: string | null = null
 
@@ -90,33 +107,30 @@ export function createAuthService(store: TokenStore = createTokenStore()): AuthS
         code_challenge: pkce.challenge
       })
 
-      const window = new BrowserWindow({
-        width: 520,
-        height: 680,
-        title: 'Accesso Google',
-        autoHideMenuBar: true,
-        webPreferences: {
-          contextIsolation: true,
-          nodeIntegration: false,
-          sandbox: true,
-          partition: 'persist:google-auth'
-        }
-      })
-
-      let closedByUser = true
+      let timer: NodeJS.Timeout | undefined
       try {
-        await window.loadURL(authUrl, { userAgent: AUTH_USER_AGENT })
+        await openExternal(authUrl)
 
         const code = await Promise.race([
           server.waitForCode(),
+          // Senza finestra da chiudere non c'è un gesto di annullamento: se il consenso
+          // non arriva, il server di loopback non deve restare aperto per sempre.
           new Promise<never>((_resolve, reject) => {
-            window.on('closed', () => {
-              if (closedByUser) {
-                reject(new ReviewerError('AUTH_CANCELLED', 'Accesso annullato.'))
-              }
-            })
+            timer = setTimeout(
+              () =>
+                reject(
+                  new ReviewerError(
+                    'AUTH_CANCELLED',
+                    'Accesso non completato nel browser. Riprova quando vuoi.'
+                  )
+                ),
+              loginTimeoutMs
+            )
           })
         ])
+
+        // L'utente è ancora nel browser: riportiamo davanti la finestra dell'app.
+        BrowserWindow.getAllWindows()[0]?.focus()
 
         const { tokens } = await client.getToken({
           code,
@@ -144,9 +158,8 @@ export function createAuthService(store: TokenStore = createTokenStore()): AuthS
 
         return status()
       } finally {
-        closedByUser = false
+        clearTimeout(timer)
         server.close()
-        if (!window.isDestroyed()) window.close()
       }
     },
 

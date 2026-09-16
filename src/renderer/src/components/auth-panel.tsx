@@ -28,8 +28,9 @@ export default function AuthPanel({ status, busy, onLogin }: Props) {
       <div className={styles.banner}>
         <span className={styles.bannerTitle}>Nessun account collegato.</span>
         <span>
-          Accedi con l&apos;account Google che contiene i documenti. L&apos;app chiede il solo
-          permesso di lettura su Drive.
+          {busy
+            ? "Completa l'accesso nella finestra del browser che si è aperta, poi torna qui."
+            : "Accedi con l'account Google che contiene i documenti. Il consenso si apre nel browser di sistema e l'app chiede il solo permesso di lettura su Drive."}
         </span>
         <span className={styles.spacer} />
         <button
@@ -38,7 +39,7 @@ export default function AuthPanel({ status, busy, onLogin }: Props) {
           disabled={busy}
           onClick={onLogin}
         >
-          {busy ? 'Accesso in corso…' : 'Accedi con Google'}
+          {busy ? 'In attesa dal browser…' : 'Accedi con Google'}
         </button>
       </div>
     )
