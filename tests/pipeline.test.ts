@@ -2,12 +2,22 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
+import type { EngineSelection } from '../src/main/config'
+import { migrate } from '../src/main/db'
+import { createRepository } from '../src/main/db/repository'
 import type { OcrService } from '../src/main/extract/ocr'
 import { createOcrEngine } from '../src/main/extract/ocr-engine'
 import { extractText } from '../src/main/extract/text'
-import { createDocumentProcessor } from '../src/main/pipeline'
-import { createTestRepository } from './helpers/db'
-import { fixture, TESSDATA_DIR, testRegistry } from './helpers/registry'
+import { createDocumentProcessor, EXTRACTION_ENGINE_V2_VERSION } from '../src/main/pipeline'
+import { createTestRepository, databaseAt } from './helpers/db'
+import {
+  fixture,
+  TESSDATA_DIR,
+  testClassifierConfigV2,
+  testLegacyFieldMap,
+  testRegistry,
+  testRegistryV2
+} from './helpers/registry'
 
 const registry = testRegistry()
 
@@ -29,15 +39,29 @@ afterAll(async () => {
   rmSync(cachePath, { recursive: true, force: true })
 })
 
-function processorFor(repo: ReturnType<typeof createTestRepository>) {
-  return createDocumentProcessor({ repo, registry, ocr })
+type TestRepository = ReturnType<typeof createRepository>
+
+const V1: EngineSelection = { classifier: 'v1', extraction: 'v1' }
+const V2: EngineSelection = { classifier: 'v2', extraction: 'v2' }
+
+/** Le dipendenze v2 ci sono sempre, come nell'app: il flag decide quale motore gira. */
+function processorFor(
+  repo: TestRepository,
+  engines: EngineSelection,
+  options: { withOcr?: boolean } = {}
+) {
+  return createDocumentProcessor({
+    repo,
+    registry,
+    ocr: options.withOcr === false ? undefined : ocr,
+    engines,
+    classifierConfigV2: testClassifierConfigV2(),
+    extractionRegistryV2: testRegistryV2(),
+    legacyFieldMap: testLegacyFieldMap()
+  })
 }
 
-function seed(
-  repo: ReturnType<typeof createTestRepository>,
-  filename: string,
-  mime: string
-): string {
+function seed(repo: TestRepository, filename: string, mime: string): string {
   return repo.documents.upsertFromDrive({
     driveFileId: `drive-${filename}`,
     filename,
@@ -46,20 +70,37 @@ function seed(
   }).id
 }
 
+function inputFor(id: string, filename: string, mime: string) {
+  return { documentId: id, cachedPath: fixture(filename), mime, filename }
+}
+
 const PDF = 'application/pdf'
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
-describe('PDF con testo nativo', () => {
+describe('dipendenze del processore', () => {
+  it('un motore v2 senza i suoi dati è un errore alla creazione, non al primo documento', () => {
+    const repo = createTestRepository()
+    expect(() =>
+      createDocumentProcessor({ repo, registry, engines: { classifier: 'v2', extraction: 'v1' } })
+    ).toThrow('CLASSIFIER_ENGINE=v2')
+    expect(() =>
+      createDocumentProcessor({ repo, registry, engines: { classifier: 'v1', extraction: 'v2' } })
+    ).toThrow('EXTRACTION_ENGINE=v2')
+    expect(() => createDocumentProcessor({ repo, registry, engines: V1 })).not.toThrow()
+    repo.close()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// v1: la scappatoia deve comportarsi esattamente come prima
+// ---------------------------------------------------------------------------
+
+describe('motore v1 — PDF con testo nativo', () => {
   it('classifica, precompila e indicizza una fattura', async () => {
     const repo = createTestRepository()
     const id = seed(repo, 'fattura-nativa.pdf', PDF)
 
-    const outcome = await processorFor(repo)({
-      documentId: id,
-      cachedPath: fixture('fattura-nativa.pdf'),
-      mime: PDF,
-      filename: 'fattura-nativa.pdf'
-    })
+    const outcome = await processorFor(repo, V1)(inputFor(id, 'fattura-nativa.pdf', PDF))
 
     expect(outcome.textSource).toBe('NATIVE_TEXT')
     expect(outcome.documentType).toBe('accounting.fattura')
@@ -96,25 +137,26 @@ describe('PDF con testo nativo', () => {
     // La ricerca full-text vede il contenuto delle pagine.
     expect(repo.search.matchingDocumentIds('costruzioni')).toEqual([id])
 
-    expect(repo.events.listForDocument(id).map((e) => e.title)).toEqual([
-      'Tipo riconosciuto',
-      'Campi precompilati'
+    expect(repo.events.listForDocument(id).map((e) => [e.title, e.detail])).toEqual([
+      ['Tipo riconosciuto', 'accounting.fattura al 90% da «fattura» in prima pagina.'],
+      ['Campi precompilati', '8 campi su 8 con evidenza verbatim.']
     ])
+
+    // Il v1 non scrive i metadati v2 né lo storico dei run.
+    expect(
+      repo.fields.listForDocument(id).every((f) => f.role === null && f.review_status === null)
+    ).toBe(true)
+    expect(repo.extractionRuns.listForDocument(id)).toEqual([])
     repo.close()
   })
 })
 
-describe('DOCX', () => {
+describe('motore v1 — DOCX', () => {
   it('estrae il testo con mammoth e precompila i campi del tipo', async () => {
     const repo = createTestRepository()
     const id = seed(repo, 'contratto-consulenza.docx', DOCX)
 
-    const outcome = await processorFor(repo)({
-      documentId: id,
-      cachedPath: fixture('contratto-consulenza.docx'),
-      mime: DOCX,
-      filename: 'contratto-consulenza.docx'
-    })
+    const outcome = await processorFor(repo, V1)(inputFor(id, 'contratto-consulenza.docx', DOCX))
 
     expect(outcome.textSource).toBe('DOCX')
     expect(outcome.documentType).toBe('contracts_general.contratto_consulenza')
@@ -134,17 +176,12 @@ describe('DOCX', () => {
   })
 })
 
-describe('PDF scansionato', () => {
+describe('motore v1 — PDF scansionato', () => {
   it('passa da OCR quando manca il text layer', async () => {
     const repo = createTestRepository()
     const id = seed(repo, 'durc-scansionato.pdf', PDF)
 
-    const outcome = await processorFor(repo)({
-      documentId: id,
-      cachedPath: fixture('durc-scansionato.pdf'),
-      mime: PDF,
-      filename: 'durc-scansionato.pdf'
-    })
+    const outcome = await processorFor(repo, V1)(inputFor(id, 'durc-scansionato.pdf', PDF))
 
     expect(outcome.textSource).toBe('OCR')
     expect(outcome.ocrPages).toEqual([1])
@@ -178,17 +215,14 @@ describe('PDF scansionato', () => {
   })
 })
 
-describe('documento non classificabile', () => {
+describe('motore v1 — documento non classificabile', () => {
   it('lascia il tipo da assegnare e chiede solo i 4 campi universali', async () => {
     const repo = createTestRepository()
     const id = seed(repo, 'promemoria-ignoto.pdf', PDF)
 
-    const outcome = await createDocumentProcessor({ repo, registry })({
-      documentId: id,
-      cachedPath: fixture('promemoria-ignoto.pdf'),
-      mime: PDF,
-      filename: 'promemoria-ignoto.pdf'
-    })
+    const outcome = await processorFor(repo, V1, { withOcr: false })(
+      inputFor(id, 'promemoria-ignoto.pdf', PDF)
+    )
 
     expect(outcome.documentType).toBeNull()
     expect(outcome.typeConfidence).toBeNull()
@@ -203,22 +237,20 @@ describe('documento non classificabile', () => {
     expect(document.warnings).toContain(
       'Tipo da assegnare a mano: nessun alias del registry supera la soglia.'
     )
-    expect(repo.events.listForDocument(id).map((e) => e.title)).toContain('Tipo non riconosciuto')
+    expect(repo.events.listForDocument(id).map((e) => [e.title, e.detail])).toContainEqual([
+      'Tipo non riconosciuto',
+      'Nessun alias del registry supera la soglia di 0,75: il tipo va assegnato a mano.'
+    ])
     repo.close()
   })
 })
 
-describe('transazione per documento', () => {
+describe('motore v1 — transazione per documento', () => {
   it('rielaborare un documento non duplica campi ed evidenze', async () => {
     const repo = createTestRepository()
     const id = seed(repo, 'fattura-nativa.pdf', PDF)
-    const process = processorFor(repo)
-    const input = {
-      documentId: id,
-      cachedPath: fixture('fattura-nativa.pdf'),
-      mime: PDF,
-      filename: 'fattura-nativa.pdf'
-    }
+    const process = processorFor(repo, V1)
+    const input = inputFor(id, 'fattura-nativa.pdf', PDF)
 
     await process(input)
     await process(input)
@@ -235,16 +267,379 @@ describe('transazione per documento', () => {
     const id = seed(repo, 'fattura-nativa.pdf', PDF)
     repo.documents.setType(id, 'accounting.nota_di_credito', null)
 
-    const outcome = await processorFor(repo)({
-      documentId: id,
-      cachedPath: fixture('fattura-nativa.pdf'),
-      mime: PDF,
-      filename: 'fattura-nativa.pdf'
-    })
+    const outcome = await processorFor(repo, V1)(inputFor(id, 'fattura-nativa.pdf', PDF))
 
     expect(outcome.documentType).toBe('accounting.nota_di_credito')
     expect(outcome.typeConfidence).toBeNull()
     expect(repo.events.listForDocument(id).map((e) => e.title)).toContain('Tipo confermato')
+    repo.close()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// v2: il percorso normale
+// ---------------------------------------------------------------------------
+
+describe('motore v2 — PDF con testo nativo', () => {
+  it('riconosce la fattura e precompila il profilo del tipo', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'fattura-nativa.pdf', PDF)
+
+    const outcome = await processorFor(repo, V2)(inputFor(id, 'fattura-nativa.pdf', PDF))
+
+    expect(outcome.documentType).toBe('accounting.fattura')
+    expect(outcome.typeConfidence).toBeGreaterThanOrEqual(0.74)
+    expect(outcome).toMatchObject({ filledFields: 8, totalFields: 15, confidence: 0.85 })
+
+    const rows = repo.fields.listForDocument(id)
+    expect(rows.map((f) => [f.name, f.role, f.review_status, f.value])).toEqual([
+      ['document.number', 'required', 'AUTO_ACCEPTED', '114/2026'],
+      ['document.issue_date', 'required', 'AUTO_ACCEPTED', '2026-09-08'],
+      ['issuer.name', 'required', 'AUTO_ACCEPTED', 'Alfa S.r.l.'],
+      ['recipient.name', 'required', 'AUTO_ACCEPTED', 'Beta Costruzioni S.p.A.'],
+      ['money.total', 'required', 'AUTO_ACCEPTED', '86420.00'],
+      ['issuer.tax_id', 'core', 'MISSING', null],
+      ['recipient.tax_id', 'core', 'MISSING', null],
+      ['money.taxable', 'core', 'AUTO_ACCEPTED', '70836.07'],
+      ['money.tax', 'core', 'AUTO_ACCEPTED', '15583.93'],
+      ['money.currency', 'core', 'AUTO_ACCEPTED', 'EUR'],
+      ['payment.due_date', 'core', 'MISSING', null],
+      ['line_items', 'core', 'MISSING', null],
+      ['bank.iban', 'conditional', 'MISSING', null],
+      ['procurement.cig', 'conditional', 'MISSING', null],
+      ['procurement.cup', 'conditional', 'MISSING', null]
+    ])
+    expect(rows.find((f) => f.name === 'line_items')?.cardinality).toBe('many')
+    expect(rows.find((f) => f.name === 'money.total')?.semantic_type).toBe('money')
+
+    const document = repo.getReviewDocument(id)!
+    expect(document.fields.find((f) => f.name === 'money.total')).toMatchObject({
+      label: 'Totale',
+      required: true,
+      semanticType: 'money'
+    })
+    // Evidenza verbatim con coordinate per ogni valore, nessuna per i vuoti.
+    for (const field of document.fields) {
+      if (!field.value) {
+        expect(field.evidenceId, `${field.name} vuoto con evidenza`).toBeUndefined()
+        continue
+      }
+      const evidence = document.evidence.find((item) => item.id === field.evidenceId)
+      expect(evidence?.bbox?.w, `${field.name} senza evidenza`).toBeGreaterThan(0)
+    }
+    expect(document.evidence).toHaveLength(8)
+    expect(document.warnings).toEqual([])
+    expect(repo.search.matchingDocumentIds('costruzioni')).toEqual([id])
+
+    const events = repo.events.listForDocument(id)
+    expect(events.map((e) => e.title)).toEqual(['Tipo riconosciuto', 'Campi precompilati'])
+    expect(events[0]?.detail).toMatch(
+      /^accounting\.fattura al 83% col classificatore v2 da «fattura»; nessun altro candidato, margine 0,83\.$/
+    )
+    expect(events[1]?.detail).toBe(
+      '8 campi su 15 con evidenza verbatim, profilo v2 EXTRACTION_SCHEMA_READY_FOR_FIELD_TEST.'
+    )
+
+    const [run] = repo.extractionRuns.listForDocument(id)
+    expect(run).toMatchObject({
+      engine_version: EXTRACTION_ENGINE_V2_VERSION,
+      schema_version: '2.0.0',
+      document_type: 'accounting.fattura',
+      status: 'COMPLETED',
+      missing_required_json: '[]',
+      conflicts_json: '[]'
+    })
+    expect(JSON.parse(run!.metrics_json!)).toMatchObject({
+      profileSource: 'V2_EXPLICIT',
+      coverage: 0.53,
+      filledFields: 8,
+      totalFields: 15,
+      textSource: 'NATIVE_TEXT',
+      reviewStatus: { AUTO_ACCEPTED: 8, MISSING: 7 },
+      classifier: {
+        engine: 'v2',
+        decision: 'ASSIGN',
+        reason: 'OK',
+        top: { documentType: 'accounting.fattura' },
+        runnerUp: null
+      }
+    })
+    repo.close()
+  })
+})
+
+describe('motore v2 — DOCX', () => {
+  it('precompila il contratto col suo profilo, senza numero richiesto', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'contratto-consulenza.docx', DOCX)
+
+    const outcome = await processorFor(repo, V2)(inputFor(id, 'contratto-consulenza.docx', DOCX))
+
+    expect(outcome.documentType).toBe('contracts_general.contratto_consulenza')
+    const rows = repo.fields.listForDocument(id)
+    const values = Object.fromEntries(rows.map((f) => [f.name, f.value]))
+    expect(values).toMatchObject({
+      'document.number': 'CC-2026-018',
+      'document.issue_date': '2026-09-15',
+      'issuer.name': 'Gamma Consulting S.r.l.',
+      'recipient.name': 'Alfa S.r.l.',
+      'contract.parties': null
+    })
+    // Profilo DRAFT: nessun campo obbligatorio, quindi nessun avviso per i vuoti.
+    expect(rows.every((f) => f.role !== 'required')).toBe(true)
+    expect(repo.getReviewDocument(id)!.warnings).toEqual([])
+    expect(repo.getReviewDocument(id)!.evidence.every((item) => item.bbox === undefined)).toBe(true)
+    repo.close()
+  })
+})
+
+describe('motore v2 — PDF scansionato', () => {
+  it('estrae da OCR, manda i valori in revisione e segnala gli obbligatori mancanti', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'durc-scansionato.pdf', PDF)
+
+    const outcome = await processorFor(repo, V2)(inputFor(id, 'durc-scansionato.pdf', PDF))
+
+    expect(outcome.textSource).toBe('OCR')
+    expect(outcome.documentType).toBe('payroll_contributions.durc')
+
+    const rows = repo.fields.listForDocument(id)
+    const byName = Object.fromEntries(rows.map((f) => [f.name, f]))
+    expect(byName['document.protocol_number']).toMatchObject({
+      value: '2026/554321',
+      review_status: 'NEEDS_REVIEW',
+      confidence: 0.75
+    })
+    expect(byName['document.issue_date']?.value).toBe('2026-09-01')
+    expect(byName['issuer.name']?.value).toContain('INPS')
+    // Il protocollo non si duplica nel numero documento.
+    expect(byName['document.number']?.value).toBeNull()
+
+    const document = repo.getReviewDocument(id)!
+    expect(document.warnings).toEqual([
+      'Testo ricavato da OCR: la confidence dei campi è ridotta di 0,10.',
+      'Campi obbligatori senza evidenza: Impresa/società, CF/P.IVA impresa, Data scadenza, Stato/esito.'
+    ])
+    expect(repo.events.listForDocument(id).map((e) => e.title)).toEqual([
+      'OCR eseguito',
+      'Tipo riconosciuto',
+      'Campi precompilati'
+    ])
+    expect(JSON.parse(repo.extractionRuns.listForDocument(id)[0]!.missing_required_json!)).toEqual([
+      'company.name',
+      'company.tax_id',
+      'document.expiry_date',
+      'license.status'
+    ])
+    repo.close()
+  }, 180_000)
+})
+
+describe('motore v2 — documento non classificabile', () => {
+  it('resta UNKNOWN senza campi, senza evidenze e col motivo nella timeline', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'promemoria-ignoto.pdf', PDF)
+
+    const outcome = await processorFor(repo, V2)(inputFor(id, 'promemoria-ignoto.pdf', PDF))
+
+    expect(outcome).toMatchObject({
+      documentType: null,
+      typeConfidence: null,
+      confidence: 0,
+      filledFields: 0,
+      totalFields: 0
+    })
+    const document = repo.getReviewDocument(id)!
+    expect(document.fields).toEqual([])
+    expect(document.evidence).toEqual([])
+    expect(document.confidenceBand).toBe('LOW')
+    expect(document.warnings).toEqual([
+      'Tipo da assegnare a mano: nessun alias del registry supera la soglia.'
+    ])
+    expect(repo.events.listForDocument(id).map((e) => [e.title, e.detail])).toEqual([
+      [
+        'Tipo non riconosciuto',
+        'Classificatore v2: nessun alias o segnale del registry compare nel testo (NO_SIGNAL). Il tipo va assegnato a mano.'
+      ],
+      [
+        'Campi non estratti',
+        'Tipo non riconosciuto: senza tipo non c’è un profilo di campi da cercare. I campi si precompilano quando il tipo viene assegnato a mano.'
+      ]
+    ])
+    expect(repo.extractionRuns.listForDocument(id)).toMatchObject([
+      { status: 'SKIPPED_UNKNOWN_TYPE', document_type: '' }
+    ])
+    repo.close()
+  })
+
+  it('assegnato il tipo a mano, si precompila col profilo di quel tipo', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'promemoria-ignoto.pdf', PDF)
+    const process = processorFor(repo, V2)
+    await process(inputFor(id, 'promemoria-ignoto.pdf', PDF))
+
+    repo.documents.setType(id, 'payments_treasury.richiesta_pagamento', null)
+    const outcome = await process(inputFor(id, 'promemoria-ignoto.pdf', PDF))
+
+    expect(outcome).toMatchObject({
+      documentType: 'payments_treasury.richiesta_pagamento',
+      typeConfidence: null,
+      filledFields: 1,
+      totalFields: 10
+    })
+    const values = Object.fromEntries(repo.fields.listForDocument(id).map((f) => [f.name, f.value]))
+    expect(values['money.amount']).toBe('1250.00')
+    expect(repo.events.listForDocument(id).map((e) => e.title)).toContain('Tipo confermato')
+    expect(JSON.parse(repo.extractionRuns.listForDocument(id)[0]!.metrics_json!)).toMatchObject({
+      classifier: { manualType: true, reason: 'NO_SIGNAL' }
+    })
+    repo.close()
+  })
+
+  it('un tipo assegnato a mano che nessun profilo conosce non fa fallire la rielaborazione', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'promemoria-ignoto.pdf', PDF)
+    repo.documents.setType(id, 'promemoria_interno', null)
+
+    const outcome = await processorFor(repo, V2)(inputFor(id, 'promemoria-ignoto.pdf', PDF))
+
+    expect(outcome).toMatchObject({ documentType: 'promemoria_interno', totalFields: 0 })
+    expect(repo.fields.listForDocument(id)).toEqual([])
+    expect(repo.events.listForDocument(id).at(-1)?.detail).toBe(
+      'Nessun profilo di estrazione per «promemoria_interno»: il tipo non ha un profilo v2 né uno schema nel registry.'
+    )
+    expect(repo.extractionRuns.listForDocument(id)[0]?.status).toBe('SKIPPED_NO_PROFILE')
+    repo.close()
+  })
+})
+
+describe('motori combinati', () => {
+  it('classificatore v2 con estrazione v1: senza tipo tornano i 4 universali', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'promemoria-ignoto.pdf', PDF)
+    await processorFor(repo, { classifier: 'v2', extraction: 'v1' })(
+      inputFor(id, 'promemoria-ignoto.pdf', PDF)
+    )
+    expect(repo.fields.listForDocument(id)).toHaveLength(4)
+    expect(repo.extractionRuns.listForDocument(id)).toEqual([])
+    repo.close()
+  })
+
+  it('classificatore v1 con estrazione v2: il profilo del tipo trovato dal v1', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'fattura-nativa.pdf', PDF)
+    const outcome = await processorFor(repo, { classifier: 'v1', extraction: 'v2' })(
+      inputFor(id, 'fattura-nativa.pdf', PDF)
+    )
+    expect(outcome).toMatchObject({ typeConfidence: 0.9, totalFields: 15 })
+    expect(repo.events.listForDocument(id)[0]?.detail).toBe(
+      'accounting.fattura al 90% da «fattura» in prima pagina.'
+    )
+    expect(
+      JSON.parse(repo.extractionRuns.listForDocument(id)[0]!.metrics_json!).classifier
+    ).toEqual({
+      engine: 'v1',
+      manualType: false,
+      documentType: 'accounting.fattura',
+      confidence: 0.9,
+      phrase: 'fattura',
+      source: 'first-page'
+    })
+    repo.close()
+  })
+})
+
+describe('motore v2 — rielaborazione e correzioni', () => {
+  it('rielaborare non duplica campi ed evidenze, e accumula lo storico dei run', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'fattura-nativa.pdf', PDF)
+    const process = processorFor(repo, V2)
+    const input = inputFor(id, 'fattura-nativa.pdf', PDF)
+
+    await process(input)
+    await process(input)
+
+    const document = repo.getReviewDocument(id)!
+    expect(document.fields).toHaveLength(15)
+    expect(document.evidence).toHaveLength(8)
+    expect(repo.extractionRuns.listForDocument(id)).toHaveLength(2)
+    repo.close()
+  })
+
+  it('una correzione sopravvive al re-run, anche su un campo che il profilo non ha più', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'fattura-nativa.pdf', PDF)
+    const process = processorFor(repo, V2)
+    const input = inputFor(id, 'fattura-nativa.pdf', PDF)
+    await process(input)
+
+    const number = repo.fields.listForDocument(id).find((f) => f.name === 'document.number')!
+    repo.fields.setCorrectedValue(number.id, '114/2026-bis')
+
+    // Il revisore cambia tipo: il profilo della nota di credito non ha i campi CIG/CUP,
+    // ma una correzione fatta lì non deve sparire.
+    const cig = repo.fields.listForDocument(id).find((f) => f.name === 'procurement.cig')!
+    repo.fields.setCorrectedValue(cig.id, 'Z123456789')
+    repo.documents.setType(id, 'accounting.nota_di_credito', null)
+    await process(input)
+
+    const rows = repo.fields.listForDocument(id)
+    expect(rows.find((f) => f.name === 'document.number')).toMatchObject({
+      value: '114/2026',
+      corrected_value: '114/2026-bis',
+      role: 'core'
+    })
+    expect(rows.find((f) => f.name === 'procurement.cig')).toMatchObject({
+      corrected_value: 'Z123456789',
+      review_status: 'NEEDS_REVIEW'
+    })
+    repo.close()
+  })
+
+  it('una correzione fatta col nome v1 sopravvive a migrazione e re-run col v2', async () => {
+    // Database di un'installazione esistente, fermo alla 0003, con una fattura già
+    // elaborata dal v1 e corretta dal revisore.
+    const db = databaseAt('0003')
+    db.prepare(
+      "INSERT INTO documents (id, drive_file_id, filename, mime, document_type, type_confidence, status, synced_at) VALUES ('doc', 'drive-fattura', 'fattura-nativa.pdf', 'application/pdf', 'accounting.fattura', 0.9, 'NEEDS_REVIEW', '2026-09-10')"
+    ).run()
+    const field = db.prepare(
+      "INSERT INTO fields (id, document_id, name, label, value, corrected_value, confidence, updated_at) VALUES (?, 'doc', ?, ?, ?, ?, 0.85, ?)"
+    )
+    field.run('f1', 'document_number', 'Numero documento', '114/2026', '114/2026-A', '2026-09-11')
+    field.run('f2', 'total_amount', 'Totale', '86420.00', '86420.50', '2026-09-11')
+    field.run('f3', 'tax_code', 'Codice fiscale o partita IVA', null, '01234567890', '2026-09-11')
+
+    migrate(db)
+    const repo = createRepository(db)
+    await processorFor(repo, V2)(inputFor('doc', 'fattura-nativa.pdf', PDF))
+
+    const rows = Object.fromEntries(repo.fields.listForDocument('doc').map((f) => [f.name, f]))
+    expect(rows['document.number']).toMatchObject({
+      value: '114/2026',
+      corrected_value: '114/2026-A',
+      updated_at: '2026-09-11'
+    })
+    expect(rows['money.total']).toMatchObject({ value: '86420.00', corrected_value: '86420.50' })
+    // `tax_code` diventa `company.tax_id`, che la fattura v2 non chiede: resta a sé.
+    expect(rows['company.tax_id']).toMatchObject({ corrected_value: '01234567890' })
+    expect(rows.document_number).toBeUndefined()
+    db.close()
+  })
+
+  it('tornando al v1 le correzioni fatte col v2 si ritrovano', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'fattura-nativa.pdf', PDF)
+    const input = inputFor(id, 'fattura-nativa.pdf', PDF)
+    await processorFor(repo, V2)(input)
+    const total = repo.fields.listForDocument(id).find((f) => f.name === 'money.total')!
+    repo.fields.setCorrectedValue(total.id, '86420.50')
+
+    await processorFor(repo, V1)(input)
+
+    const rows = repo.fields.listForDocument(id)
+    expect(rows).toHaveLength(8)
+    expect(rows.find((f) => f.name === 'total_amount')?.corrected_value).toBe('86420.50')
     repo.close()
   })
 })
