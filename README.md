@@ -213,25 +213,52 @@ toglie la copia locale e lascia intatti dati estratti ed evidenze: il file si ri
 riaprendolo. L'elenco mostra, per ogni riga, se il file è in locale, da aggiornare o
 solo analizzato, e in testa quanto spazio occupa la cache.
 
-**Classificazione** (deterministica, nessun LLM). Phrase match di `canonical_name`,
-`aliases` e `synonyms` del registry sul testo normalizzato della prima pagina (0,90) e
-sul nome del file (0,70), vince il massimo fra i due e, a parità, l'alias più lungo.
-Sotto 0,75 il tipo non viene assegnato e resta da scegliere a mano nella UI.
+**Due motori, scelti da variabile d'ambiente.** `CLASSIFIER_ENGINE` ed
+`EXTRACTION_ENGINE` valgono `v2` se non impostate; `v1` riporta il comportamento di
+prima ed è la scappatoia se il v2 dà problemi. Si leggono come le credenziali: prima
+l'ambiente, poi il `.env`. Un valore diverso da `v1`/`v2` ferma l'avvio. Con entrambi a
+`v1` i JSON del registry v2 non vengono nemmeno caricati.
 
-**Precompilazione.** Vengono chiesti solo i campi dichiarati dallo schema del tipo (i 4
-universali più gli specifici); senza tipo restano i 4 universali. Il testo viene dal
-text layer del PDF, da mammoth per i DOCX, o da tesseract per le pagine sotto i 100
-caratteri. Le euristiche sono per tipo semantico: date normalizzate a `yyyy-mm-dd`,
-importi a decimale con punto, codice fiscale e partita IVA, numeri di documento e di
-protocollo, e il pattern `<etichetta>: <valore>` per le stringhe.
+**Classificazione v2** (deterministica, nessun LLM). Combina più indizi sulle prime
+pagine (`max_pages` in `resources/registry/v2/classifier_signals_v2.json`): alias del
+registry pesati per posizione (zona del titolo o resto del testo) e specificità, segnali
+positivi, contrari ed esclusivi configurati per 11 classi che si confondono (CU, UNILAV,
+patente a crediti…), il nome del file solo come conferma. Assegna il tipo solo se il
+punteggio supera la soglia **e** stacca abbastanza il secondo candidato; altrimenti il
+documento resta `UNKNOWN` e la timeline dice perché (`BELOW_THRESHOLD`, `LOW_MARGIN`,
+`FILENAME_ONLY`, `HARD_NEGATIVE`, `NO_SIGNAL`) con miglior candidato, secondo e margine.
+
+**Classificazione v1.** Phrase match di `canonical_name`, `aliases` e `synonyms` sulla
+prima pagina (0,90) e sul nome del file (0,70); sotto 0,75 il tipo resta da assegnare.
+
+**Precompilazione v2.** I campi sono quelli del profilo del tipo
+(`class_extraction_profiles_v2.json`, 500 profili su un'ontologia di 248 campi), ognuno
+col suo ruolo: obbligatorio, principale, opzionale, condizionale. I 16 tipi del registry
+senza profilo esplicito ricevono un profilo ricavato dal loro schema v1
+(`LEGACY_FALLBACK`). **Senza tipo non si estrae niente**: la scheda resta vuota finché il
+tipo non viene assegnato a mano, e l'assegnazione rielabora subito il documento. Il
+valore si cerca dopo l'etichetta sulla stessa riga o, se la riga finisce con
+l'etichetta, sulla successiva, con un lettore per tipo (date, importi, interi, decimali,
+identificativi, testo). Fra due campi che leggono la stessa riga vince l'etichetta più
+specifica; a parità, o con due valori diversi per la stessa etichetta, il campo va in
+`CONFLICT`. I campi ripetuti (righe, rate, garanzie) finiscono in `field_items`, un
+elemento per riga. Ogni esecuzione lascia un rigo in `extraction_runs` con motore,
+versione dei profili, obbligatori mancanti, conflitti e metriche.
+
+**Precompilazione v1.** I campi dichiarati dallo schema del tipo, i 4 universali se il
+tipo manca, con le euristiche di `src/main/extract/heuristics.ts`. Il testo, per
+entrambi, viene dal text layer del PDF, da mammoth per i DOCX, o da tesseract per le
+pagine sotto i 100 caratteri.
 
 **Nessun valore senza evidenza.** Ogni campo precompilato punta a una riga verbatim del
 documento, con le coordinate quando il text layer le espone. Se l'evidenza non si trova,
 il campo resta vuoto: un dato che il revisore non può verificare costa più di un campo
 da riempire a mano.
 
-**Confidence.** 0,85 con una keyword di contesto, 0,70 col solo pattern, meno 0,10 se il
-testo viene da OCR. La confidence del documento è la media dei campi valorizzati; le
+**Confidence.** v2: 0,85 col valore sulla riga dell'etichetta, 0,80 sulla riga
+successiva, meno 0,18 per ogni validatore fallito; sotto 0,85 il campo è `NEEDS_REVIEW`,
+sopra `AUTO_ACCEPTED`. v1: 0,85 con una keyword di contesto, 0,70 col solo pattern. In
+entrambi meno 0,10 se il testo viene da OCR. La confidence del documento è la media dei campi valorizzati; le
 bande sono HIGH ≥ 0,90, MEDIUM ≥ 0,75, LOW sotto. Sono euristiche dichiarate, da
 calibrare sui documenti veri.
 
@@ -295,7 +322,13 @@ negli schemi ma qui sono trattati come stringhe: in pratica portano un'unità di
 
 **Correzioni e rielaborazione.** Una correzione umana è legata al nome del campo e
 sopravvive a una nuova estrazione dello stesso documento; lo stesso vale per un tipo
-assegnato a mano, che non viene sovrascritto da un match automatico.
+assegnato a mano, che non viene sovrascritto da un match automatico. La migrazione 0004
+rinomina i 40 campi v1 sugli id dell'ontologia (`document_number` → `document.number`),
+e la pipeline ritrova una correzione anche sotto l'altro nome, così cambiare motore non
+la perde. Col v2 una correzione su un campo che il nuovo profilo non chiede resta come
+campo a sé, e quella su un elemento ripetuto torna sullo stesso indice. All'avvio col v2
+i documenti in coda con la copia in cache che non sono mai passati da questa versione dei
+profili vengono rielaborati in sottofondo; quelli già revisionati o scartati no.
 
 **OCR.** Copre le pagine *scansionate*, cioè quelle fatte di immagini: il motore prende
 l'immagine che la pagina già contiene invece di ri-rasterizzarla. Una pagina senza testo
@@ -343,5 +376,7 @@ stanno in una navbar orizzontale invece che in una sidebar, e in revisione il do
 è sempre visibile accanto alle schede Dati, History ed Evidenze.
 
 I file in `resources/registry/` sono uno **snapshot** del registry PraticaAI
-(511 tipi, vedi `SNAPSHOT.txt`). Il repo non dipende dal monorepo PraticaAI e non ne
+(511 tipi, vedi `SNAPSHOT.txt`); quelli in `resources/registry/v2/` vengono dal pacchetto
+Classifier v2 + Extraction Brain v2 (vedi `v2/SNAPSHOT.txt`), con i profili ancora in
+stato di bozza. Il repo non dipende dal monorepo PraticaAI e non ne
 importa nulla: quei JSON sono dati, non codice.

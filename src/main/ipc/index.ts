@@ -12,6 +12,7 @@ import { fail, logError, ok, ReviewerError } from '../errors'
 import { extractDocxPages } from '../extract/docx'
 import type { OcrService } from '../extract/ocr'
 import { cachePathFor } from '../paths'
+import { assignDocumentType } from '../reprocess'
 import { buildReviewPayload, describeReview, statusForAction } from '../review'
 import {
   documentFiltersSchema,
@@ -143,25 +144,9 @@ export function registerIpcHandlers(context: IpcContext): void {
 
   handle('docs:types', noInput, () => context.registryTypes?.() ?? [])
 
-  handle('docs:set-type', setTypeSchema, ({ id, documentType }) => {
-    const existing = repo.documents.get(id)
-    if (!existing) throw new ReviewerError('NOT_FOUND', 'Documento non trovato.')
-
-    repo.transaction(() => {
-      // Assegnazione manuale: la confidence del tipo resta nulla, perché non viene
-      // da un match del registry ma da una decisione del revisore.
-      repo.documents.setType(id, documentType, null)
-      repo.events.add(
-        id,
-        documentType ? 'Tipo assegnato a mano' : 'Tipo rimosso',
-        documentType
-          ? `Il revisore ha impostato il tipo «${documentType}».`
-          : 'Il revisore ha rimosso il tipo assegnato.'
-      )
-    })
-
-    return repo.getReviewDocument(id)!
-  })
+  handle('docs:set-type', setTypeSchema, ({ id, documentType }) =>
+    assignDocumentType({ repo, documentId: id, documentType, process: context.process })
+  )
 
   // ---- campi e revisione ---------------------------------------------------
   handle('fields:update', updateFieldSchema, ({ documentId, fieldId, correctedValue }) => {
