@@ -1,42 +1,22 @@
-import type { Annotation, BoundingBox, EvidenceItem, ReviewDocument } from '@shared/types'
+import type { EvidenceItem, ReviewDocument } from '@shared/types'
 import { useEffect, useState } from 'react'
 import { api, errorMessage } from '../lib/ipc'
-import AnnotationsPanel from './annotations-panel'
 import styles from './document-review.module.css'
-import PdfViewer, { type DrawMode } from './pdf-viewer'
+import PdfViewer from './pdf-viewer'
 
 interface Props {
   document: ReviewDocument
   evidence: EvidenceItem[]
-  annotations: Annotation[]
   focusedEvidenceId: string | null
-  busy: boolean
-  onCreateAnnotation: (page: number, bbox: BoundingBox, kind: 'highlight' | 'note') => void
-  onUpdateNote: (id: string, note: string) => void
-  onDeleteAnnotation: (id: string) => void
-  onExport: () => void
 }
 
 const PDF_MIME = 'application/pdf'
 
 /**
- * Il PDF si vede e si annota; il DOCX in v1 è solo testo (D4): senza resa di pagina
- * non ci sono coordinate su cui appoggiare un'evidenziazione.
+ * Il PDF si vede pagina per pagina; il DOCX in v1 è solo testo (D4): senza resa di
+ * pagina non ci sono coordinate su cui appoggiare le evidenze.
  */
-export default function DocumentPreview({
-  document,
-  evidence,
-  annotations,
-  focusedEvidenceId,
-  busy,
-  onCreateAnnotation,
-  onUpdateNote,
-  onDeleteAnnotation,
-  onExport
-}: Props) {
-  const [mode, setMode] = useState<DrawMode>('none')
-  const [selectedAnnotation, setSelectedAnnotation] = useState<string | null>(null)
-
+export default function DocumentPreview({ document, evidence, focusedEvidenceId }: Props) {
   if (document.mime !== PDF_MIME) {
     return <DocxText documentId={document.id} />
   }
@@ -51,35 +31,12 @@ export default function DocumentPreview({
   }
 
   return (
-    <div className={styles.pdfPane}>
-      <AnnotationsPanel
-        annotations={annotations}
-        mode={mode}
-        busy={busy}
-        selectedId={selectedAnnotation}
-        onModeChange={setMode}
-        onSelect={setSelectedAnnotation}
-        onUpdateNote={onUpdateNote}
-        onDelete={(id) => {
-          setSelectedAnnotation(null)
-          onDeleteAnnotation(id)
-        }}
-        onExport={onExport}
-      />
-      <PdfViewer
-        documentId={document.id}
-        read={api.pdf.read}
-        evidence={evidence}
-        annotations={annotations}
-        focusedEvidenceId={focusedEvidenceId}
-        mode={mode}
-        onDraw={(page, bbox) => {
-          onCreateAnnotation(page, bbox, mode === 'note' ? 'note' : 'highlight')
-          setMode('none')
-        }}
-        onSelectAnnotation={(annotation) => setSelectedAnnotation(annotation.id)}
-      />
-    </div>
+    <PdfViewer
+      documentId={document.id}
+      read={api.pdf.read}
+      evidence={evidence}
+      focusedEvidenceId={focusedEvidenceId}
+    />
   )
 }
 
@@ -101,13 +58,5 @@ function DocxText({ documentId }: { documentId: string }) {
   if (error) return <div className={styles.error}>{error}</div>
   if (text === null) return <div className={styles.spinner}>Estraggo il testo…</div>
 
-  return (
-    <div className={styles.pdfPane}>
-      <div className={styles.muted}>
-        Per i DOCX la v1 mostra solo il testo estratto: senza resa di pagina non ci sono coordinate,
-        quindi non si possono creare annotazioni.
-      </div>
-      <div className={styles.docxText}>{text}</div>
-    </div>
-  )
+  return <div className={styles.docxText}>{text}</div>
 }

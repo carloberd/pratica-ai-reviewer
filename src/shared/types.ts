@@ -5,7 +5,7 @@
  * i nomi originali (`ReviewDocument`, `ExtractedField`, `EvidenceItem`, `TimelineItem`,
  * `ReviewDecision`, bande HIGH/MEDIUM/LOW) sono mantenuti così come sono, per poter
  * riusare la shell senza riscriverla. Le aggiunte necessarie a questa app desktop
- * (drive, annotazioni, correzioni con before/after) sono marcate con `// v1 reviewer`.
+ * (drive, correzioni con before/after) sono marcate con `// v1 reviewer`.
  */
 
 export type ReviewDecision = 'APPROVE' | 'CORRECT' | 'REJECT'
@@ -66,17 +66,6 @@ export interface TimelineItem {
   at: string
   title: string
   detail: string
-}
-
-export interface Annotation {
-  id: string
-  documentId: string
-  page: number
-  bbox: BoundingBox
-  kind: 'highlight' | 'note'
-  note?: string
-  createdAt: string
-  updatedAt: string
 }
 
 export interface ReviewDocument {

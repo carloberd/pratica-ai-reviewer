@@ -243,37 +243,6 @@ describe('fields ed evidence dao', () => {
   })
 })
 
-describe('annotations dao', () => {
-  it('crea, aggiorna ed elimina una nota', () => {
-    const r = makeRepo()
-    const id = seedDocument(r)
-    const created = r.annotations.add({
-      documentId: id,
-      page: 2,
-      bbox: { x: 1, y: 2, w: 3, h: 4 },
-      kind: 'note',
-      note: 'da verificare'
-    })
-
-    expect(r.listAnnotations(id)).toHaveLength(1)
-
-    r.annotations.update(created.id, { note: 'verificato', bbox: { x: 5, y: 6, w: 7, h: 8 } })
-    const updated = r.listAnnotations(id)[0]!
-    expect(updated.note).toBe('verificato')
-    expect(updated.bbox).toEqual({ x: 5, y: 6, w: 7, h: 8 })
-    expect(updated.updatedAt >= updated.createdAt).toBe(true)
-
-    expect(r.annotations.delete(created.id)).toBe(true)
-    expect(r.listAnnotations(id)).toHaveLength(0)
-  })
-
-  it('non modifica un id inesistente', () => {
-    const r = makeRepo()
-    expect(r.annotations.update('manca', { note: 'x' })).toBeUndefined()
-    expect(r.annotations.delete('manca')).toBe(false)
-  })
-})
-
 describe('events dao', () => {
   it('costruisce la timeline in ordine cronologico', () => {
     const r = makeRepo()

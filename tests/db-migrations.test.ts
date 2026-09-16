@@ -22,13 +22,14 @@ describe('migrazioni', () => {
       'documents',
       'fields',
       'evidence',
-      'annotations',
       'events',
       'documents_fts',
       'schema_migrations'
     ]) {
       expect(names).toContain(table)
     }
+    // La 0002 la elimina: nessuna schermata sa più mostrarne il contenuto.
+    expect(names).not.toContain('annotations')
     db.close()
   })
 
@@ -46,7 +47,7 @@ describe('migrazioni', () => {
     db.close()
   })
 
-  it('cancellando un documento spariscono campi, evidenze, annotazioni ed eventi', () => {
+  it('cancellando un documento spariscono campi, evidenze ed eventi', () => {
     const db = openDatabase({ file: ':memory:' })
     db.prepare(
       "INSERT INTO documents (id, drive_file_id, filename, mime, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', '2026-01-01')"
@@ -58,9 +59,6 @@ describe('migrazioni', () => {
       "INSERT INTO fields (id, document_id, name, label, confidence) VALUES ('f', 'd', 'issue_date', 'Data', 0.9)"
     ).run()
     db.prepare(
-      "INSERT INTO annotations (id, document_id, page, bbox_json, kind, created_at, updated_at) VALUES ('a', 'd', 1, '{}', 'note', '2026', '2026')"
-    ).run()
-    db.prepare(
       "INSERT INTO events (id, document_id, at, title, detail) VALUES ('v', 'd', '2026', 't', 'd')"
     ).run()
     db.prepare(
@@ -69,7 +67,7 @@ describe('migrazioni', () => {
 
     db.prepare("DELETE FROM documents WHERE id = 'd'").run()
 
-    for (const table of ['fields', 'evidence', 'annotations', 'events', 'documents_fts']) {
+    for (const table of ['fields', 'evidence', 'events', 'documents_fts']) {
       const count = db.prepare(`SELECT COUNT(*) AS c FROM ${table}`).get() as { c: number }
       expect(count.c, `${table} deve restare vuota`).toBe(0)
     }

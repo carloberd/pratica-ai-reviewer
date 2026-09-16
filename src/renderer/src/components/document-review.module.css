@@ -614,10 +614,6 @@
   font-weight: 750;
 }
 
-.pdfPane {
-  display: grid;
-  gap: 10px;
-}
 .pdfToolbar {
   display: flex;
   align-items: center;
@@ -644,12 +640,12 @@
 .pdfOverlay {
   position: absolute;
   inset: 0;
+  pointer-events: none;
 }
 .pdfHighlight {
   position: absolute;
   border-radius: 2px;
-  pointer-events: auto;
-  cursor: pointer;
+  pointer-events: none;
 }
 .pdfHighlightEvidence {
   background: rgba(97, 209, 159, 0.34);
@@ -659,44 +655,7 @@
   background: rgba(255, 214, 102, 0.55);
   outline: 2px solid #d99b16;
 }
-.pdfAnnotation {
-  background: rgba(255, 214, 102, 0.34);
-  outline: 1px solid #d99b16;
-}
-.pdfAnnotationNote {
-  background: rgba(126, 169, 255, 0.3);
-  outline: 1px solid #3f6fd0;
-}
-.pdfSelection {
-  position: absolute;
-  background: rgba(97, 209, 159, 0.22);
-  outline: 1px dashed #2a8f66;
-  pointer-events: none;
-}
-.pdfDrawLayer {
-  position: absolute;
-  inset: 0;
-  cursor: crosshair;
-}
 
-.annotationRow {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-  align-items: start;
-  border: 1px solid #e7ebee;
-  border-radius: 10px;
-  padding: 10px 11px;
-  margin-bottom: 8px;
-}
-.annotationMeta {
-  font-size: 11px;
-  color: #7e8991;
-  margin-top: 4px;
-}
-.annotationNote {
-  font-size: 13px;
-}
 .iconButton {
   border: 1px solid #e3e8eb;
   background: #fff;

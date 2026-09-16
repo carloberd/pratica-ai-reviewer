@@ -1,7 +1,5 @@
 import type {
-  Annotation,
   AuthStatus,
-  BoundingBox,
   CacheUsage,
   DashboardKpi,
   DocumentFilters,
@@ -40,7 +38,6 @@ export default function DocumentReviewShell() {
   const [filters, setFilters] = useState<DocumentFilters>({})
   const [types, setTypes] = useState<RegistryTypeOption[]>([])
   const [selected, setSelected] = useState<ReviewDocument | null>(null)
-  const [annotations, setAnnotations] = useState<Annotation[]>([])
   const [pending, setPending] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -133,14 +130,12 @@ export default function DocumentReviewShell() {
       setFetchingId(file.id)
       try {
         const { documentId } = await api.drive.fetch(file.id)
-        const [document, marks, files, usage] = await Promise.all([
+        const [document, files, usage] = await Promise.all([
           api.docs.get(documentId),
-          api.annotations.list(documentId),
           api.drive.list(),
           api.drive.cacheUsage()
         ])
         setSelected(document)
-        setAnnotations(marks)
         setDriveFiles(files)
         setCache(usage)
         setView('review')
@@ -162,56 +157,15 @@ export default function DocumentReviewShell() {
       setDriveFiles(files)
       setCache(usage)
       setMessage(
-        `Copia locale rimossa: ${formatBytes(freedBytes)} liberati. I dati estratti e le annotazioni restano.`
+        `Copia locale rimossa: ${formatBytes(freedBytes)} liberati. I dati estratti restano.`
       )
     })
 
   const openDocument = (id: string) =>
     run('open', async () => {
-      const [document, marks] = await Promise.all([api.docs.get(id), api.annotations.list(id)])
-      setSelected(document)
-      setAnnotations(marks)
+      setSelected(await api.docs.get(id))
       setView('review')
     })
-
-  const createAnnotation = (page: number, bbox: BoundingBox, kind: 'highlight' | 'note') => {
-    if (!selected) return
-    const documentId = selected.id
-    void run('annotate', async () => {
-      await api.annotations.add({ documentId, page, bbox, kind })
-      setAnnotations(await api.annotations.list(documentId))
-    })
-  }
-
-  const updateAnnotation = (id: string, note: string) => {
-    if (!selected) return
-    const documentId = selected.id
-    void run('annotate', async () => {
-      await api.annotations.update(id, note)
-      setAnnotations(await api.annotations.list(documentId))
-    })
-  }
-
-  const exportAnnotated = () => {
-    if (!selected) return
-    const documentId = selected.id
-    void run('annotate', async () => {
-      const { path } = await api.annotations.export(documentId)
-      if (path) {
-        setSelected(await api.docs.get(documentId))
-        setMessage(`PDF annotato salvato in ${path}. Il file in cache non è stato modificato.`)
-      }
-    })
-  }
-
-  const deleteAnnotation = (id: string) => {
-    if (!selected) return
-    const documentId = selected.id
-    void run('annotate', async () => {
-      await api.annotations.delete(id)
-      setAnnotations(await api.annotations.list(documentId))
-    })
-  }
 
   const commitField = (fieldId: string, value: string | null) => {
     if (!selected) return
@@ -445,16 +399,11 @@ export default function DocumentReviewShell() {
                 <ReviewView
                   document={selected}
                   types={types}
-                  annotations={annotations}
                   busy={busy}
                   onBack={() => setView('documents')}
                   onFieldCommit={commitField}
                   onDecide={decide}
                   onAssignType={assignType}
-                  onCreateAnnotation={createAnnotation}
-                  onUpdateAnnotation={updateAnnotation}
-                  onDeleteAnnotation={deleteAnnotation}
-                  onExportAnnotated={exportAnnotated}
                   onEvict={() => evictDocument(selected.id)}
                 />
               ) : (

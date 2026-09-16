@@ -1,6 +1,5 @@
 import { fieldSemanticType } from '@shared/fields'
 import type {
-  Annotation,
   BoundingBox,
   ConfidenceBand,
   EvidenceItem,
@@ -45,17 +44,6 @@ export interface EvidenceRow {
   text: string
   bbox_json: string | null
   confidence: number
-}
-
-export interface AnnotationRow {
-  id: string
-  document_id: string
-  page: number
-  bbox_json: string
-  kind: string
-  note: string | null
-  created_at: string
-  updated_at: string
 }
 
 export interface EventRow {
@@ -120,19 +108,6 @@ export function toExtractedField(row: FieldRow, required: boolean): ExtractedFie
     required,
     semanticType: fieldSemanticType(row.name),
     ...(row.updated_at ? { updatedAt: row.updated_at } : {})
-  }
-}
-
-export function toAnnotation(row: AnnotationRow): Annotation {
-  return {
-    id: row.id,
-    documentId: row.document_id,
-    page: row.page,
-    bbox: parseBbox(row.bbox_json) ?? { x: 0, y: 0, w: 0, h: 0 },
-    kind: row.kind === 'note' ? 'note' : 'highlight',
-    ...(row.note !== null ? { note: row.note } : {}),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
   }
 }
 

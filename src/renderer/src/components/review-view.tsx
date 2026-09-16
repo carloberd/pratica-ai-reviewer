@@ -1,10 +1,4 @@
-import type {
-  Annotation,
-  BoundingBox,
-  RegistryTypeOption,
-  ReviewDecision,
-  ReviewDocument
-} from '@shared/types'
+import type { RegistryTypeOption, ReviewDecision, ReviewDocument } from '@shared/types'
 import { useState } from 'react'
 import { cx } from '../lib/cx'
 import { formatDateTime, pct, textSourceLabel, typeLabel } from '../lib/format'
@@ -16,16 +10,11 @@ import FieldEditor from './field-editor'
 interface Props {
   document: ReviewDocument
   types: RegistryTypeOption[]
-  annotations: Annotation[]
   busy: boolean
   onBack: () => void
   onFieldCommit: (fieldId: string, value: string | null) => void
   onDecide: (decision: ReviewDecision, note?: string) => void
   onAssignType: (documentType: string | null) => void
-  onCreateAnnotation: (page: number, bbox: BoundingBox, kind: 'highlight' | 'note') => void
-  onUpdateAnnotation: (id: string, note: string) => void
-  onDeleteAnnotation: (id: string) => void
-  onExportAnnotated: () => void
   /** Toglie la copia locale del file, lasciando dati estratti e annotazioni. */
   onEvict: () => void
 }
@@ -35,16 +24,11 @@ type Tab = 'fields' | 'document'
 export default function ReviewView({
   document,
   types,
-  annotations,
   busy,
   onBack,
   onFieldCommit,
   onDecide,
   onAssignType,
-  onCreateAnnotation,
-  onUpdateAnnotation,
-  onDeleteAnnotation,
-  onExportAnnotated,
   onEvict
 }: Props) {
   const [note, setNote] = useState('')
@@ -151,11 +135,6 @@ export default function ReviewView({
               onClick={() => setTab('document')}
             >
               Documento
-              {annotations.length > 0 && (
-                <span className={styles.tabCount}>
-                  {annotations.length === 1 ? '1 annotazione' : `${annotations.length} annotazioni`}
-                </span>
-              )}
             </button>
           </div>
 
@@ -163,13 +142,7 @@ export default function ReviewView({
             <DocumentPreview
               document={document}
               evidence={document.evidence}
-              annotations={annotations}
               focusedEvidenceId={focusedEvidence}
-              busy={busy}
-              onCreateAnnotation={onCreateAnnotation}
-              onUpdateNote={onUpdateAnnotation}
-              onDeleteAnnotation={onDeleteAnnotation}
-              onExport={onExportAnnotated}
             />
           )}
 

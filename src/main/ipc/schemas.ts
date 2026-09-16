@@ -4,13 +4,6 @@ import { z } from 'zod'
  * Ogni canale valida il proprio input prima di toccare il database o Drive: il
  * renderer è codice fidato, ma il ponte IPC resta un confine e va trattato come tale.
  */
-export const bboxSchema = z.object({
-  x: z.number().finite(),
-  y: z.number().finite(),
-  w: z.number().finite().nonnegative(),
-  h: z.number().finite().nonnegative()
-})
-
 export const documentFiltersSchema = z.object({
   status: z.enum(['NEEDS_REVIEW', 'APPROVED', 'REJECTED']).optional(),
   documentType: z.string().min(1).max(200).optional(),
@@ -48,20 +41,6 @@ export const reviewPayloadSchema = z.object({
     decision: z.enum(['APPROVE', 'CORRECT', 'REJECT']),
     note: z.string().max(2000).optional()
   })
-})
-
-export const addAnnotationSchema = z.object({
-  documentId: z.string().min(1),
-  page: z.number().int().positive(),
-  bbox: bboxSchema,
-  kind: z.enum(['highlight', 'note']),
-  note: z.string().max(2000).optional()
-})
-
-export const updateAnnotationSchema = z.object({
-  id: z.string().min(1),
-  bbox: bboxSchema.optional(),
-  note: z.string().max(2000).nullable().optional()
 })
 
 export const fetchDriveFileSchema = z.object({
