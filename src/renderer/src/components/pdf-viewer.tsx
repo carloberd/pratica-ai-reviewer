@@ -139,10 +139,10 @@ export default function PdfViewer({
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [focused, pages.length])
 
-  // Senza un campo attivo non c'è niente da compilare: si torna alla selezione.
+  // Su una scansione non c'è testo da selezionare: lo strumento buono è già l'area.
   useEffect(() => {
-    if (!captureTarget) setMode('text')
-  }, [captureTarget])
+    if (pages.length > 0) setMode(pages.some((page) => page.text) ? 'text' : 'area')
+  }, [pages])
 
   const toPageCoordinates = useCallback(
     (element: HTMLElement, clientX: number, clientY: number) => {
