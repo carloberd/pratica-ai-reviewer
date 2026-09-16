@@ -1,3 +1,4 @@
+import { type EvidenceTarget, matchSpans, unionRect } from '@shared/evidence-locate'
 import type { BoundingBox, EvidenceItem } from '@shared/types'
 import { TextLayer } from 'pdfjs-dist'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -6,12 +7,21 @@ import { api, errorMessage } from '../lib/ipc'
 import { loadPdf, type PdfDocument } from '../lib/pdf'
 import styles from './document-review.module.css'
 
+/**
+ * Richiesta di portare il documento a un punto. `seq` cambia a ogni clic: cliccare due
+ * volte la stessa evidenza deve riportarci anche se nel frattempo si è scorso altrove.
+ */
+export interface EvidenceFocus {
+  target: EvidenceTarget
+  seq: number
+}
+
 interface Props {
   documentId: string
   read: (documentId: string) => Promise<ArrayBuffer>
   evidence: EvidenceItem[]
-  /** Evidenza da raggiungere: la pagina scorre e il riquadro lampeggia. */
-  focusedEvidenceId: string | null
+  /** Punto da raggiungere: la pagina scorre fino alla riga e la riga si evidenzia. */
+  focus: EvidenceFocus | null
   /** Etichetta del campo che sta aspettando un valore, `null` se nessuno. */
   captureTarget: string | null
   onCapture: (text: string) => void
@@ -32,6 +42,13 @@ const OCR_SCALE = 3
 
 type Mode = 'text' | 'area'
 
+/** Il punto raggiunto: il rettangolo della riga, o la sola pagina quando non si trova. */
+interface Located {
+  page: number
+  box: BoundingBox | null
+  seq: number
+}
+
 /**
  * Visualizzatore PDF con layer di testo e di overlay.
  *
@@ -48,7 +65,7 @@ export default function PdfViewer({
   documentId,
   read,
   evidence,
-  focusedEvidenceId,
+  focus,
   captureTarget,
   onCapture
 }: Props) {
@@ -62,12 +79,14 @@ export default function PdfViewer({
   const [reading, setReading] = useState(false)
   const [captureError, setCaptureError] = useState<string | null>(null)
   const dragStart = useRef<{ page: number; x: number; y: number } | null>(null)
+  const [located, setLocated] = useState<Located | null>(null)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(null)
     setPages([])
+    setLocated(null)
 
     read(documentId)
       .then(async (data) => {
@@ -131,13 +150,31 @@ export default function PdfViewer({
     }
   }, [documentId, read])
 
-  const focused = evidence.find((item) => item.id === focusedEvidenceId)
-
+  /**
+   * Porta il documento al punto richiesto. Con le coordinate salvate si evidenzia il
+   * rettangolo; senza, si cerca la riga nel text layer della pagina; se la pagina non ha
+   * testo (una scansione letta con OCR) si arriva alla pagina e la si segnala intera.
+   */
   useEffect(() => {
-    if (!focused || pages.length === 0) return
-    const target = containerRef.current?.querySelector<HTMLElement>(`[data-page="${focused.page}"]`)
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [focused, pages.length])
+    const container = containerRef.current
+    if (!focus || !container || pages.length === 0) return
+    const { target } = focus
+    const pageElement = container.querySelector<HTMLElement>(`[data-page="${target.page}"]`)
+    if (!pageElement) return
+
+    const rendered = pages.find((page) => page.page === target.page)
+    const box =
+      target.bbox ??
+      (rendered?.text ? locateInTextLayer(rendered.text, pageElement, target.text) : null)
+    setLocated({ page: target.page, box, seq: focus.seq })
+
+    // La riga a un terzo dell'altezza: si vede anche quello che le sta sopra.
+    const top = box
+      ? pageElement.offsetTop + box.y * SCALE - container.clientHeight / 3
+      : pageElement.offsetTop - 12
+    const left = box ? pageElement.offsetLeft + box.x * SCALE - 24 : container.scrollLeft
+    container.scrollTo({ top: Math.max(0, top), left: Math.max(0, left), behavior: 'smooth' })
+  }, [focus, pages])
 
   // Su una scansione non c'è testo da selezionare: lo strumento buono è già l'area.
   useEffect(() => {
@@ -243,6 +280,12 @@ export default function PdfViewer({
         </button>
       </div>
       {captureError && <div className={styles.error}>{captureError}</div>}
+      {located && !located.box && (
+        <div className={styles.viewerNote}>
+          Pagina {located.page}: la riga non ha coordinate (testo senza text layer), controlla la
+          pagina evidenziata.
+        </div>
+      )}
 
       {/* La selezione è un gesto di puntatore: la cattura avviene quando si rilascia. */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: il testo si seleziona con il mouse */}
@@ -263,15 +306,22 @@ export default function PdfViewer({
                 .map((item) => (
                   <div
                     key={item.id}
-                    className={cx(
-                      styles.pdfHighlight,
-                      item.id === focusedEvidenceId
-                        ? styles.pdfHighlightFlash
-                        : styles.pdfHighlightEvidence
-                    )}
+                    className={cx(styles.pdfHighlight, styles.pdfHighlightEvidence)}
                     title={item.label}
                     style={boxStyle(item.bbox!)}
                   />
+                ))}
+
+              {/* La chiave cambia a ogni clic: l'animazione riparte anche sulla stessa riga. */}
+              {located?.page === rendered.page &&
+                (located.box ? (
+                  <div
+                    key={located.seq}
+                    className={cx(styles.pdfHighlight, styles.pdfHighlightFlash)}
+                    style={boxStyle(padBox(located.box))}
+                  />
+                ) : (
+                  <div key={located.seq} className={styles.pdfPageFlash} />
                 ))}
 
               {drawing?.page === rendered.page && (
@@ -354,6 +404,42 @@ function boxStyle(box: BoundingBox): React.CSSProperties {
     width: box.w * SCALE,
     height: box.h * SCALE
   }
+}
+
+/** Un filo di margine attorno alla riga: il riquadro non deve coprire le lettere. */
+function padBox(box: BoundingBox): BoundingBox {
+  return { x: box.x - 3, y: box.y - 2, w: box.w + 6, h: box.h + 4 }
+}
+
+/**
+ * Rettangolo della riga di evidenza nel text layer di pdf.js, in unità di pagina a scala
+ * 1. Serve alle evidenze senza coordinate su pagine che il testo ce l'hanno.
+ */
+function locateInTextLayer(
+  layer: HTMLDivElement,
+  pageElement: HTMLElement,
+  text: string
+): BoundingBox | null {
+  const spans = Array.from(layer.querySelectorAll('span')).filter(
+    (span) => span.childElementCount === 0
+  )
+  const range = matchSpans(
+    spans.map((span) => span.textContent ?? ''),
+    text
+  )
+  if (!range) return null
+  const origin = pageElement.getBoundingClientRect()
+  return unionRect(
+    spans.slice(range[0], range[1] + 1).map((span) => {
+      const rect = span.getBoundingClientRect()
+      return {
+        x: (rect.left - origin.left) / SCALE,
+        y: (rect.top - origin.top) / SCALE,
+        w: rect.width / SCALE,
+        h: rect.height / SCALE
+      }
+    })
+  )
 }
 
 function rectBetween(start: { x: number; y: number }, end: { x: number; y: number }): BoundingBox {

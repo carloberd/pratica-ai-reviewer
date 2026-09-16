@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { averageConfidence, bandOf } from '@shared/confidence'
 import type { RegistryFieldName } from '@shared/fields'
 import { fieldLabel, sortFieldNames, UNIVERSAL_FIELDS } from '@shared/fields'
+import { TYPE_MATCH_REASON_LABELS } from '@shared/review-workspace'
 import type { EngineSelection } from './config'
 import type { EvidenceInput } from './db/dao/evidence'
 import type { ExtractionRunInput } from './db/dao/extraction-runs'
@@ -409,13 +410,7 @@ function prepareV2(input: {
 // Timeline e audit
 // ---------------------------------------------------------------------------
 
-const REASONS: Record<Exclude<TypeMatchV2['reason'], 'OK'>, string> = {
-  BELOW_THRESHOLD: 'il punteggio non raggiunge la soglia',
-  LOW_MARGIN: 'il margine sul secondo candidato è troppo stretto',
-  FILENAME_ONLY: 'la frase compare solo nel nome del file',
-  HARD_NEGATIVE: 'il testo contiene un segnale che esclude il tipo',
-  NO_SIGNAL: 'nessun alias o segnale del registry compare nel testo'
-}
+const REASONS = TYPE_MATCH_REASON_LABELS
 
 function percent(value: number): string {
   return `${Math.round(value * 100)}%`
