@@ -47,6 +47,11 @@ export default function ReviewView({
   const [note, setNote] = useState('')
   const [tab, setTab] = useState<Tab>('fields')
   const [focusedEvidence, setFocusedEvidence] = useState<string | null>(null)
+  /**
+   * Campo che riceve il testo preso dal documento. Resta attivo anche quando
+   * l'input perde il fuoco: selezionare sul documento lo fa perdere per forza.
+   */
+  const [activeField, setActiveField] = useState<string | null>(null)
 
   /** Da un'evidenza si salta alla pagina del documento da cui viene. */
   function openEvidence(evidenceId: string) {
@@ -58,6 +63,15 @@ export default function ReviewView({
     () => types.map((type) => ({ id: type.id, label: type.label, hint: type.id })),
     [types]
   )
+
+  const active = document.fields.find((field) => field.id === activeField) ?? null
+
+  /** Quello che il revisore ha selezionato sul documento finisce nel campo attivo. */
+  function capture(text: string) {
+    if (!active) return
+    const value = text.replace(/\s+/g, ' ').trim()
+    if (value) onFieldCommit(active.id, value)
+  }
 
   const corrections = document.fields.filter(
     (field) => field.correctedValue !== undefined && field.correctedValue !== field.value
@@ -165,6 +179,8 @@ export default function ReviewView({
                           key={field.id}
                           field={field}
                           disabled={busy}
+                          active={field.id === activeField}
+                          onActivate={() => setActiveField(field.id)}
                           onCommit={(value) => onFieldCommit(field.id, value)}
                           onFocusEvidence={openEvidence}
                         />
@@ -267,6 +283,8 @@ export default function ReviewView({
             document={document}
             evidence={document.evidence}
             focusedEvidenceId={focusedEvidence}
+            captureTarget={active?.label ?? null}
+            onCapture={capture}
           />
         </section>
       </div>

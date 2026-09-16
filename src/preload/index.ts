@@ -76,6 +76,10 @@ export const reviewerApi = {
   docx: {
     text: (documentId: string) => invoke<IpcResultOf<string>>('docx:text', { documentId })
   },
+  ocr: {
+    /** Testo di un ritaglio di pagina (PNG) evidenziato durante la revisione. */
+    region: (image: Uint8Array) => invoke<IpcResultOf<{ text: string }>>('ocr:region', { image })
+  },
   onFetchProgress: (listener: (progress: FetchProgress) => void): (() => void) => {
     const handler = (_event: unknown, progress: FetchProgress) => listener(progress)
     ipcRenderer.on('drive:fetch-progress', handler)

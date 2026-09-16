@@ -7,6 +7,9 @@ import styles from './document-review.module.css'
 interface Props {
   field: ExtractedField
   disabled: boolean
+  /** Il campo è quello che riceve il testo selezionato sul documento. */
+  active: boolean
+  onActivate: () => void
   /** `null` annulla la correzione e riporta il campo al valore precompilato. */
   onCommit: (value: string | null) => void
   onFocusEvidence: (evidenceId: string) => void
@@ -28,7 +31,14 @@ const PLACEHOLDER: Record<ExtractedField['semanticType'], string> = {
  * Il campo sta in una colonna stretta accanto al documento, quindi etichetta, valore
  * e provenienza si impilano invece di stare in riga.
  */
-export default function FieldEditor({ field, disabled, onCommit, onFocusEvidence }: Props) {
+export default function FieldEditor({
+  field,
+  disabled,
+  active,
+  onActivate,
+  onCommit,
+  onFocusEvidence
+}: Props) {
   const current = field.correctedValue ?? field.value
   const [draft, setDraft] = useState(current)
 
@@ -47,7 +57,7 @@ export default function FieldEditor({ field, disabled, onCommit, onFocusEvidence
   }
 
   return (
-    <div className={styles.fieldCard}>
+    <div className={cx(styles.fieldCard, active && styles.fieldCardActive)}>
       <div className={styles.fieldHead}>
         <span className={styles.fieldLabel}>
           {field.label}
@@ -66,6 +76,7 @@ export default function FieldEditor({ field, disabled, onCommit, onFocusEvidence
           field.value ? PLACEHOLDER[field.semanticType] : 'Nessuna evidenza: compila a mano'
         }
         onChange={(event) => setDraft(event.target.value)}
+        onFocus={onActivate}
         onBlur={commit}
         onKeyDown={(event) => {
           if (event.key === 'Enter') event.currentTarget.blur()

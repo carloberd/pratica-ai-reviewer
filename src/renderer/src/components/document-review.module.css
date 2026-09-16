@@ -344,6 +344,11 @@
   border-radius: 10px;
   padding: 10px 11px;
 }
+/* Il campo che riceve quello che si seleziona sul documento. */
+.fieldCardActive {
+  border-color: #61d19f;
+  box-shadow: 0 0 0 3px rgba(97, 209, 159, 0.16);
+}
 .fieldHead {
   display: flex;
   align-items: baseline;
@@ -642,6 +647,71 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+.viewerBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 14px 0;
+}
+
+/*
+  Text layer di pdf.js: trasparente sopra al canvas, è quello che rende
+  selezionabile il testo della pagina. Le regole ricalcano `pdf_viewer.css`
+  (posizioni in percentuale, dimensione del font legata a --total-scale-factor):
+  senza, le righe finirebbero tutte nell'angolo in alto a sinistra.
+*/
+.textLayer {
+  position: absolute;
+  inset: 0;
+  text-align: initial;
+  overflow: clip;
+  line-height: 1;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  z-index: 1;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+.textLayer span,
+.textLayer br {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+.textLayer > :not(:global(.markedContent)),
+.textLayer :global(.markedContent) span:not(:global(.markedContent)) {
+  z-index: 1;
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+.textLayer :global(.markedContent) {
+  display: contents;
+}
+.textLayer ::selection {
+  background: rgba(97, 209, 159, 0.45);
+}
+
+.pdfSelection {
+  position: absolute;
+  background: rgba(97, 209, 159, 0.22);
+  outline: 1px dashed #2a8f66;
+  pointer-events: none;
+}
+.pdfDrawLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: crosshair;
 }
 .pdfHighlight {
   position: absolute;

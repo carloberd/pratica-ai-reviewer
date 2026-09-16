@@ -55,6 +55,7 @@ function start(): void {
     auth: createAuthService(),
     registryTypes: () => registry.types(),
     process: createDocumentProcessor({ repo, registry, ocr }),
+    ocr,
     sender: () => mainWindow?.webContents ?? null
   })
 

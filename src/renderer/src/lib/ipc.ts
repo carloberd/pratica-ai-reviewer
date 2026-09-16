@@ -77,5 +77,8 @@ export const api = {
   },
   docx: {
     text: (documentId: string) => call(() => window.reviewer.docx.text(documentId))
+  },
+  ocr: {
+    region: (image: Uint8Array) => call(() => window.reviewer.ocr.region(image))
   }
 }

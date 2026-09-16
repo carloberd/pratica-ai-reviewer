@@ -10,6 +10,7 @@ import { createDriveClient, DOCX_MIME, PDF_MIME } from '../drive/client'
 import { cacheUsage, type DocumentProcessor, evictCachedFile, fetchDriveFile } from '../drive/fetch'
 import { fail, logError, ok, ReviewerError } from '../errors'
 import { extractDocxPages } from '../extract/docx'
+import type { OcrService } from '../extract/ocr'
 import { cachePathFor } from '../paths'
 import { buildReviewPayload, describeReview } from '../review'
 import {
@@ -17,6 +18,7 @@ import {
   documentIdSchema,
   documentRefSchema,
   fetchDriveFileSchema,
+  ocrRegionSchema,
   reviewPayloadSchema,
   searchSchema,
   setTypeSchema,
@@ -33,6 +35,8 @@ export interface IpcContext {
   registryTypes?: () => RegistryTypeOption[]
   /** Classificazione e precompilazione, eseguita su ogni documento scaricato. */
   process?: DocumentProcessor
+  /** Serve anche alla revisione, per leggere un'area evidenziata su una scansione. */
+  ocr?: OcrService
   /** Invia gli eventi di avanzamento della sincronizzazione al renderer. */
   sender?: () => WebContents | null
 }
@@ -199,6 +203,20 @@ export function registerIpcHandlers(context: IpcContext): void {
       snippet: hit.snippet
     }))
   )
+
+  // ---- OCR su richiesta ----------------------------------------------------
+  /**
+   * Legge il ritaglio di pagina che il revisore ha evidenziato, per compilare un
+   * campo. Il ritaglio arriva già rasterizzato dal renderer, che la pagina ce l'ha
+   * sotto gli occhi: il main non deve riaprire il PDF per rifare lo stesso lavoro.
+   */
+  handle('ocr:region', ocrRegionSchema, async ({ image }) => {
+    if (!context.ocr) {
+      throw new ReviewerError('UNSUPPORTED', 'OCR non disponibile su questa istanza.')
+    }
+    const bytes = image instanceof Uint8Array ? image : new Uint8Array(image)
+    return { text: await context.ocr.recognizeImage(bytes) }
+  })
 
   // ---- file in cache -------------------------------------------------------
   handle('pdf:read', documentRefSchema, async ({ documentId }) => {

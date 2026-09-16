@@ -50,3 +50,26 @@ export const fetchDriveFileSchema = z.object({
 
 export const searchSchema = z.object({ text: z.string().max(500) })
 export const emptySchema = z.unknown().optional()
+
+/**
+ * Ritaglio di pagina da passare all'OCR. Arriva dal renderer come immagine PNG già
+ * rasterizzata: il tetto serve perché un'area grande a scala alta pesa, e oltre il
+ * foglio intero non c'è niente da leggere.
+ */
+const MAX_OCR_IMAGE_BYTES = 16 * 1024 * 1024
+
+export const ocrRegionSchema = z.object({
+  image: z.custom<ArrayBuffer | Uint8Array>(
+    (value) => {
+      const bytes = imageByteLength(value)
+      return bytes > 0 && bytes <= MAX_OCR_IMAGE_BYTES
+    },
+    { message: 'immagine non valida o troppo grande' }
+  )
+})
+
+export function imageByteLength(value: unknown): number {
+  if (value instanceof ArrayBuffer) return value.byteLength
+  if (value instanceof Uint8Array) return value.byteLength
+  return 0
+}

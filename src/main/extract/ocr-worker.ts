@@ -13,14 +13,15 @@ export interface OcrWorkerData {
   cachePath: string
 }
 
-export interface OcrRequest {
-  id: number
-  pdfPath: string
-  pages: number[]
-}
+export type OcrRequest =
+  /** Pagine di un PDF senza text layer, durante la precompilazione. */
+  | { id: number; kind: 'pages'; pdfPath: string; pages: number[] }
+  /** Ritaglio di pagina arrivato dalla revisione, per compilare un campo. */
+  | { id: number; kind: 'image'; image: Uint8Array }
 
 export type OcrResponse =
-  | { id: number; ok: true; pages: Array<{ page: number; text: string }> }
+  | { id: number; ok: true; kind: 'pages'; pages: Array<{ page: number; text: string }> }
+  | { id: number; ok: true; kind: 'image'; text: string }
   | { id: number; ok: false; message: string }
 
 const port = parentPort
@@ -30,8 +31,13 @@ if (port) {
 
   port.on('message', async (request: OcrRequest) => {
     try {
+      if (request.kind === 'image') {
+        const text = await engine.recognizeImage(request.image)
+        port.postMessage({ id: request.id, ok: true, kind: 'image', text } satisfies OcrResponse)
+        return
+      }
       const pages = await engine.recognizePdfPages(request.pdfPath, request.pages)
-      port.postMessage({ id: request.id, ok: true, pages } satisfies OcrResponse)
+      port.postMessage({ id: request.id, ok: true, kind: 'pages', pages } satisfies OcrResponse)
     } catch (error) {
       port.postMessage({
         id: request.id,
