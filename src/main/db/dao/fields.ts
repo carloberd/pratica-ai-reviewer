@@ -6,7 +6,7 @@ import type {
   FieldRole
 } from '@shared/extraction-v2'
 import type { Db } from '../index'
-import type { FieldItemRow, FieldRow } from '../rows'
+import { type FieldItemRow, type FieldRow, parseItemValue } from '../rows'
 
 export interface FieldItemInput {
   itemIndex: number
@@ -73,6 +73,89 @@ interface KeptItems {
   engine: Map<number, KeptEngineItem>
   manual: KeptReviewerItem[]
 }
+
+/**
+ * Un campo che passa da un valore solo a più valori (la cardinalità decisa per il tipo è
+ * cambiata): la correzione del campo singolo diventa il lavoro sulle righe. Se il motore
+ * ripropone il valore che il revisore aveva corretto, la correzione va su quella riga; se
+ * l'aveva svuotato, quella riga resta tolta; un valore scritto a mano che il motore non
+ * propone diventa una riga del revisore.
+ */
+function singleToItems(
+  kept: KeptCorrection,
+  items: FieldItemInput[]
+): { engine: Map<number, KeptEngineItem>; manual: KeptReviewerItem[] } {
+  const engine = new Map<number, KeptEngineItem>()
+  const manual: KeptReviewerItem[] = []
+  const proposed = kept.value?.trim() || null
+  const corrected = kept.corrected_value.trim()
+  const same = (item: FieldItemInput, value: string) => item.value?.trim() === value
+  const target = proposed === null ? undefined : items.find((item) => same(item, proposed))
+
+  if (corrected === '') {
+    if (target) {
+      engine.set(target.itemIndex, {
+        corrected_value_json: null,
+        removed: 1,
+        updated_at: kept.updated_at
+      })
+    }
+  } else if (!items.some((item) => same(item, corrected))) {
+    if (target) {
+      engine.set(target.itemIndex, {
+        corrected_value_json: JSON.stringify(corrected),
+        removed: 0,
+        updated_at: kept.updated_at
+      })
+    } else {
+      manual.push({
+        sortIndex: 0,
+        corrected_value_json: JSON.stringify(corrected),
+        updated_at: kept.updated_at
+      })
+    }
+  }
+  return { engine, manual }
+}
+
+/** Separatore dei valori di più righe finiti in un campo che ora ne chiede uno solo. */
+const JOINED_ITEMS_SEPARATOR = '; '
+
+/**
+ * Il contrario: un campo con più righe che ora chiede un valore solo. Le righe che il
+ * revisore aveva lasciato — tolte escluse — diventano la correzione del campo, unite con
+ * `; ` se sono più d'una: nessun valore sparisce, e il revisore vede in «Dati» cosa tenere.
+ * Se restano uguali a quello che il motore propone adesso, non c'è niente da correggere.
+ */
+function itemsToSingle(
+  rows: PreviousItemRow[],
+  proposed: string | null
+): { corrected_value: string; updated_at: string | null } | null {
+  const values = [...rows]
+    .sort((a, b) => a.item_index - b.item_index)
+    .filter((row) => row.removed === 0)
+    .map((row) => parseItemValue(row.corrected_value_json) ?? parseItemValue(row.value_json))
+    .map((value) => value?.trim() ?? '')
+    .filter((value) => value !== '')
+  const updatedAt =
+    rows
+      .map((row) => row.updated_at)
+      .filter((at): at is string => at !== null)
+      .sort()
+      .pop() ?? null
+  const engine = proposed?.trim() || null
+
+  if (values.length === 0) {
+    return engine === null ? null : { corrected_value: '', updated_at: updatedAt }
+  }
+  const joined = values.join(JOINED_ITEMS_SEPARATOR)
+  return joined === engine ? null : { corrected_value: joined, updated_at: updatedAt }
+}
+
+type PreviousItemRow = Pick<
+  FieldItemRow,
+  'item_index' | 'value_json' | 'corrected_value_json' | 'removed' | 'updated_at'
+> & { name: string }
 
 function errorsJson(errors: string[] | null | undefined): string | null {
   return errors && errors.length > 0 ? JSON.stringify(errors) : null
@@ -191,6 +274,20 @@ export function createFieldsDao(db: Db) {
         itemCorrections.set(row.name, kept)
       }
 
+      // Tutte le righe dei campi ripetuti, anche quelle confermate senza toccarle: se il campo
+      // ora chiede un valore solo, è l'elenco intero che il revisore aveva davanti.
+      const allItems = db
+        .prepare(`
+          SELECT f.name, i.item_index, i.value_json, i.corrected_value_json, i.removed, i.updated_at
+            FROM field_items i JOIN fields f ON f.id = i.field_id
+           WHERE f.document_id = ?
+        `)
+        .all(documentId) as PreviousItemRow[]
+      const itemsByName = new Map<string, PreviousItemRow[]>()
+      for (const row of allItems) {
+        itemsByName.set(row.name, [...(itemsByName.get(row.name) ?? []), row])
+      }
+
       /** Il primo fra il nome e i suoi alias che ha una correzione salvata. */
       const matchName = (source: Map<string, unknown>, name: string): string | undefined =>
         [name, ...(options.correctionAliases?.(name) ?? [])].find((candidate) =>
@@ -204,19 +301,32 @@ export function createFieldsDao(db: Db) {
       const consumedItems = new Set<string>()
       for (const field of fields) {
         const id = randomUUID()
+        const many = field.cardinality === 'many'
         const keptName = matchName(corrections, field.name)
         const kept = keptName ? corrections.get(keptName) : undefined
         if (keptName) consumed.add(keptName)
+
+        // Un campo ripetuto che ora chiede un valore solo: le sue righe toccate dal revisore
+        // diventano la correzione, a meno che il campo singolo non ne abbia già una.
+        let single: { corrected_value: string; updated_at: string | null } | null = kept ?? null
+        if (!many && !kept) {
+          const itemsName = matchName(itemCorrections, field.name)
+          if (itemsName) {
+            consumedItems.add(itemsName)
+            single = itemsToSingle(itemsByName.get(itemsName) ?? [], field.value)
+          }
+        }
+
         insert.run(
           id,
           documentId,
           field.name,
           field.label,
           field.value,
-          kept?.corrected_value ?? null,
+          many ? null : (single?.corrected_value ?? null),
           field.confidence,
           field.evidenceId ?? null,
-          kept?.updated_at ?? null,
+          many ? null : (single?.updated_at ?? null),
           field.semanticType ?? null,
           field.cardinality ?? null,
           field.reviewStatus ?? null,
@@ -224,10 +334,19 @@ export function createFieldsDao(db: Db) {
           field.role ?? null
         )
 
-        if (field.cardinality !== 'many') continue
+        if (!many) continue
         const itemsName = matchName(itemCorrections, field.name)
-        const keptItems = itemsName ? itemCorrections.get(itemsName) : undefined
         if (itemsName) consumedItems.add(itemsName)
+        // Un campo singolo che ora chiede più valori: la sua correzione passa sulle righe.
+        const keptItems: KeptItems | undefined = itemsName
+          ? itemCorrections.get(itemsName)
+          : kept
+            ? {
+                label: kept.label,
+                semantic_type: kept.semantic_type,
+                ...singleToItems(kept, field.items ?? [])
+              }
+            : undefined
         const written = new Set<number>()
         let nextIndex = 0
         for (const item of field.items ?? []) {

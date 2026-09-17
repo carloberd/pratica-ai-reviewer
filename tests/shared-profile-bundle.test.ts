@@ -45,7 +45,7 @@ const MANIFEST = {
   exportedAt: '2026-09-17T09:00:00.000Z'
 }
 
-const EMPTY: ProfileOverlay = { fields: {}, hintLabels: {} }
+const EMPTY: ProfileOverlay = { fields: {}, hintLabels: {}, cardinality: {} }
 
 function bundle(overlay: ProfileOverlay, actions: ProfileAction[] = []) {
   const result = buildProfileBundle({
@@ -111,7 +111,8 @@ describe('il pacchetto della mappa corretta', () => {
         'issuer.tax_id': 'required'
       }
     },
-    hintLabels: { 'issuer.tax_id': ['Partita IVA'] }
+    hintLabels: { 'issuer.tax_id': ['Partita IVA'] },
+    cardinality: {}
   }
 
   it('scrive quattro file e conta cosa è cambiato', () => {
@@ -191,6 +192,41 @@ describe('il pacchetto della mappa corretta', () => {
     expect(changelog.actions[0].standing).toBe(true)
     expect(changelog.actions[1].standing).toBe(false)
     expect(changelog.actions[0].reason.documents).toBe(2)
+  })
+
+  it('un campo con più valori esce come array nello schema, e il changelog lo dice', () => {
+    const { file, result } = bundle(
+      { ...EMPTY, cardinality: { 'accounting.fattura': { 'bank.iban': 'many' } } },
+      [
+        action({
+          kind: 'SET_CARDINALITY',
+          fieldId: 'bank.iban',
+          before: 'one',
+          after: 'many'
+        })
+      ]
+    )
+
+    const schema = file(SCHEMAS_FILE)['accounting.fattura']
+    expect(schema.properties['bank.iban'].type).toBe('array')
+    expect(schema.properties['bank.iban'].items).toEqual({ type: 'string' })
+    expect(schema.properties['document.number'].type).toBe('string')
+
+    const profile = file(PROFILES_FILE).profiles['accounting.fattura']
+    expect(profile.field_cardinality).toEqual({ 'bank.iban': 'many' })
+    // La mappa dei campi non cambia: cambia solo quanti valori chiede uno di loro.
+    expect(profile.conditional_fields).toEqual(
+      PROFILES.profiles['accounting.fattura']!.conditional_fields
+    )
+    // Gli altri tipi restano quelli dell'ontologia.
+    expect(file(SCHEMAS_FILE)['accounting.autofattura']).toEqual(
+      GENERATED['accounting.autofattura']
+    )
+
+    expect(result).toMatchObject({ types: 1, fields: 1, edits: 1 })
+    expect(file(CHANGELOG_FILE).changes[0].cardinality).toEqual([
+      { fieldId: 'bank.iban', from: 'one', to: 'many' }
+    ])
   })
 
   it('due export di fila danno gli stessi byte', () => {

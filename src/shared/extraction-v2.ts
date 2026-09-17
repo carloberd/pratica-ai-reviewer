@@ -38,6 +38,11 @@ export interface ClassExtractionProfile {
   literal_evidence_required: boolean
   unknown_value_policy: 'LEAVE_EMPTY'
   review_policy: string
+  /**
+   * La cardinalità decisa per questo tipo, solo dove è diversa da `default_cardinality`
+   * dell'ontologia. Il registry non la scrive: la mette il revisore (`@shared/profile-overlay`).
+   */
+  field_cardinality?: Record<string, Cardinality>
 }
 
 export interface ExtractionEvidenceV2 {

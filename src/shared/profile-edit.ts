@@ -1,6 +1,13 @@
-import type { ClassExtractionProfile, FieldRole } from './extraction-v2'
+import type { Cardinality, ClassExtractionProfile, FieldRole } from './extraction-v2'
 import { FIELD_ROLE_LABELS } from './profile-metrics'
-import { type FieldState, roleIn, type TypeOverrides } from './profile-overlay'
+import {
+  CARDINALITY_LABELS,
+  type FieldState,
+  type MapValue,
+  roleIn,
+  type TypeCardinality,
+  type TypeOverrides
+} from './profile-overlay'
 
 /**
  * Una correzione alla mappa «tipo documento ↔ dati da estrarre».
@@ -28,6 +35,16 @@ export type ProfileEdit =
    * compare nei documenti veri. Non cambia la mappa, cambia come si cerca.
    */
   | { kind: 'ADD_HINT_LABEL'; documentType: string; fieldId: string; label: string }
+  /**
+   * Il campo su questo tipo ha un solo valore, o più d'uno: le righe di una fattura, le
+   * parti di un contratto. Cambia come il motore lo legge e come il revisore lo compila.
+   */
+  | {
+      kind: 'SET_CARDINALITY'
+      documentType: string
+      fieldId: string
+      cardinality: Cardinality
+    }
 
 export type ProfileEditKind = ProfileEdit['kind']
 
@@ -44,6 +61,8 @@ export interface FieldSpecRef {
   id: string
   label: string
   aliases: string[]
+  /** `default_cardinality` dell'ontologia: quella che vale senza una decisione. */
+  cardinality?: Cardinality
 }
 
 export interface ProfileEditInput {
@@ -52,6 +71,8 @@ export interface ProfileEditInput {
   profile: ClassExtractionProfile | null
   /** Le decisioni già prese su quel tipo. */
   overrides: TypeOverrides
+  /** Le cardinalità già decise su quel tipo, dove diverse dall'ontologia. */
+  cardinality?: TypeCardinality
   /** Le etichette con cui il motore cerca il campo adesso, registry incluso. */
   hintLabels: string[]
   /** `null` se il campo non esiste nell'ontologia: nessun motore saprebbe cercarlo. */
@@ -64,14 +85,20 @@ export interface ProfileEditPlan {
   edit: ProfileEdit
   documentType: string
   fieldId: string
-  /** Lo stato del campo prima della correzione: ruolo, «non utile», o `null`. */
-  before: FieldState | null
+  /**
+   * Lo stato del campo prima della correzione: ruolo, «non utile», o `null`. Per
+   * SET_CARDINALITY, la cardinalità: `one` o `many`.
+   */
+  before: MapValue | null
   /** Lo stato dopo. `null` significa «torna a quello che dice il registry». */
-  after: FieldState | null
-  /** La riga da scrivere su `profile_overrides`, o `null` per cancellarla. */
-  override: FieldState | null
-  /** Il valore che c'era su `profile_overrides`: serve ad annullare l'azione. */
-  previousOverride: FieldState | null
+  after: MapValue | null
+  /**
+   * La riga da scrivere, o `null` per cancellarla: su `profile_overrides`, o su
+   * `profile_cardinality_overrides` per SET_CARDINALITY.
+   */
+  override: MapValue | null
+  /** Il valore che c'era su quella tabella: serve ad annullare l'azione. */
+  previousOverride: MapValue | null
   /** L'etichetta insegnata, solo per ADD_HINT_LABEL. */
   label: string | null
   /** La frase che il revisore legge in cronologia. */
@@ -167,6 +194,10 @@ export function planProfileEdit(input: ProfileEditInput): ProfileEditPlan {
     }
   }
 
+  if (edit.kind === 'SET_CARDINALITY') {
+    return planCardinality(input, edit, before)
+  }
+
   if (edit.kind === 'RESTORE_FIELD') {
     if (previousOverride === null) {
       throw new ProfileEditError(
@@ -248,6 +279,56 @@ export function planProfileEdit(input: ProfileEditInput): ProfileEditPlan {
     after: edit.role,
     override: edit.role,
     detail: `${nameOf(input.field, fieldId)} passa da ${FIELD_ROLE_LABELS[before]} a ${FIELD_ROLE_LABELS[edit.role]} su ${documentType}.`
+  }
+}
+
+/**
+ * Uno o più valori. Si decide solo su un campo che la mappa chiede — su uno fuori non
+ * cambierebbe niente — e la riga sul database c'è solo quando la decisione è diversa
+ * dall'ontologia: rimettere la cardinalità di partenza toglie la decisione, non ne scrive
+ * una uguale al default che poi nessuno saprebbe distinguere.
+ */
+function planCardinality(
+  input: ProfileEditInput,
+  edit: Extract<ProfileEdit, { kind: 'SET_CARDINALITY' }>,
+  state: FieldState | null
+): ProfileEditPlan {
+  const { documentType, fieldId } = edit
+  const field = input.field
+  if (!field) {
+    throw new ProfileEditError(
+      `«${fieldId}» non è un campo dell'ontologia: nessun motore saprebbe cercarlo.`
+    )
+  }
+  if (state === null || state === 'excluded') {
+    throw new ProfileEditError(
+      `La mappa di «${documentType}» non chiede ${nameOf(field, fieldId)}: prima va aggiunto.`
+    )
+  }
+
+  const ontology = field.cardinality ?? 'one'
+  const previousOverride = input.cardinality?.[fieldId] ?? null
+  const before = previousOverride ?? ontology
+  if (before === edit.cardinality) {
+    throw new ProfileEditError(
+      `${nameOf(field, fieldId)} chiede già ${CARDINALITY_LABELS[edit.cardinality]} su «${documentType}».`
+    )
+  }
+
+  const backToOntology = edit.cardinality === ontology
+  return {
+    edit,
+    documentType,
+    fieldId,
+    before,
+    after: edit.cardinality,
+    override: backToOntology ? null : edit.cardinality,
+    previousOverride,
+    label: null,
+    reason: input.reason,
+    detail: backToOntology
+      ? `${nameOf(field, fieldId)} torna a ${CARDINALITY_LABELS[edit.cardinality]} su ${documentType}, come dice l'ontologia.`
+      : `${nameOf(field, fieldId)} passa da ${CARDINALITY_LABELS[before]} a ${CARDINALITY_LABELS[edit.cardinality]} su ${documentType}.`
   }
 }
 

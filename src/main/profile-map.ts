@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import type { Cardinality } from '@shared/extraction-v2'
 import {
   buildProfileBundle,
   type ProfileBundle,
@@ -13,9 +14,14 @@ import {
   planProfileEdit,
   stateOf
 } from '@shared/profile-edit'
-import { type ActivityEntry, buildActivity, type ProfileAction } from '@shared/profile-history'
+import {
+  type ActivityEntry,
+  actionTrack,
+  buildActivity,
+  type ProfileAction
+} from '@shared/profile-history'
 import type { ProfileTypeMeasure } from '@shared/profile-metrics'
-import type { FieldState, ProfileOverlay } from '@shared/profile-overlay'
+import type { FieldState, MapValue, ProfileOverlay } from '@shared/profile-overlay'
 import { ReviewerError } from './errors'
 import { collectTypeMeasure, type ProfileInsightsDeps } from './profile-insights'
 import { readRegistrySourceFiles } from './registry-source'
@@ -55,7 +61,36 @@ export function reasonFor(measure: ProfileTypeMeasure | null, fieldId: string): 
 
 function fieldRef(deps: ProfileMapDeps, fieldId: string) {
   const spec = deps.registry.field(fieldId)
-  return spec ? { id: spec.id, label: spec.label_it, aliases: spec.label_aliases_it } : null
+  return spec
+    ? {
+        id: spec.id,
+        label: spec.label_it,
+        aliases: spec.label_aliases_it,
+        cardinality: spec.default_cardinality
+      }
+    : null
+}
+
+/**
+ * Scrive (o toglie, con `null`) la decisione su un campo: il peso su `profile_overrides`,
+ * la cardinalità sulla sua tabella. Le due non si toccano mai a vicenda.
+ */
+function writeDecision(
+  deps: ProfileMapDeps,
+  cardinality: boolean,
+  documentType: string,
+  fieldId: string,
+  decision: { value: MapValue | null; at: string }
+): void {
+  const map = deps.repo.profileMap
+  if (decision.value === null) {
+    if (cardinality) map.clearCardinality(documentType, fieldId)
+    else map.clearOverride(documentType, fieldId)
+  } else if (cardinality) {
+    map.setCardinality(documentType, fieldId, decision.value as Cardinality, decision.at)
+  } else {
+    map.setOverride(documentType, fieldId, decision.value as FieldState, decision.at)
+  }
 }
 
 /**
@@ -83,6 +118,7 @@ export function editProfileMap(deps: ProfileMapDeps, edit: ProfileEdit): Profile
       edit,
       profile: base,
       overrides,
+      cardinality: repo.profileMap.cardinalityForType(edit.documentType),
       hintLabels: registry.hints(edit.fieldId),
       field: fieldRef(deps, edit.fieldId),
       reason: reasonFor(measure, edit.fieldId)
@@ -96,10 +132,11 @@ export function editProfileMap(deps: ProfileMapDeps, edit: ProfileEdit): Profile
   return repo.transaction(() => {
     if (edit.kind === 'ADD_HINT_LABEL' && plan.label) {
       repo.profileMap.addHintLabel(edit.fieldId, plan.label, edit.documentType, at)
-    } else if (plan.override === null) {
-      repo.profileMap.clearOverride(edit.documentType, edit.fieldId)
     } else {
-      repo.profileMap.setOverride(edit.documentType, edit.fieldId, plan.override, at)
+      writeDecision(deps, edit.kind === 'SET_CARDINALITY', edit.documentType, edit.fieldId, {
+        value: plan.override,
+        at
+      })
     }
 
     return repo.profileMap.addAction({
@@ -138,15 +175,17 @@ export function revertProfileAction(deps: ProfileMapDeps, actionId: string): Pro
 
   // Le azioni arrivano dalla più recente: quelle che si incontrano prima di questa sono
   // più nuove di lei. Non si confrontano i timestamp — due correzioni di fila cadono
-  // nello stesso millisecondo — ma l'ordine in cui sono state scritte.
+  // nello stesso millisecondo — ma l'ordine in cui sono state scritte. Conta solo la
+  // stessa decisione: un peso cambiato dopo non blocca l'annullamento di una cardinalità.
+  const track = actionTrack(action.kind)
   const newer: ProfileAction[] = []
   for (const candidate of repo.profileMap.listActions()) {
     if (candidate.id === action.id) break
     if (
       candidate.documentType === action.documentType &&
       candidate.fieldId === action.fieldId &&
-      candidate.kind !== 'ADD_HINT_LABEL' &&
-      candidate.kind !== 'REVERT' &&
+      track !== 'HINT' &&
+      actionTrack(candidate.kind) === track &&
       candidate.revertedAt === null
     ) {
       newer.push(candidate)
@@ -165,17 +204,13 @@ export function revertProfileAction(deps: ProfileMapDeps, actionId: string): Pro
       repo.profileMap.removeHintLabel(action.fieldId as string, action.label)
     } else {
       // Esattamente la riga che c'era prima: nessuna, se il campo seguiva il registry.
-      const previous = action.previousOverride
-      if (previous === null) {
-        repo.profileMap.clearOverride(action.documentType as string, action.fieldId as string)
-      } else {
-        repo.profileMap.setOverride(
-          action.documentType as string,
-          action.fieldId as string,
-          previous,
-          at
-        )
-      }
+      writeDecision(
+        deps,
+        action.kind === 'SET_CARDINALITY',
+        action.documentType as string,
+        action.fieldId as string,
+        { value: action.previousOverride, at }
+      )
     }
 
     repo.profileMap.markReverted(action.id, at)

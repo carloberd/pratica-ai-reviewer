@@ -257,6 +257,124 @@ describe('insegnare al motore l’etichetta che gli manca', () => {
   })
 })
 
+describe('uno o più valori', () => {
+  it('il campo cambia forma sul documento aperto, senza perdere quello che il revisore aveva scritto', async () => {
+    const { deps, repo, open, field, db } = await setup()
+    const id = await open('fattura-nativa.pdf')
+
+    expect(field(id, 'document.number')).toMatchObject({ cardinality: 'one', value: '114/2026' })
+    updateFieldValue(repo, {
+      documentId: id,
+      fieldId: field(id, 'document.number').id,
+      correctedValue: '114/2026/A'
+    })
+
+    const toMany = await editMapFromDocument(deps, id, {
+      kind: 'SET_CARDINALITY',
+      documentType: FATTURA,
+      fieldId: 'document.number',
+      cardinality: 'many'
+    })
+
+    expect(toMany.action).toMatchObject({ kind: 'SET_CARDINALITY', before: 'one', after: 'many' })
+    expect(toMany.action.detail).toBe(
+      '«Numero documento» (document.number) passa da un solo valore a più valori su accounting.fattura.'
+    )
+    expect(repo.profileMap.cardinalityForType(FATTURA)).toEqual({ 'document.number': 'many' })
+    // Il peso non c'entra: la mappa dei campi resta quella del registry.
+    expect(repo.profileMap.forType(FATTURA)).toEqual({})
+    expect(deps.registry.profile(FATTURA)!.field_cardinality).toEqual({ 'document.number': 'many' })
+
+    // Il documento si è rielaborato: il numero è un elenco, e la correzione è sulla sua riga.
+    const many = toMany.document.fields.find((entry) => entry.name === 'document.number')!
+    expect(many.cardinality).toBe('many')
+    expect(many.items.map((item) => [item.value, item.correctedValue])).toEqual([
+      ['114/2026', '114/2026/A']
+    ])
+    expect(
+      toMany.map.measure.fields.find((entry) => entry.fieldId === 'document.number')
+    ).toMatchObject({ cardinality: 'many', cardinalityDecision: 'many' })
+    expect(toMany.map.undoable.map((action) => action.id)).toEqual([toMany.action.id])
+
+    // Il revisore aggiunge un secondo numero, poi ci ripensa: il campo ne chiede uno solo.
+    repo.fields.addItem(many.id, '115/2026')
+    const toOne = await editMapFromDocument(deps, id, {
+      kind: 'SET_CARDINALITY',
+      documentType: FATTURA,
+      fieldId: 'document.number',
+      cardinality: 'one'
+    })
+
+    expect(toOne.action.detail).toContain("come dice l'ontologia")
+    expect(repo.profileMap.cardinalityForType(FATTURA)).toEqual({})
+    // Nessun valore sparisce: le due righe finiscono nella correzione, da sistemare in «Dati».
+    expect(field(id, 'document.number')).toMatchObject({
+      cardinality: 'one',
+      value: '114/2026',
+      correctedValue: '114/2026/A; 115/2026'
+    })
+
+    // Tutto in cronologia, e si annulla solo l'ultima decisione sul numero di valori.
+    expect(repo.profileMap.countStandingEdits()).toBe(2)
+    const titles = collectActivity(deps)
+      .filter((entry) => entry.source === 'MAP')
+      .map((entry) => [entry.title, entry.revertable])
+    expect(titles).toEqual([
+      ['Numero di valori cambiato', true],
+      ['Numero di valori cambiato', false]
+    ])
+    expect(() => revertProfileAction(deps, toMany.action.id)).toThrow(/decisione più recente/)
+
+    const undo = revertProfileAction(deps, toOne.action.id)
+    expect(undo).toMatchObject({ kind: 'REVERT', before: 'one', after: 'many' })
+    expect(repo.profileMap.cardinalityForType(FATTURA)).toEqual({ 'document.number': 'many' })
+    revertProfileAction(deps, toMany.action.id)
+    expect(repo.profileMap.cardinalityForType(FATTURA)).toEqual({})
+    expect(repo.profileMap.countStandingEdits()).toBe(0)
+
+    db.close()
+  })
+
+  it('un peso cambiato dopo non blocca l’annullamento del numero di valori', async () => {
+    const { deps, repo, db } = await setup()
+
+    const cardinality = editProfileMap(deps, {
+      kind: 'SET_CARDINALITY',
+      documentType: FATTURA,
+      fieldId: 'bank.iban',
+      cardinality: 'many'
+    })
+    editProfileMap(deps, {
+      kind: 'SET_ROLE',
+      documentType: FATTURA,
+      fieldId: 'bank.iban',
+      role: 'core'
+    })
+
+    revertProfileAction(deps, cardinality.id)
+    expect(repo.profileMap.cardinalityForType(FATTURA)).toEqual({})
+    expect(repo.profileMap.forType(FATTURA)).toEqual({ 'bank.iban': 'core' })
+
+    db.close()
+  })
+
+  it('un campo fuori dalla mappa non ha un numero di valori da decidere', async () => {
+    const { deps, db } = await setup()
+
+    expect(() =>
+      editProfileMap(deps, {
+        kind: 'SET_CARDINALITY',
+        documentType: FATTURA,
+        fieldId: 'document.title',
+        cardinality: 'many'
+      })
+    ).toThrow(/prima va aggiunto/)
+    expect(deps.repo.profileMap.listActions()).toEqual([])
+
+    db.close()
+  })
+})
+
 describe('annullare una correzione', () => {
   it('rimette quello che diceva il registry e resta scritto che è successo', async () => {
     const { deps, repo, measured, db } = await annotated()

@@ -1,14 +1,17 @@
-import type { FieldOntologyEntry } from './extraction-v2'
+import type { Cardinality, FieldOntologyEntry } from './extraction-v2'
 import type { ProfileAction } from './profile-history'
 import { countStandingEdits, isMapEdit } from './profile-history'
 import { REVIEWER_EDITED_SCHEMA_STATE } from './profile-metrics'
 import {
+  applyCardinalityOverlay,
   applyHintOverlay,
   applyOverlay,
+  cardinalityOf,
   excludedFields,
   type ProfileOverlay,
   ROLE_KEYS,
   ROLES,
+  type TypeCardinality,
   type TypeOverrides
 } from './profile-overlay'
 
@@ -45,6 +48,8 @@ export interface RawProfile {
   optional_fields: string[]
   conditional_fields: string[]
   field_provenance?: Record<string, string>
+  /** Uno o più valori per campo, dove il revisore l'ha deciso diversamente dall'ontologia. */
+  field_cardinality?: Record<string, Cardinality>
   [key: string]: unknown
 }
 
@@ -109,7 +114,7 @@ export interface ProfileBundle {
   files: BundleFile[]
   /** Tipi con almeno una decisione del revisore. */
   types: number
-  /** Campi aggiunti, scartati o ripesati, in totale. */
+  /** Campi aggiunti, scartati, ripesati o con un'altra cardinalità, in totale. */
   fields: number
   /** Azioni sulla mappa ancora in piedi. */
   edits: number
@@ -133,8 +138,12 @@ function materialize(fallback: RawProfile): RawProfile {
 }
 
 /** Il profilo del registry con sopra le decisioni, e la traccia di chi le ha prese. */
-function correctedProfile(base: RawProfile, overrides: TypeOverrides): RawProfile {
-  const next = applyOverlay(base, overrides)
+function correctedProfile(
+  base: RawProfile,
+  overrides: TypeOverrides,
+  cardinality: TypeCardinality
+): RawProfile {
+  const next = applyCardinalityOverlay(applyOverlay(base, overrides), cardinality)
   const excluded = excludedFields(overrides)
 
   const provenance: Record<string, string> = { ...(base.field_provenance ?? {}) }
@@ -170,8 +179,11 @@ function correctedHints(hints: HintsFile, overlay: ProfileOverlay): HintsFile {
 
 type JsonSchemaProperty = Record<string, unknown>
 
-/** La forma di un campo, dedotta dall'ontologia come nel file del programmer pack. */
-function propertyFor(field: FieldOntologyEntry): JsonSchemaProperty {
+/**
+ * La forma di un campo, dedotta dall'ontologia come nel file del programmer pack. La
+ * cardinalità è quella del profilo: l'ontologia, o la decisione del revisore per il tipo.
+ */
+function propertyFor(field: FieldOntologyEntry, cardinality: Cardinality): JsonSchemaProperty {
   const scalar: JsonSchemaProperty =
     field.type === 'date'
       ? { type: 'string', format: 'date' }
@@ -186,7 +198,7 @@ function propertyFor(field: FieldOntologyEntry): JsonSchemaProperty {
               : { type: 'string' }
 
   const shape: JsonSchemaProperty =
-    field.default_cardinality === 'many' ? { type: 'array', items: scalar } : scalar
+    cardinality === 'many' ? { type: 'array', items: scalar } : scalar
 
   return {
     ...shape,
@@ -229,7 +241,10 @@ export function jsonSchemaFor(
       unknownFields.push(fieldId)
       continue
     }
-    properties[fieldId] = propertyFor(field)
+    properties[fieldId] = propertyFor(
+      field,
+      cardinalityOf(profile, fieldId, field.default_cardinality)
+    )
   }
 
   return {
@@ -258,14 +273,29 @@ export interface TypeChange {
   added: Array<{ fieldId: string; role: string }>
   excluded: string[]
   rerolled: Array<{ fieldId: string; from: string; to: string }>
+  /** Campi che su questo tipo chiedono un numero di valori diverso dall'ontologia. */
+  cardinality: Array<{ fieldId: string; from: Cardinality; to: Cardinality }>
 }
 
 function changesFor(
   documentType: string,
   base: RawProfile | null,
-  overrides: TypeOverrides
+  overrides: TypeOverrides,
+  cardinality: TypeCardinality,
+  ontology: Record<string, FieldOntologyEntry>
 ): TypeChange {
-  const change: TypeChange = { documentType, added: [], excluded: [], rerolled: [] }
+  const change: TypeChange = {
+    documentType,
+    added: [],
+    excluded: [],
+    rerolled: [],
+    cardinality: []
+  }
+  for (const [fieldId, to] of Object.entries(cardinality)) {
+    const from = ontology[fieldId]?.default_cardinality ?? 'one'
+    if (from !== to) change.cardinality.push({ fieldId, from, to })
+  }
+  change.cardinality.sort((a, b) => a.fieldId.localeCompare(b.fieldId))
   for (const [fieldId, state] of Object.entries(overrides)) {
     const from = base
       ? (ROLES.find((role) => base[ROLE_KEYS[role]].includes(fieldId)) ?? null)
@@ -282,23 +312,33 @@ function changesFor(
 
 export function buildProfileBundle(input: ProfileBundleInput): ProfileBundle {
   const { manifest, overlay, ontology } = input
-  const touched = Object.entries(overlay.fields)
-    .filter(([, overrides]) => Object.keys(overrides).length > 0)
-    .sort(([a], [b]) => a.localeCompare(b))
+  const touched = [
+    ...new Set([...Object.keys(overlay.fields), ...Object.keys(overlay.cardinality)])
+  ]
+    .map((documentType) => ({
+      documentType,
+      overrides: overlay.fields[documentType] ?? {},
+      cardinality: overlay.cardinality[documentType] ?? {}
+    }))
+    .filter(
+      (entry) =>
+        Object.keys(entry.overrides).length > 0 || Object.keys(entry.cardinality).length > 0
+    )
+    .sort((a, b) => a.documentType.localeCompare(b.documentType))
 
   const profiles: Record<string, RawProfile> = { ...input.profiles.profiles }
   const changes: TypeChange[] = []
   let fields = 0
 
-  for (const [documentType, overrides] of touched) {
+  for (const { documentType, overrides, cardinality } of touched) {
     const explicit = input.profiles.profiles[documentType] ?? null
     const fallback = input.fallbackProfiles?.[documentType]
     const base = explicit ?? (fallback ? materialize(fallback) : null)
     if (!base) continue
 
-    profiles[documentType] = correctedProfile(base, overrides)
-    changes.push(changesFor(documentType, explicit, overrides))
-    fields += Object.keys(overrides).length
+    profiles[documentType] = correctedProfile(base, overrides, cardinality)
+    changes.push(changesFor(documentType, explicit, overrides, cardinality, ontology))
+    fields += new Set([...Object.keys(overrides), ...Object.keys(cardinality)]).size
   }
 
   const correctedProfiles: ProfilesFile = { ...input.profiles, profiles }

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { ClassExtractionProfile } from '../src/shared/extraction-v2'
 import {
+  applyCardinalityOverlay,
   applyHintOverlay,
   applyOverlay,
+  cardinalityOf,
   excludedFields,
   roleIn
 } from '../src/shared/profile-overlay'
@@ -62,6 +64,23 @@ describe('il profilo con sopra le decisioni del revisore', () => {
 
     expect(PROFILE.core_fields).toEqual(['issuer.name'])
     expect(PROFILE.required_fields).toEqual(['document.number', 'document.issue_date'])
+  })
+})
+
+describe('uno o più valori', () => {
+  it('la decisione sta sul profilo, e il motore la legge prima dell’ontologia', () => {
+    const corrected = applyCardinalityOverlay(PROFILE, { 'procurement.cig': 'many' })
+
+    expect(corrected.field_cardinality).toEqual({ 'procurement.cig': 'many' })
+    expect(cardinalityOf(corrected, 'procurement.cig', 'one')).toBe('many')
+    expect(cardinalityOf(corrected, 'document.number', 'one')).toBe('one')
+    expect(cardinalityOf(PROFILE, 'line_items', 'many')).toBe('many')
+  })
+
+  it('senza decisioni restituisce lo stesso profilo, e non tocca quello di partenza', () => {
+    expect(applyCardinalityOverlay(PROFILE, {})).toBe(PROFILE)
+    applyCardinalityOverlay(PROFILE, { 'issuer.name': 'many' })
+    expect(PROFILE.field_cardinality).toBeUndefined()
   })
 })
 
