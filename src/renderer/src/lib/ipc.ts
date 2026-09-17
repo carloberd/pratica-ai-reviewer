@@ -65,12 +65,15 @@ export const api = {
     export: () => call(() => window.reviewer.dataset.export()),
     exportXlsx: () => call(() => window.reviewer.dataset.exportXlsx())
   },
+  map: {
+    get: (documentId: string) => call(() => window.reviewer.map.get(documentId)),
+    edit: (documentId: string, edit: ProfileEdit) =>
+      call(() => window.reviewer.map.edit(documentId, edit)),
+    revert: (documentId: string, actionId: string) =>
+      call(() => window.reviewer.map.revert(documentId, actionId))
+  },
   profiles: {
-    list: () => call(() => window.reviewer.profiles.list()),
-    edit: (edit: ProfileEdit) => call(() => window.reviewer.profiles.edit(edit)),
     revert: (actionId: string) => call(() => window.reviewer.profiles.revert(actionId)),
-    rerun: (documentType: string) => call(() => window.reviewer.profiles.rerun(documentType)),
-    export: (format: 'json' | 'csv') => call(() => window.reviewer.profiles.export(format)),
     exportMap: () => call(() => window.reviewer.profiles.exportMap())
   },
   history: {

@@ -90,7 +90,7 @@ export default function ExportMenu({ busy, pending, onExport }: Props) {
             className={styles.menuItem}
             onClick={() => choose('map')}
           >
-            Mappa tipi ↔ dati
+            Mappa dei campi da estrarre
             <span className={styles.menuItemHint}>
               I file per pratica-ai: profili e hint corretti, gli schemi JSON e il changelog di
               tutte le decisioni.
