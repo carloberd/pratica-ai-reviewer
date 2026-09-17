@@ -382,3 +382,43 @@ stessa serie (fixture nuove, generate con date fisse):
 - richiudere non vale doppio, scartare ritira le prove.
 
 Il revert di una regola arriva con la PR 6, insieme alla UI.
+
+### PR 5 — classificazione: memoria dei moduli
+
+Regola `TEMPLATE_TYPE` (una per modulo e tipo), funzioni in `src/main/learning-templates.ts`,
+segnale `template-memory` in `classify-v2.ts`. Scelte:
+
+- **Prove dagli eventi di tipo**: un documento con impronta chiuso con un tipo sostiene la
+  memoria di quel tipo e smentisce quella di ogni altro tipo dello stesso modulo; un tipo
+  tolto le smentisce tutte. Uno scarto le ritira, come per le etichette.
+- **Più severa delle etichette**: 3 revisioni concordi e nessuna smentita per attivarsi, e
+  una smentita basta a sospendere. È la regola di 1.6 della specifica («mai auto-assegnare
+  se esiste conflitto storico»), con un supporto più alto perché un tipo sbagliato cambia
+  tutti i campi cercati.
+- **Segnale limitato**: vale esattamente `auto_assign_threshold`. Da solo propone il tipo di
+  un modulo che il registry non riconosce (il caso dei promemoria); non supera un hard
+  negative, non vince un margine sotto il minimo, e non entra nel bonus di corroborazione.
+- **Rielaborazione per impronta** (`reprocessQueueOfTemplate`), non per tipo: i documenti che
+  cambiano sono quelli del modulo ancora senza tipo. Un tipo scelto a mano resta.
+- **Audit**: le memorie offerte al classificatore finiscono in
+  `metrics_json.classifier.templateRuleIds`; la timeline dice «dalla memoria del modulo».
+
+Verificato in `tests/learning-flow.test.ts`: dopo tre revisioni il promemoria in coda si
+classifica da sé e, con l'etichetta già attiva, arriva con la data; un modulo chiuso con un
+altro tipo sospende la memoria e il documento in coda torna senza tipo; in `BASELINE` la
+memoria non vale.
+
+**Frasi del classificatore (`CLASSIFIER_POSITIVE`/`NEGATIVE`): rimandate.** Il pacchetto le
+mette nella stessa fase, con `mergeClassifierConfig`. Non le ho fatte per tre ragioni:
+
+1. Serve estrarre frasi distintive confrontando i documenti fra tipi diversi, e un reviewer
+   desktop ne vede pochi per tipo: le frequenze su cui decidere se una frase distingue un
+   tipo non ci sono ancora.
+2. È la parte con più rischio di dati personali (una frase «distintiva» di un fornitore è
+   spesso il suo nome) e di falsi segnali su tipi confondibili.
+3. È la meno portabile: pratica-ai ha un altro classificatore (voti su titolo e lessico,
+   segnali forti, regole di disambiguazione, voto LLM), e `ClassifierConfigV2` non esiste lì.
+
+La memoria dei moduli copre il caso più frequente — lo stesso stampato che ritorna — senza
+nessuno di questi rischi. Le frasi valgono una PR a sé quando ci saranno abbastanza
+revisioni per misurarle; gli eventi `DOCUMENT_TYPE` le conservano già.
