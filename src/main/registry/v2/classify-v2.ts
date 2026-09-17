@@ -9,6 +9,16 @@ export type MatchEvidenceSource =
   | 'positive-signal'
   | 'negative-signal'
   | 'hard-negative-signal'
+  | 'template-memory'
+
+/**
+ * Un modulo che le revisioni hanno sempre chiuso con lo stesso tipo: la memoria del
+ * learner locale, già filtrata per l'impronta del documento.
+ */
+export interface TemplateMemoryV2 {
+  documentType: string
+  templateFingerprint: string
+}
 
 export interface MatchEvidenceV2 {
   source: MatchEvidenceSource
@@ -100,12 +110,18 @@ function addEvidence(
  * - negative / hard-negative signals penalize confusable classes;
  * - assignment requires both score threshold and margin over runner-up;
  * - returns top candidates + reasons for auditability.
+ *
+ * Template memory (local learner): a layout the reviewer has always closed with the same
+ * type adds exactly the assignment threshold. On its own it is enough to propose the
+ * type; it never lifts a hard negative, never wins a low margin, and is kept out of the
+ * corroboration bonus, so it cannot be counted twice.
  */
 export function matchDocumentTypeV2(input: {
   aliases: RegistryAlias[]
   pages: string[]
   filename: string
   config: ClassifierConfigV2
+  templateMemory?: TemplateMemoryV2[]
 }): TypeMatchV2 {
   const { aliases, config } = input
   const d = config.defaults
@@ -162,10 +178,20 @@ export function matchDocumentTypeV2(input: {
     }
   }
 
+  for (const memory of input.templateMemory ?? []) {
+    const c = getCandidate(map, memory.documentType)
+    addEvidence(
+      c,
+      'template-memory',
+      `modulo ${memory.templateFingerprint}`,
+      d.auto_assign_threshold
+    )
+  }
+
   // Bounded corroboration for distinct positive content signals.
   for (const c of map.values()) {
     const positiveContentCount = c.evidence.filter(
-      (e) => e.delta > 0 && e.source !== 'filename'
+      (e) => e.delta > 0 && e.source !== 'filename' && e.source !== 'template-memory'
     ).length
     if (positiveContentCount > 1) {
       const bonus = Math.min(

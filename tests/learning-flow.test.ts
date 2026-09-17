@@ -4,7 +4,11 @@ import { createRepository } from '../src/main/db/repository'
 import { createReloadableExtractionRegistryV2 } from '../src/main/extract/v2/profile-loader'
 import { updateFieldValue } from '../src/main/field-edits'
 import { createDocumentProcessor } from '../src/main/pipeline'
-import { type RefinementDeps, reprocessQueueOfType } from '../src/main/profile-refinement'
+import {
+  type RefinementDeps,
+  reprocessQueueOfTemplate,
+  reprocessQueueOfType
+} from '../src/main/profile-refinement'
 import { assignDocumentType } from '../src/main/reprocess'
 import { submitReview } from '../src/main/review'
 import type { LearningMode } from '../src/shared/local-learning'
@@ -83,8 +87,11 @@ function setup(mode: LearningMode = 'LEARNING') {
   /** I tipi che l'ultimo salvataggio ha chiesto di rielaborare, come li riceve l'IPC. */
   let queued: Promise<unknown> = Promise.resolve()
 
-  /** Il promemoria scaricato ed elaborato, col tipo scelto a mano come farebbe il revisore. */
-  async function open(month: Month) {
+  /**
+   * Il promemoria scaricato ed elaborato, col tipo scelto a mano come farebbe il revisore;
+   * `type: null` lo lascia a quello che decide il classificatore.
+   */
+  async function open(month: Month, options: { type: string | null } = { type: TYPE }) {
     const [filename] = SERIES[month]
     const { id } = repo.documents.upsertFromDrive({
       driveFileId: `drive-${month}`,
@@ -95,7 +102,9 @@ function setup(mode: LearningMode = 'LEARNING') {
     ids.set(month, id)
     repo.documents.setCachedPath(id, fixture(filename))
     await process({ documentId: id, cachedPath: fixture(filename), mime: PDF, filename })
-    await assignDocumentType({ repo, documentId: id, documentType: TYPE, process })
+    if (options.type) {
+      await assignDocumentType({ repo, documentId: id, documentType: options.type, process })
+    }
     return id
   }
 
@@ -122,14 +131,19 @@ function setup(mode: LearningMode = 'LEARNING') {
       action,
       actor: ACTOR,
       registry: extractionRegistryV2,
-      onRulesChanged: (types) => {
-        for (const type of types) queued = reprocessQueueOfType(deps, type, null).done
+      onRulesChanged: ({ documentTypes, templateFingerprints }) => {
+        for (const type of documentTypes) queued = reprocessQueueOfType(deps, type, null).done
+        for (const fingerprint of templateFingerprints) {
+          queued = reprocessQueueOfTemplate(deps, fingerprint).done
+        }
       }
     })
     return repo.getReviewDocument(idOf(month))!.timeline.at(-1)!.detail
   }
 
   const anchorRules = () => repo.learning.listRules({ kind: 'EXTRACTION_ANCHOR' })
+  const memoryRules = () => repo.learning.listRules({ kind: 'TEMPLATE_TYPE' })
+  const classification = (month: Month) => repo.getReviewDocument(idOf(month))!.classification!
   const rule = (scope: 'TEMPLATE' | 'CLASS') => anchorRules().find((r) => r.scope === scope)!
   const lastRun = (month: Month) =>
     JSON.parse(repo.extractionRuns.listForDocument(idOf(month))[0]!.metrics_json!)
@@ -143,6 +157,8 @@ function setup(mode: LearningMode = 'LEARNING') {
     save,
     rule,
     anchorRules,
+    memoryRules,
+    classification,
     lastRun,
     idOf,
     reprocessed: () => queued
@@ -317,10 +333,98 @@ describe('una prova per documento', () => {
       flow.repo.learning.listEvents({ documentId: flow.idOf('ottobre') }).length
     ).toBeGreaterThan(2)
 
+    // Le due etichette e la memoria del modulo.
     expect(flow.save('ottobre', 'DISCARD')).toContain(
-      'Apprendimento: tolte le prove di questo documento da 2 regole.'
+      'Apprendimento: tolte le prove di questo documento da 3 regole.'
     )
     expect(flow.rule('TEMPLATE')).toMatchObject({ positiveCount: 1 })
     expect(flow.rule('CLASS')).toMatchObject({ positiveCount: 1 })
+  })
+})
+
+describe('il motore impara il tipo di un modulo che ritorna', () => {
+  it('tre revisioni concordi: il promemoria in coda si classifica da sé, e si compila', async () => {
+    const flow = setup()
+    await flow.open('settembre')
+    expect(flow.classification('settembre')).toMatchObject({
+      decision: 'UNKNOWN',
+      proposedType: null
+    })
+
+    // Dicembre è in coda senza tipo: nessuno sa ancora cosa sia.
+    await flow.open('dicembre', { type: null })
+    expect(flow.repo.getReviewDocument(flow.idOf('dicembre'))!.documentType).toBeNull()
+
+    for (const month of ['settembre', 'ottobre'] as const) {
+      if (month !== 'settembre') await flow.open(month)
+      flow.pickDate(month)
+      flow.save(month)
+    }
+    expect(flow.memoryRules()).toMatchObject([{ status: 'CANDIDATE', positiveCount: 2 }])
+
+    // Terza revisione concorde: la memoria del modulo si attiva.
+    await flow.open('novembre')
+    expect(flow.save('novembre')).toContain('1 regola attivata.')
+    const memory = flow.memoryRules()[0]!
+    expect(memory).toMatchObject({ status: 'ACTIVE', positiveCount: 3, documentType: TYPE })
+    expect(flow.repo.learning.listActions()[0]!.detail).toBe(
+      `Memoria del modulo ${memory.templateFingerprint} come ${TYPE} attivata: 3 revisioni concordi.`
+    )
+
+    // La coda di quel modulo si rielabora: dicembre ha il tipo, e con lui la data.
+    await flow.reprocessed()
+    const december = flow.repo.getReviewDocument(flow.idOf('dicembre'))!
+    expect(december).toMatchObject({ documentType: TYPE, typeConfidence: 0.74 })
+    expect(december.classification).toMatchObject({ decision: 'ASSIGN', reason: 'OK' })
+    expect(december.classification!.candidates[0]!.signals).toEqual([
+      { source: 'template-memory', phrase: `modulo ${memory.templateFingerprint}`, delta: 0.74 }
+    ])
+    expect(december.timeline.map((event) => event.detail)).toContainEqual(
+      expect.stringContaining('dalla memoria del modulo, già revisionato con questo tipo')
+    )
+    expect(flow.date('dicembre').value).toBe('2026-12-05')
+    expect(flow.lastRun('dicembre').classifier.templateRuleIds).toEqual([memory.id])
+
+    // Confermare il tipo proposto dalla memoria è un'altra revisione concorde.
+    flow.save('dicembre')
+    expect(flow.memoryRules()[0]).toMatchObject({ status: 'ACTIVE', positiveCount: 4 })
+  })
+
+  it('un conflitto la sospende, e il modulo torna senza tipo', async () => {
+    const flow = setup()
+    for (const month of ['settembre', 'ottobre', 'novembre'] as const) {
+      await flow.open(month)
+      flow.save(month)
+    }
+    await flow.open('dicembre', { type: null })
+    expect(flow.repo.getReviewDocument(flow.idOf('dicembre'))!.documentType).toBe(TYPE)
+
+    // Gennaio, stesso modulo, il revisore lo chiude come un altro tipo.
+    await flow.open('gennaio', { type: 'accounting.fattura' })
+    expect(flow.save('gennaio')).toContain('1 regola sospesa.')
+    expect(flow.memoryRules()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ documentType: TYPE, status: 'SUSPENDED', negativeCount: 1 }),
+        expect.objectContaining({ documentType: 'accounting.fattura', status: 'CANDIDATE' })
+      ])
+    )
+    expect(flow.repo.learning.listActions()[0]!.detail).toContain(
+      'lo stesso modulo è stato chiuso anche con un altro tipo (1 smentita)'
+    )
+
+    await flow.reprocessed()
+    expect(flow.repo.getReviewDocument(flow.idOf('dicembre'))!.documentType).toBeNull()
+  })
+
+  it('in BASELINE la memoria dei moduli non vale', async () => {
+    const flow = setup()
+    for (const month of ['settembre', 'ottobre', 'novembre'] as const) {
+      await flow.open(month)
+      flow.save(month)
+    }
+    flow.repo.learning.setMode('BASELINE')
+    await flow.open('dicembre', { type: null })
+    expect(flow.repo.getReviewDocument(flow.idOf('dicembre'))!.documentType).toBeNull()
+    expect(flow.lastRun('dicembre').classifier.templateRuleIds).toEqual([])
   })
 })
