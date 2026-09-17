@@ -1,137 +1,106 @@
-import type { ProfileEdit } from './profile-edit'
-import type { MeasureDelta, ProfileTypeMeasure } from './profile-metrics'
+import type { ActivityEntry, ProfileAction } from './profile-history'
+import type { ProfileTypeMeasure } from './profile-metrics'
+import type { ReviewDocument } from './types'
 
 /**
- * I contratti della schermata «Istruzioni per tipo»: quello che attraversa il ponte IPC
- * e le frasi che il revisore legge. Nessuna dipendenza da Electron, dal database o da
- * React — la schermata li usa per mostrare, il main per rispondere, i test per
+ * I contratti della scheda «Campi da estrarre» e della cronologia: quello che attraversa
+ * il ponte IPC e le frasi che il revisore legge. Nessuna dipendenza da Electron, dal
+ * database o da React — la scheda li usa per mostrare, il main per rispondere, i test per
  * verificare che le parole siano quelle.
  */
 
-/** Dove finisce una correzione ai JSON del registry. */
-export type ProfileWriteMode =
-  /** Scritta e committata: il caso normale, col repo in sviluppo. */
-  | 'COMMITTED'
-  /** Scritta ma non versionata: la cartella non sta in un repo git, o git ha rifiutato. */
-  | 'WRITTEN'
-  /** Cartella di sola lettura: il JSON corretto si esporta e si sostituisce a mano. */
-  | 'EXPORT_REQUIRED'
-
-export interface ProfileStoreStatus {
-  directory: string
-  writable: boolean
-  repositoryRoot: string | null
-  mode: ProfileWriteMode
+/** Un campo dell'ontologia come compare nel menu che li elenca tutti. */
+export interface FieldOption {
+  id: string
+  label: string
+  /** Tipo e descrizione, per distinguere due campi che si somigliano. */
+  hint: string
 }
 
-export type ProfileWriteOutcome =
-  | { mode: 'COMMITTED'; paths: string[]; commit: string; subject: string }
-  | { mode: 'WRITTEN'; paths: string[]; subject: string; reason: string }
-  | {
-      mode: 'EXPORT_REQUIRED'
-      /** I file che sarebbero cambiati, per nome. */
-      files: string[]
-      /** Dove il revisore li ha salvati; vuoto se ha annullato. */
-      exportedTo: string[]
-      subject: string
-      reason: string
-    }
-
-export interface ProfileEditOutcome {
-  edit: ProfileEdit
-  write: ProfileWriteOutcome
-  /** Le misure del tipo dopo la correzione: il profilo è cambiato, i numeri no. */
-  measure: ProfileTypeMeasure | null
-}
-
-export interface SkippedDocument {
-  documentId: string
-  filename: string
-  reason: string
-}
-
-export interface TypeRerunResult {
+/**
+ * La mappa del tipo del documento aperto, con quello che serve a correggerla senza
+ * lasciare la revisione.
+ */
+export interface TypeFieldMap {
   documentType: string
-  /** Rielaborati dalla cache: nessun file è stato riscaricato. */
-  processed: string[]
-  skipped: SkippedDocument[]
-  failed: SkippedDocument[]
-  /** Documenti che dopo il re-run non sono più di questo tipo. Di norma vuoto. */
-  retyped: string[]
-  before: ProfileTypeMeasure
-  after: ProfileTypeMeasure
-  delta: MeasureDelta
+  /**
+   * I campi che la mappa chiede, con i numeri dei documenti già revisionati di quel tipo.
+   * Senza documenti revisionati i numeri sono zero, ma i campi ci sono lo stesso: la mappa
+   * si corregge anche sul primo documento.
+   */
+  measure: ProfileTypeMeasure
+  /** Il registry ha un profilo per questo tipo: senza, non c'è una mappa da correggere. */
+  editable: boolean
+  /** I campi dell'ontologia: si può aggiungerne uno qualsiasi, non solo i visti. */
+  ontology: FieldOption[]
+  /** Le correzioni su questo tipo che si possono ancora annullare, dalla più recente. */
+  undoable: ProfileAction[]
 }
 
-/** Tutto quello che serve alla schermata in una risposta sola. */
-export interface ProfileWorkspace {
-  types: ProfileTypeMeasure[]
-  store: ProfileStoreStatus
+/** L'esito di una correzione (o di un annullamento) fatta dal documento aperto. */
+export interface MapEditResult {
+  action: ProfileAction
+  /** Il documento rielaborato con la mappa nuova: la scheda «Dati» lo mostra subito. */
+  document: ReviewDocument
+  map: TypeFieldMap
+  /** `false` se la copia locale non c'è: il documento resta quello di prima. */
+  reprocessed: boolean
+  /** Altri documenti in coda dello stesso tipo, rielaborati in sottofondo. */
+  queued: number
 }
 
-export interface ProfileReportResult {
-  /** `false` se il revisore ha annullato la scelta del file. */
+/** L'esito dell'export della mappa corretta. */
+export interface ProfileBundleResult {
   saved: boolean
-  path: string | null
+  directory: string | null
+  /** I file scritti, per percorso completo. */
+  paths: string[]
+  /** Tipi con almeno una decisione del revisore. */
   types: number
-  documents: number
+  /** Campi decisi, in totale. */
+  fields: number
+  /** Correzioni ancora in piedi al momento dell'export. */
+  edits: number
+}
+
+/** La cronologia unica, come arriva alla schermata. */
+export interface ActivityFeed {
+  entries: ActivityEntry[]
+  standingEdits: number
 }
 
 // ---------------------------------------------------------------------------
 // Le frasi che il revisore legge
 // ---------------------------------------------------------------------------
 
-/** Cosa succederà alla prossima correzione, detto prima di farla. */
-export function describeStore(store: ProfileStoreStatus): string {
-  if (store.mode === 'COMMITTED') {
-    return 'Ogni correzione riscrive i JSON del registry e ne fa un commit dedicato.'
-  }
-  if (store.mode === 'WRITTEN') {
-    return 'I JSON del registry sono scrivibili ma non versionati: la correzione viene salvata senza commit.'
-  }
-  return 'La cartella del registry è di sola lettura: la correzione produce il JSON corretto da salvare e sostituire a mano.'
-}
-
-/** Com'è andata, una volta fatta. */
-export function describeWriteOutcome(outcome: ProfileWriteOutcome): string {
-  if (outcome.mode === 'COMMITTED') {
-    return `${outcome.subject} — commit ${outcome.commit || 'creato'}.`
-  }
-  if (outcome.mode === 'WRITTEN') {
-    return `${outcome.subject} — salvato senza commit. ${outcome.reason}`
-  }
-  if (outcome.exportedTo.length === 0) {
-    return `${outcome.subject} — export annullato: il registry non è stato modificato. ${outcome.reason}`
-  }
-  return `${outcome.subject} — JSON corretto salvato in ${outcome.exportedTo.join(', ')}: sostituiscilo a mano in ${outcome.files.join(', ')}. ${outcome.reason}`
-}
-
 function plural(count: number, one: string, many: string): string {
   return count === 1 ? `1 ${one}` : `${count} ${many}`
 }
 
-/** L'esito del re-run in una riga: quanti documenti, e se qualcosa è rimasto fuori. */
-export function describeRerun(result: TypeRerunResult): string {
-  const parts = [
-    `${result.processed.length === 1 ? 'Rielaborato' : 'Rielaborati'} ${plural(result.processed.length, 'documento', 'documenti')} dalla cache.`
-  ]
-  if (result.skipped.length > 0) {
+/** Com'è andata una correzione fatta dalla revisione, una volta fatta. */
+export function describeMapEdit(
+  result: Pick<MapEditResult, 'action' | 'reprocessed' | 'queued'>
+): string {
+  const parts = [result.action.detail]
+  parts.push(
+    result.reprocessed
+      ? 'Il documento è stato rielaborato: i campi aggiornati sono in «Dati».'
+      : 'La copia locale del documento non c’è: riaprilo da Drive per vedere i campi aggiornati.'
+  )
+  if (result.queued > 0) {
     parts.push(
-      `${plural(result.skipped.length, 'documento saltato', 'documenti saltati')}: la copia locale non c’è più.`
+      `${plural(result.queued, 'altro documento in coda', 'altri documenti in coda')} dello stesso tipo si ${result.queued === 1 ? 'rielabora' : 'rielaborano'} in sottofondo.`
     )
-  }
-  if (result.failed.length > 0) {
-    parts.push(
-      `${plural(result.failed.length, 'documento non rielaborato', 'documenti non rielaborati')} per un errore.`
-    )
-  }
-  if (result.retyped.length > 0) {
-    parts.push(
-      `${plural(result.retyped.length, 'documento ha', 'documenti hanno')} cambiato tipo e non conta più in questi numeri.`
-    )
-  }
-  if (result.delta.unchanged) {
-    parts.push('I numeri non si sono mossi: la correzione non ha cambiato la precompilazione.')
   }
   return parts.join(' ')
+}
+
+/** L'esito dell'export, con i file che ne sono usciti. */
+export function describeBundle(result: ProfileBundleResult): string {
+  if (!result.saved) return 'Export annullato: non è stato scritto niente.'
+  return (
+    `Mappa esportata in ${result.directory}: ${plural(result.types, 'tipo corretto', 'tipi corretti')}, ` +
+    `${plural(result.fields, 'campo deciso', 'campi decisi')}, ${result.paths.length} file. ` +
+    'I JSON del registry di questa installazione non sono stati toccati.'
+  )
 }

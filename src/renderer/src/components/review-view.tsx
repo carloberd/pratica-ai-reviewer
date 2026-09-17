@@ -1,12 +1,15 @@
 import { type EvidenceTarget, targetOfEvidence } from '@shared/evidence-locate'
 import { documentCorrections } from '@shared/field-edits'
+import type { ProfileEdit } from '@shared/profile-edit'
+import type { TypeFieldMap } from '@shared/profile-workspace'
 import type { RegistryTypeOption, ReviewAction, ReviewDocument } from '@shared/types'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { cx } from '../lib/cx'
 import { formatDateTime, pct, STATUS_LABELS, textSourceLabel } from '../lib/format'
 import DocumentPreview from './document-preview'
 import styles from './document-review.module.css'
 import { BAND_CLASS } from './document-table'
+import ExtractionFields from './extraction-fields'
 import FieldsPanel, { type ActiveTarget } from './fields-panel'
 import type { EvidenceFocus } from './pdf-viewer'
 import SearchableSelect from './searchable-select'
@@ -25,12 +28,18 @@ interface Props {
   onAssignType: (documentType: string | null) => void
   /** Toglie la copia locale del file, lasciando i dati estratti. */
   onEvict: () => void
+  /** La mappa del tipo del documento, per la scheda «Campi da estrarre». */
+  fieldMap: TypeFieldMap | null
+  onLoadFieldMap: () => void
+  onMapEdit: (edit: ProfileEdit) => void
+  onMapRevert: (actionId: string) => void
 }
 
-type Tab = 'fields' | 'history' | 'evidence'
+type Tab = 'fields' | 'map' | 'history' | 'evidence'
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'fields', label: 'Dati' },
+  { id: 'map', label: 'Campi da estrarre' },
   { id: 'history', label: 'History' },
   { id: 'evidence', label: 'Evidenze' }
 ]
@@ -52,7 +61,11 @@ export default function ReviewView({
   onItemAdd,
   onDecide,
   onAssignType,
-  onEvict
+  onEvict,
+  fieldMap,
+  onLoadFieldMap,
+  onMapEdit,
+  onMapRevert
 }: Props) {
   const [note, setNote] = useState('')
   const [tab, setTab] = useState<Tab>('fields')
@@ -62,6 +75,13 @@ export default function ReviewView({
    * l'input perde il fuoco: selezionare sul documento lo fa perdere per forza.
    */
   const [active, setActive] = useState<ActiveTarget | null>(null)
+
+  // La mappa si rilegge ogni volta che si apre la scheda, e quando cambia il tipo: i numeri
+  // dipendono dai documenti salvati nel frattempo, i campi dal tipo.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: si rilegge solo su scheda, documento e tipo
+  useEffect(() => {
+    if (tab === 'map' && document.documentType) onLoadFieldMap()
+  }, [tab, document.id, document.documentType])
 
   /** Da un'evidenza si va al punto del documento da cui viene, restando nella scheda. */
   function focusEvidence(target: EvidenceTarget) {
@@ -231,6 +251,17 @@ export default function ReviewView({
                   )}
                 </div>
               </>
+            )}
+
+            {tab === 'map' && (
+              <ExtractionFields
+                documentType={document.documentType}
+                map={fieldMap}
+                busy={busy}
+                onEdit={onMapEdit}
+                onRevert={onMapRevert}
+                onShowData={() => setTab('fields')}
+              />
             )}
 
             {tab === 'history' && (

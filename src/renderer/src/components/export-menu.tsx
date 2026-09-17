@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { cx } from '../lib/cx'
 import styles from './document-review.module.css'
 
-/** Quale dei due export è in corso, per l'etichetta del pulsante. */
-export type ExportFormat = 'json' | 'xlsx'
+/** Quale export è in corso, per l'etichetta del pulsante. */
+export type ExportFormat = 'json' | 'xlsx' | 'map'
 
 interface Props {
   busy: boolean
@@ -12,12 +12,13 @@ interface Props {
 }
 
 /**
- * Il pulsante «Esporta» della dashboard, con le due forme dello stesso dataset.
+ * Il pulsante «Esporta» della dashboard.
  *
- * Sono lo stesso export — gli stessi documenti chiusi dal revisore, le stesse regole sul
- * valore confermato — e cambia solo la forma del file: due pulsanti affiancati facevano
- * sembrare che fossero due cose diverse. La riga sotto ogni voce dice a cosa serve
- * quella forma, che è l'unica domanda che si fa chi sta per esportare.
+ * Le prime due voci sono lo stesso dataset in due forme — gli stessi documenti chiusi dal
+ * revisore, le stesse regole sul valore confermato — e cambia solo la forma del file. La
+ * terza è un'altra cosa e sta sotto una riga di separazione: non i documenti annotati, ma
+ * la mappa «tipo ↔ dati da estrarre» come l'ha corretta il revisore. È l'unico modo in
+ * cui quelle correzioni diventano file: durante il lavoro restano nel database.
  */
 export default function ExportMenu({ busy, pending, onExport }: Props) {
   const [open, setOpen] = useState(false)
@@ -80,6 +81,19 @@ export default function ExportMenu({ busy, pending, onExport }: Props) {
             Excel
             <span className={styles.menuItemHint}>
               Due fogli da lavorare in tabella: una riga per documento, una per campo.
+            </span>
+          </button>
+          <div className={styles.menuSeparator} />
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.menuItem}
+            onClick={() => choose('map')}
+          >
+            Mappa dei campi da estrarre
+            <span className={styles.menuItemHint}>
+              I file per pratica-ai: profili e hint corretti, gli schemi JSON e il changelog di
+              tutte le decisioni.
             </span>
           </button>
         </div>

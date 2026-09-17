@@ -1,10 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { ProfileEdit } from '../shared/profile-edit'
+import type { ProfileAction } from '../shared/profile-history'
 import type {
-  ProfileEditOutcome,
-  ProfileReportResult,
-  ProfileWorkspace,
-  TypeRerunResult
+  ActivityFeed,
+  MapEditResult,
+  ProfileBundleResult,
+  TypeFieldMap
 } from '../shared/profile-workspace'
 import type {
   AuthStatus,
@@ -84,23 +85,26 @@ export const reviewerApi = {
     /** Lo stesso dataset in foglio di calcolo: due tabelle, `documents` e `fields`. */
     exportXlsx: () => invoke<IpcResultOf<XlsxExportResult>>('dataset:export-xlsx')
   },
-  /** Misure e correzione delle istruzioni di estrazione, tipo per tipo. */
+  /** La mappa «tipo documento ↔ dati da estrarre», corretta dal documento aperto. */
+  map: {
+    get: (documentId: string) => invoke<IpcResultOf<TypeFieldMap>>('map:get', { documentId }),
+    /** Scrive la decisione sul database e rielabora il documento con la mappa nuova. */
+    edit: (documentId: string, edit: ProfileEdit) =>
+      invoke<IpcResultOf<MapEditResult>>('map:edit', { documentId, edit }),
+    /** Annulla una correzione e rielabora il documento con la mappa di prima. */
+    revert: (documentId: string, actionId: string) =>
+      invoke<IpcResultOf<MapEditResult>>('map:revert', { documentId, actionId })
+  },
   profiles: {
-    list: () => invoke<IpcResultOf<ProfileWorkspace>>('profiles:list'),
-    /** Corregge i JSON sorgente del registry e ne fa un commit dedicato. */
-    edit: (edit: ProfileEdit) =>
-      invoke<IpcResultOf<{ outcome: ProfileEditOutcome; workspace: ProfileWorkspace }>>(
-        'profiles:edit',
-        { edit }
-      ),
-    /** Rielabora dalla cache i documenti annotati di un tipo e confronta i numeri. */
-    rerun: (documentType: string) =>
-      invoke<IpcResultOf<{ rerun: TypeRerunResult; workspace: ProfileWorkspace }>>(
-        'profiles:rerun',
-        { documentType }
-      ),
-    export: (format: 'json' | 'csv') =>
-      invoke<IpcResultOf<ProfileReportResult>>('profiles:export', { format })
+    /** Annulla un'azione della cronologia e rimette lo stato che c'era prima. */
+    revert: (actionId: string) =>
+      invoke<IpcResultOf<ProfileAction>>('profiles:revert', { actionId }),
+    /** I file della mappa corretta, da portare in pratica-ai. */
+    exportMap: () => invoke<IpcResultOf<ProfileBundleResult>>('profiles:export-map')
+  },
+  /** Cronologia unica: correzioni alla mappa ed eventi dei documenti. */
+  history: {
+    list: () => invoke<IpcResultOf<ActivityFeed>>('history:list')
   },
   review: {
     submit: (input: { documentId: string; payload: ReviewSubmission }) =>

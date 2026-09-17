@@ -4,9 +4,7 @@ import {
   isFieldTestedProfile,
   type MeasuredDocumentInput,
   type MeasuredTypeInput,
-  measureDelta,
-  measureType,
-  measureTypes
+  measureType
 } from '../src/shared/profile-metrics'
 import type { ExtractedField } from '../src/shared/types'
 import { item, listField, scalarField } from './helpers/review-document'
@@ -218,76 +216,6 @@ describe('misure per tipo', () => {
       'money.total',
       'money.tax'
     ])
-  })
-
-  it('i tipi escono da quello con più documenti annotati', () => {
-    const [first, second] = measureTypes([
-      { ...type([document('a', [])], []), documentType: 'a.uno' },
-      { ...type([document('b', []), document('c', [])], []), documentType: 'b.due' }
-    ])
-    expect(first!.documentType).toBe('b.due')
-    expect(second!.documentType).toBe('a.uno')
-  })
-})
-
-describe('prima e dopo', () => {
-  const profile = [NUMBER, DATE]
-
-  /** Dieci documenti dove il «numero» si riempie a mano nella quota indicata. */
-  function withManualNumber(manual: number) {
-    return measureType(
-      type(
-        Array.from({ length: 10 }, (_, index) =>
-          document(`doc-${index}`, [
-            index < manual
-              ? scalarField({ id: `n${index}`, value: '', correctedValue: `10${index}/2026` })
-              : scalarField({ id: `n${index}`, value: `10${index}/2026` }),
-            scalarField({ id: `d${index}`, name: 'document.issue_date', value: '2026-09-14' })
-          ])
-        ),
-        profile
-      )
-    )
-  }
-
-  it('mostra il campo che è migliorato, col prima e col dopo', () => {
-    const delta = measureDelta(withManualNumber(7), withManualNumber(2))
-
-    expect(delta.unchanged).toBe(false)
-    expect(delta.before.manualRate).toBe(0.35)
-    expect(delta.after.manualRate).toBe(0.1)
-
-    const number = delta.fields[0]!
-    expect(number.fieldId).toBe('document.number')
-    expect(number.before!.manualRate).toBe(0.7)
-    expect(number.after!.manualRate).toBe(0.2)
-    expect(number.manualRateChange).toBe(-0.5)
-    expect(number.confirmedRateChange).toBe(0.5)
-  })
-
-  it('senza movimenti lo dice, invece di mostrare una lista vuota', () => {
-    const delta = measureDelta(withManualNumber(3), withManualNumber(3))
-    expect(delta.fields).toEqual([])
-    expect(delta.unchanged).toBe(true)
-  })
-
-  it('un campo tolto dal profilo compare col «dopo» assente', () => {
-    const before = withManualNumber(0)
-    const after = measureType(
-      type(
-        Array.from({ length: 10 }, (_, index) =>
-          document(`doc-${index}`, [
-            scalarField({ id: `d${index}`, name: 'document.issue_date', value: '2026-09-14' })
-          ])
-        ),
-        [DATE]
-      )
-    )
-    const gone = measureDelta(before, after).fields.find(
-      (field) => field.fieldId === 'document.number'
-    )!
-    expect(gone.before).not.toBeNull()
-    expect(gone.after).toBeNull()
   })
 })
 
