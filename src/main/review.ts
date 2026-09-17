@@ -10,7 +10,7 @@ import type {
 import type { Repository } from './db/repository'
 import { ReviewerError } from './errors'
 import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
-import { learnFromReview } from './review-learning'
+import { learnFromReview, type RulesChange } from './review-learning'
 
 /** Lo stato in cui l'azione lascia il documento, cioè se entrerà nel dataset o no. */
 export function statusForAction(action: ReviewAction): QueueStatus {
@@ -103,8 +103,8 @@ export function buildReviewPayload(
  *
  * Nella stessa transazione una revisione salvata diventa eventi per il learner
  * (`learnFromReview`), e la riga di timeline dice se e quanto è stato registrato. Se una
- * regola comincia o smette di valere, `onRulesChanged` riceve i tipi da rielaborare, dopo
- * che la transazione è chiusa.
+ * regola comincia o smette di valere, `onRulesChanged` riceve tipi e moduli da rielaborare,
+ * dopo che la transazione è chiusa.
  */
 export function submitReview(
   repo: Repository,
@@ -117,7 +117,7 @@ export function submitReview(
     actor?: string | null
     /** Il registry v2, per ricavare le etichette dai valori selezionati. */
     registry?: ExtractionRegistryV2 | undefined
-    onRulesChanged?: (documentTypes: string[]) => void
+    onRulesChanged?: (change: RulesChange) => void
   }
 ): ReviewDocument {
   const document = repo.getReviewDocument(input.documentId)
@@ -149,7 +149,10 @@ export function submitReview(
     )
     return learned
   })
-  if (learned.changedTypes.length > 0) input.onRulesChanged?.(learned.changedTypes)
+  const { documentTypes, templateFingerprints } = learned.changed
+  if (documentTypes.length > 0 || templateFingerprints.length > 0) {
+    input.onRulesChanged?.(learned.changed)
+  }
 
   return repo.getReviewDocument(input.documentId)!
 }

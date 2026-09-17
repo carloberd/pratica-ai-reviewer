@@ -207,6 +207,8 @@ export type TypeSignalSource =
   | 'positive-signal'
   | 'negative-signal'
   | 'hard-negative-signal'
+  /** v3 reviewer: il modulo è sempre stato chiuso con questo tipo. */
+  | 'template-memory'
 
 /** Riga del documento da cui viene un indizio: si raggiunge come un'evidenza. */
 export interface DocumentLocation {

@@ -97,3 +97,32 @@ describe('TypeCandidates', () => {
     expect(view).toContain('Cerca il tipo fra quelli del registry')
   })
 })
+
+describe('TypeCandidates con la memoria dei moduli', () => {
+  it('il segnale del modulo si legge come tale, senza un punto del documento', () => {
+    const remembered: TypeClassification = {
+      ...classification,
+      decision: 'ASSIGN',
+      reason: 'OK',
+      proposedType: 'payments_treasury.richiesta_pagamento',
+      candidates: [
+        {
+          documentType: 'payments_treasury.richiesta_pagamento',
+          label: 'richiesta pagamento',
+          score: 0.74,
+          signals: [{ source: 'template-memory', phrase: 'modulo 4f0e2912bff50e67', delta: 0.74 }]
+        }
+      ]
+    }
+    const document = {
+      documentType: 'payments_treasury.richiesta_pagamento',
+      typeConfidence: 0.74,
+      classification: remembered
+    }
+    const view = text(<TypeCandidates {...props} document={document} />)
+    expect(view).toContain('+ «modulo 4f0e2912bff50e67» già revisionato con questo tipo')
+    expect(html(<TypeCandidates {...props} document={document} />)).not.toContain(
+      'data-evidence-page'
+    )
+  })
+})

@@ -18,6 +18,7 @@ import type { LearningWriter } from './db/dao/learning'
 import type { Repository } from './db/repository'
 import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
 import { anchorRuleInputs, deriveAnchor } from './learning-anchors'
+import { templateTypeRuleInput } from './learning-templates'
 
 /**
  * La revisione chiusa, registrata per il learner, e quello che ne impara.
@@ -36,6 +37,8 @@ import { anchorRuleInputs, deriveAnchor } from './learning-anchors'
  * - un valore proposto da una regola la mette alla prova: confermato la sostiene, corretto
  *   la smentisce — a meno che il revisore non abbia selezionato proprio quello che la regola
  *   legge, e la correzione sia solo di forma;
+ * - il tipo con cui un documento con un'impronta viene chiuso sostiene la memoria di quel
+ *   modulo per quel tipo, e smentisce quella per ogni altro tipo (`learning-templates.ts`);
  * - le regole toccate si promuovono o si sospendono con `nextRuleStatus`.
  *
  * Una prova vale per documento: chiudere di nuovo un documento sostituisce le sue prove,
@@ -53,14 +56,22 @@ export interface LearnFromReviewInput {
   policy?: LearningPolicy
 }
 
+/** Cosa rielaborare dopo che una regola ha cominciato o smesso di valere. */
+export interface RulesChange {
+  /** Tipi con un'etichetta cambiata: la coda di quel tipo. */
+  documentTypes: string[]
+  /** Moduli con una memoria cambiata: la coda con quell'impronta, qualunque tipo abbia. */
+  templateFingerprints: string[]
+}
+
 export interface LearnedReview {
   /** La frase per la timeline, `null` quando non c'è niente da dire. */
   note: string | null
-  /** I tipi con una regola appena attivata o sospesa: la loro coda va rielaborata. */
-  changedTypes: string[]
+  changed: RulesChange
 }
 
-const NOTHING: LearnedReview = { note: null, changedTypes: [] }
+const NO_CHANGE: RulesChange = { documentTypes: [], templateFingerprints: [] }
+const NOTHING: LearnedReview = { note: null, changed: NO_CHANGE }
 
 /** Le correzioni che danno un valore: da lì si impara dove stava. */
 const TEACHES = new Set(['CHANGED', 'FILLED', 'ADDED'])
@@ -82,17 +93,17 @@ export function learnFromReview(repo: Repository, input: LearnFromReviewInput): 
     if (!settled || settled.touched === 0) return NOTHING
     return {
       note: `Apprendimento: tolte le prove di questo documento da ${plural(settled.touched, 'regola', 'regole')}.${describeActions(settled.actions)}`,
-      changedTypes: settled.changedTypes
+      changed: settled.changed
     }
   }
 
   if (mode !== 'LEARNING') {
-    return { note: `${LEARNING_MODE_LABELS[mode]}: revisione non registrata.`, changedTypes: [] }
+    return { note: `${LEARNING_MODE_LABELS[mode]}: revisione non registrata.`, changed: NO_CHANGE }
   }
   if (!input.actor) {
     return {
       note: 'Apprendimento: revisione non registrata, nessun account collegato.',
-      changedTypes: []
+      changed: NO_CHANGE
     }
   }
 
@@ -115,7 +126,7 @@ export function learnFromReview(repo: Repository, input: LearnFromReviewInput): 
 
   return {
     note: `${describeLearnedReview(events)}${describeActions(settled?.actions ?? [])}`,
-    changedTypes: settled?.changedTypes ?? []
+    changed: settled?.changed ?? NO_CHANGE
   }
 }
 
@@ -128,6 +139,25 @@ function proofs(
 ): Array<[LearningRule, LearningEffect]> {
   const result: Array<[LearningRule, LearningEffect]> = []
   const taught: LearningRule[] = []
+
+  if (event.kind === 'DOCUMENT_TYPE' && event.templateFingerprint) {
+    // Il modulo chiuso con questo tipo: a favore di questo tipo, contro tutti gli altri che
+    // lo stesso modulo aveva avuto. Un tipo tolto smentisce tutti.
+    for (const rule of repo.learning.listRules({
+      kind: 'TEMPLATE_TYPE',
+      templateFingerprint: event.templateFingerprint
+    })) {
+      if (rule.documentType !== event.documentType) result.push([rule, 'NEGATIVE'])
+    }
+    if (event.documentType) {
+      const input = templateTypeRuleInput(event.documentType, event.templateFingerprint)
+      result.push([
+        writer.findRule(input.ruleKey) ?? writer.createRule(input, event.at),
+        'POSITIVE'
+      ])
+    }
+    return result
+  }
 
   const spec = event.fieldId ? input.registry?.field(event.fieldId) : undefined
   const location = event.pick?.location
@@ -178,7 +208,7 @@ function ruleById(writer: LearningWriter, repo: Repository, id: string): Learnin
 interface Settled {
   touched: number
   actions: LearningAction[]
-  changedTypes: string[]
+  changed: RulesChange
 }
 
 /** Porta ogni regola toccata allo stato che le sue prove chiedono. */
@@ -190,7 +220,8 @@ function settle(
 ): Settled {
   const keys = [...new Set(rules.map((rule) => rule.ruleKey))]
   const actions: LearningAction[] = []
-  const changedTypes = new Set<string>()
+  const documentTypes = new Set<string>()
+  const templateFingerprints = new Set<string>()
   for (const ruleKey of keys) {
     const rule = writer.findRule(ruleKey)
     if (!rule) continue
@@ -201,9 +232,20 @@ function settle(
     )
     if (next === rule.status) continue
     actions.push(writer.changeRuleStatus(rule.id, next, { at, detail: describeRule(rule, next) }))
-    changedTypes.add(rule.documentType)
+    if (rule.kind === 'TEMPLATE_TYPE' && rule.templateFingerprint) {
+      templateFingerprints.add(rule.templateFingerprint)
+    } else {
+      documentTypes.add(rule.documentType)
+    }
   }
-  return { touched: keys.length, actions, changedTypes: [...changedTypes] }
+  return {
+    touched: keys.length,
+    actions,
+    changed: {
+      documentTypes: [...documentTypes],
+      templateFingerprints: [...templateFingerprints]
+    }
+  }
 }
 
 function plural(count: number, one: string, many: string): string {
@@ -216,6 +258,15 @@ function percent(value: number | null): string {
 
 /** La riga di cronologia di un cambio di stato, coi numeri che l'hanno deciso. */
 function describeRule(rule: LearningRule, next: string): string {
+  if (rule.kind === 'TEMPLATE_TYPE') {
+    const verb =
+      next === 'ACTIVE' ? 'attivata' : next === 'SUSPENDED' ? 'sospesa' : next.toLowerCase()
+    const reason =
+      next === 'SUSPENDED'
+        ? `lo stesso modulo è stato chiuso anche con un altro tipo (${plural(rule.negativeCount, 'smentita', 'smentite')})`
+        : plural(ruleSupport(rule), 'revisione concorde', 'revisioni concordi')
+    return `Memoria del modulo ${rule.templateFingerprint} come ${rule.documentType} ${verb}: ${reason}.`
+  }
   const what = isAnchorPattern(rule.pattern)
     ? `Etichetta «${rule.pattern.label}» per ${rule.fieldId}`
     : `Regola ${rule.kind}`

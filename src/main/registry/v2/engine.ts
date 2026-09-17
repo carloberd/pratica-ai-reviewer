@@ -1,7 +1,7 @@
 import type { EngineVersion } from '../../config'
 import { matchDocumentType, type TypeMatch } from '../classify'
 import type { RegistryAlias } from '../index'
-import { matchDocumentTypeV2, type TypeMatchV2 } from './classify-v2'
+import { matchDocumentTypeV2, type TemplateMemoryV2, type TypeMatchV2 } from './classify-v2'
 import type { ClassifierConfigV2 } from './config'
 
 /**
@@ -26,6 +26,8 @@ export function classifyWithSelectedEngine(input: {
   pages: string[]
   filename: string
   configV2: ClassifierConfigV2 | undefined
+  /** La memoria dei moduli già revisionati: solo il v2 la usa. */
+  templateMemory?: TemplateMemoryV2[]
 }): Classification {
   if (input.engine === 'v1') {
     const match = matchDocumentType(input.aliases, input.pages[0] ?? '', input.filename)
@@ -45,7 +47,8 @@ export function classifyWithSelectedEngine(input: {
     aliases: input.aliases,
     pages: input.pages,
     filename: input.filename,
-    config: input.configV2
+    config: input.configV2,
+    templateMemory: input.templateMemory ?? []
   })
 
   // Un UNKNOWN non ha confidence di tipo: una confidence non nulla con tipo nullo
