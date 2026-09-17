@@ -150,7 +150,7 @@ describe('migrazioni', () => {
     // Correzione rimasta senza la riga proposta: la 0004 la teneva con valore nullo.
     item.run('orfana', 'f', 2, null, '"Trasporto"', 0)
 
-    expect(migrate(db)).toEqual(['0005', '0006', '0007'])
+    expect(migrate(db)).toEqual(['0005', '0006', '0007', '0008'])
 
     expect(
       db.prepare('SELECT id, origin, removed FROM field_items ORDER BY item_index').all()
@@ -172,7 +172,7 @@ describe('migrazioni', () => {
       "INSERT INTO documents (id, drive_file_id, filename, mime, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', '2026-01-01')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0006', '0007'])
+    expect(migrate(db)).toEqual(['0006', '0007', '0008'])
 
     // NULL = da calcolare al primo export, non «documento senza impronta».
     expect(db.prepare('SELECT template_fingerprint FROM documents').get()).toEqual({
@@ -185,13 +185,37 @@ describe('migrazioni', () => {
     db.close()
   })
 
+  it('la 0008 apre le tabelle della mappa, vuote: nessuna decisione presa prima esiste', () => {
+    const db = databaseAt('0007')
+
+    expect(migrate(db)).toEqual(['0008'])
+
+    expect(db.prepare('SELECT COUNT(*) AS n FROM profile_overrides').get()).toEqual({ n: 0 })
+    expect(db.prepare('SELECT COUNT(*) AS n FROM profile_hint_labels').get()).toEqual({ n: 0 })
+    expect(db.prepare('SELECT COUNT(*) AS n FROM profile_actions').get()).toEqual({ n: 0 })
+
+    // Lo stato di un campo è uno dei quattro pesi oppure «non utile», e basta.
+    db.prepare(
+      "INSERT INTO profile_overrides (document_type, field_id, state, updated_at) VALUES ('accounting.fattura', 'procurement.cig', 'excluded', '2026-09-17')"
+    ).run()
+    expect(() =>
+      db
+        .prepare(
+          "INSERT INTO profile_overrides (document_type, field_id, state, updated_at) VALUES ('accounting.fattura', 'bank.iban', 'importante', '2026-09-17')"
+        )
+        .run()
+    ).toThrow()
+
+    db.close()
+  })
+
   it('la 0007 aggiunge la nota del revisore, vuota sui documenti già chiusi', () => {
     const db = databaseAt('0006')
     db.prepare(
       "INSERT INTO documents (id, drive_file_id, filename, mime, status, reviewed_at, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', 'REVIEWED', '2026-01-02', '2026-01-01')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0007'])
+    expect(migrate(db)).toEqual(['0007', '0008'])
 
     // Chi ha chiuso un documento prima di questa versione non ha una nota da recuperare:
     // restava solo nel testo della timeline, che non è un formato da rileggere.
@@ -249,7 +273,7 @@ describe('migrazione 0004 su un database esistente', () => {
     const db = databaseAt('0003')
     seedV1(db)
 
-    expect(migrate(db)).toEqual(['0004', '0005', '0006', '0007'])
+    expect(migrate(db)).toEqual(['0004', '0005', '0006', '0007', '0008'])
 
     const rows = db
       .prepare(
