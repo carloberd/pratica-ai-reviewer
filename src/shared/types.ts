@@ -64,6 +64,8 @@ export interface EvidenceItem {
   method?: PickMethod
   /** v3 reviewer: dove cade fra le righe salvate dall'elaborazione, quando si ritrova. */
   location?: PickLocation
+  /** v3 reviewer: la regola appresa che ha trovato l'etichetta; assente per il registry. */
+  ruleId?: string
 }
 
 /** v3 reviewer: chi ha trovato il testo di un'evidenza. */

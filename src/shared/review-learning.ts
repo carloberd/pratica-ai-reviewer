@@ -50,6 +50,7 @@ type Decision = Pick<
   | 'fieldId'
   | 'itemIndex'
   | 'engineConfidence'
+  | 'engineRuleId'
   | 'pick'
 >
 
@@ -65,6 +66,7 @@ const decision = (
   fieldId: null,
   itemIndex: null,
   engineConfidence: null,
+  engineRuleId: null,
   pick: null,
   ...rest
 })
@@ -96,13 +98,18 @@ function typeDecision(document: ReviewDocument): Decision | null {
 function fieldDecisions(field: ExtractedField, evidence: Map<string, EvidenceItem>): Decision[] {
   const itemsById = new Map(field.items.map((item) => [item.id, item]))
   const confidenceOf = (item: FieldItem | undefined) => item?.confidence ?? field.confidence
+  /** La regola appresa dietro la proposta del motore, dalla sua evidenza. */
+  const ruleOf = (source: { evidenceId?: string }) =>
+    (source.evidenceId ? evidence.get(source.evidenceId)?.ruleId : undefined) ?? null
   const corrected = fieldCorrections(field).map((correction) => {
     const item = correction.itemId === null ? undefined : itemsById.get(correction.itemId)
     const source = item ?? field
+    const proposed = correction.before !== null
     return decision('FIELD_VALUE', correction.kind, {
       fieldId: field.name,
       itemIndex: correction.itemIndex,
-      engineConfidence: correction.before === null ? null : confidenceOf(item),
+      engineConfidence: proposed ? confidenceOf(item) : null,
+      engineRuleId: proposed ? ruleOf(source) : null,
       pick:
         correction.after === null
           ? null
@@ -126,7 +133,8 @@ function fieldDecisions(field: ExtractedField, evidence: Map<string, EvidenceIte
         decision('FIELD_VALUE', 'CONFIRMED', {
           fieldId: field.name,
           itemIndex: item.index,
-          engineConfidence: item.confidence
+          engineConfidence: item.confidence,
+          engineRuleId: ruleOf(item)
         })
       )
     return [...corrected, ...confirmed].sort((a, b) => (a.itemIndex ?? 0) - (b.itemIndex ?? 0))
@@ -137,7 +145,8 @@ function fieldDecisions(field: ExtractedField, evidence: Map<string, EvidenceIte
   return [
     decision('FIELD_VALUE', 'CONFIRMED', {
       fieldId: field.name,
-      engineConfidence: field.confidence
+      engineConfidence: field.confidence,
+      engineRuleId: ruleOf(field)
     })
   ]
 }

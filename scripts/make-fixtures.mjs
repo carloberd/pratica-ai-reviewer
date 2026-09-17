@@ -5,6 +5,11 @@
  * serve solo a documentare (e a rifare) come sono state prodotte.
  *
  *   node scripts/make-fixtures.mjs
+ *   node scripts/make-fixtures.mjs promemoria-ottobre.pdf   # solo le fixture nominate
+ *
+ * Rigenerare un PDF ne cambia i byte (pdf-lib scrive la data di creazione), e quindi lo
+ * sha-256 che i test e il dataset atteso si portano dietro: si rigenera solo quello che
+ * serve. Le fixture aggiunte dopo hanno date fisse, e restano identiche a ogni giro.
  *
  * Richiede `zip` (presente su macOS e Linux) per costruire il DOCX.
  */
@@ -97,9 +102,38 @@ const IGNOTO_LINES = [
   'Da archiviare a cura della segreteria.'
 ]
 
+/**
+ * Lo stesso modulo del promemoria, con altri dati della stessa forma: date `99/99/9999`,
+ * importi `9.999,99`. Stessa impronta del layout, byte diversi: sono i documenti su cui il
+ * learner impara un'etichetta per il template e la rimette alla prova.
+ */
+function promemoria(importo, data) {
+  return IGNOTO_LINES.map((line) =>
+    line.startsWith('Importo complessivo')
+      ? `Importo complessivo EUR ${importo}`
+      : line.startsWith('Data:')
+        ? `Data: ${data}`
+        : line
+  )
+}
+
+const PROMEMORIA_SERIE = [
+  ['promemoria-ottobre.pdf', promemoria('1.480,00', '10/10/2026')],
+  ['promemoria-novembre.pdf', promemoria('2.310,00', '07/11/2026')],
+  ['promemoria-dicembre.pdf', promemoria('3.045,50', '05/12/2026')],
+  ['promemoria-gennaio.pdf', promemoria('1.120,00', '09/01/2027')]
+]
+
+/** Data fissa per le fixture che non devono cambiare byte a ogni rigenerazione. */
+const FIXED_DATE = new Date('2026-09-17T00:00:00.000Z')
+
 /** PDF con text layer nativo: pdf.js legge il testo senza OCR. */
-async function makeTextPdf(lines, outfile) {
+async function makeTextPdf(lines, outfile, options = {}) {
   const pdf = await PDFDocument.create()
+  if (options.fixedDate) {
+    pdf.setCreationDate(FIXED_DATE)
+    pdf.setModificationDate(FIXED_DATE)
+  }
   const font = await pdf.embedFont(StandardFonts.Helvetica)
   const page = pdf.addPage([595, 842])
   let y = 780
@@ -183,10 +217,26 @@ function makeDocx(lines, outfile) {
   }
 }
 
-await makeTextPdf(FATTURA_LINES, join(fixtures, 'fattura-nativa.pdf'))
-await makeTextPdf(FATTURA_RIGHE_LINES, join(fixtures, 'fattura-righe.pdf'))
-await makeScannedPdf(SCANSIONE_LINES, join(fixtures, 'durc-scansionato.pdf'))
-await makeTextPdf(IGNOTO_LINES, join(fixtures, 'promemoria-ignoto.pdf'))
-makeDocx(CONTRATTO_LINES, join(fixtures, 'contratto-consulenza.docx'))
+const only = new Set(process.argv.slice(2))
+const wanted = (name) => only.size === 0 || only.has(name)
+
+if (wanted('fattura-nativa.pdf')) {
+  await makeTextPdf(FATTURA_LINES, join(fixtures, 'fattura-nativa.pdf'))
+}
+if (wanted('fattura-righe.pdf')) {
+  await makeTextPdf(FATTURA_RIGHE_LINES, join(fixtures, 'fattura-righe.pdf'))
+}
+if (wanted('durc-scansionato.pdf')) {
+  await makeScannedPdf(SCANSIONE_LINES, join(fixtures, 'durc-scansionato.pdf'))
+}
+if (wanted('promemoria-ignoto.pdf')) {
+  await makeTextPdf(IGNOTO_LINES, join(fixtures, 'promemoria-ignoto.pdf'))
+}
+for (const [name, lines] of PROMEMORIA_SERIE) {
+  if (wanted(name)) await makeTextPdf(lines, join(fixtures, name), { fixedDate: true })
+}
+if (wanted('contratto-consulenza.docx')) {
+  makeDocx(CONTRATTO_LINES, join(fixtures, 'contratto-consulenza.docx'))
+}
 
 console.log('fixture generate in tests/fixtures/')

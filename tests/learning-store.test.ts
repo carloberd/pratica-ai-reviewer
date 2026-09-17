@@ -43,6 +43,7 @@ function event(
     fieldId: 'document.issue_date',
     itemIndex: null,
     engineConfidence: null,
+    engineRuleId: null,
     pick: {
       method: 'TEXT_SELECTION',
       page: 1,
@@ -232,15 +233,17 @@ describe('regole', () => {
     expect(rule.templateFingerprint).toBeNull()
   })
 
-  it('le prove contano una volta per evento, e danno supporto e precisione', () => {
+  it('le prove contano una volta per documento, e danno supporto e precisione', () => {
     const { learning, documentId } = setup()
     const rule = learning.acquire((writer) => {
       const created = writer.createRule(ANCHOR, AT)
-      const first = writer.addEvent(event(documentId))
-      const second = writer.addEvent(event(documentId))
-      const wrong = writer.addEvent(event(documentId, { outcome: 'CHANGED' }))
+      const first = writer.addEvent(event(documentId, { contentSha256: 'a'.repeat(64) }))
+      const again = writer.addEvent(event(documentId, { contentSha256: 'a'.repeat(64) }))
+      const second = writer.addEvent(event(documentId, { contentSha256: 'b'.repeat(64) }))
+      const wrong = writer.addEvent(event(documentId, { contentSha256: 'c'.repeat(64) }))
       writer.recordEvidence(created.id, first.id, 'POSITIVE', AT)
-      writer.recordEvidence(created.id, first.id, 'POSITIVE', AT)
+      // Lo stesso documento non vale due volte.
+      writer.recordEvidence(created.id, again.id, 'POSITIVE', AT)
       writer.recordEvidence(created.id, second.id, 'POSITIVE', AT)
       return writer.recordEvidence(created.id, wrong.id, 'NEGATIVE', '2026-09-17T12:00:00.000Z')
     })!
@@ -259,6 +262,79 @@ describe('regole', () => {
       'POSITIVE',
       'NEGATIVE'
     ])
+  })
+
+  it('sullo stesso documento la smentita prevale sulla conferma, non il contrario', () => {
+    const { learning, documentId } = setup()
+    const rule = learning.acquire((writer) => {
+      const created = writer.createRule(ANCHOR, AT)
+      const row = () => writer.addEvent(event(documentId)).id
+      writer.recordEvidence(created.id, row(), 'POSITIVE', AT)
+      writer.recordEvidence(created.id, row(), 'NEGATIVE', AT)
+      return writer.recordEvidence(created.id, row(), 'POSITIVE', AT)
+    })!
+    expect(rule).toMatchObject({ positiveCount: 0, negativeCount: 1 })
+  })
+
+  it('senza hash la prova si lega all’id del documento', () => {
+    const { learning, documentId } = setup()
+    const rule = learning.acquire((writer) => {
+      const created = writer.createRule(ANCHOR, AT)
+      writer.recordEvidence(
+        created.id,
+        writer.addEvent(event(documentId, { contentSha256: null })).id,
+        'POSITIVE',
+        AT
+      )
+      return writer.recordEvidence(
+        created.id,
+        writer.addEvent(event(documentId, { contentSha256: null })).id,
+        'POSITIVE',
+        AT
+      )
+    })!
+    expect(rule.positiveCount).toBe(1)
+  })
+
+  it('ritirare un documento toglie le sue prove da tutte le regole', () => {
+    const { learning, documentId } = setup()
+    const [anchor, other] = learning.acquire((writer) => {
+      const first = writer.createRule(ANCHOR, AT)
+      const second = writer.createRule({ ...ANCHOR, scope: 'CLASS', ruleKey: 'class-key' }, AT)
+      const kept = writer.addEvent(event(documentId, { contentSha256: 'b'.repeat(64) }))
+      const retracted = writer.addEvent(event(documentId))
+      writer.recordEvidence(first.id, kept.id, 'POSITIVE', AT)
+      writer.recordEvidence(first.id, retracted.id, 'POSITIVE', AT)
+      writer.recordEvidence(second.id, retracted.id, 'NEGATIVE', AT)
+      const touched = writer.retractDocument('a'.repeat(64), AT)
+      expect(touched.map((rule) => rule.id).sort()).toEqual([first.id, second.id].sort())
+      expect(writer.retractDocument('nessuno', AT)).toEqual([])
+      return [writer.findRule(first.ruleKey)!, writer.findRule(second.ruleKey)!]
+    })!
+    expect(anchor).toMatchObject({ positiveCount: 1, negativeCount: 0 })
+    expect(other).toMatchObject({ positiveCount: 0, negativeCount: 0 })
+    // Gli eventi restano: si ritira la prova, non la storia.
+    expect(learning.listEvents()).toHaveLength(2)
+  })
+
+  it('gli effetti recenti vanno dal più nuovo', () => {
+    const { learning, documentId } = setup()
+    const effects = learning.acquire((writer) => {
+      const rule = writer.createRule(ANCHOR, AT)
+      const at = (hour: number) => `2026-09-17T${String(hour).padStart(2, '0')}:00:00.000Z`
+      for (const [hour, sha, effect] of [
+        [9, 'a', 'POSITIVE'],
+        [10, 'b', 'NEGATIVE'],
+        [11, 'c', 'NEGATIVE']
+      ] as const) {
+        const recorded = writer.addEvent(
+          event(documentId, { at: at(hour), contentSha256: sha.repeat(64) })
+        )
+        writer.recordEvidence(rule.id, recorded.id, effect, at(hour))
+      }
+      return writer.recentEffects(rule.id, 2)
+    })
+    expect(effects).toEqual(['NEGATIVE', 'NEGATIVE'])
   })
 
   it('i cambi di stato hanno un nome, portano i numeri e aggiornano le regole attive', () => {

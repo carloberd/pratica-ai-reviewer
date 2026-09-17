@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import {
+  documentKey,
   isLearningMode,
   LEARNER_VERSION,
   LEARNING_MODE_LABELS,
@@ -54,6 +55,7 @@ interface EventRow {
   field_id: string | null
   item_index: number | null
   engine_confidence: number | null
+  engine_rule_id: string | null
   pick_method: string | null
   pick_page: number | null
   pick_bbox_json: string | null
@@ -119,6 +121,7 @@ function toEvent(row: EventRow): LearningEvent {
     fieldId: row.field_id,
     itemIndex: row.item_index,
     engineConfidence: row.engine_confidence,
+    engineRuleId: row.engine_rule_id,
     pick:
       row.pick_method === null || row.pick_page === null
         ? null
@@ -191,10 +194,19 @@ export interface LearningWriter {
   /** Una regola nuova nasce candidata, e non lascia righe in cronologia. */
   createRule(input: LearningRuleInput, at: string): LearningRule
   /**
-   * Un evento che sostiene o smentisce una regola. Conta una volta sola per coppia
-   * regola-evento: ripetere la stessa prova non gonfia i contatori.
+   * Un evento che sostiene o smentisce una regola. Una regola ha al più una prova per
+   * documento: ripetere la prova non gonfia i contatori, e se lo stesso documento la
+   * sostiene e la smentisce (due righe di un campo ripetuto) vale la smentita.
    */
   recordEvidence(ruleId: string, eventId: string, effect: LearningEffect, at: string): LearningRule
+  /**
+   * Toglie le prove di un documento da tutte le regole, e ritorna quelle toccate. Serve
+   * prima di registrare di nuovo un documento richiuso, e quando un documento salvato viene
+   * scartato: vale solo l'ultima chiusura.
+   */
+  retractDocument(documentKey: string, at: string): LearningRule[]
+  /** Gli effetti delle prove di una regola, dalla più recente. */
+  recentEffects(ruleId: string, limit: number): LearningEffect[]
   /** Promuove, sospende, riattiva o scarta una regola, e lo scrive in cronologia. */
   changeRuleStatus(
     ruleId: string,
@@ -208,13 +220,13 @@ export function createLearningDao(db: Db) {
     INSERT INTO learning_events (
       id, at, actor, document_id, content_sha256, template_fingerprint, text_source, kind, outcome,
       document_type, predicted_type, predicted_confidence, field_id, item_index, engine_confidence,
-      pick_method, pick_page, pick_bbox_json, pick_line_start, pick_line_end, pick_char_start,
-      pick_char_end, learner_version
+      engine_rule_id, pick_method, pick_page, pick_bbox_json, pick_line_start, pick_line_end,
+      pick_char_start, pick_char_end, learner_version
     ) VALUES (
       @id, @at, @actor, @documentId, @contentSha256, @templateFingerprint, @textSource, @kind, @outcome,
       @documentType, @predictedType, @predictedConfidence, @fieldId, @itemIndex, @engineConfidence,
-      @pickMethod, @pickPage, @pickBboxJson, @pickLineStart, @pickLineEnd, @pickCharStart,
-      @pickCharEnd, @learnerVersion
+      @engineRuleId, @pickMethod, @pickPage, @pickBboxJson, @pickLineStart, @pickLineEnd,
+      @pickCharStart, @pickCharEnd, @learnerVersion
     )
   `)
   const insertRule = db.prepare(`
@@ -245,6 +257,18 @@ export function createLearningDao(db: Db) {
     const row = selectRule.get(id) as RuleRow | undefined
     if (!row) throw new Error(`Regola ${id} inesistente.`)
     return toRule(row)
+  }
+
+  /** Sposta un contatore; l'ultima data si aggiorna solo quando una prova arriva. */
+  function count(ruleId: string, effect: LearningEffect, delta: 1 | -1, at: string) {
+    const column = effect === 'POSITIVE' ? 'positive' : 'negative'
+    db.prepare(`
+      UPDATE learning_rules
+         SET ${column}_count = ${column}_count + ?,
+             last_${column}_at = CASE WHEN ? > 0 THEN ? ELSE last_${column}_at END,
+             updated_at = ?
+       WHERE id = ?
+    `).run(delta, delta, at, at, ruleId)
   }
 
   function addAction(action: Omit<LearningAction, 'id' | 'revertsId' | 'revertedAt'>) {
@@ -302,20 +326,54 @@ export function createLearningDao(db: Db) {
     },
 
     recordEvidence(ruleId, eventId, effect, at) {
-      const inserted = db
-        .prepare(
-          'INSERT OR IGNORE INTO learning_rule_evidence (rule_id, event_id, effect) VALUES (?, ?, ?)'
-        )
-        .run(ruleId, eventId, effect)
-      if (inserted.changes > 0) {
-        const column = effect === 'POSITIVE' ? 'positive' : 'negative'
-        db.prepare(`
-          UPDATE learning_rules
-             SET ${column}_count = ${column}_count + 1, last_${column}_at = ?, updated_at = ?
-           WHERE id = ?
-        `).run(at, at, ruleId)
+      const event = db
+        .prepare('SELECT content_sha256, document_id FROM learning_events WHERE id = ?')
+        .get(eventId) as Pick<EventRow, 'content_sha256' | 'document_id'> | undefined
+      if (!event) throw new Error(`Evento ${eventId} inesistente.`)
+      const key = documentKey({
+        contentSha256: event.content_sha256,
+        documentId: event.document_id
+      })
+      const existing = db
+        .prepare('SELECT effect FROM learning_rule_evidence WHERE rule_id = ? AND document_key = ?')
+        .get(ruleId, key) as { effect: LearningEffect } | undefined
+
+      if (!existing) {
+        db.prepare(
+          'INSERT INTO learning_rule_evidence (rule_id, document_key, event_id, effect) VALUES (?, ?, ?, ?)'
+        ).run(ruleId, key, eventId, effect)
+        count(ruleId, effect, +1, at)
+      } else if (existing.effect === 'POSITIVE' && effect === 'NEGATIVE') {
+        db.prepare(
+          'UPDATE learning_rule_evidence SET effect = ?, event_id = ? WHERE rule_id = ? AND document_key = ?'
+        ).run(effect, eventId, ruleId, key)
+        count(ruleId, 'POSITIVE', -1, at)
+        count(ruleId, 'NEGATIVE', +1, at)
       }
       return rule(ruleId)
+    },
+
+    retractDocument(key, at) {
+      const rows = db
+        .prepare('SELECT rule_id, effect FROM learning_rule_evidence WHERE document_key = ?')
+        .all(key) as Array<{ rule_id: string; effect: LearningEffect }>
+      for (const row of rows) count(row.rule_id, row.effect, -1, at)
+      db.prepare('DELETE FROM learning_rule_evidence WHERE document_key = ?').run(key)
+      return rows.map((row) => rule(row.rule_id))
+    },
+
+    recentEffects(ruleId, limit) {
+      return (
+        db
+          .prepare(`
+            SELECT r.effect FROM learning_rule_evidence r
+              JOIN learning_events e ON e.id = r.event_id
+             WHERE r.rule_id = ?
+          ORDER BY e.at DESC, e.rowid DESC
+             LIMIT ?
+          `)
+          .all(ruleId, limit) as Array<{ effect: LearningEffect }>
+      ).map((row) => row.effect)
     },
 
     changeRuleStatus(ruleId, status, change) {
