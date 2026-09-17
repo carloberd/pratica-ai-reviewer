@@ -236,7 +236,8 @@ prima pagina (0,90) e sul nome del file (0,70); sotto 0,75 il tipo resta da asse
 col suo ruolo: obbligatorio, principale, opzionale, condizionale. I 16 tipi del registry
 senza profilo esplicito ricevono un profilo ricavato dal loro schema v1
 (`LEGACY_FALLBACK`). Quei profili sono quasi tutti bozze mai verificate: quanto valgano lo
-dicono le annotazioni, e si correggono dalla schermata «Mappa tipi ↔ dati» (sotto).
+dicono le annotazioni, e si correggono dalla scheda «Campi da estrarre» della revisione
+(sotto).
 **Senza tipo non si estrae niente**: la scheda resta vuota finché il
 tipo non viene assegnato a mano, e l'assegnazione rielabora subito il documento. Il
 valore si cerca dopo l'etichetta sulla stessa riga o, se la riga finisce con
@@ -321,7 +322,7 @@ il formato JSON non cambia perché esiste anche quello Excel. «Esporta», nella
 apre un menu con le due voci: sono lo stesso export e cambia solo la forma del file,
 mentre due pulsanti affiancati facevano sembrare che fossero due cose diverse.
 
-Sotto una riga di separazione c'è una terza voce, **Mappa tipi ↔ dati**, che non esporta i
+Sotto una riga di separazione c'è una terza voce, **Mappa dei campi da estrarre**, che non esporta i
 documenti annotati ma le correzioni alla mappa «tipo ↔ dati da estrarre»: è l'unico modo in
 cui quelle decisioni diventano file. Come è fatta sta [più sotto](#export-della-mappa).
 
@@ -456,23 +457,27 @@ exceljs: intestazioni, conteggi, impronte e valori confermati.
 
 ---
 
-## Mappa tipi ↔ dati da estrarre
+## Campi da estrarre
 
 Quali dati vanno estratti da ogni tipo documento è scritto in
 `resources/registry/v2/class_extraction_profiles_v2.json` e `extraction_hints_v2.json`, e
 sono per lo più bozze: **481 profili su 500 li ha proposti l'AI e nessuno li ha
 verificati**, e da lì nascono difetti come il «numero» chiesto a tipi che non lo
-prevedono. La terza voce della navbar rende il ciclo misurabile: le annotazioni già fatte
-dicono quali istruzioni funzionano, la correzione diventa un lavoro guidato dai numeri, e
-il re-run dice se è servita.
+prevedono. La mappa si corregge **dentro la revisione**, dalla scheda «Campi da estrarre»
+accanto a «Dati»: il revisore che sta compilando un documento e vede un campo che manca o
+che non serve lo sistema lì, il documento si rielabora con la mappa nuova, e torna a «Dati»
+per finire il lavoro. Non c'è più una schermata a parte: costringeva a salvare un documento
+coi campi sbagliati, cambiare pagina, correggere e tornare a rifare la revisione.
 
 Il confine è quello di sempre: qui si misura **l'utilità della precompilazione**, cioè
 delle regole fisse offline. L'IA di pratica-ai si valida col dataset esportato, sul
 benchmark della monorepo: altro lavoro, altro posto. Ed è l'ordine che conta — prima si
 sistema la mappa, poi le annotazioni valgono come metro.
 
-**Le tre misure**, per tipo documento e per campo, calcolate sui soli documenti `REVIEWED`
-— i `DISCARDED` non votano, e nemmeno quelli ancora in coda:
+**Le tre misure**, per campo, accanto a ogni campo della scheda. Si calcolano sui soli
+documenti `REVIEWED` di quel tipo — i `DISCARDED` non votano, e nemmeno quelli ancora in
+coda. Su un tipo mai revisionato i numeri sono zero, ma i campi ci sono lo stesso: la mappa
+si corregge anche sul primo documento.
 
 | Misura | Cosa vuol dire |
 |---|---|
@@ -496,8 +501,7 @@ pack — e restano identici. Quello che il revisore decide è una riga su
 `profile_overrides` (migrazione `0008`): per ogni coppia tipo/campo, un peso oppure
 **«non utile»**. Il registry applica queste decisioni a ogni lettura
 (`@shared/profile-overlay`), quindi una correzione vale **subito** — sul prossimo
-documento elaborato e sul re-run — senza riscrivere niente sul disco e senza rileggere il
-registry.
+documento elaborato — senza riscrivere niente sul disco e senza rileggere il registry.
 
 È un cambiamento rispetto alle versioni fino alla 1.3: prima ogni correzione riscriveva i
 JSON del repo e ne faceva un commit git. Quel meccanismo funzionava solo in sviluppo —
@@ -511,42 +515,47 @@ motore usa, ma resta in elenco nella sua sezione, con i numeri che aveva e il pu
 rimetterlo. Nell'export finisce in `x_reviewer_excluded_fields` sul profilo: chi legge il
 file sa che quel campo è stato guardato e scartato, non semplicemente dimenticato.
 
-### L'editor
+### La scheda
 
-Ogni pulsante sta accanto al numero che lo motiva: «mai usato» → segnalo non utile;
-«assente dalla mappa» → aggiungilo, col peso scelto; «a mano» → insegna al motore
-l'etichetta con cui il campo compare nei documenti veri. Si può anche cambiare il peso di
-un campo (obbligatorio, principale, opzionale, condizionale) e ripristinare quello che dice
-il registry.
+Ogni campo della mappa è una scheda — la colonna è stretta, come per i campi di «Dati» —
+con il peso (obbligatorio, principale, opzionale, condizionale), i numeri in una riga e le
+azioni sotto: **Aggiungi etichetta** insegna al motore l'etichetta con cui il campo compare
+nei documenti veri, **Segna non utile** lo toglie dalla mappa, **Ripristina** toglie la
+decisione del revisore e rimette quello che dice il registry. Sotto la mappa: i campi che
+il revisore compila a mano e la mappa non prevede, da aggiungere col peso scelto; quelli
+segnati non utili, con il modo di rimetterli; e **l'ontologia intera**, tutti i 248 campi,
+perché una mappa sbagliata si vede anche per assenza. Un id che l'ontologia non conosce
+viene rifiutato al confine IPC: nessun motore saprebbe cercarlo. In fondo, le **modifiche a
+questo tipo** ancora annullabili, ognuna col suo «Annulla».
 
-In fondo alla schermata c'è **l'ontologia intera**: tutti i 248 campi, non solo quelli già
-comparsi su un documento. Una mappa sbagliata si vede anche per assenza — il tipo vorrebbe
-un dato che nessuno ha mai scritto, perché il motore non lo chiedeva e compilarlo a mano
-non era previsto — e da lì si aggiunge lo stesso. Un id che l'ontologia non conosce viene
-rifiutato al confine IPC: nessun motore saprebbe cercarlo.
+**Cosa si rielabora.** Una correzione rielabora **subito il documento aperto**, dalla cache:
+la scheda «Dati» riceve i campi della mappa nuova, con le correzioni già fatte (la pipeline
+le tiene per nome del campo). Gli **altri documenti in coda dello stesso tipo** si
+rielaborano in sottofondo, uno alla volta, così il prossimo che si apre ha già i campi
+giusti. I documenti salvati o scartati non si toccano: il loro tipo e i loro campi sono il
+dato consegnato. Senza copia locale la correzione vale lo stesso, ma il documento resta
+quello di prima finché non lo si riapre da Drive, e il messaggio lo dice.
 
 **Le due cornici restano marcate.** I 15 profili con `EXTRACTION_SCHEMA_READY_FOR_FIELD_TEST`,
-costruiti su documenti reali, hanno il badge «verificato su documenti reali» e una loro
-modifica chiede conferma esplicita. I tipi senza profilo esplicito (`LEGACY_FALLBACK`)
-appaiono come tali: si correggono allo stesso modo, e nell'export il loro profilo viene
-materializzato con `schema_state` `EXTRACTION_SCHEMA_DRAFT_FROM_LEGACY_FALLBACK`, perché
-resti visibile che non è uno schema verificato.
+costruiti su documenti reali, hanno il badge «Verificato» e una loro modifica chiede una
+conferma, dentro la scheda del campo dove si è appena cliccato. I tipi senza profilo
+esplicito (`LEGACY_FALLBACK`) appaiono come tali: si correggono allo stesso modo, e
+nell'export il loro profilo viene materializzato con `schema_state`
+`EXTRACTION_SCHEMA_DRAFT_FROM_LEGACY_FALLBACK`, perché resti visibile che non è uno schema
+verificato.
 
-**Re-run e delta.** Dopo una correzione, un pulsante rilancia l'estrazione sui documenti
-già annotati di quel tipo, **dalla cache, senza riscaricare niente**. Le correzioni umane
-sopravvivono — è la pipeline di sempre, con il meccanismo della v1 — e la schermata mostra
-il prima/dopo: «a mano sul campo X: 70% → 20%». Se i numeri non si muovono lo dice, invece
-di lasciar cercare la differenza. I documenti senza copia locale restano fuori, elencati
-col motivo.
+La scheda non esporta niente: la mappa si esporta da «Esporta» nella dashboard, insieme al
+dataset.
 
 ### Cronologia
 
-La quarta voce della navbar tiene **ogni azione**, in una lista sola: correzioni alla
-mappa, annullamenti, re-run ed export da una parte; aperture, cambi di tipo, salvataggi e
+La terza voce della navbar tiene **ogni azione**, in una lista sola: correzioni alla
+mappa, annullamenti ed export da una parte; aperture, cambi di tipo, salvataggi e
 scarti dei documenti dall'altra. Si filtra per sorgente e si cerca a testo. Ogni riga dice
 cosa è successo e con quali numeri.
 
-Da qui si **annulla** una correzione. L'annullamento rimette esattamente la riga che c'era
+Da qui — o dalla scheda «Campi da estrarre», per le correzioni al tipo del documento
+aperto — si **annulla** una correzione. L'annullamento rimette esattamente la riga che c'era
 prima — `previous_override`, che non sempre coincide con il ruolo precedente: un campo può
 essere «principale» perché lo dice il registry, e annullare non deve lasciare una decisione
 che nessuno ha preso — e diventa a sua volta una riga. **La cronologia non si riscrive**:
@@ -557,7 +566,7 @@ un'altra.
 
 ### Export della mappa
 
-«Esporta → **Mappa tipi ↔ dati**», nella dashboard, chiede dove creare la cartella e ci
+«Esporta → **Mappa dei campi da estrarre**», nella dashboard, chiede dove creare la cartella e ci
 scrive quattro file (`@shared/profile-bundle`):
 
 | File | Cosa contiene |
@@ -579,24 +588,19 @@ campo di prima (`document_number`, `issue_date`): la traduzione all'indietro non
 esprimibile per i campi dell'ontologia che un nome v1 non ce l'hanno, e per questo l'export
 parla la lingua dell'ontologia e lascia la conversione a chi sa cosa farsene.
 
-**Report d'insieme.** «Report JSON» e «Report CSV», dentro la schermata, salvano tutte le
-misure per tipo e per campo, da mandare al collega che annota o da tenere accanto al
-dataset esportato. Il CSV ha una riga per coppia tipo/campo, con le stesse parole della
-schermata e la decisione del revisore in coda.
-
 **Portabilità.** Le misure (`src/shared/profile-metrics.ts`), le regole di una correzione
 (`src/shared/profile-edit.ts`), l'overlay (`src/shared/profile-overlay.ts`) e i file
 dell'export (`src/shared/profile-bundle.ts`) sono moduli puri, senza Electron, senza
 database e senza UI: destinazione pratica-ai. Il livello che legge dal database
 (`src/main/profile-insights.ts`, `src/main/profile-map.ts`) tiene tutte le query in un
 posto solo — nella UI non ce n'è nemmeno una. `tests/profile-map.test.ts` fa il giro intero
-su documenti veri: annota, misura, corregge, rielabora, guarda il delta, annulla ed
+su documenti veri: annota, misura, corregge dal documento, che si rielabora, annulla ed
 esporta.
 
-**Quando cambia la mappa.** Il re-run copre i documenti annotati di quel tipo. I documenti
-ancora in coda prendono la mappa nuova alla prossima elaborazione: la versione dei profili
-(`version` nel JSON) non cambia con una correzione, quindi la rielaborazione in sottofondo
-all'avvio non riparte da sola.
+**Quando cambia la mappa.** Il documento aperto e quelli in coda dello stesso tipo si
+rielaborano da soli. I documenti già salvati restano com'erano: la versione dei profili
+(`version` nel JSON) non cambia con una correzione, quindi nemmeno la rielaborazione in
+sottofondo all'avvio li riprende.
 
 ---
 
