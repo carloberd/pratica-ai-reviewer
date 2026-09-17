@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs'
+import { reviewerTypeId } from '@shared/registry-alignment'
 import type { ReviewDocument } from '@shared/types'
 import type { Repository } from './db/repository'
 import type { DocumentRow } from './db/rows'
@@ -16,6 +17,9 @@ import { EXTRACTION_ENGINE_V2_VERSION } from './pipeline'
  * tratta il tipo come manuale (confidence nulla) e non lo sovrascrive; le correzioni
  * già fatte restano. Togliere il tipo non rielabora: una nuova classificazione
  * automatica rimetterebbe quello che il revisore ha appena tolto.
+ *
+ * Uno slug copiato da pratica-ai vale come il suo: le tre classi che i due progetti chiamano
+ * in modo diverso si traducono qui, o resterebbero senza profilo di estrazione.
  */
 export async function assignDocumentType(input: {
   repo: Repository
@@ -24,7 +28,8 @@ export async function assignDocumentType(input: {
   process?: DocumentProcessor | undefined
   fileExists?: (path: string) => boolean
 }): Promise<ReviewDocument> {
-  const { repo, documentId, documentType } = input
+  const { repo, documentId } = input
+  const documentType = input.documentType === null ? null : reviewerTypeId(input.documentType)
   const existing = repo.documents.get(documentId)
   if (!existing) throw new ReviewerError('NOT_FOUND', 'Documento non trovato.')
 
