@@ -1,0 +1,167 @@
+import type { BoundingBox, PickLocation, PickMethod, TextSource } from './types'
+
+/**
+ * Il contratto del learner locale: quello che il motore impara dalle revisioni, come si
+ * registra e con quale stato vale. Nessuna dipendenza da database o Electron: lo usano il
+ * main per scrivere, e un giorno pratica-ai per leggere lo stesso formato.
+ *
+ * Il piano sta in `docs/local-learning-analisi.md`.
+ */
+
+/** Versione della logica del learner, scritta su ogni evento e ogni regola. */
+export const LEARNER_VERSION = 'local-learner/0.1.0'
+
+/**
+ * - `LEARNING`: registra le revisioni, aggiorna le regole, applica quelle attive.
+ * - `FROZEN`: applica le regole già attive, non registra e non cambia niente.
+ * - `BASELINE`: solo registry, nessuna regola applicata né scritta. Per i benchmark e per
+ *   annotare un holdout senza contaminarlo.
+ */
+export type LearningMode = 'LEARNING' | 'FROZEN' | 'BASELINE'
+
+export const LEARNING_MODES: readonly LearningMode[] = ['LEARNING', 'FROZEN', 'BASELINE']
+
+/** Come la modalità si legge in UI e in cronologia. */
+export const LEARNING_MODE_LABELS: Record<LearningMode, string> = {
+  LEARNING: 'Apprendimento attivo',
+  FROZEN: 'Apprendimento congelato',
+  BASELINE: 'Solo registry'
+}
+
+export function isLearningMode(value: string): value is LearningMode {
+  return (LEARNING_MODES as readonly string[]).includes(value)
+}
+
+/** In quale modalità le regole attive valgono per l'estrazione. */
+export function appliesRules(mode: LearningMode): boolean {
+  return mode !== 'BASELINE'
+}
+
+/** Un evento per il tipo del documento, uno per ogni campo o riga. */
+export type LearningEventKind = 'DOCUMENT_TYPE' | 'FIELD_VALUE'
+
+/**
+ * Com'è finita la proposta del motore. Stesso vocabolario delle correzioni del dataset, più
+ * `CONFIRMED`: una proposta tenuta è un esempio positivo, e un registro fatto solo di
+ * disaccordi insegnerebbe il contrario di quello che deve.
+ */
+export type LearningOutcome = 'CONFIRMED' | 'CHANGED' | 'FILLED' | 'CLEARED' | 'ADDED' | 'REMOVED'
+
+/** Da dove il revisore ha preso un valore, senza il testo: basta la posizione. */
+export interface LearningPick {
+  method: PickMethod
+  page: number
+  bbox: BoundingBox | null
+  location: PickLocation | null
+}
+
+export interface LearningEventInput {
+  /** Il momento della revisione: gli eventi di una stessa chiusura lo condividono. */
+  at: string
+  actor: string
+  documentId: string
+  contentSha256: string | null
+  templateFingerprint: string | null
+  textSource: TextSource | null
+  kind: LearningEventKind
+  outcome: LearningOutcome
+  /** Il tipo con cui il documento è stato chiuso. */
+  documentType: string | null
+  predictedType: string | null
+  predictedConfidence: number | null
+  fieldId: string | null
+  itemIndex: number | null
+  engineConfidence: number | null
+  pick: LearningPick | null
+}
+
+export interface LearningEvent extends LearningEventInput {
+  id: string
+  learnerVersion: string
+}
+
+export type LearningRuleKind =
+  /** Un'etichetta che annuncia il valore di un campo. */
+  | 'EXTRACTION_ANCHOR'
+  /** Un template che, finora, è sempre stato dello stesso tipo. */
+  | 'TEMPLATE_TYPE'
+  | 'CLASSIFIER_POSITIVE'
+  | 'CLASSIFIER_NEGATIVE'
+
+export type LearningRuleScope = 'TEMPLATE' | 'CLASS'
+
+export type LearningRuleStatus = 'CANDIDATE' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED'
+
+export type LearningEffect = 'POSITIVE' | 'NEGATIVE'
+
+export interface LearningRuleInput {
+  kind: LearningRuleKind
+  scope: LearningRuleScope
+  documentType: string
+  fieldId: string | null
+  /** Solo per scope `TEMPLATE`. */
+  templateFingerprint: string | null
+  /** La forma della regola, che dipende dal tipo. */
+  pattern: Record<string, unknown>
+  /** Individua la regola: la stessa regola imparata due volte è una sola. */
+  ruleKey: string
+}
+
+export interface LearningRule extends LearningRuleInput {
+  id: string
+  status: LearningRuleStatus
+  positiveCount: number
+  negativeCount: number
+  lastPositiveAt: string | null
+  lastNegativeAt: string | null
+  createdAt: string
+  updatedAt: string
+  learnerVersion: string
+}
+
+/** Quante revisioni sostengono la regola. */
+export function ruleSupport(rule: Pick<LearningRule, 'positiveCount'>): number {
+  return rule.positiveCount
+}
+
+/** Quante volte, fra quelle in cui è stata messa alla prova, la regola ci ha preso. */
+export function rulePrecision(
+  rule: Pick<LearningRule, 'positiveCount' | 'negativeCount'>
+): number | null {
+  const total = rule.positiveCount + rule.negativeCount
+  return total === 0 ? null : rule.positiveCount / total
+}
+
+export type LearningActionKind =
+  | 'MODE_CHANGED'
+  | 'RULE_PROMOTED'
+  | 'RULE_SUSPENDED'
+  | 'RULE_REACTIVATED'
+  | 'RULE_REJECTED'
+  | 'REVERT'
+
+/** Supporto e precisione di una regola al momento di un'azione. */
+export interface LearningActionNumbers {
+  support: number
+  precision: number | null
+}
+
+export interface LearningAction {
+  id: string
+  at: string
+  kind: LearningActionKind
+  ruleId: string | null
+  /** Modalità, o stato della regola, prima e dopo. */
+  before: string | null
+  after: string | null
+  detail: string
+  numbers: LearningActionNumbers | null
+  revertsId: string | null
+  revertedAt: string | null
+}
+
+/** Quanto il learner ha raccolto: i contatori della UI. */
+export interface LearningCounts {
+  events: number
+  rules: Record<LearningRuleStatus, number>
+}
