@@ -215,11 +215,14 @@ su `76c0853`, le scelte sopra vanno lette contro come quel progetto legge i docu
 5. **Id dei campi.** Ontologia v2 puntata contro i 40 campi V5.1. `legacy_field_map_v2.json`
    copre i 40; gli altri ~208 campi v2 non hanno corrispondenza. → Gli eventi portano l'id
    v2; l'export verso pratica-ai traduce con la mappa e segnala ciò che non ha equivalente.
-6. **Id dei tipi.** 495 su 500 coincidono. I 5 restanti sono classi che pratica-ai ha
-   aggiunto con slug diversi (per esempio `hse_risk.autocertificazione_idoneita_tecnico_professionale`
-   contro `hse_risk.idoneita_autocertificazione`, `payroll_contributions.dichiarazione_regolarita_retributiva`
-   contro `payroll_contributions.regolarita_retributiva`). → Da riallineare prima di
-   un'integrazione, indipendentemente dal learner.
+6. **Id dei tipi.** 497 su 500 coincidono; tre classi hanno lo stesso nome canonico e uno
+   slug diverso da una parte e dall'altra (per esempio
+   `hse_risk.autocertificazione_idoneita_tecnico_professionale` contro
+   `hse_risk.idoneita_autocertificazione`). Le altre differenze sono classi che esistono da
+   un lato solo, cioè vocabolari a versioni diverse. → **Fatto**: la traduzione sta in
+   `src/shared/registry-alignment.ts` e si applica alle frontiere (export e assegnazione a
+   mano); i due snapshot non si toccano. Era il punto da chiudere prima di un'integrazione,
+   indipendentemente dal learner.
 7. **Frasi del classificatore.** `mergeClassifierConfig` dipende dalla forma di
    `ClassifierConfigV2`, che pratica-ai non usa (V5.1 ha `positive_signals`,
    `strong_signals`, `negative_signals` e regole di disambiguazione). → Portabile è il
