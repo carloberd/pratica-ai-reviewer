@@ -1,5 +1,6 @@
 import type { ClassExtractionProfile, FieldRole } from './extraction-v2'
 import { confirmedItems, currentFieldValue, fieldCorrections } from './field-edits'
+import type { FieldState } from './profile-overlay'
 import { hasEngineProposal } from './review-workspace'
 import type { ExtractedField } from './types'
 
@@ -46,6 +47,12 @@ export type FieldSignal =
    * Candidato all'aggiunta; il numero dice quanto è ripetuto.
    */
   | 'MISSING_FROM_PROFILE'
+  /**
+   * Il revisore lo ha segnato non utile per questo tipo: il motore non lo cerca più.
+   * Resta nell'elenco, con i numeri che aveva, perché la decisione si possa rileggere e
+   * all'occorrenza togliere.
+   */
+  | 'EXCLUDED'
 
 /**
  * I 15 profili costruiti su documenti reali. Sono la cornice del lavoro: si possono
@@ -104,6 +111,10 @@ export interface MeasuredTypeInput {
   fieldTested: boolean
   /** Campi del profilo attuale, nell'ordine required → core → optional → conditional. */
   profileFields: ProfileFieldRef[]
+  /** Le decisioni del revisore su questo tipo: campo per campo, ruolo o «non utile». */
+  decisions?: Record<string, FieldState>
+  /** L'etichetta di un campo dell'ontologia, per quelli che nessun documento porta. */
+  fieldLabel?: (fieldId: string) => string | null
   documents: MeasuredDocumentInput[]
 }
 
@@ -125,6 +136,11 @@ export interface ProfileFieldMeasure {
   correctedRate: number
   manualRate: number
   signal: FieldSignal
+  /**
+   * La decisione del revisore su questo campo, `null` se il campo segue il registry.
+   * È quello che distingue «il registry non lo prevede» da «l'abbiamo scartato noi».
+   */
+  decision: FieldState | null
 }
 
 export interface ProfileTotals {
@@ -206,7 +222,13 @@ function rate(count: number, total: number): number {
   return Math.round((count / total) * 1e4) / 1e4
 }
 
-function signalOf(tally: Tally, inProfile: boolean, documents: number): FieldSignal {
+function signalOf(
+  tally: Tally,
+  inProfile: boolean,
+  documents: number,
+  decision: FieldState | null
+): FieldSignal {
+  if (decision === 'excluded') return 'EXCLUDED'
   const filled = tally.confirmed + tally.corrected + tally.manual
   if (inProfile) return documents > 0 && filled === 0 ? 'NEVER_USED' : 'OK'
   return filled > 0 ? 'MISSING_FROM_PROFILE' : 'OK'
@@ -224,12 +246,27 @@ export function measureType(input: MeasuredTypeInput): ProfileTypeMeasure {
   const documents = input.documents.length
   const tallies = new Map<string, Tally>()
   const inProfile = new Map<string, FieldRole>()
+  const decisions = input.decisions ?? {}
 
   for (const entry of input.profileFields) {
     inProfile.set(entry.fieldId, entry.role)
     tallies.set(entry.fieldId, {
       fieldId: entry.fieldId,
       label: entry.label,
+      confirmed: 0,
+      corrected: 0,
+      manual: 0
+    })
+  }
+
+  // Un campo segnato non utile è uscito dal profilo e può non comparire su nessun
+  // documento: senza questa riga sparirebbe dalla schermata, e con lui il modo di
+  // rimetterlo dentro.
+  for (const fieldId of Object.keys(decisions)) {
+    if (tallies.has(fieldId)) continue
+    tallies.set(fieldId, {
+      fieldId,
+      label: input.fieldLabel?.(fieldId) ?? fieldId,
       confirmed: 0,
       corrected: 0,
       manual: 0
@@ -286,7 +323,8 @@ export function measureType(input: MeasuredTypeInput): ProfileTypeMeasure {
       confirmedRate: rate(tally.confirmed, documents),
       correctedRate: rate(tally.corrected, documents),
       manualRate: rate(tally.manual, documents),
-      signal: signalOf(tally, role !== null, documents)
+      signal: signalOf(tally, role !== null, documents, decisions[tally.fieldId] ?? null),
+      decision: decisions[tally.fieldId] ?? null
     }
   })
 
@@ -325,6 +363,9 @@ export function measureType(input: MeasuredTypeInput): ProfileTypeMeasure {
 /** Prima i campi del profilo, per ruolo; poi i candidati all'aggiunta, i più chiesti sopra. */
 function compareFields(a: ProfileFieldMeasure, b: ProfileFieldMeasure): number {
   if (a.inProfile !== b.inProfile) return a.inProfile ? -1 : 1
+  // I campi scartati in fondo: sono decisioni prese, non lavoro da fare.
+  const excluded = (field: ProfileFieldMeasure) => (field.decision === 'excluded' ? 1 : 0)
+  if (excluded(a) !== excluded(b)) return excluded(a) - excluded(b)
   if (a.role && b.role && a.role !== b.role) {
     return ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role)
   }
@@ -334,89 +375,4 @@ function compareFields(a: ProfileFieldMeasure, b: ProfileFieldMeasure): number {
 
 function sum(fields: ProfileFieldMeasure[], key: 'confirmed' | 'corrected' | 'manual'): number {
   return fields.reduce((total, field) => total + field[key], 0)
-}
-
-/** I tipi con più documenti annotati per primi: è lì che i numeri contano qualcosa. */
-export function measureTypes(inputs: MeasuredTypeInput[]): ProfileTypeMeasure[] {
-  return inputs
-    .map(measureType)
-    .sort(
-      (a, b) =>
-        b.totals.documents - a.totals.documents || a.documentType.localeCompare(b.documentType)
-    )
-}
-
-// ---------------------------------------------------------------------------
-// Prima/dopo
-// ---------------------------------------------------------------------------
-
-export interface FieldDelta {
-  fieldId: string
-  label: string
-  /** Assente prima o dopo la modifica: il campo è stato aggiunto o tolto dal profilo. */
-  before: ProfileFieldMeasure | null
-  after: ProfileFieldMeasure | null
-  /** Variazione della quota «a mano», in punti: −0,5 vuol dire cinquanta punti in meno. */
-  manualRateChange: number
-  confirmedRateChange: number
-}
-
-export interface MeasureDelta {
-  documentType: string
-  before: ProfileTotals
-  after: ProfileTotals
-  /** Solo i campi dove qualcosa è cambiato, dal miglioramento più grande. */
-  fields: FieldDelta[]
-  /** Nessun numero si è mosso: la modifica non ha cambiato la precompilazione. */
-  unchanged: boolean
-}
-
-/**
- * Il confronto fra i numeri di prima e quelli di dopo un re-run. È la prova che la
- * correzione del profilo ha funzionato: «a mano sul campo X: 70% → 20%».
- */
-export function measureDelta(before: ProfileTypeMeasure, after: ProfileTypeMeasure): MeasureDelta {
-  const beforeByField = new Map(before.fields.map((field) => [field.fieldId, field]))
-  const afterByField = new Map(after.fields.map((field) => [field.fieldId, field]))
-  const fieldIds = [...new Set([...beforeByField.keys(), ...afterByField.keys()])]
-
-  const fields: FieldDelta[] = []
-  for (const fieldId of fieldIds) {
-    const from = beforeByField.get(fieldId) ?? null
-    const to = afterByField.get(fieldId) ?? null
-    const manualRateChange = (to?.manualRate ?? 0) - (from?.manualRate ?? 0)
-    const confirmedRateChange = (to?.confirmedRate ?? 0) - (from?.confirmedRate ?? 0)
-    const moved =
-      manualRateChange !== 0 ||
-      confirmedRateChange !== 0 ||
-      (from === null) !== (to === null) ||
-      from?.corrected !== to?.corrected
-    if (!moved) continue
-    fields.push({
-      fieldId,
-      label: to?.label ?? from?.label ?? fieldId,
-      before: from,
-      after: to,
-      manualRateChange: round(manualRateChange),
-      confirmedRateChange: round(confirmedRateChange)
-    })
-  }
-
-  // Il miglioramento più grande in cima: meno lavoro a mano, poi più conferme.
-  fields.sort(
-    (a, b) =>
-      a.manualRateChange - b.manualRateChange || b.confirmedRateChange - a.confirmedRateChange
-  )
-
-  return {
-    documentType: after.documentType,
-    before: before.totals,
-    after: after.totals,
-    fields,
-    unchanged: fields.length === 0
-  }
-}
-
-function round(value: number): number {
-  return Math.round(value * 1e4) / 1e4
 }

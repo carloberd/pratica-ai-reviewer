@@ -1,22 +1,12 @@
-import { writeFile } from 'node:fs/promises'
 import type { FieldRole } from '@shared/extraction-v2'
 import {
   isFieldTestedProfile,
   type MeasuredTypeInput,
   measureType,
-  measureTypes,
   type ProfileFieldRef,
   type ProfileOrigin,
   type ProfileTypeMeasure
 } from '@shared/profile-metrics'
-import {
-  buildProfileReport,
-  type ProfileReport,
-  type ProfileReportFormat,
-  type ProfileReportManifestInput,
-  profileReportCsv,
-  serializeProfileReport
-} from '@shared/profile-report'
 import type { Repository } from './db/repository'
 import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
 
@@ -77,6 +67,7 @@ function originOf(registry: ExtractionRegistryV2, documentType: string): Profile
 /** Gli ingressi puri per un tipo: il profilo attuale e i documenti annotati che votano. */
 function inputFor(deps: ProfileInsightsDeps, documentType: string): MeasuredTypeInput {
   const { repo, registry } = deps
+  // Il profilo che il motore usa davvero: registry più le decisioni del revisore.
   const profile = registry.profile(documentType)
 
   const documents = repo.documents
@@ -98,17 +89,10 @@ function inputFor(deps: ProfileInsightsDeps, documentType: string): MeasuredType
     schemaState: profile?.schema_state ?? null,
     fieldTested: isFieldTestedProfile(profile),
     profileFields: profileFieldsOf(registry, documentType),
+    decisions: repo.profileMap.forType(documentType),
+    fieldLabel: (fieldId) => registry.field(fieldId)?.label_it ?? null,
     documents
   }
-}
-
-/** I tipi documento su cui esiste almeno un'annotazione finita. */
-export function measuredTypes(repo: Repository): string[] {
-  const types = new Set<string>()
-  for (const row of repo.documents.list({ status: 'REVIEWED' })) {
-    if (row.document_type) types.add(row.document_type)
-  }
-  return [...types].sort()
 }
 
 /** Le misure di un tipo solo. `null` se di quel tipo non c'è nessun documento annotato. */
@@ -122,31 +106,13 @@ export function collectTypeMeasure(
 }
 
 /**
- * Tutte le misure, un tipo per volta. I tipi senza documenti annotati non compaiono:
- * un profilo senza annotazioni non ha numeri da mostrare, e proporre una correzione
- * senza numeri è esattamente quello che questa schermata serve a evitare.
+ * La mappa di un tipo con i suoi numeri, anche quando di quel tipo non c'è ancora nessun
+ * documento revisionato: il revisore la corregge dal primo documento che apre, e lì i
+ * numeri sono zero ma i campi che il motore cerca vanno mostrati lo stesso.
  */
-export function collectTypeMeasures(deps: ProfileInsightsDeps): ProfileTypeMeasure[] {
-  return measureTypes(measuredTypes(deps.repo).map((type) => inputFor(deps, type)))
-}
-
-// ---------------------------------------------------------------------------
-// Report d'insieme
-// ---------------------------------------------------------------------------
-
-/** Tutte le misure in un report, da mandare al collega o da tenere col dataset. */
-export function collectProfileReport(
+export function collectTypeMap(
   deps: ProfileInsightsDeps,
-  manifest: ProfileReportManifestInput
-): ProfileReport {
-  return buildProfileReport(manifest, collectTypeMeasures(deps))
-}
-
-export async function writeProfileReportFile(
-  path: string,
-  report: ProfileReport,
-  format: ProfileReportFormat
-): Promise<void> {
-  const content = format === 'csv' ? profileReportCsv(report.types) : serializeProfileReport(report)
-  await writeFile(path, content, 'utf8')
+  documentType: string
+): ProfileTypeMeasure {
+  return measureType(inputFor(deps, documentType))
 }

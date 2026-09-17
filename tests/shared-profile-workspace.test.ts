@@ -1,151 +1,77 @@
 import { describe, expect, it } from 'vitest'
-import type { ProfileTypeMeasure } from '../src/shared/profile-metrics'
+import type { ProfileAction } from '../src/shared/profile-history'
 import {
-  describeRerun,
-  describeStore,
-  describeWriteOutcome,
-  type ProfileStoreStatus,
-  type TypeRerunResult
+  describeBundle,
+  describeMapEdit,
+  type ProfileBundleResult
 } from '../src/shared/profile-workspace'
 
 /**
- * Le frasi che il revisore legge dopo una correzione o un re-run. Sono parte del
- * contratto quanto i numeri: una degradazione dichiarata male vale una degradazione
- * nascosta.
+ * Le frasi che il revisore legge dopo una correzione o un export. Sono parte del contratto
+ * quanto i numeri: se la scheda dice che il documento è aggiornato mentre non lo è, la
+ * frase è un difetto.
  */
 
-function store(mode: ProfileStoreStatus['mode']): ProfileStoreStatus {
-  return {
-    directory: '/registry/v2',
-    writable: mode !== 'EXPORT_REQUIRED',
-    repositoryRoot: mode === 'COMMITTED' ? '/repo' : null,
-    mode
-  }
-}
-
-const EMPTY_MEASURE = {
-  documentType: 'accounting.fattura',
-  label: 'fattura',
-  profileOrigin: 'V2_EXPLICIT',
-  schemaState: null,
-  fieldTested: false,
-  totals: {
-    documents: 2,
-    confirmed: 0,
-    corrected: 0,
-    manual: 0,
-    outcomes: 0,
-    confirmedRate: 0,
-    correctedRate: 0,
-    manualRate: 0
-  },
-  fields: [],
-  documents: []
-} satisfies ProfileTypeMeasure
-
-function rerun(overrides: Partial<TypeRerunResult> = {}): TypeRerunResult {
-  return {
+describe('com’è andata una correzione', () => {
+  const action: ProfileAction = {
+    id: 'a1',
+    at: '2026-09-17T08:00:00.000Z',
+    kind: 'REMOVE_FIELD',
     documentType: 'accounting.fattura',
-    processed: ['a', 'b'],
-    skipped: [],
-    failed: [],
-    retyped: [],
-    before: EMPTY_MEASURE,
-    after: EMPTY_MEASURE,
-    delta: {
-      documentType: 'accounting.fattura',
-      before: EMPTY_MEASURE.totals,
-      after: EMPTY_MEASURE.totals,
-      fields: [],
-      unchanged: false
-    },
-    ...overrides
+    fieldId: 'procurement.cig',
+    label: null,
+    before: 'conditional',
+    after: 'excluded',
+    previousOverride: null,
+    detail: '«CIG» (procurement.cig) segnato non utile per accounting.fattura.',
+    reason: null,
+    revertsId: null,
+    revertedAt: null
   }
-}
 
-describe('cosa succederà alla prossima correzione', () => {
-  it('lo dice prima di farla, in tutti e tre i casi', () => {
-    expect(describeStore(store('COMMITTED'))).toContain('commit dedicato')
-    expect(describeStore(store('WRITTEN'))).toContain('senza commit')
-    expect(describeStore(store('EXPORT_REQUIRED'))).toContain('sola lettura')
+  it('ripete la decisione e manda a «Dati», dove i campi sono già aggiornati', () => {
+    const message = describeMapEdit({ action, reprocessed: true, queued: 0 })
+    expect(message).toContain('segnato non utile')
+    expect(message).toContain('i campi aggiornati sono in «Dati»')
+    expect(message).not.toContain('in coda')
+  })
+
+  it('senza copia locale dice che il documento non è cambiato', () => {
+    expect(describeMapEdit({ action, reprocessed: false, queued: 0 })).toContain(
+      'riaprilo da Drive'
+    )
+  })
+
+  it('conta i documenti in coda che si rielaborano in sottofondo', () => {
+    expect(describeMapEdit({ action, reprocessed: true, queued: 1 })).toContain(
+      '1 altro documento in coda dello stesso tipo si rielabora in sottofondo'
+    )
+    expect(describeMapEdit({ action, reprocessed: true, queued: 3 })).toContain(
+      '3 altri documenti in coda dello stesso tipo si rielaborano'
+    )
   })
 })
 
-describe('com’è andata', () => {
-  const subject = 'profile(accounting.fattura): rimuove document.number, mai usato su 12 documenti'
+describe('esito dell’export della mappa', () => {
+  const bundle: ProfileBundleResult = {
+    saved: true,
+    directory: '/Users/x/Documents/mappa-tipi-2026-09-17',
+    paths: ['/a.json', '/b.json', '/c.json', '/d.json'],
+    types: 2,
+    fields: 5,
+    edits: 5
+  }
 
-  it('col commit dice quale', () => {
-    expect(
-      describeWriteOutcome({ mode: 'COMMITTED', paths: ['/a.json'], commit: 'a1b2c3d', subject })
-    ).toBe(`${subject} — commit a1b2c3d.`)
+  it('dice dove sono i file, quanti tipi e che il registry non è cambiato', () => {
+    const message = describeBundle(bundle)
+    expect(message).toContain('mappa-tipi-2026-09-17')
+    expect(message).toContain('2 tipi corretti')
+    expect(message).toContain('5 campi decisi')
+    expect(message).toContain('4 file')
+    expect(message).toContain('non sono stati toccati')
   })
 
-  it('senza git dice che è salvato e non versionato', () => {
-    const message = describeWriteOutcome({
-      mode: 'WRITTEN',
-      paths: ['/a.json'],
-      subject,
-      reason: 'la cartella non sta in un repository git.'
-    })
-    expect(message).toContain('salvato senza commit')
-    expect(message).toContain('non sta in un repository git')
-  })
-
-  it('con la cartella di sola lettura dice dove sta il file da sostituire', () => {
-    const message = describeWriteOutcome({
-      mode: 'EXPORT_REQUIRED',
-      files: ['class_extraction_profiles_v2.json'],
-      exportedTo: ['/Users/x/Documents/class_extraction_profiles_v2.json'],
-      subject,
-      reason: 'La cartella è di sola lettura.'
-    })
-    expect(message).toContain('/Users/x/Documents/class_extraction_profiles_v2.json')
-    expect(message).toContain('sostituiscilo a mano in class_extraction_profiles_v2.json')
-  })
-
-  it('export annullato: il registry non è cambiato, e si dice', () => {
-    expect(
-      describeWriteOutcome({
-        mode: 'EXPORT_REQUIRED',
-        files: ['class_extraction_profiles_v2.json'],
-        exportedTo: [],
-        subject,
-        reason: 'La cartella è di sola lettura.'
-      })
-    ).toContain('export annullato: il registry non è stato modificato')
-  })
-})
-
-describe('esito del re-run', () => {
-  it('quanti documenti, e cosa è rimasto fuori', () => {
-    expect(describeRerun(rerun())).toBe('Rielaborati 2 documenti dalla cache.')
-
-    const partial = describeRerun(
-      rerun({
-        processed: ['a'],
-        skipped: [{ documentId: 'b', filename: 'b.pdf', reason: 'la copia locale non c’è più.' }],
-        failed: [{ documentId: 'c', filename: 'c.pdf', reason: 'boom' }],
-        retyped: ['d']
-      })
-    )
-    expect(partial).toContain('Rielaborato 1 documento dalla cache.')
-    expect(partial).toContain('1 documento saltato')
-    expect(partial).toContain('1 documento non rielaborato per un errore')
-    expect(partial).toContain('1 documento ha cambiato tipo')
-  })
-
-  it('se i numeri non si muovono lo dice, invece di far cercare la differenza', () => {
-    const message = describeRerun(
-      rerun({
-        delta: {
-          documentType: 'accounting.fattura',
-          before: EMPTY_MEASURE.totals,
-          after: EMPTY_MEASURE.totals,
-          fields: [],
-          unchanged: true
-        }
-      })
-    )
-    expect(message).toContain('I numeri non si sono mossi')
+  it('annullato: non è stato scritto niente, e lo dice', () => {
+    expect(describeBundle({ ...bundle, saved: false })).toContain('non è stato scritto niente')
   })
 })
