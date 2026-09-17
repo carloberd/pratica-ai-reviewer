@@ -230,3 +230,74 @@ describe('profili di segnali delle classi problematiche', () => {
     expect(seen('hard-negative-signal')).toEqual(profile.hard_negative_phrases ?? [])
   })
 })
+
+describe('memoria dei moduli già revisionati', () => {
+  const memory = (documentType: string) => [{ documentType, templateFingerprint: 'f1' }]
+
+  it('da sola porta il tipo esattamente alla soglia: basta a proporlo', () => {
+    const result = matchDocumentTypeV2({
+      aliases: [],
+      pages: ['Promemoria interno\nData: 12/09/2026'],
+      filename: 'promemoria.pdf',
+      config: configWith({}),
+      templateMemory: memory('payments_treasury.richiesta_pagamento')
+    })
+    expect(result).toMatchObject({
+      decision: 'ASSIGN',
+      reason: 'OK',
+      documentType: 'payments_treasury.richiesta_pagamento',
+      confidence: realConfig.defaults.auto_assign_threshold
+    })
+    expect(result.evidence).toEqual([
+      {
+        source: 'template-memory',
+        phrase: 'modulo f1',
+        delta: realConfig.defaults.auto_assign_threshold
+      }
+    ])
+  })
+
+  it('non passa sopra un hard negative', () => {
+    const result = matchDocumentTypeV2({
+      aliases: [],
+      pages: ['Istanza di permanenza nella white list'],
+      filename: 'istanza.pdf',
+      config: configWith({
+        'certifications_licenses.white_list_prefettura': {
+          hard_negative_phrases: ['istanza di permanenza']
+        }
+      }),
+      templateMemory: memory('certifications_licenses.white_list_prefettura')
+    })
+    expect(result).toMatchObject({ decision: 'UNKNOWN', reason: 'HARD_NEGATIVE' })
+  })
+
+  it('non vince un margine insufficiente', () => {
+    const result = matchDocumentTypeV2({
+      aliases: [alias('accounting.fattura', 'fattura commerciale elettronica')],
+      // Un titolo specifico porta la fattura a 0,73: la memoria del modulo vale 0,74.
+      pages: ['FATTURA COMMERCIALE ELETTRONICA'],
+      filename: 'documento.pdf',
+      config: configWith({}),
+      templateMemory: memory('payments_treasury.richiesta_pagamento')
+    })
+    expect(result.candidates.map((c) => c.documentType)).toEqual([
+      'payments_treasury.richiesta_pagamento',
+      'accounting.fattura'
+    ])
+    expect(result).toMatchObject({ decision: 'UNKNOWN', reason: 'LOW_MARGIN' })
+  })
+
+  it('si somma alle frasi del tipo, ma non conta nel bonus di corroborazione', () => {
+    const result = matchDocumentTypeV2({
+      aliases: [alias('accounting.fattura', 'fattura')],
+      pages: ['Fattura allegata alla nota spese'],
+      filename: 'documento.pdf',
+      config: configWith({}),
+      templateMemory: memory('accounting.fattura')
+    })
+    expect(result.evidence.map((item) => item.source)).toEqual(['title-zone', 'template-memory'])
+    expect(result.evidence.some((item) => item.phrase === '__corroboration__')).toBe(false)
+    expect(result.confidence).toBe(0.99)
+  })
+})

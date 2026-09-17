@@ -457,7 +457,12 @@ export function createLearningDao(db: Db) {
     },
 
     listRules(
-      filter: { status?: LearningRuleStatus; kind?: LearningRuleKind; documentType?: string } = {}
+      filter: {
+        status?: LearningRuleStatus
+        kind?: LearningRuleKind
+        documentType?: string
+        templateFingerprint?: string
+      } = {}
     ): LearningRule[] {
       const where: string[] = []
       const params: string[] = []
@@ -472,6 +477,10 @@ export function createLearningDao(db: Db) {
       if (filter.documentType) {
         where.push('document_type = ?')
         params.push(filter.documentType)
+      }
+      if (filter.templateFingerprint) {
+        where.push('template_fingerprint = ?')
+        params.push(filter.templateFingerprint)
       }
       return (
         db

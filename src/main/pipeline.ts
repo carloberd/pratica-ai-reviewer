@@ -19,6 +19,7 @@ import type { ExtractedText } from './extract/types'
 import { extractFactsV2, type LearnedLabel } from './extract/v2/fact-reader'
 import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
 import { learnedLabelsFor } from './learning-anchors'
+import { templateMemoryFor } from './learning-templates'
 import type { Registry } from './registry'
 import type { TypeMatchV2 } from './registry/v2/classify-v2'
 import type { ClassifierConfigV2 } from './registry/v2/config'
@@ -102,12 +103,19 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
       .update(await readFile(input.cachedPath))
       .digest('hex')
 
+    const fingerprint = firstPageFingerprint(extracted)
+    // Le regole apprese valgono in LEARNING e FROZEN; in BASELINE decide solo il registry.
+    const learningMode = repo.learning.mode()
+    const rules = appliesRules(learningMode) ? repo.learning.activeRules() : []
+    const templateMemory = templateMemoryFor(rules, fingerprint)
+
     const classification = classifyWithSelectedEngine({
       engine: engines.classifier,
       aliases: registry.aliases(),
       pages: extracted.pages.map((page) => page.text),
       filename: input.filename,
-      configV2: deps.classifierConfigV2
+      configV2: deps.classifierConfigV2,
+      templateMemory
     })
 
     // Un tipo assegnato a mano dal revisore non va sovrascritto da un match automatico.
@@ -118,13 +126,7 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
     const documentType = manualType ?? classification.documentType
     const typeConfidence = manualType ? null : classification.confidence
 
-    const fingerprint = firstPageFingerprint(extracted)
-    // Le regole apprese valgono in LEARNING e FROZEN; in BASELINE decide solo il registry.
-    const learningMode = repo.learning.mode()
-    const learnedLabels =
-      documentType && appliesRules(learningMode)
-        ? learnedLabelsFor(repo.learning.activeRules(), documentType, fingerprint)
-        : []
+    const learnedLabels = documentType ? learnedLabelsFor(rules, documentType, fingerprint) : []
 
     const prepared =
       engines.extraction === 'v2'
@@ -135,7 +137,11 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
             classification,
             manualType: manualType !== null,
             startedAt,
-            learning: { mode: learningMode, labels: learnedLabels }
+            learning: {
+              mode: learningMode,
+              labels: learnedLabels,
+              templateRuleIds: templateMemory.map((memory) => memory.ruleId)
+            }
           })
         : prepareV1(registry, documentType, extracted)
 
@@ -313,8 +319,8 @@ function prepareV2(input: {
   classification: Classification
   manualType: boolean
   startedAt: string
-  /** Modalità del learner ed etichette delle regole attive per questo documento. */
-  learning: { mode: LearningMode; labels: LearnedLabel[] }
+  /** Modalità del learner, etichette e memorie dei moduli attive per questo documento. */
+  learning: { mode: LearningMode; labels: LearnedLabel[]; templateRuleIds: string[] }
 }): PreparedExtraction {
   const { registry, documentType, extracted } = input
   const run = (
@@ -331,7 +337,14 @@ function prepareV2(input: {
     conflicts: extra.conflicts ?? [],
     metrics: {
       textSource: extracted.source,
-      classifier: classifierAudit(input.classification, input.manualType),
+      classifier:
+        input.classification.engine === 'v2'
+          ? {
+              ...classifierAudit(input.classification, input.manualType),
+              // Le memorie dei moduli offerte al classificatore, anche se non hanno deciso.
+              templateRuleIds: input.learning.templateRuleIds
+            }
+          : classifierAudit(input.classification, input.manualType),
       ...extra.metrics
     }
   })
@@ -523,12 +536,21 @@ export function describeClassification(
 
   if (match.decision === 'ASSIGN') {
     const phrases = match.evidence
-      .filter((item) => item.delta > 0 && item.phrase !== '__corroboration__')
+      .filter(
+        (item) =>
+          item.delta > 0 && item.phrase !== '__corroboration__' && item.source !== 'template-memory'
+      )
       .map((item) => `«${item.phrase}»`)
     const unique = [...new Set(phrases)].slice(0, 3).join(', ')
+    const sources = [
+      unique ? `da ${unique}` : null,
+      match.evidence.some((item) => item.source === 'template-memory')
+        ? 'dalla memoria del modulo, già revisionato con questo tipo'
+        : null
+    ].filter((part) => part !== null)
     return {
       title: 'Tipo riconosciuto',
-      detail: `${match.documentType} al ${percent(match.confidence)} col classificatore v2 da ${unique}; ${runnerUp}, margine ${decimal(match.margin)}.`
+      detail: `${match.documentType} al ${percent(match.confidence)} col classificatore v2 ${sources.join(' e ')}; ${runnerUp}, margine ${decimal(match.margin)}.`
     }
   }
 

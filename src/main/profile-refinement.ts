@@ -103,11 +103,44 @@ export function reprocessQueueOfType(
   documentType: string,
   exceptId: string | null
 ): { queued: number; done: Promise<unknown> } {
+  return enqueue(
+    deps,
+    deps.repo.documents.list({ status: 'NEEDS_REVIEW', documentType }),
+    exceptId,
+    // Riletto al momento: nel frattempo il revisore può aver salvato il documento o
+    // avergli cambiato tipo, e allora non va più toccato.
+    (row) => row.document_type === documentType
+  )
+}
+
+/**
+ * I documenti in coda usciti dallo stesso modulo, qualunque tipo abbiano: quando la memoria
+ * di un modulo comincia o smette di valere, sono proprio quelli ancora senza tipo a cambiare.
+ * Un tipo scelto a mano resta: la pipeline non lo sovrascrive.
+ */
+export function reprocessQueueOfTemplate(
+  deps: RefinementDeps,
+  templateFingerprint: string
+): { queued: number; done: Promise<unknown> } {
+  const matches = (row: DocumentRow) => row.template_fingerprint === templateFingerprint
+  return enqueue(
+    deps,
+    deps.repo.documents.list({ status: 'NEEDS_REVIEW' }).filter(matches),
+    null,
+    matches
+  )
+}
+
+function enqueue(
+  deps: RefinementDeps,
+  rows: DocumentRow[],
+  exceptId: string | null,
+  stillMatches: (row: DocumentRow) => boolean
+): { queued: number; done: Promise<unknown> } {
   const fileExists = deps.fileExists ?? existsSync
   const { process } = deps
   const ids = new Set(
-    deps.repo.documents
-      .list({ status: 'NEEDS_REVIEW', documentType })
+    rows
       .filter((row) => row.id !== exceptId && row.cached_path && fileExists(row.cached_path))
       .map((row) => row.id)
   )
@@ -120,10 +153,7 @@ export function reprocessQueueOfType(
         repo: deps.repo,
         process,
         fileExists,
-        // Riletto al momento: nel frattempo il revisore può aver salvato il documento o
-        // avergli cambiato tipo, e allora non va più toccato.
-        isStale: (row) =>
-          ids.has(row.id) && row.status === 'NEEDS_REVIEW' && row.document_type === documentType
+        isStale: (row) => ids.has(row.id) && row.status === 'NEEDS_REVIEW' && stillMatches(row)
       })
     )
     .catch((error) => logError('profiles.queue', error))

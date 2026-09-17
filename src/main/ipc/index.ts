@@ -39,6 +39,7 @@ import {
   documentFieldMap,
   editMapFromDocument,
   type RefinementDeps,
+  reprocessQueueOfTemplate,
   reprocessQueueOfType,
   revertMapFromDocument
 } from '../profile-refinement'
@@ -243,10 +244,11 @@ export function registerIpcHandlers(context: IpcContext): void {
       note: payload.note,
       actor: auth.status().email,
       registry: context.profiles?.refinement.registry,
-      onRulesChanged: (documentTypes) => {
+      onRulesChanged: ({ documentTypes, templateFingerprints }) => {
         if (!context.profiles || !context.process) return
         const deps = refinement()
         for (const documentType of documentTypes) reprocessQueueOfType(deps, documentType, null)
+        for (const fingerprint of templateFingerprints) reprocessQueueOfTemplate(deps, fingerprint)
       }
     })
   )
