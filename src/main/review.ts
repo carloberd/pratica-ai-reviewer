@@ -9,6 +9,7 @@ import type {
 } from '@shared/types'
 import type { Repository } from './db/repository'
 import { ReviewerError } from './errors'
+import { learnFromReview } from './review-learning'
 
 /** Lo stato in cui l'azione lascia il documento, cioè se entrerà nel dataset o no. */
 export function statusForAction(action: ReviewAction): QueueStatus {
@@ -98,10 +99,20 @@ export function buildReviewPayload(
  *
  * La nota finisce sia nella timeline, che la racconta, sia su una colonna sua, da cui
  * l'export la rilegge: il testo della timeline è per gli occhi e non è un formato.
+ *
+ * Nella stessa transazione una revisione salvata diventa eventi per il learner
+ * (`learnFromReview`), e la riga di timeline dice se e quanto è stato registrato.
  */
 export function submitReview(
   repo: Repository,
-  input: { documentId: string; action: ReviewAction; note?: string | undefined; now?: Date }
+  input: {
+    documentId: string
+    action: ReviewAction
+    note?: string | undefined
+    now?: Date
+    /** L'account che salva; senza, la revisione non si registra per il learner. */
+    actor?: string | null
+  }
 ): ReviewDocument {
   const document = repo.getReviewDocument(input.documentId)
   if (!document) throw new ReviewerError('NOT_FOUND', 'Documento non trovato.')
@@ -111,13 +122,19 @@ export function submitReview(
   const at = (input.now ?? new Date()).toISOString()
 
   repo.transaction(() => {
+    const learned = learnFromReview(repo, {
+      document,
+      action: input.action,
+      at,
+      actor: input.actor ?? null
+    })
     repo.documents.setReviewOutcome(
       input.documentId,
       statusForAction(input.action),
       at,
       payload.note ?? null
     )
-    repo.events.add(input.documentId, title, detail, at)
+    repo.events.add(input.documentId, title, learned ? `${detail} ${learned}` : detail, at)
   })
 
   return repo.getReviewDocument(input.documentId)!
