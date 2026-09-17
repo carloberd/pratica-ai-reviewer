@@ -49,6 +49,8 @@ export interface ExtractionEvidenceV2 {
   page: number
   text: string
   bbox?: { x: number; y: number; w: number; h: number }
+  /** La regola appresa che ha trovato l'etichetta; assente per le etichette del registry. */
+  ruleId?: string
 }
 
 export interface FieldCandidateV2 {

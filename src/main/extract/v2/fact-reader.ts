@@ -7,6 +7,7 @@ import type {
   FieldRole
 } from '@shared/extraction-v2'
 import { isRegistryField } from '@shared/fields'
+import type { AnchorRelation, LearningRuleScope } from '@shared/local-learning'
 import { cardinalityOf } from '@shared/profile-overlay'
 import type { BoundingBox } from '@shared/types'
 import { FIELD_SPECS, findDate, findMoney, fold, OCR_PENALTY } from '../heuristics'
@@ -32,7 +33,10 @@ import { runFieldValidator } from './validators'
  * - un'etichetta più lunga batte una più corta, anche fra campi diversi: la stessa riga
  *   con lo stesso valore non può essere il numero di protocollo e il numero documento,
  *   e se nessuna etichetta è più specifica il campo va in CONFLICT;
- * - i campi `many` raccolgono un elemento per riga, in ordine di documento.
+ * - i campi `many` raccolgono un elemento per riga, in ordine di documento;
+ * - le etichette imparate dalle revisioni (`learnedLabels`) passano davanti a quelle del
+ *   registry, quelle di un template davanti a quelle di un tipo: a parità di livello decide
+ *   ancora la lunghezza. I validatori restano l'ultima parola per tutte.
  */
 
 export const CONFIDENCE_SAME_LINE = 0.85
@@ -47,12 +51,24 @@ const VALUE_WINDOW = 40
 const NEXT_LINE_WINDOW = 10
 const MAX_TEXT_VALUE = 200
 
+/** Un'etichetta imparata da una regola attiva, già filtrata per tipo e template. */
+export interface LearnedLabel {
+  ruleId: string
+  fieldId: string
+  /** Ripiegata come `fold`. */
+  label: string
+  relation: AnchorRelation
+  scope: LearningRuleScope
+}
+
 export interface ExtractFactsInput {
   documentType: string
   pages: ExtractedPage[]
   registry: ExtractionRegistryV2
   /** Testo da OCR: la confidence scende di 0,10 come nella v1. */
   fromOcr?: boolean
+  /** Le etichette delle regole apprese che valgono per questo documento. */
+  learnedLabels?: LearnedLabel[]
 }
 
 // ---------------------------------------------------------------------------
@@ -101,7 +117,24 @@ function labelOccurrences(line: FoldedLine, label: string): Array<[number, numbe
   return found
 }
 
-function labelsFor(fieldId: string, spec: FieldOntologyEntry, registry: ExtractionRegistryV2) {
+/** Un'etichetta da cercare, col livello che decide chi vince fra due letture. */
+interface LabelSource {
+  label: string
+  /** 0 registry, 1 regola appresa di tipo, 2 regola appresa di template. */
+  tier: number
+  ruleId?: string
+  /** Assente per il registry: stessa riga, e se non c'è niente la riga successiva. */
+  relation?: AnchorRelation
+}
+
+const TIER: Record<LearningRuleScope, number> = { CLASS: 1, TEMPLATE: 2 }
+
+function labelsFor(
+  fieldId: string,
+  spec: FieldOntologyEntry,
+  registry: ExtractionRegistryV2,
+  learned: LearnedLabel[]
+): LabelSource[] {
   const legacyKeywords = registry
     .legacyNames(fieldId)
     .flatMap((name) => (isRegistryField(name) ? FIELD_SPECS[name].keywords : []))
@@ -111,9 +144,18 @@ function labelsFor(fieldId: string, spec: FieldOntologyEntry, registry: Extracti
     ...spec.label_aliases_it,
     ...legacyKeywords
   ]
-  return [...new Set(all.map(fold).filter((label) => label.length > 0))].sort(
-    (a, b) => b.length - a.length
-  )
+  const byLabel = new Map<string, LabelSource>()
+  for (const label of all.map(fold).filter((label) => label.length > 0)) {
+    byLabel.set(label, { label, tier: 0 })
+  }
+  // Un'etichetta imparata che il registry ha già vale col livello più alto.
+  for (const rule of learned.filter((entry) => entry.fieldId === fieldId)) {
+    const label = fold(rule.label)
+    const tier = TIER[rule.scope]
+    if (label.length === 0 || (byLabel.get(label)?.tier ?? -1) >= tier) continue
+    byLabel.set(label, { label, tier, ruleId: rule.ruleId, relation: rule.relation })
+  }
+  return [...byLabel.values()].sort((a, b) => b.tier - a.tier || b.label.length - a.label.length)
 }
 
 // ---------------------------------------------------------------------------
@@ -301,6 +343,8 @@ interface Candidate {
   fieldId: string
   value: string
   confidence: number
+  /** Livello dell'etichetta: una regola appresa batte il registry. */
+  tier: number
   /** Lunghezza dell'etichetta ripiegata: più è lunga, più è specifica. */
   labelLength: number
   sameLine: boolean
@@ -337,15 +381,92 @@ function startsSegment(text: string, start: number): boolean {
   return before === '' || /[-–—|;•(]$/.test(before)
 }
 
+/** Una lettura di un'etichetta: dove compare, e il valore che si legge dopo. */
+export interface LabelRead {
+  /** Riga dell'etichetta e riga del valore, indici in `lines`. */
+  line: number
+  valueLine: number
+  sameLine: boolean
+  /** Dove finisce l'etichetta nel testo della sua riga. */
+  labelEnd: number
+  value: string
+}
+
+function readsInLines(
+  fieldId: string,
+  spec: FieldOntologyEntry,
+  lines: TextLine[],
+  folded: FoldedLine[],
+  label: string,
+  relation: AnchorRelation | undefined
+): LabelRead[] {
+  const isText = !readsAsIdentifier(fieldId, spec) && ['string', 'object'].includes(spec.type)
+  const reads: LabelRead[] = []
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]!
+    for (const [start, end] of labelOccurrences(folded[index]!, label)) {
+      if (isText && !startsSegment(line.text, start)) continue
+
+      const remainder = line.text.slice(end)
+      const sameLine =
+        relation === 'next-line' ? null : readValue(fieldId, spec, remainder, 'same-line')
+      if (sameLine !== null) {
+        reads.push({
+          line: index,
+          valueLine: index,
+          sameLine: true,
+          labelEnd: end,
+          value: sameLine
+        })
+        continue
+      }
+      if (
+        relation !== 'same-line' &&
+        /^[\s:=.°#\-–—]*$/.test(remainder) &&
+        index + 1 < lines.length
+      ) {
+        const nextLine = readValue(fieldId, spec, lines[index + 1]!.text, 'next-line')
+        if (nextLine !== null) {
+          reads.push({
+            line: index,
+            valueLine: index + 1,
+            sameLine: false,
+            labelEnd: end,
+            value: nextLine
+          })
+        }
+      }
+    }
+  }
+  return reads
+}
+
+/**
+ * Tutte le letture di un'etichetta sulle righe di una pagina, con le regole
+ * dell'estrazione: confini di parola, lettore del tipo del campo, stessa riga o riga
+ * successiva. `relation` limita la lettura a una delle due. È quello che serve per sapere
+ * se un'etichetta imparata leggerebbe davvero il valore che il revisore ha selezionato.
+ */
+export function readsOfLabel(
+  fieldId: string,
+  spec: FieldOntologyEntry,
+  lines: TextLine[],
+  label: string,
+  relation?: AnchorRelation
+): LabelRead[] {
+  const folded = lines.map((line) => foldWithOrigin(line.text))
+  return readsInLines(fieldId, spec, lines, folded, fold(label), relation)
+}
+
 function candidatesForField(
   fieldId: string,
   spec: FieldOntologyEntry,
-  labels: string[],
+  labels: LabelSource[],
   pages: ExtractedPage[],
   fromOcr: boolean
 ): Candidate[] {
   const penalty = fromOcr ? OCR_PENALTY : 0
-  const isText = !readsAsIdentifier(fieldId, spec) && ['string', 'object'].includes(spec.type)
   // Per ogni riga del valore resta solo il candidato con l'etichetta più specifica.
   const best = new Map<string, Candidate>()
 
@@ -353,50 +474,45 @@ function candidatesForField(
     const lines = pageLines(page)
     const folded = lines.map((line) => foldWithOrigin(line.text))
 
-    for (let index = 0; index < lines.length; index += 1) {
-      const line = lines[index]!
-      for (const label of labels) {
-        for (const [start, end] of labelOccurrences(folded[index]!, label)) {
-          if (isText && !startsSegment(line.text, start)) continue
+    for (const source of labels) {
+      for (const read of readsInLines(
+        fieldId,
+        spec,
+        lines,
+        folded,
+        source.label,
+        source.relation
+      )) {
+        const { value, sameLine } = read
+        const failed = spec.validators
+          .map((validator) => runFieldValidator(validator, value))
+          .filter((error): error is string => error !== null)
+        const base = sameLine ? CONFIDENCE_SAME_LINE : CONFIDENCE_NEXT_LINE
+        const confidence = round(Math.max(0, base - penalty - failed.length * VALIDATOR_PENALTY))
 
-          const remainder = line.text.slice(end)
-          let value = readValue(fieldId, spec, remainder, 'same-line')
-          let sameLine = true
-          let valueIndex = index
-          if (value === null && /^[\s:=.°#\-–—]*$/.test(remainder) && index + 1 < lines.length) {
-            value = readValue(fieldId, spec, lines[index + 1]!.text, 'next-line')
-            sameLine = false
-            valueIndex = index + 1
-          }
-          if (value === null) continue
-
-          const failed = spec.validators
-            .map((validator) => runFieldValidator(validator, value))
-            .filter((error): error is string => error !== null)
-          const base = sameLine ? CONFIDENCE_SAME_LINE : CONFIDENCE_NEXT_LINE
-          const confidence = round(Math.max(0, base - penalty - failed.length * VALIDATOR_PENALTY))
-
-          const valueLine = lines[valueIndex]!
-          const bbox = sameLine ? line.bbox : unionBox(line.bbox, valueLine.bbox)
-          const candidate: Candidate = {
-            fieldId,
-            value,
-            confidence,
-            labelLength: label.length,
-            sameLine,
-            validatorsFailed: failed,
-            evidence: {
-              page: page.page,
-              text: sameLine ? line.text : `${line.text}\n${valueLine.text}`,
-              ...(bbox ? { bbox } : {})
-            },
-            position: { page: page.page, line: valueIndex }
-          }
-
-          const key = `${page.page}:${valueIndex}:${value}`
-          const previous = best.get(key)
-          if (!previous || compareCandidates(candidate, previous) < 0) best.set(key, candidate)
+        const line = lines[read.line]!
+        const valueLine = lines[read.valueLine]!
+        const bbox = sameLine ? line.bbox : unionBox(line.bbox, valueLine.bbox)
+        const candidate: Candidate = {
+          fieldId,
+          value,
+          confidence,
+          tier: source.tier,
+          labelLength: source.label.length,
+          sameLine,
+          validatorsFailed: failed,
+          evidence: {
+            page: page.page,
+            text: sameLine ? line.text : `${line.text}\n${valueLine.text}`,
+            ...(bbox ? { bbox } : {}),
+            ...(source.ruleId ? { ruleId: source.ruleId } : {})
+          },
+          position: { page: page.page, line: read.valueLine }
         }
+
+        const key = `${page.page}:${read.valueLine}:${value}`
+        const previous = best.get(key)
+        if (!previous || compareCandidates(candidate, previous) < 0) best.set(key, candidate)
       }
     }
   }
@@ -404,9 +520,18 @@ function candidatesForField(
   return [...best.values()].sort(compareCandidates)
 }
 
-/** Etichetta più specifica, poi stessa riga, poi validatori superati, poi ordine di documento. */
+/** L'etichetta di `a` è più specifica di quella di `b`: livello, poi lunghezza. */
+function moreSpecific(a: Candidate, b: Candidate): boolean {
+  return a.tier > b.tier || (a.tier === b.tier && a.labelLength > b.labelLength)
+}
+
+/**
+ * Etichetta più specifica (livello, poi lunghezza), poi stessa riga, poi validatori
+ * superati, poi ordine di documento.
+ */
 function compareCandidates(a: Candidate, b: Candidate): number {
   return (
+    b.tier - a.tier ||
     b.labelLength - a.labelLength ||
     Number(b.sameLine) - Number(a.sameLine) ||
     a.validatorsFailed.length - b.validatorsFailed.length ||
@@ -473,7 +598,7 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
       candidatesForField(
         fieldId,
         spec,
-        labelsFor(fieldId, spec, input.registry),
+        labelsFor(fieldId, spec, input.registry, input.learnedLabels ?? []),
         input.pages,
         input.fromOcr ?? false
       )
@@ -481,8 +606,8 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
   }
 
   // Assegnazione dei campi `one`: tutte le coppie (campo, candidato) in ordine di
-  // specificità. Una riga con un valore appartiene al campo con l'etichetta più lunga;
-  // a parità di etichetta la tengono entrambi, in conflitto.
+  // specificità. Una riga con un valore appartiene al campo con l'etichetta più specifica;
+  // a parità la tengono entrambi, in conflitto.
   const chosen = new Map<string, Candidate>()
   const conflicted = new Set<string>()
   const claims = new Map<string, Candidate>()
@@ -498,7 +623,7 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
     if (chosen.has(candidate.fieldId)) continue
     const key = `${candidate.position.page}:${candidate.position.line}:${candidate.value}`
     const owner = claims.get(key)
-    if (owner && owner.labelLength > candidate.labelLength) continue
+    if (owner && moreSpecific(owner, candidate)) continue
     if (owner) {
       conflicted.add(owner.fieldId)
       conflicted.add(candidate.fieldId)
@@ -557,7 +682,10 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
     }
 
     const rivals = list.filter(
-      (other) => other.labelLength === pick.labelLength && other.value !== pick.value
+      (other) =>
+        other.tier === pick.tier &&
+        other.labelLength === pick.labelLength &&
+        other.value !== pick.value
     )
     if (rivals.length > 0) {
       conflicted.add(fieldId)

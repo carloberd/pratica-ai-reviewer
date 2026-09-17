@@ -11,6 +11,8 @@ export interface EvidenceInput {
   text: string
   bbox?: BoundingBox | null
   confidence: number
+  /** La regola appresa che ha trovato l'etichetta, se il valore viene da lì. */
+  ruleId?: string | null
 }
 
 /** La selezione del revisore: il punto del documento da cui ha preso un valore. */
@@ -29,8 +31,8 @@ const REVIEWER_CONFIDENCE = 1
 export function createEvidenceDao(db: Db) {
   const insert = db.prepare(`
     INSERT INTO evidence (id, document_id, page, text, bbox_json, confidence, origin, method,
-                          line_start, line_end, char_start, char_end)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          line_start, line_end, char_start, char_end, rule_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   return {
@@ -61,7 +63,8 @@ export function createEvidenceDao(db: Db) {
           null,
           null,
           null,
-          null
+          null,
+          item.ruleId ?? null
         )
         ids.push(id)
       }
@@ -83,7 +86,8 @@ export function createEvidenceDao(db: Db) {
         input.location?.lineStart ?? null,
         input.location?.lineEnd ?? null,
         input.location?.charStart ?? null,
-        input.location?.charEnd ?? null
+        input.location?.charEnd ?? null,
+        null
       )
       return id
     },

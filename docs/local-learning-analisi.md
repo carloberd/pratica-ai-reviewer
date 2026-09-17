@@ -340,3 +340,45 @@ Da tenere presente nella PR 4:
   considerare solo l'ultima chiusura di ogni documento.
 - **Campi del motore v1** arrivano coi nomi legacy (`issue_date`): vanno tradotti con
   `legacy_field_map_v2.json` o ignorati.
+
+### PR 4 — regole di estrazione
+
+Migrazione `0012_learning_provenance`; derivazione in `src/main/learning-anchors.ts`,
+apprendimento in `src/main/review-learning.ts`, applicazione in `fact-reader.ts` e
+`pipeline.ts`. Scelte:
+
+- **Etichetta verificata con il motore.** `readsOfLabel` è la lettura dell'estrazione resa
+  pubblica (e usata dall'estrazione stessa): un'etichetta candidata vale solo se su quella
+  pagina legge un valore in un punto solo, e quel punto è la selezione. Vince la più corta.
+  Niente cifre, al massimo tre parole, stop a un'altra etichetta: è anche il filtro PII più
+  semplice, perché nomi e codici stanno quasi sempre dopo i due punti, non prima.
+- **Due regole per selezione**, template e tipo, con chiave stabile (`anchorRuleKey`).
+- **Livelli nell'estrazione**: template > tipo > registry, poi lunghezza dell'etichetta.
+  Una regola appresa legge solo nella sua relazione (stessa riga o riga successiva).
+- **Una prova per documento**, per sha-256 (tabella delle prove ricreata con
+  `document_key`): richiudere sostituisce, scartare ritira, e sullo stesso documento la
+  smentita prevale. Risolve i due punti lasciati dalla PR 3.
+- **Prova alla regola che ha proposto il valore** (`evidence.rule_id` →
+  `learning_events.engine_rule_id`): conferma a favore, correzione contro, salvo quando la
+  selezione insegna la stessa regola (correzione di sola forma, come «07/11/2026» contro
+  «2026-11-07»).
+- **Policy**: come la specifica, con due differenze. La precisione sospende solo da 5 prove
+  in su, perché dopo 2 conferme una smentita fa già il 67% e la regola non è sbagliata;
+  prima decidono le 2 smentite di fila. E il learner non riattiva una regola sospesa: una
+  sospensione a mano (PR 6) non deve durare fino alla prossima conferma.
+- **Campi v1** ignorati per la derivazione: non sono nell'ontologia v2, quindi non hanno un
+  lettore. Il terzo punto lasciato dalla PR 3.
+- **Rielaborazione** della coda del tipo quando una regola si attiva o si sospende, con
+  `reprocessQueueOfType` dopo la chiusura della transazione.
+
+Definizione di «fatto» del pacchetto, in `tests/learning-flow.test.ts` sui promemoria della
+stessa serie (fixture nuove, generate con date fisse):
+
+- due selezioni attivano la regola di template, e il documento in coda arriva con la data
+  compilata, la regola nell'evidenza e nelle metriche del run;
+- la stessa sequenza in `FROZEN` non registra niente e non compila niente; in `BASELINE`
+  le regole attive non valgono, in `FROZEN` sì ma senza prove nuove;
+- due smentite di fila sospendono la regola, e il documento dopo torna senza data;
+- richiudere non vale doppio, scartare ritira le prove.
+
+Il revert di una regola arriva con la PR 6, insieme alla UI.

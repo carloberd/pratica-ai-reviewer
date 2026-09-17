@@ -109,6 +109,8 @@ export interface EvidenceRow {
   line_end: number | null
   char_start: number | null
   char_end: number | null
+  /** La regola appresa che ha letto il valore (migrazione 0012). */
+  rule_id: string | null
 }
 
 export interface EventRow {
@@ -183,7 +185,8 @@ export function toEvidenceItem(row: EvidenceRow, label: string): EvidenceItem {
     ...(bbox ? { bbox } : {}),
     origin: toEvidenceOrigin(row.origin),
     ...(method ? { method } : {}),
-    ...(location ? { location } : {})
+    ...(location ? { location } : {}),
+    ...(row.rule_id ? { ruleId: row.rule_id } : {})
   }
 }
 
