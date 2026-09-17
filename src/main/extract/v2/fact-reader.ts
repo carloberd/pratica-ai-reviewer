@@ -7,6 +7,7 @@ import type {
   FieldRole
 } from '@shared/extraction-v2'
 import { isRegistryField } from '@shared/fields'
+import { cardinalityOf } from '@shared/profile-overlay'
 import type { BoundingBox } from '@shared/types'
 import { FIELD_SPECS, findDate, findMoney, fold, OCR_PENALTY } from '../heuristics'
 import type { ExtractedPage, TextLine } from '../types'
@@ -452,6 +453,11 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
     ])
   ]
 
+  // Quanti valori chiede il campo su questo tipo: la decisione del revisore, se c'è,
+  // altrimenti l'ontologia.
+  const cardinality = (fieldId: string, spec: FieldOntologyEntry) =>
+    cardinalityOf(profile, fieldId, spec.default_cardinality)
+
   const conflicts: string[] = []
   const specs = new Map<string, FieldOntologyEntry>()
   const candidates = new Map<string, Candidate[]>()
@@ -481,7 +487,10 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
   const conflicted = new Set<string>()
   const claims = new Map<string, Candidate>()
   const pairs = [...candidates.entries()]
-    .filter(([fieldId]) => specs.get(fieldId)?.default_cardinality === 'one')
+    .filter(([fieldId]) => {
+      const spec = specs.get(fieldId)
+      return spec !== undefined && cardinality(fieldId, spec) === 'one'
+    })
     .flatMap(([, list]) => list)
     .sort(compareCandidates)
 
@@ -509,7 +518,7 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
     const role = roleOf(profile, fieldId)
     const list = candidates.get(fieldId) ?? []
 
-    if (spec.default_cardinality === 'many') {
+    if (cardinality(fieldId, spec) === 'many') {
       // Un elemento per riga, nell'ordine in cui compare nel documento.
       const perLine = new Map<string, Candidate>()
       for (const candidate of list) {

@@ -510,6 +510,19 @@ correzione diventava un file da sostituire a mano — e legava il lavoro del rev
 repository che sulla sua macchina non c'è. Adesso il lavoro sta accanto alle annotazioni
 che lo motivano, nello stesso database, e diventa un file solo quando lo si esporta.
 
+**Uno o più valori.** Ogni campo dell'ontologia ha una cardinalità di partenza
+(`default_cardinality`): 36 campi su 248 chiedono più valori (righe, parti, garanzie…),
+gli altri uno solo. Lo stesso dato può però averne uno su un tipo e più d'uno su un altro,
+e il revisore lo decide tipo per tipo: la decisione è una riga su
+`profile_cardinality_overrides` (migrazione `0009`), separata dal peso, e c'è solo quando
+è diversa dall'ontologia — rimettere la cardinalità di partenza toglie la riga. Il registry
+la scrive sul profilo in `field_cardinality`, il motore la legge da lì prima
+dell'ontologia, e l'export la porta così com'è nel profilo, come `array` negli schemi e
+nel changelog. Quando il documento si rielabora, **quello che il revisore aveva scritto non
+si perde**: passando a più valori la correzione del campo finisce sulla riga che il motore
+ripropone (o diventa una riga del revisore), passando a un valore solo le righe rimaste
+diventano la correzione del campo, unite con `; ` se sono più d'una.
+
 **«Non utile» è uno stato, non una cancellazione.** Il campo esce dalla mappa che il
 motore usa, ma resta in elenco nella sua sezione, con i numeri che aveva e il pulsante per
 rimetterlo. Nell'export finisce in `x_reviewer_excluded_fields` sul profilo: chi legge il
@@ -518,8 +531,8 @@ file sa che quel campo è stato guardato e scartato, non semplicemente dimentica
 ### La scheda
 
 Ogni campo della mappa è una scheda — la colonna è stretta, come per i campi di «Dati» —
-con il peso (obbligatorio, principale, opzionale, condizionale), i numeri in una riga e le
-azioni sotto: **Aggiungi etichetta** insegna al motore l'etichetta con cui il campo compare
+con il peso (obbligatorio, principale, opzionale, condizionale), i **valori da estrarre**
+(un solo valore o più valori), i numeri in una riga e le azioni sotto: **Aggiungi etichetta** insegna al motore l'etichetta con cui il campo compare
 nei documenti veri, **Segna non utile** lo toglie dalla mappa, **Ripristina** toglie la
 decisione del revisore e rimette quello che dice il registry. Sotto la mappa: i campi che
 il revisore compila a mano e la mappa non prevede, da aggiungere col peso scelto; quelli
@@ -562,7 +575,8 @@ che nessuno ha preso — e diventa a sua volta una riga. **La cronologia non si 
 l'azione annullata resta, marcata. Si annulla solo l'ultima decisione presa su un campo,
 controllato nel main e non solo nella UI: annullarne una più vecchia rimetterebbe uno stato
 che nel frattempo è cambiato, e la mappa direbbe una cosa mentre la cronologia ne dice
-un'altra.
+un'altra. Il peso e il numero di valori sono due decisioni distinte, e ognuna segue la sua
+fila: cambiare il peso di un campo non blocca l'annullamento della sua cardinalità.
 
 ### Export della mappa
 

@@ -1,6 +1,6 @@
-import type { ClassExtractionProfile, FieldRole } from './extraction-v2'
+import type { Cardinality, ClassExtractionProfile, FieldRole } from './extraction-v2'
 import { confirmedItems, currentFieldValue, fieldCorrections } from './field-edits'
-import type { FieldState } from './profile-overlay'
+import type { FieldState, TypeCardinality } from './profile-overlay'
 import { hasEngineProposal } from './review-workspace'
 import type { ExtractedField } from './types'
 
@@ -115,6 +115,10 @@ export interface MeasuredTypeInput {
   decisions?: Record<string, FieldState>
   /** L'etichetta di un campo dell'ontologia, per quelli che nessun documento porta. */
   fieldLabel?: (fieldId: string) => string | null
+  /** Quanti valori chiede il campo su questo tipo adesso: decisione del revisore o ontologia. */
+  fieldCardinality?: (fieldId: string) => Cardinality
+  /** Le cardinalità decise dal revisore su questo tipo, dove diverse dall'ontologia. */
+  cardinalityDecisions?: TypeCardinality
   documents: MeasuredDocumentInput[]
 }
 
@@ -141,6 +145,10 @@ export interface ProfileFieldMeasure {
    * È quello che distingue «il registry non lo prevede» da «l'abbiamo scartato noi».
    */
   decision: FieldState | null
+  /** Uno o più valori: quello con cui il motore legge il campo su questo tipo adesso. */
+  cardinality: Cardinality
+  /** La cardinalità decisa dal revisore, `null` se il campo segue l'ontologia. */
+  cardinalityDecision: Cardinality | null
 }
 
 export interface ProfileTotals {
@@ -247,6 +255,7 @@ export function measureType(input: MeasuredTypeInput): ProfileTypeMeasure {
   const tallies = new Map<string, Tally>()
   const inProfile = new Map<string, FieldRole>()
   const decisions = input.decisions ?? {}
+  const cardinalityDecisions = input.cardinalityDecisions ?? {}
 
   for (const entry of input.profileFields) {
     inProfile.set(entry.fieldId, entry.role)
@@ -324,7 +333,10 @@ export function measureType(input: MeasuredTypeInput): ProfileTypeMeasure {
       correctedRate: rate(tally.corrected, documents),
       manualRate: rate(tally.manual, documents),
       signal: signalOf(tally, role !== null, documents, decisions[tally.fieldId] ?? null),
-      decision: decisions[tally.fieldId] ?? null
+      decision: decisions[tally.fieldId] ?? null,
+      cardinality:
+        cardinalityDecisions[tally.fieldId] ?? input.fieldCardinality?.(tally.fieldId) ?? 'one',
+      cardinalityDecision: cardinalityDecisions[tally.fieldId] ?? null
     }
   })
 

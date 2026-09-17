@@ -142,6 +142,12 @@ export const mapEditSchema = z.object({
       documentType: documentTypeSlugSchema,
       fieldId: fieldIdSchema,
       label: z.string().min(2).max(120)
+    }),
+    z.object({
+      kind: z.literal('SET_CARDINALITY'),
+      documentType: documentTypeSlugSchema,
+      fieldId: fieldIdSchema,
+      cardinality: z.enum(['one', 'many'])
     })
   ])
 })

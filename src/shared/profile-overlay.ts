@@ -1,4 +1,4 @@
-import type { FieldRole } from './extraction-v2'
+import type { Cardinality, FieldRole } from './extraction-v2'
 
 /**
  * Le correzioni del revisore applicate sopra il profilo che arriva dal registry.
@@ -33,13 +33,32 @@ export type TypeOverrides = Record<string, FieldState>
 /** Tutte le decisioni, per tipo documento. */
 export type OverridesByType = Record<string, TypeOverrides>
 
+/**
+ * Quanti valori chiede un campo su un tipo, dove il revisore l'ha deciso diversamente
+ * dall'ontologia. È un'altra decisione rispetto al peso: si prende e si annulla da sola.
+ */
+export type TypeCardinality = Record<string, Cardinality>
+
+/** Le cardinalità decise, per tipo documento. */
+export type CardinalityByType = Record<string, TypeCardinality>
+
+/** Quello che un'azione sulla mappa scrive prima e dopo: un peso, «non utile», o una cardinalità. */
+export type MapValue = FieldState | Cardinality
+
 export interface ProfileOverlay {
   fields: OverridesByType
   /** Etichette insegnate al motore, per campo: si sommano a quelle del registry. */
   hintLabels: Record<string, string[]>
+  cardinality: CardinalityByType
 }
 
-export const EMPTY_OVERLAY: ProfileOverlay = { fields: {}, hintLabels: {} }
+export const EMPTY_OVERLAY: ProfileOverlay = { fields: {}, hintLabels: {}, cardinality: {} }
+
+/** «un solo valore» / «più valori»: come lo legge il revisore. */
+export const CARDINALITY_LABELS: Record<Cardinality, string> = {
+  one: 'un solo valore',
+  many: 'più valori'
+}
 
 export const ROLE_KEYS: Record<
   FieldRole,
@@ -119,4 +138,31 @@ export function applyHintOverlay(base: string[], taught: string[] | undefined): 
   const seen = new Set(base.map((label) => label.toLowerCase()))
   const extra = taught.filter((label) => !seen.has(label.toLowerCase()))
   return extra.length === 0 ? base : [...base, ...extra]
+}
+
+/**
+ * La cardinalità decisa dal revisore scritta sul profilo, in `field_cardinality`. Il motore
+ * la legge da lì prima di guardare l'ontologia, e l'export la porta nel file così com'è.
+ */
+export function applyCardinalityOverlay<T extends { field_cardinality?: TypeCardinality }>(
+  profile: T,
+  cardinality: TypeCardinality | undefined
+): T {
+  if (!cardinality || Object.keys(cardinality).length === 0) return profile
+  const merged = { ...(profile.field_cardinality ?? {}), ...cardinality }
+  const sorted = Object.fromEntries(
+    Object.keys(merged)
+      .sort()
+      .map((fieldId) => [fieldId, merged[fieldId] as Cardinality])
+  )
+  return { ...profile, field_cardinality: sorted }
+}
+
+/** Quanti valori chiede un campo su un profilo: la decisione per il tipo, o l'ontologia. */
+export function cardinalityOf(
+  profile: { field_cardinality?: TypeCardinality } | null,
+  fieldId: string,
+  ontologyDefault: Cardinality
+): Cardinality {
+  return profile?.field_cardinality?.[fieldId] ?? ontologyDefault
 }

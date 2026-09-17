@@ -1,11 +1,11 @@
-import type { FieldRole } from '@shared/extraction-v2'
+import type { Cardinality, FieldRole } from '@shared/extraction-v2'
 import type { ProfileEdit } from '@shared/profile-edit'
 import {
   FIELD_ROLE_LABELS,
   type ProfileFieldMeasure,
   type ProfileTypeMeasure
 } from '@shared/profile-metrics'
-import { ROLES } from '@shared/profile-overlay'
+import { CARDINALITY_LABELS, ROLES } from '@shared/profile-overlay'
 import type { TypeFieldMap } from '@shared/profile-workspace'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { cx } from '../lib/cx'
@@ -21,8 +21,8 @@ import SearchableSelect from './searchable-select'
  * tipo non ha o non chiede uno che serve, e lo sistema qui. Il documento si rielabora con
  * la mappa nuova e la scheda «Dati» mostra già i campi giusti, con le correzioni fatte.
  *
- * La colonna è stretta: ogni campo è una scheda con nome, peso e azioni impilati, e i
- * numeri dei documenti già revisionati stanno in una riga sola sotto il nome.
+ * La colonna è stretta: ogni campo è una scheda con nome, peso, numero di valori e azioni
+ * impilati, e i numeri dei documenti già revisionati stanno in una riga sola sotto il nome.
  */
 
 interface Props {
@@ -383,6 +383,18 @@ function MapFieldCard({
         </select>
       </div>
 
+      <CardinalityRow
+        field={field}
+        busy={busy}
+        onChange={(cardinality) =>
+          onRequest(
+            field.fieldId,
+            { kind: 'SET_CARDINALITY', documentType, fieldId: field.fieldId, cardinality },
+            `chiedere ${CARDINALITY_LABELS[cardinality]} per ${field.label}`
+          )
+        }
+      />
+
       {field.documents > 0 && <div className={styles.mapFieldStats}>{stats(field)}</div>}
 
       {field.signal === 'NEVER_USED' && (
@@ -457,6 +469,51 @@ function MapFieldCard({
       )}
 
       {confirm}
+    </div>
+  )
+}
+
+/**
+ * Uno o più valori. Le righe di una fattura, le parti di un contratto, gli IBAN di un
+ * estratto conto sono più d'uno; il numero documento è uno. Rimettere la scelta
+ * dell'ontologia toglie la decisione: non serve un «Ripristina» a parte.
+ */
+function CardinalityRow({
+  field,
+  busy,
+  onChange
+}: {
+  field: ProfileFieldMeasure
+  busy: boolean
+  onChange: (cardinality: Cardinality) => void
+}) {
+  return (
+    <div className={styles.mapCardinality} data-cardinality={field.cardinality}>
+      <span className={styles.mapCardinalityLabel}>
+        Valori da estrarre
+        {field.cardinalityDecision && (
+          <span
+            className={cx(styles.pill, styles.pillChanged)}
+            title="Deciso qui per questo tipo, non dall'ontologia."
+          >
+            modificato
+          </span>
+        )}
+      </span>
+      <select
+        className={cx(styles.select, styles.mapRoleSelect)}
+        value={field.cardinality}
+        disabled={busy}
+        aria-label={`Quanti valori per ${field.label}`}
+        title="Un solo valore, o più valori (una riga per valore): il documento si rielabora e in «Dati» il campo cambia forma."
+        onChange={(event) => onChange(event.target.value as Cardinality)}
+      >
+        {(['one', 'many'] as const).map((cardinality) => (
+          <option key={cardinality} value={cardinality}>
+            {CARDINALITY_LABELS[cardinality]}
+          </option>
+        ))}
+      </select>
     </div>
   )
 }

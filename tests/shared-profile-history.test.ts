@@ -95,6 +95,28 @@ describe('cosa si può annullare', () => {
     expect(revertableActions([second, first])).toEqual(new Set(['l1', 'l2']))
   })
 
+  it('peso e numero di valori dello stesso campo si annullano ognuno per conto suo', () => {
+    const role = action({ id: 'peso', kind: 'SET_ROLE', before: 'conditional', after: 'core' })
+    const cardinality = action({
+      id: 'valori',
+      kind: 'SET_CARDINALITY',
+      before: 'one',
+      after: 'many',
+      at: '2026-09-17T09:00:00.000Z'
+    })
+    const later = action({
+      id: 'valori-bis',
+      kind: 'SET_CARDINALITY',
+      before: 'many',
+      after: 'one',
+      at: '2026-09-17T10:00:00.000Z'
+    })
+
+    expect(revertableActions([cardinality, role])).toEqual(new Set(['peso', 'valori']))
+    expect(revertableActions([later, cardinality, role])).toEqual(new Set(['peso', 'valori-bis']))
+    expect(countStandingEdits([later, cardinality, role])).toBe(3)
+  })
+
   it('un re-run o un export non sono correzioni: non si annullano', () => {
     const rerun = action({ id: 'r', kind: 'RERUN', fieldId: null })
     const exported = action({ id: 'x', kind: 'EXPORT', fieldId: null, documentType: null })

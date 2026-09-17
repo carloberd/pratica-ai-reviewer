@@ -1276,6 +1276,19 @@ details > .candidatesTitle {
   padding: 5px 8px;
   font-size: 12px;
 }
+.mapCardinality {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mapCardinalityLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #53646d;
+}
 .mapFieldStats {
   font-size: 11px;
   color: #68747c;
