@@ -205,8 +205,12 @@ export interface LearningWriter {
    * scartato: vale solo l'ultima chiusura.
    */
   retractDocument(documentKey: string, at: string): LearningRule[]
-  /** Gli effetti delle prove di una regola, dalla più recente. */
-  recentEffects(ruleId: string, limit: number): LearningEffect[]
+  /**
+   * Gli effetti delle prove arrivate dopo l'ultima volta che la regola è diventata attiva,
+   * dalla più recente; tutte, se non lo è mai stata. Le prove della revisione che l'ha
+   * attivata non contano: sono quelle che l'hanno fatta attivare.
+   */
+  effectsSinceActive(ruleId: string): LearningEffect[]
   /** Promuove, sospende, riattiva o scarta una regola, e lo scrive in cronologia. */
   changeRuleStatus(
     ruleId: string,
@@ -362,17 +366,21 @@ export function createLearningDao(db: Db) {
       return rows.map((row) => rule(row.rule_id))
     },
 
-    recentEffects(ruleId, limit) {
+    effectsSinceActive(ruleId) {
       return (
         db
           .prepare(`
             SELECT r.effect FROM learning_rule_evidence r
               JOIN learning_events e ON e.id = r.event_id
-             WHERE r.rule_id = ?
+             WHERE r.rule_id = @ruleId
+               AND e.at > COALESCE(
+                 (SELECT MAX(at) FROM learning_actions
+                   WHERE rule_id = @ruleId AND after_state = 'ACTIVE' AND reverted_at IS NULL),
+                 ''
+               )
           ORDER BY e.at DESC, e.rowid DESC
-             LIMIT ?
           `)
-          .all(ruleId, limit) as Array<{ effect: LearningEffect }>
+          .all({ ruleId }) as Array<{ effect: LearningEffect }>
       ).map((row) => row.effect)
     },
 
@@ -422,6 +430,22 @@ export function createLearningDao(db: Db) {
           numbers: null
         })
       })()
+    },
+
+    /**
+     * Un cambio di stato deciso da una persona dalla scheda «Apprendimento». Vale in ogni
+     * modalità: `FROZEN` ferma quello che il learner impara da sé, non chi lo governa.
+     */
+    setRuleStatus(
+      ruleId: string,
+      status: LearningRuleStatus,
+      change: { at: string; detail: string }
+    ): LearningAction {
+      try {
+        return db.transaction(() => writer.changeRuleStatus(ruleId, status, change))()
+      } finally {
+        activeCache = null
+      }
     },
 
     /**

@@ -7,6 +7,7 @@ import {
   serializeDataset
 } from '@shared/dataset'
 import type { Repository } from './db/repository'
+import { learningSnapshot } from './learning-workspace'
 
 /**
  * Raccoglie dal database i documenti chiusi dal revisore e li passa al formato del
@@ -32,7 +33,8 @@ export function collectDataset(repo: Repository, manifest: DatasetManifestInput)
         : null
     })
   }
-  return buildDataset(manifest, sources)
+  // L'apprendimento dichiarato è quello del momento dell'export, non di chi lo chiede.
+  return buildDataset({ ...manifest, learning: learningSnapshot(repo) }, sources)
 }
 
 export async function writeDatasetFile(path: string, dataset: AnnotatedDataset): Promise<void> {

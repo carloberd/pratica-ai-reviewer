@@ -1529,3 +1529,68 @@ details > .candidatesTitle {
 .buttonLink:hover {
   text-decoration: underline;
 }
+
+/* Apprendimento */
+.learningView {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.learningModes {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.learningMode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  font: inherit;
+  padding: 12px 14px;
+  border: 1px solid #dfe6ea;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+.learningMode:hover:not(:disabled) {
+  border-color: #9fb3bd;
+}
+.learningModeActive {
+  border-color: #2a8f66;
+  background: #eef9f3;
+  box-shadow: inset 0 0 0 1px #2a8f66;
+}
+.learningModeLabel {
+  font-weight: 700;
+  font-size: 13px;
+}
+.learningRuleActions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+  align-self: center;
+}
+/* La modalità accanto alla voce «Apprendimento»: si vede da ogni pagina. */
+.navMode {
+  margin-left: 6px;
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  color: #d6dee1;
+}
+.navModeLearning {
+  background: rgba(97, 209, 159, 0.2);
+  color: #8be5bc;
+}
+.navModeBaseline {
+  background: rgba(255, 196, 92, 0.2);
+  color: #ffd38a;
+}

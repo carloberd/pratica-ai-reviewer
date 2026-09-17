@@ -1,3 +1,5 @@
+import type { LearningOverview, ManualRuleStatus } from '@shared/learning-workspace'
+import { LEARNING_MODE_LABELS, type LearningMode } from '@shared/local-learning'
 import type { ProfileEdit } from '@shared/profile-edit'
 import {
   type ActivityFeed,
@@ -32,6 +34,7 @@ import DocumentTable from './document-table'
 import DriveFiles from './drive-files'
 import ExportMenu, { type ExportFormat } from './export-menu'
 import HistoryView from './history-view'
+import LearningView from './learning-view'
 import { KpiSkeleton } from './loading-skeleton'
 import ReviewView from './review-view'
 
@@ -40,12 +43,13 @@ import ReviewView from './review-view'
  *
  * I menu stanno in cima perché la revisione ha bisogno di tutta l'altezza della
  * finestra per il documento: una colonna laterale se ne mangerebbe una parte senza
- * dare niente in cambio. Le voci sono tre — la dashboard, i documenti su Drive e la
- * cronologia — mentre la revisione si apre da una riga e non è una destinazione a sé. I
+ * dare niente in cambio. Le voci sono quattro — la dashboard, i documenti su Drive, la
+ * cronologia e l'apprendimento, con la sua modalità sempre in vista — mentre la revisione si
+ * apre da una riga e non è una destinazione a sé. I
  * campi da estrarre per tipo si correggono dentro la revisione, dal documento che ha fatto
  * notare l'errore.
  */
-type View = 'dashboard' | 'documents' | 'history' | 'review'
+type View = 'dashboard' | 'documents' | 'history' | 'learning' | 'review'
 
 /** La cartella aperta in «Documenti»: la radice e le cartelle attraversate per arrivarci. */
 interface DrivePlace {
@@ -80,6 +84,8 @@ export default function DocumentReviewShell() {
   const [fieldMap, setFieldMap] = useState<TypeFieldMap | null>(null)
   const [history, setHistory] = useState<ActivityFeed | null>(null)
   const [historyLoaded, setHistoryLoaded] = useState(false)
+  /** Quello che il motore ha imparato: si rilegge con il resto, perché cambia a ogni revisione. */
+  const [learning, setLearning] = useState<LearningOverview | null>(null)
   /**
    * La prima lettura del database è finita. Prima che lo sia, «nessun documento» non è
    * una risposta: è una domanda ancora aperta, e darla per buona significa smentirsi
@@ -89,14 +95,16 @@ export default function DocumentReviewShell() {
 
   const refresh = useCallback(async () => {
     try {
-      const [status, stats, list] = await Promise.all([
+      const [status, stats, list, overview] = await Promise.all([
         api.auth.status(),
         api.docs.stats(),
-        api.docs.list()
+        api.docs.list(),
+        api.learning.overview()
       ])
       setAuth(status)
       setKpis(stats.kpis)
       setDocuments(list)
+      setLearning(overview)
     } catch (caught) {
       setError(errorMessage(caught))
     } finally {
@@ -234,6 +242,34 @@ export default function DocumentReviewShell() {
       setHistory(await api.history.list())
       setFieldMap(null)
       setMessage(action.detail)
+    })
+
+  /** La modalità del learner: vale dai documenti elaborati da adesso. */
+  const setLearningMode = (mode: LearningMode) =>
+    run('learning-mode', async () => {
+      setLearning(await api.learning.setMode(mode))
+      setHistoryLoaded(false)
+      setMessage(
+        `${LEARNING_MODE_LABELS[mode]}: vale dai documenti elaborati da adesso, quelli già precompilati restano come sono.`
+      )
+    })
+
+  /** Sospende, riattiva o scarta una regola: la coda che ne dipende si rielabora nel main. */
+  const setRuleStatus = (ruleId: string, status: ManualRuleStatus) =>
+    run('learning-rule', async () => {
+      const overview = await api.learning.setRuleStatus(ruleId, status)
+      setLearning(overview)
+      setMessage(overview.actions[0]?.detail ?? null)
+      await refresh()
+    })
+
+  const exportLearning = () =>
+    run('learning-export', async () => {
+      const result = await api.learning.export()
+      if (!result.saved) return
+      setMessage(
+        `Regole esportate in ${result.path}: ${result.rules} regole, ${result.events} decisioni registrate.`
+      )
     })
 
   /** Doppio clic su un file: lo scarica, lo analizza e apre la revisione. */
@@ -383,6 +419,22 @@ export default function DocumentReviewShell() {
           <NavButton active={view === 'history'} onClick={showHistory}>
             Cronologia
           </NavButton>
+          <NavButton active={view === 'learning'} onClick={() => setView('learning')}>
+            Apprendimento
+            {learning && (
+              <span
+                className={cx(
+                  styles.navMode,
+                  learning.mode === 'LEARNING' && styles.navModeLearning,
+                  learning.mode === 'BASELINE' && styles.navModeBaseline
+                )}
+                data-mode={learning.mode}
+                title={LEARNING_MODE_LABELS[learning.mode]}
+              >
+                {NAV_MODE[learning.mode]}
+              </span>
+            )}
+          </NavButton>
         </nav>
         <span className={styles.spacer} />
         {auth?.signedIn && (
@@ -503,6 +555,18 @@ export default function DocumentReviewShell() {
           </>
         )}
 
+        {view === 'learning' && (
+          <LearningView
+            overview={learning}
+            loading={!loaded}
+            busy={busy}
+            exporting={pending === 'learning-export'}
+            onSetMode={setLearningMode}
+            onSetRuleStatus={setRuleStatus}
+            onExport={exportLearning}
+          />
+        )}
+
         {view === 'history' && (
           <HistoryView
             feed={history}
@@ -541,6 +605,13 @@ export default function DocumentReviewShell() {
       </main>
     </div>
   )
+}
+
+/** La modalità in una parola, accanto alla voce di menu. */
+const NAV_MODE: Record<LearningMode, string> = {
+  LEARNING: 'attivo',
+  FROZEN: 'congelato',
+  BASELINE: 'solo registry'
 }
 
 function NavButton({

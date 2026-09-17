@@ -317,24 +317,26 @@ describe('regole', () => {
     expect(learning.listEvents()).toHaveLength(2)
   })
 
-  it('gli effetti recenti vanno dal più nuovo', () => {
+  it('gli effetti dall’ultima attivazione vanno dal più nuovo, senza quelli che l’hanno attivata', () => {
     const { learning, documentId } = setup()
+    const at = (hour: number) => `2026-09-17T${String(hour).padStart(2, '0')}:00:00.000Z`
     const effects = learning.acquire((writer) => {
       const rule = writer.createRule(ANCHOR, AT)
-      const at = (hour: number) => `2026-09-17T${String(hour).padStart(2, '0')}:00:00.000Z`
-      for (const [hour, sha, effect] of [
-        [9, 'a', 'POSITIVE'],
-        [10, 'b', 'NEGATIVE'],
-        [11, 'c', 'NEGATIVE']
-      ] as const) {
+      const prove = (hour: number, sha: string, effect: 'POSITIVE' | 'NEGATIVE') => {
         const recorded = writer.addEvent(
           event(documentId, { at: at(hour), contentSha256: sha.repeat(64) })
         )
         writer.recordEvidence(rule.id, recorded.id, effect, at(hour))
       }
-      return writer.recentEffects(rule.id, 2)
+      prove(9, 'a', 'POSITIVE')
+      prove(10, 'b', 'NEGATIVE')
+      const before = writer.effectsSinceActive(rule.id)
+      writer.changeRuleStatus(rule.id, 'ACTIVE', { at: at(10), detail: '' })
+      prove(11, 'c', 'NEGATIVE')
+      prove(12, 'd', 'POSITIVE')
+      return { before, after: writer.effectsSinceActive(rule.id) }
     })
-    expect(effects).toEqual(['NEGATIVE', 'NEGATIVE'])
+    expect(effects).toEqual({ before: ['NEGATIVE', 'POSITIVE'], after: ['POSITIVE', 'NEGATIVE'] })
   })
 
   it('i cambi di stato hanno un nome, portano i numeri e aggiornano le regole attive', () => {
