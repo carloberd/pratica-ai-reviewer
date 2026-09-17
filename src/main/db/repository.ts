@@ -11,6 +11,7 @@ import { createEventsDao } from './dao/events'
 import { createEvidenceDao } from './dao/evidence'
 import { createExtractionRunsDao } from './dao/extraction-runs'
 import { createFieldsDao } from './dao/fields'
+import { createLearningDao } from './dao/learning'
 import { createPagesDao } from './dao/pages'
 import { createProfileMapDao } from './dao/profile-map'
 import { createSearchDao } from './dao/search'
@@ -44,6 +45,7 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
   const extractionRuns = createExtractionRunsDao(db)
   const profileMap = createProfileMapDao(db)
   const pages = createPagesDao(db)
+  const learning = createLearningDao(db)
 
   const requiredFields = deps.requiredFields ?? (() => [...UNIVERSAL_FIELDS])
   const typeLabel = deps.typeLabel ?? (() => null)
@@ -121,6 +123,8 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
     extractionRuns,
     /** Le righe del testo salvate dall'elaborazione, su cui si ritrovano le selezioni. */
     pages,
+    /** Quello che il motore impara dalle revisioni: modalità, eventi, regole, cronologia. */
+    learning,
     /** La mappa «tipo ↔ dati da estrarre» corretta dal revisore, e la sua cronologia. */
     profileMap,
 
