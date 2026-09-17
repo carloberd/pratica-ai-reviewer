@@ -96,7 +96,7 @@ utenti di test elencati.
 | `pnpm build` | Compila main, preload e renderer in `out/` |
 | `pnpm dist` | Pacchetti mac (dmg, zip) e Windows (nsis, zip) in `release/` |
 | `pnpm dist:mac` / `pnpm dist:win` | Solo una delle due piattaforme |
-| `node scripts/make-fixtures.mjs` | Rigenera le fixture di `tests/fixtures/` |
+| `node scripts/make-fixtures.mjs [nomi…]` | Rigenera le fixture di `tests/fixtures/`, o solo quelle nominate: rigenerare un PDF ne cambia lo sha-256 |
 | `node scripts/make-icon.mjs` | Rigenera `build/icon.png` |
 
 Il gate è `pnpm typecheck && pnpm lint && pnpm test`.
@@ -661,9 +661,10 @@ sottofondo all'avvio li riprende.
 
 Il reviewer si prepara a imparare dalle revisioni: quale etichetta annuncia un campo, quale
 tipo ha un modulo che ricorre. Il piano, la compatibilità con pratica-ai e le decisioni
-stanno in [`docs/local-learning-analisi.md`](docs/local-learning-analisi.md). Per ora il
-learner registra le revisioni salvate nel suo deposito (migrazione `0011`,
-`src/main/db/dao/learning.ts`), ma nessuna regola cambia ancora l'estrazione.
+stanno in [`docs/local-learning-analisi.md`](docs/local-learning-analisi.md). Il learner
+registra le revisioni salvate nel suo deposito (migrazioni `0011` e `0012`,
+`src/main/db/dao/learning.ts`) e ne ricava etichette che l'estrazione usa sui documenti
+successivi. La classificazione non impara ancora.
 
 **Tre modalità**, salvate nel database, ogni cambio in cronologia:
 
@@ -694,6 +695,40 @@ della revisione dice cosa è stato registrato, o perché no.
 dentro `learning.acquire(work)`, che esegue il lavoro in una transazione e solo in
 `LEARNING`. Nelle altre modalità il lavoro non parte, quindi non esiste una scrittura
 dimenticata che possa contaminare una misura.
+
+**Etichette imparate.** Quando il revisore seleziona un valore sul documento, il learner
+cerca l'etichetta che lo annuncia (`src/main/learning-anchors.ts`): le ultime parole prima
+del valore sulla stessa riga, o la fine della riga sopra se il valore sta in testa. Mai
+cifre, al massimo tre parole, e senza scavalcare un'altra etichetta («Emittente:»). Fra le
+candidate vince la più corta che, letta con le regole del motore su quella pagina, trova un
+valore in un punto solo, e quel punto è la selezione. Una selezione insegna due regole: una
+per il template (l'impronta del modulo) e una per il tipo.
+
+**Quando una regola vale** (`nextRuleStatus`, soglie in `DEFAULT_LEARNING_POLICY`):
+
+| | Si attiva | Si sospende |
+|---|---|---|
+| Template | 2 documenti che la confermano, nessuna smentita | 2 smentite di fila, o precisione sotto il 70% con almeno 5 prove |
+| Tipo | 3 documenti, precisione ≥ 90% | come sopra |
+
+Una regola si mette alla prova sui documenti che ha precompilato: valore confermato, prova a
+favore; corretto o svuotato, prova contro — a meno che il revisore non selezioni proprio il
+punto che la regola legge, e allora cambia solo la forma. Le prove sono una per documento
+(per sha-256): richiudere un documento sostituisce le sue, scartarlo le toglie. Il learner
+attiva e sospende da sé, ma non riattiva e non scarta: tornare a fidarsi di una regola
+sospesa è una decisione di una persona.
+
+**Nell'estrazione** le etichette delle regole attive del tipo — di tipo, o del template del
+documento — passano davanti a quelle del registry, quelle di template davanti a quelle di
+tipo; i validatori restano l'ultima parola. L'evidenza del valore dice quale regola l'ha
+trovata (`evidence.rule_id`), e il run registra in `metrics_json.learning` modalità, regole
+disponibili e regole usate. Quando una regola si attiva o si sospende, i documenti in coda
+del suo tipo si rielaborano in sottofondo, come dopo una correzione della mappa.
+
+**Limiti noti.** Insegnano solo le selezioni su una riga, con la posizione esatta: un'area
+letta con OCR di solito non si ritrova nel testo, e resta un esempio senza regola. Una prima
+pagina letta con OCR non ha impronta, quindi solo regole di tipo. Una regola attiva che
+perde prove per uno scarto resta attiva finché le prove contro non la sospendono.
 
 ---
 
