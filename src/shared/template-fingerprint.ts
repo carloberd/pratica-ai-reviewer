@@ -34,6 +34,19 @@ export function templateLine(line: string): string {
 }
 
 /**
+ * Le righe da cui si ricava l'impronta: quelle dell'estrazione, o il testo spezzato a capo
+ * quando l'estrazione non le ha. Elaborazione ed export devono leggere le stesse, o lo
+ * stesso documento avrebbe due impronte.
+ */
+export function firstPageLines(
+  page: { text: string; lines: Array<{ text: string }> } | undefined
+): string[] {
+  if (!page) return []
+  if (page.lines.length > 0) return page.lines.map((line) => line.text)
+  return page.text.split(/\r?\n/)
+}
+
+/**
  * L'impronta delle righe della prima pagina, o `null` quando non c'è testo da cui
  * ricavarla: una scansione senza OCR non ha un layout leggibile, e un'impronta uguale
  * per tutte le scansioni raggrupperebbe documenti che non c'entrano niente.

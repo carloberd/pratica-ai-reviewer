@@ -233,3 +233,158 @@ describe('una nuova estrazione non perde il lavoro sulle righe', () => {
     ])
   })
 })
+
+describe('valori presi dal documento', () => {
+  /** Le righe salvate dall'elaborazione per la prima pagina. */
+  const PAGE = [
+    { text: 'FATTURA n. 114/2026 del 08/09/2026', bbox: { x: 56, y: 111, w: 187.71, h: 11 } },
+    { text: 'Fornitura materiali edili 70.836,07', bbox: { x: 56, y: 271, w: 193.81, h: 11 } }
+  ]
+
+  function withPages() {
+    const context = setup()
+    context.r.pages.replaceForDocument(context.id, [
+      { page: 1, textSource: 'NATIVE_TEXT', lines: PAGE }
+    ])
+    return context
+  }
+
+  const selection = (text: string, bbox = { x: 100, y: 111, w: 45, h: 11 }) => ({
+    method: 'TEXT_SELECTION' as const,
+    page: 1,
+    text,
+    bbox
+  })
+
+  const number = (r: NonNullable<typeof repo>, id: string) => r.getReviewDocument(id)!.fields[0]!
+  const evidenceOf = (r: NonNullable<typeof repo>, id: string, evidenceId: string | undefined) =>
+    r.getReviewDocument(id)!.evidence.find((item) => item.id === evidenceId)
+
+  it('la selezione diventa un’evidenza del revisore, ritrovata fra le righe salvate', () => {
+    const { r, id } = withPages()
+    updateFieldValue(r, {
+      documentId: id,
+      fieldId: number(r, id).id,
+      correctedValue: '08/09/2026',
+      pick: selection('08/09/2026', { x: 188, y: 111, w: 55, h: 11 })
+    })
+
+    const field = number(r, id)
+    expect(field.correctedValue).toBe('08/09/2026')
+    expect(evidenceOf(r, id, field.correctedEvidenceId)).toMatchObject({
+      origin: 'REVIEWER',
+      method: 'TEXT_SELECTION',
+      page: 1,
+      text: '08/09/2026',
+      bbox: { x: 188, y: 111, w: 55, h: 11 },
+      location: { lineStart: 0, lineEnd: 0, charStart: 24, charEnd: 34 }
+    })
+  })
+
+  it('il testo selezionato resta verbatim, il valore è quello con gli spazi ripiegati', () => {
+    const { r, id } = withPages()
+    updateFieldValue(r, {
+      documentId: id,
+      fieldId: number(r, id).id,
+      correctedValue: 'n. 114/2026',
+      pick: selection('n.\n 114/2026')
+    })
+    const field = number(r, id)
+    expect(evidenceOf(r, id, field.correctedEvidenceId)).toMatchObject({
+      text: 'n.\n 114/2026',
+      location: { charStart: 8, charEnd: 19 }
+    })
+  })
+
+  it('riscritto a mano, il valore perde la selezione e l’evidenza sparisce', () => {
+    const { r, id } = withPages()
+    const fieldId = number(r, id).id
+    updateFieldValue(r, {
+      documentId: id,
+      fieldId,
+      correctedValue: '08/09/2026',
+      pick: selection('08/09/2026')
+    })
+    updateFieldValue(r, { documentId: id, fieldId, correctedValue: '09/09/2026' })
+
+    expect(number(r, id).correctedEvidenceId).toBeUndefined()
+    expect(r.evidence.listForDocument(id).filter((row) => row.origin === 'REVIEWER')).toEqual([])
+  })
+
+  it('una selezione che non è il valore salvato non vale come origine', () => {
+    const { r, id } = withPages()
+    updateFieldValue(r, {
+      documentId: id,
+      fieldId: number(r, id).id,
+      correctedValue: '114/2026-bis',
+      pick: selection('114/2026')
+    })
+    expect(number(r, id)).toMatchObject({ correctedValue: '114/2026-bis' })
+    expect(number(r, id).correctedEvidenceId).toBeUndefined()
+    expect(r.evidence.listForDocument(id).filter((row) => row.origin === 'REVIEWER')).toEqual([])
+  })
+
+  it('selezionare la proposta non è una correzione, e non lascia evidenze', () => {
+    const { r, id } = withPages()
+    updateFieldValue(r, {
+      documentId: id,
+      fieldId: number(r, id).id,
+      correctedValue: '114/2026',
+      pick: selection('114/2026')
+    })
+    expect(number(r, id).correctedValue).toBeUndefined()
+    expect(r.evidence.listForDocument(id).filter((row) => row.origin === 'REVIEWER')).toEqual([])
+  })
+
+  it('senza righe salvate la selezione si registra lo stesso, senza posizione', () => {
+    const { r, id } = setup()
+    updateFieldValue(r, {
+      documentId: id,
+      fieldId: number(r, id).id,
+      correctedValue: '08/09/2026',
+      pick: selection('08/09/2026')
+    })
+    const evidence = evidenceOf(r, id, number(r, id).correctedEvidenceId)
+    expect(evidence).toMatchObject({ origin: 'REVIEWER', page: 1 })
+    expect(evidence?.location).toBeUndefined()
+  })
+
+  it('righe: selezionata, aggiunta, poi tolta o tornata alla proposta', () => {
+    const { r, id } = withPages()
+    const area = {
+      method: 'AREA_OCR' as const,
+      page: 1,
+      text: 'Fornitura materiali edili',
+      bbox: { x: 50, y: 265, w: 140, h: 20 }
+    }
+    const [first] = lines(r, id).items
+    updateFieldItem(r, {
+      documentId: id,
+      itemId: first!.id,
+      correctedValue: 'Fornitura materiali edili 70.836,07',
+      pick: selection('Fornitura materiali edili 70.836,07', { x: 56, y: 271, w: 193.81, h: 11 })
+    })
+    addFieldItem(r, {
+      documentId: id,
+      fieldId: lines(r, id).id,
+      value: 'Fornitura materiali edili',
+      pick: area
+    })
+
+    const [corrected, , added] = lines(r, id).items
+    expect(evidenceOf(r, id, corrected!.correctedEvidenceId)).toMatchObject({
+      label: 'Righe documento · riga 1 · selezionato dal revisore',
+      location: { lineStart: 1, lineEnd: 1, charStart: 35, charEnd: 70 }
+    })
+    expect(evidenceOf(r, id, added!.correctedEvidenceId)).toMatchObject({
+      method: 'AREA_OCR',
+      location: { lineStart: 1, lineEnd: 1, charStart: 35, charEnd: 60 }
+    })
+
+    updateFieldItem(r, { documentId: id, itemId: corrected!.id, correctedValue: null })
+    setFieldItemRemoved(r, { documentId: id, itemId: added!.id, removed: true })
+
+    expect(lines(r, id).items.every((item) => item.correctedEvidenceId === undefined)).toBe(true)
+    expect(r.evidence.listForDocument(id).filter((row) => row.origin === 'REVIEWER')).toEqual([])
+  })
+})

@@ -862,6 +862,11 @@
   background: rgba(97, 209, 159, 0.34);
   outline: 1px solid #2a8f66;
 }
+/* Il punto da cui il revisore ha preso un valore: distinto da quello letto dal motore. */
+.pdfHighlightPicked {
+  background: rgba(120, 144, 255, 0.28);
+  outline: 1px dashed #4a5fc8;
+}
 .pdfHighlightFlash {
   background: rgba(255, 214, 102, 0.42);
   outline: 2px solid #d99b16;

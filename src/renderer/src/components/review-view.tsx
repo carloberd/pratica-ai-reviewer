@@ -1,8 +1,9 @@
 import { type EvidenceTarget, targetOfEvidence } from '@shared/evidence-locate'
 import { documentCorrections } from '@shared/field-edits'
+import { pickValue } from '@shared/pick-locate'
 import type { ProfileEdit } from '@shared/profile-edit'
 import type { TypeFieldMap } from '@shared/profile-workspace'
-import type { RegistryTypeOption, ReviewAction, ReviewDocument } from '@shared/types'
+import type { DocumentPick, RegistryTypeOption, ReviewAction, ReviewDocument } from '@shared/types'
 import { useEffect, useMemo, useState } from 'react'
 import { cx } from '../lib/cx'
 import { formatDateTime, pct, STATUS_LABELS, textSourceLabel } from '../lib/format'
@@ -20,10 +21,11 @@ interface Props {
   types: RegistryTypeOption[]
   busy: boolean
   onBack: () => void
-  onFieldCommit: (fieldId: string, value: string | null) => void
-  onItemCommit: (itemId: string, value: string | null) => void
+  /** `pick` quando il valore è stato preso dal documento. */
+  onFieldCommit: (fieldId: string, value: string | null, pick?: DocumentPick) => void
+  onItemCommit: (itemId: string, value: string | null, pick?: DocumentPick) => void
   onItemRemove: (itemId: string, removed: boolean) => void
-  onItemAdd: (fieldId: string, value: string) => void
+  onItemAdd: (fieldId: string, value: string, pick?: DocumentPick) => void
   onDecide: (action: ReviewAction, note?: string) => void
   onAssignType: (documentType: string | null) => void
   /** Toglie la copia locale del file, lasciando i dati estratti. */
@@ -112,15 +114,16 @@ export default function ReviewView({
 
   /**
    * Quello che il revisore ha selezionato sul documento finisce nel campo attivo; con la
-   * riga nuova attiva, ogni selezione aggiunge una riga.
+   * riga nuova attiva, ogni selezione aggiunge una riga. Il punto da cui viene va col
+   * valore: è da lì che il motore imparerà dove cercarlo.
    */
-  function capture(text: string) {
+  function capture(text: string, pick?: DocumentPick) {
     if (!active || !captureTarget) return
-    const value = text.replace(/\s+/g, ' ').trim()
+    const value = pickValue(text)
     if (!value) return
-    if (active.kind === 'field') onFieldCommit(active.fieldId, value)
-    else if (active.kind === 'item') onItemCommit(active.itemId, value)
-    else onItemAdd(active.fieldId, value)
+    if (active.kind === 'field') onFieldCommit(active.fieldId, value, pick)
+    else if (active.kind === 'item') onItemCommit(active.itemId, value, pick)
+    else onItemAdd(active.fieldId, value, pick)
   }
 
   const corrections = documentCorrections(document.fields).length

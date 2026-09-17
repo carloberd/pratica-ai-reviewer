@@ -128,7 +128,9 @@ describe('migrazioni', () => {
       'updated_at',
       // 0005
       'origin',
-      'removed'
+      'removed',
+      // 0010
+      'corrected_evidence_id'
     ])
     expect(columns('extraction_runs')).toContain('metrics_json')
     db.close()
@@ -150,7 +152,7 @@ describe('migrazioni', () => {
     // Correzione rimasta senza la riga proposta: la 0004 la teneva con valore nullo.
     item.run('orfana', 'f', 2, null, '"Trasporto"', 0)
 
-    expect(migrate(db)).toEqual(['0005', '0006', '0007', '0008', '0009'])
+    expect(migrate(db)).toEqual(['0005', '0006', '0007', '0008', '0009', '0010'])
 
     expect(
       db.prepare('SELECT id, origin, removed FROM field_items ORDER BY item_index').all()
@@ -172,7 +174,7 @@ describe('migrazioni', () => {
       "INSERT INTO documents (id, drive_file_id, filename, mime, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', '2026-01-01')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0006', '0007', '0008', '0009'])
+    expect(migrate(db)).toEqual(['0006', '0007', '0008', '0009', '0010'])
 
     // NULL = da calcolare al primo export, non «documento senza impronta».
     expect(db.prepare('SELECT template_fingerprint FROM documents').get()).toEqual({
@@ -188,7 +190,7 @@ describe('migrazioni', () => {
   it('la 0008 apre le tabelle della mappa, vuote: nessuna decisione presa prima esiste', () => {
     const db = databaseAt('0007')
 
-    expect(migrate(db)).toEqual(['0008', '0009'])
+    expect(migrate(db)).toEqual(['0008', '0009', '0010'])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_overrides').get()).toEqual({ n: 0 })
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_hint_labels').get()).toEqual({ n: 0 })
@@ -212,7 +214,7 @@ describe('migrazioni', () => {
   it('la 0009 apre la tabella delle cardinalità, vuota: ogni campo segue l’ontologia', () => {
     const db = databaseAt('0008')
 
-    expect(migrate(db)).toEqual(['0009'])
+    expect(migrate(db)).toEqual(['0009', '0010'])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_cardinality_overrides').get()).toEqual({
       n: 0
@@ -233,13 +235,49 @@ describe('migrazioni', () => {
     db.close()
   })
 
+  it('la 0010 conserva le correzioni e le evidenze di prima: tutte del motore, nessuna selezione', () => {
+    const db = databaseAt('0009')
+    db.exec(`
+      INSERT INTO documents (id, drive_file_id, filename, mime, synced_at)
+        VALUES ('d', 'x', 'f.pdf', 'application/pdf', '2026-01-01');
+      INSERT INTO evidence (id, document_id, page, text, confidence)
+        VALUES ('e', 'd', 1, 'FATTURA n. 114/2026', 0.85);
+      INSERT INTO fields (id, document_id, name, label, value, corrected_value, confidence, evidence_id)
+        VALUES ('f', 'd', 'document.number', 'Numero documento', '114/2026', '114/2026-bis', 0.85, 'e');
+    `)
+
+    expect(migrate(db)).toEqual(['0010'])
+
+    expect(db.prepare('SELECT origin, method, line_start, char_start FROM evidence').get()).toEqual(
+      {
+        origin: 'ENGINE',
+        method: null,
+        line_start: null,
+        char_start: null
+      }
+    )
+    // Una correzione di prima resta senza selezione: nessuno sa da dove venisse.
+    expect(db.prepare('SELECT corrected_value, corrected_evidence_id FROM fields').get()).toEqual({
+      corrected_value: '114/2026-bis',
+      corrected_evidence_id: null
+    })
+    expect(db.prepare('SELECT content_sha256 FROM documents').get()).toEqual({
+      content_sha256: null
+    })
+    expect(db.prepare('SELECT COUNT(*) AS n FROM document_pages').get()).toEqual({ n: 0 })
+    expect(() => db.prepare("UPDATE evidence SET origin = 'OTHER'").run()).toThrow(
+      /CHECK constraint failed/
+    )
+    db.close()
+  })
+
   it('la 0007 aggiunge la nota del revisore, vuota sui documenti già chiusi', () => {
     const db = databaseAt('0006')
     db.prepare(
       "INSERT INTO documents (id, drive_file_id, filename, mime, status, reviewed_at, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', 'REVIEWED', '2026-01-02', '2026-01-01')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0007', '0008', '0009'])
+    expect(migrate(db)).toEqual(['0007', '0008', '0009', '0010'])
 
     // Chi ha chiuso un documento prima di questa versione non ha una nota da recuperare:
     // restava solo nel testo della timeline, che non è un formato da rileggere.
@@ -297,7 +335,7 @@ describe('migrazione 0004 su un database esistente', () => {
     const db = databaseAt('0003')
     seedV1(db)
 
-    expect(migrate(db)).toEqual(['0004', '0005', '0006', '0007', '0008', '0009'])
+    expect(migrate(db)).toEqual(['0004', '0005', '0006', '0007', '0008', '0009', '0010'])
 
     const rows = db
       .prepare(

@@ -12,7 +12,15 @@ describe('bersaglio di un’evidenza', () => {
   it('porta pagina, testo e rettangolo quando c’è', () => {
     const bbox = { x: 56, y: 50, w: 200, h: 11 }
     expect(
-      targetOfEvidence({ id: 'e1', label: 'Totale', page: 2, text: 'Totale', confidence: 1, bbox })
+      targetOfEvidence({
+        id: 'e1',
+        label: 'Totale',
+        page: 2,
+        text: 'Totale',
+        confidence: 1,
+        bbox,
+        origin: 'ENGINE'
+      })
     ).toEqual({ page: 2, text: 'Totale', bbox, evidenceId: 'e1' })
     expect(targetOfLocation({ page: 1, text: 'FATTURA n. 114' })).toEqual({
       page: 1,

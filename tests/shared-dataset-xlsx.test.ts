@@ -22,14 +22,16 @@ const EVIDENCE: EvidenceItem[] = [
     page: 1,
     text: 'FATTURA n. 114/2026 del 08/09/2026',
     confidence: 0.85,
-    bbox: { x: 56, y: 91, w: 181.6, h: 11 }
+    bbox: { x: 56, y: 91, w: 181.6, h: 11 },
+    origin: 'ENGINE'
   },
   {
     id: 'e-line-0',
     label: 'Righe documento',
     page: 2,
     text: 'Demolizione tramezzi - EUR 3.200,00',
-    confidence: 0.8
+    confidence: 0.8,
+    origin: 'ENGINE'
   }
 ]
 

@@ -72,9 +72,23 @@ export function createDocumentsDao(db: Db) {
       return selectByDriveId.get(driveFileId) as DocumentRow | undefined
     },
 
-    /** Impronta del layout: si calcola una volta sola, al primo export che la chiede. */
+    /** Impronta del layout per un documento elaborato prima che l'elaborazione la calcolasse. */
     setTemplateFingerprint(id: string, fingerprint: string): void {
       db.prepare('UPDATE documents SET template_fingerprint = ? WHERE id = ?').run(fingerprint, id)
+    },
+
+    /**
+     * Quello che l'elaborazione sa del file: lo sha-256 dei byte e l'impronta del layout.
+     * Si riscrivono a ogni elaborazione, perché la copia in cache può essere una versione
+     * nuova dello stesso file di Drive.
+     */
+    setContentIdentity(
+      id: string,
+      identity: { contentSha256: string; templateFingerprint: string | null }
+    ): void {
+      db.prepare(
+        'UPDATE documents SET content_sha256 = ?, template_fingerprint = ? WHERE id = ?'
+      ).run(identity.contentSha256, identity.templateFingerprint, id)
     },
 
     setCachedPath(id: string, cachedPath: string | null): void {

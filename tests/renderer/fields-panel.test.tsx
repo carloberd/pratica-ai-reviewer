@@ -1,3 +1,4 @@
+import type { EvidenceItem } from '@shared/types'
 import { describe, expect, it } from 'vitest'
 import FieldsPanel from '../../src/renderer/src/components/fields-panel'
 import { item, listField, scalarField } from '../helpers/review-document'
@@ -28,9 +29,23 @@ describe('FieldsPanel', () => {
     }),
     listField([item({ evidenceId: 'ev-line' })])
   ]
-  const evidence = [
-    { id: 'ev-number', label: 'Numero', page: 1, text: 'FATTURA n. 114/2026', confidence: 0.85 },
-    { id: 'ev-line', label: 'Righe', page: 1, text: 'Fornitura materiali edili', confidence: 0.85 }
+  const evidence: EvidenceItem[] = [
+    {
+      id: 'ev-number',
+      label: 'Numero',
+      page: 1,
+      text: 'FATTURA n. 114/2026',
+      confidence: 0.85,
+      origin: 'ENGINE'
+    },
+    {
+      id: 'ev-line',
+      label: 'Righe',
+      page: 1,
+      text: 'Fornitura materiali edili',
+      confidence: 0.85,
+      origin: 'ENGINE'
+    }
   ]
 
   it('mette in cima i campi senza proposta col contatore dei vuoti, e li mostra tutti', () => {
@@ -70,6 +85,37 @@ describe('FieldsPanel', () => {
     expect(markup).toContain('FATTURA n. 114/2026')
     expect(markup).toContain('Fornitura materiali edili')
     expect(count(markup, 'Mostra nel documento')).toBe(2)
+  })
+
+  it('un valore selezionato sul documento mostra la selezione, non la lettura del motore', () => {
+    const picked: EvidenceItem = {
+      id: 'ev-picked',
+      label: 'Numero documento · selezionato dal revisore',
+      page: 2,
+      text: '114/2026-bis',
+      confidence: 1,
+      origin: 'REVIEWER',
+      method: 'TEXT_SELECTION'
+    }
+    const markup = html(
+      <FieldsPanel
+        fields={[
+          scalarField({
+            evidenceId: 'ev-number',
+            correctedValue: '114/2026-bis',
+            correctedEvidenceId: 'ev-picked'
+          })
+        ]}
+        evidence={[...evidence, picked]}
+        disabled={false}
+        active={null}
+        shownEvidenceId={null}
+        {...handlers}
+      />
+    )
+    expect(markup).toContain('data-evidence-page="2"')
+    expect(markup).not.toContain('FATTURA n. 114/2026')
+    expect(count(markup, 'Mostra nel documento')).toBe(1)
   })
 
   it('a campi tutti compilati il contatore lo dice', () => {
