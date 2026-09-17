@@ -243,3 +243,96 @@ describe('insegnare un’etichetta', () => {
     ).toThrowError(/non può essere vuota/)
   })
 })
+
+describe('uno o più valori', () => {
+  const iban = { id: 'bank.iban', label: 'IBAN', aliases: [], cardinality: 'one' as const }
+
+  it('un campo da un valore solo passa a più valori, e resta scritto da cosa a cosa', () => {
+    const result = plan(
+      {
+        kind: 'SET_CARDINALITY',
+        documentType: TYPE,
+        fieldId: 'bank.iban',
+        cardinality: 'many'
+      },
+      { profile: profile({ conditional_fields: ['bank.iban'] }), field: iban }
+    )
+
+    expect(result.before).toBe('one')
+    expect(result.after).toBe('many')
+    expect(result.override).toBe('many')
+    expect(result.previousOverride).toBeNull()
+    expect(result.detail).toBe(
+      '«IBAN» (bank.iban) passa da un solo valore a più valori su accounting.fattura.'
+    )
+  })
+
+  it('tornare a quello che dice l’ontologia toglie la decisione invece di scriverne una uguale', () => {
+    const result = plan(
+      {
+        kind: 'SET_CARDINALITY',
+        documentType: TYPE,
+        fieldId: 'bank.iban',
+        cardinality: 'one'
+      },
+      {
+        profile: profile({ conditional_fields: ['bank.iban'] }),
+        field: iban,
+        cardinality: { 'bank.iban': 'many' }
+      }
+    )
+
+    expect(result.before).toBe('many')
+    expect(result.override).toBeNull()
+    expect(result.previousOverride).toBe('many')
+    expect(result.detail).toContain("come dice l'ontologia")
+  })
+
+  it('la cardinalità che il campo ha già non è una correzione', () => {
+    expect(() =>
+      plan(
+        {
+          kind: 'SET_CARDINALITY',
+          documentType: TYPE,
+          fieldId: 'bank.iban',
+          cardinality: 'one'
+        },
+        { profile: profile({ conditional_fields: ['bank.iban'] }), field: iban }
+      )
+    ).toThrow(/chiede già un solo valore/)
+  })
+
+  it('su un campo che la mappa non chiede non cambierebbe niente', () => {
+    expect(() =>
+      plan(
+        { kind: 'SET_CARDINALITY', documentType: TYPE, fieldId: 'bank.iban', cardinality: 'many' },
+        { field: iban }
+      )
+    ).toThrow(ProfileEditError)
+    expect(() =>
+      plan(
+        {
+          kind: 'SET_CARDINALITY',
+          documentType: TYPE,
+          fieldId: 'procurement.cig',
+          cardinality: 'many'
+        },
+        { overrides: { 'procurement.cig': 'excluded' } }
+      )
+    ).toThrow(/prima va aggiunto/)
+  })
+
+  it('un id che l’ontologia non conosce si ferma qui', () => {
+    expect(() =>
+      plan(
+        {
+          kind: 'SET_CARDINALITY',
+          documentType: TYPE,
+          fieldId: 'document.number',
+          cardinality: 'many'
+        },
+        { field: null }
+      )
+    ).toThrow(/non è un campo dell'ontologia/)
+  })
+})

@@ -7,6 +7,7 @@ import {
   type ProfileOrigin,
   type ProfileTypeMeasure
 } from '@shared/profile-metrics'
+import { cardinalityOf } from '@shared/profile-overlay'
 import type { Repository } from './db/repository'
 import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
 
@@ -91,6 +92,9 @@ function inputFor(deps: ProfileInsightsDeps, documentType: string): MeasuredType
     profileFields: profileFieldsOf(registry, documentType),
     decisions: repo.profileMap.forType(documentType),
     fieldLabel: (fieldId) => registry.field(fieldId)?.label_it ?? null,
+    fieldCardinality: (fieldId) =>
+      cardinalityOf(profile, fieldId, registry.field(fieldId)?.default_cardinality ?? 'one'),
+    cardinalityDecisions: repo.profileMap.cardinalityForType(documentType),
     documents
   }
 }

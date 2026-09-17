@@ -1,10 +1,14 @@
 import { randomUUID } from 'node:crypto'
+import type { Cardinality } from '@shared/extraction-v2'
 import type { ProfileEditReason } from '@shared/profile-edit'
 import type { ProfileAction, ProfileActionKind } from '@shared/profile-history'
 import type {
+  CardinalityByType,
   FieldState,
+  MapValue,
   OverridesByType,
   ProfileOverlay,
+  TypeCardinality,
   TypeOverrides
 } from '@shared/profile-overlay'
 import type { Db } from '../index'
@@ -12,7 +16,7 @@ import type { Db } from '../index'
 /**
  * La mappa «tipo documento ↔ dati da estrarre» come l'ha corretta il revisore.
  *
- * Tre tabelle (migrazione 0008) e un'unica regola: i JSON del registry non si toccano.
+ * Quattro tabelle (migrazioni 0008 e 0009) e un'unica regola: i JSON del registry non si toccano.
  * Qui c'è solo quello che il revisore ha deciso, e la cronologia di come ci è arrivato.
  *
  * L'overlay viene chiesto dal motore a ogni documento elaborato, quindi sta in memoria e
@@ -24,6 +28,13 @@ interface OverrideRow {
   document_type: string
   field_id: string
   state: string
+  updated_at: string
+}
+
+interface CardinalityRow {
+  document_type: string
+  field_id: string
+  cardinality: string
   updated_at: string
 }
 
@@ -58,9 +69,9 @@ function toAction(row: ActionRow): ProfileAction {
     documentType: row.document_type,
     fieldId: row.field_id,
     label: row.label,
-    before: row.before_state as FieldState | null,
-    after: row.after_state as FieldState | null,
-    previousOverride: row.previous_override as FieldState | null,
+    before: row.before_state as MapValue | null,
+    after: row.after_state as MapValue | null,
+    previousOverride: row.previous_override as MapValue | null,
     detail: row.detail,
     reason: row.numbers_json ? (JSON.parse(row.numbers_json) as ProfileEditReason) : null,
     revertsId: row.reverts_id,
@@ -75,9 +86,9 @@ export interface NewProfileAction {
   documentType?: string | null
   fieldId?: string | null
   label?: string | null
-  before?: FieldState | null
-  after?: FieldState | null
-  previousOverride?: FieldState | null
+  before?: MapValue | null
+  after?: MapValue | null
+  previousOverride?: MapValue | null
   reason?: ProfileEditReason | null
   revertsId?: string | null
   at?: string
@@ -92,6 +103,16 @@ export function createProfileMapDao(db: Db) {
   )
   const deleteOverride = db.prepare(
     'DELETE FROM profile_overrides WHERE document_type = ? AND field_id = ?'
+  )
+
+  const selectCardinality = db.prepare('SELECT * FROM profile_cardinality_overrides')
+  const upsertCardinality = db.prepare(
+    `INSERT INTO profile_cardinality_overrides (document_type, field_id, cardinality, updated_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT (document_type, field_id) DO UPDATE SET cardinality = excluded.cardinality, updated_at = excluded.updated_at`
+  )
+  const deleteCardinality = db.prepare(
+    'DELETE FROM profile_cardinality_overrides WHERE document_type = ? AND field_id = ?'
   )
 
   // La tabella è WITHOUT ROWID: l'ordine stabile lo danno le colonne, non un rowid.
@@ -125,12 +146,19 @@ export function createProfileMapDao(db: Db) {
       fields[row.document_type] = forType
     }
 
+    const cardinality: CardinalityByType = {}
+    for (const row of selectCardinality.all() as CardinalityRow[]) {
+      const forType = cardinality[row.document_type] ?? {}
+      forType[row.field_id] = row.cardinality as Cardinality
+      cardinality[row.document_type] = forType
+    }
+
     const hintLabels: Record<string, string[]> = {}
     for (const row of selectHints.all() as HintRow[]) {
       hintLabels[row.field_id] = [...(hintLabels[row.field_id] ?? []), row.label]
     }
 
-    cached = { fields, hintLabels }
+    cached = { fields, hintLabels, cardinality }
     return cached
   }
 
@@ -142,12 +170,18 @@ export function createProfileMapDao(db: Db) {
       return overlay().fields[documentType] ?? {}
     },
 
-    /** I tipi su cui il revisore ha deciso qualcosa. */
+    /** Le cardinalità decise su un tipo solo. Oggetto vuoto se non ce n'è nessuna. */
+    cardinalityForType(documentType: string): TypeCardinality {
+      return overlay().cardinality[documentType] ?? {}
+    },
+
+    /** I tipi su cui il revisore ha deciso qualcosa: un peso, «non utile» o una cardinalità. */
     touchedTypes(): string[] {
-      return Object.entries(overlay().fields)
-        .filter(([, overrides]) => Object.keys(overrides).length > 0)
+      const { fields, cardinality } = overlay()
+      const touched = [...Object.entries(fields), ...Object.entries(cardinality)]
+        .filter(([, decisions]) => Object.keys(decisions).length > 0)
         .map(([documentType]) => documentType)
-        .sort()
+      return [...new Set(touched)].sort()
     },
 
     setOverride(documentType: string, fieldId: string, state: FieldState, at: string): void {
@@ -157,6 +191,21 @@ export function createProfileMapDao(db: Db) {
 
     clearOverride(documentType: string, fieldId: string): void {
       deleteOverride.run(documentType, fieldId)
+      cached = null
+    },
+
+    setCardinality(
+      documentType: string,
+      fieldId: string,
+      cardinality: Cardinality,
+      at: string
+    ): void {
+      upsertCardinality.run(documentType, fieldId, cardinality, at)
+      cached = null
+    },
+
+    clearCardinality(documentType: string, fieldId: string): void {
+      deleteCardinality.run(documentType, fieldId)
       cached = null
     },
 
@@ -239,7 +288,8 @@ export function createProfileMapDao(db: Db) {
         .prepare(
           `SELECT COUNT(*) AS n FROM profile_actions
             WHERE reverted_at IS NULL
-              AND kind IN ('ADD_FIELD', 'REMOVE_FIELD', 'SET_ROLE', 'RESTORE_FIELD', 'ADD_HINT_LABEL')`
+              AND kind IN ('ADD_FIELD', 'REMOVE_FIELD', 'SET_ROLE', 'RESTORE_FIELD', 'ADD_HINT_LABEL',
+                           'SET_CARDINALITY')`
         )
         .get() as { n: number }
       return row.n

@@ -488,6 +488,110 @@ describe('campi v2: metadati, elementi ripetuti, correzioni fra motori', () => {
   })
 })
 
+describe('campo che cambia numero di valori fra due run', () => {
+  const one = (value: string | null) => [
+    { name: 'bank.iban', label: 'IBAN', value, confidence: 0.85, cardinality: 'one' as const }
+  ]
+  const many = (values: string[]) => [
+    {
+      name: 'bank.iban',
+      label: 'IBAN',
+      value: null,
+      confidence: 0.85,
+      cardinality: 'many' as const,
+      items: values.map((value, itemIndex) => ({ itemIndex, value, confidence: 0.85 }))
+    }
+  ]
+  const itemsOf = (r: ReturnType<typeof makeRepo>, id: string) =>
+    r.fields
+      .listItems(r.fields.listForDocument(id)[0]!.id)
+      .map((item) => [item.origin, item.value_json, item.corrected_value_json, item.removed])
+
+  it('da uno a più: la correzione va sulla riga che il motore ripropone', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, one('IT60X054'))
+    r.fields.setCorrectedValue(r.fields.listForDocument(id)[0]!.id, 'IT60X0542811101000000123456')
+
+    r.fields.replaceForDocument(id, many(['IT60X054', 'IT02L1234']))
+
+    expect(r.fields.listForDocument(id)[0]).toMatchObject({
+      cardinality: 'many',
+      corrected_value: null
+    })
+    expect(itemsOf(r, id)).toEqual([
+      ['ENGINE', '"IT60X054"', '"IT60X0542811101000000123456"', 0],
+      ['ENGINE', '"IT02L1234"', null, 0]
+    ])
+  })
+
+  it('da uno a più: un valore scritto a mano diventa una riga del revisore', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, one(null))
+    r.fields.setCorrectedValue(r.fields.listForDocument(id)[0]!.id, 'IT60X054')
+
+    r.fields.replaceForDocument(id, many(['IT02L1234']))
+    expect(itemsOf(r, id)).toEqual([
+      ['ENGINE', '"IT02L1234"', null, 0],
+      ['MANUAL', null, '"IT60X054"', 0]
+    ])
+  })
+
+  it('da uno a più: una proposta svuotata resta tolta', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, one('sbagliato'))
+    r.fields.setCorrectedValue(r.fields.listForDocument(id)[0]!.id, '')
+
+    r.fields.replaceForDocument(id, many(['sbagliato', 'IT02L1234']))
+    expect(itemsOf(r, id)).toEqual([
+      ['ENGINE', '"sbagliato"', null, 1],
+      ['ENGINE', '"IT02L1234"', null, 0]
+    ])
+  })
+
+  it('da più a uno: le righe lasciate dal revisore diventano la correzione, nessuna persa', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, many(['IT60X054', 'sbagliato']))
+    const fieldId = r.fields.listForDocument(id)[0]!.id
+    const [, wrong] = r.fields.listItems(fieldId)
+    r.fields.setItemRemoved(wrong!.id, true)
+    r.fields.addItem(fieldId, 'IT02L1234')
+
+    r.fields.replaceForDocument(id, one('IT60X054'))
+
+    expect(r.fields.listForDocument(id)).toMatchObject([
+      { cardinality: 'one', value: 'IT60X054', corrected_value: 'IT60X054; IT02L1234' }
+    ])
+    expect(r.fields.listItems(r.fields.listForDocument(id)[0]!.id)).toEqual([])
+  })
+
+  it('da più a uno: se resta la riga che il motore propone, non c’è niente da correggere', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, many(['IT60X054', 'sbagliato']))
+    const [, wrong] = r.fields.listItems(r.fields.listForDocument(id)[0]!.id)
+    r.fields.setItemRemoved(wrong!.id, true)
+
+    r.fields.replaceForDocument(id, one('IT60X054'), { keepUnmatchedCorrections: true })
+
+    expect(r.fields.listForDocument(id)).toMatchObject([
+      { name: 'bank.iban', cardinality: 'one', corrected_value: null }
+    ])
+  })
+
+  it('da più a uno: righe mai toccate lasciano decidere il motore', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, many(['IT60X054', 'IT02L1234']))
+
+    r.fields.replaceForDocument(id, one('IT60X054'))
+    expect(r.fields.listForDocument(id)[0]?.corrected_value).toBeNull()
+  })
+})
+
 describe('extraction runs dao', () => {
   it('accumula i run dal più recente e riconosce motore e profili già usati', () => {
     const r = makeRepo()

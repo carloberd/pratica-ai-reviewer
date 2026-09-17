@@ -1,5 +1,5 @@
 import type { ProfileEditReason } from './profile-edit'
-import type { FieldState } from './profile-overlay'
+import type { MapValue } from './profile-overlay'
 
 /**
  * La cronologia: tutto quello che è stato fatto, in ordine di tempo.
@@ -19,6 +19,7 @@ export type ProfileActionKind =
   | 'SET_ROLE'
   | 'RESTORE_FIELD'
   | 'ADD_HINT_LABEL'
+  | 'SET_CARDINALITY'
   | 'REVERT'
   | 'RERUN'
   | 'EXPORT'
@@ -31,10 +32,11 @@ export interface ProfileAction {
   documentType: string | null
   fieldId: string | null
   label: string | null
-  before: FieldState | null
-  after: FieldState | null
+  /** Peso o «non utile»; per SET_CARDINALITY, `one` o `many`. */
+  before: MapValue | null
+  after: MapValue | null
   /** La decisione che c'era prima, da rimettere annullando: `null` = seguiva il registry. */
-  previousOverride: FieldState | null
+  previousOverride: MapValue | null
   detail: string
   /** I numeri delle annotazioni quando l'azione è stata fatta. */
   reason: ProfileEditReason | null
@@ -77,6 +79,7 @@ export const ACTION_TITLES: Record<ProfileActionKind, string> = {
   SET_ROLE: 'Peso del campo cambiato',
   RESTORE_FIELD: 'Campo riportato al registry',
   ADD_HINT_LABEL: 'Etichetta insegnata al motore',
+  SET_CARDINALITY: 'Numero di valori cambiato',
   REVERT: 'Azione annullata',
   RERUN: 'Documenti rielaborati',
   EXPORT: 'Mappa esportata'
@@ -88,7 +91,8 @@ const REVERTABLE: ProfileActionKind[] = [
   'REMOVE_FIELD',
   'SET_ROLE',
   'RESTORE_FIELD',
-  'ADD_HINT_LABEL'
+  'ADD_HINT_LABEL',
+  'SET_CARDINALITY'
 ]
 
 /** Le azioni che lasciano un segno sulla mappa, annullamenti esclusi. */
@@ -97,9 +101,20 @@ export function isMapEdit(kind: ProfileActionKind): boolean {
 }
 
 /**
+ * Cosa di un campo cambia un'azione. Il peso (con aggiunta, scarto e ripristino) e la
+ * cardinalità sono due decisioni separate: si annullano ognuna seguendo la propria fila,
+ * e un peso cambiato dopo non blocca l'annullamento di una cardinalità presa prima.
+ */
+export function actionTrack(kind: ProfileActionKind): 'ROLE' | 'CARDINALITY' | 'HINT' | null {
+  if (kind === 'ADD_HINT_LABEL') return 'HINT'
+  if (kind === 'SET_CARDINALITY') return 'CARDINALITY'
+  return isMapEdit(kind) ? 'ROLE' : null
+}
+
+/**
  * Quali azioni si possono ancora annullare.
  *
- * Solo l'ultima azione su un campo: annullarne una più vecchia rimetterebbe uno stato
+ * Solo l'ultima azione su un campo, per ciascuna delle sue decisioni: annullarne una più vecchia rimetterebbe uno stato
  * che nel frattempo qualcuno ha già cambiato, e la cronologia direbbe una cosa mentre la
  * mappa ne dice un'altra. Le etichette insegnate non hanno questo problema — ognuna sta
  * per conto suo — e restano annullabili finché non lo sono state.
@@ -115,7 +130,7 @@ export function revertableActions(actions: ProfileAction[]): Set<string> {
       revertable.add(action.id)
       continue
     }
-    const key = JSON.stringify([action.documentType, action.fieldId])
+    const key = JSON.stringify([action.documentType, action.fieldId, actionTrack(action.kind)])
     if (seen.has(key)) continue
     seen.add(key)
     revertable.add(action.id)
