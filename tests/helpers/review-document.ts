@@ -63,6 +63,7 @@ export function reviewDocument(overrides: Partial<ReviewDocument> = {}): ReviewD
     source: 'Google Drive',
     textSource: 'NATIVE_TEXT',
     cachedPath: null,
+    contentSha256: null,
     warnings: [],
     fields: [],
     evidence: [],

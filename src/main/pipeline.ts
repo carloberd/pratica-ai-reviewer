@@ -1,12 +1,15 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import { averageConfidence, bandOf } from '@shared/confidence'
 import type { RegistryFieldName } from '@shared/fields'
 import { fieldLabel, sortFieldNames, UNIVERSAL_FIELDS } from '@shared/fields'
 import { TYPE_MATCH_REASON_LABELS } from '@shared/review-workspace'
+import { firstPageLines, templateFingerprint } from '@shared/template-fingerprint'
 import type { EngineSelection } from './config'
 import type { EvidenceInput } from './db/dao/evidence'
 import type { ExtractionRunInput } from './db/dao/extraction-runs'
 import type { FieldInput } from './db/dao/fields'
+import type { PageInput } from './db/dao/pages'
 import type { Repository } from './db/repository'
 import { prefillFields } from './extract/heuristics'
 import type { OcrService } from './extract/ocr'
@@ -93,6 +96,9 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
       mime: input.mime,
       ocr: deps.ocr
     })
+    const contentSha256 = createHash('sha256')
+      .update(await readFile(input.cachedPath))
+      .digest('hex')
 
     const classification = classifyWithSelectedEngine({
       engine: engines.classifier,
@@ -125,6 +131,12 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
     const band = bandOf(prepared.confidence)
 
     repo.transaction(() => {
+      repo.documents.setContentIdentity(input.documentId, {
+        contentSha256,
+        templateFingerprint: firstPageFingerprint(extracted)
+      })
+      // Le righe su cui si ritroveranno le selezioni del revisore: le stesse del motore.
+      repo.pages.replaceForDocument(input.documentId, pagesOf(extracted))
       repo.documents.setExtraction(input.documentId, {
         documentType,
         typeConfidence,
@@ -148,6 +160,8 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
         correctionAliases,
         keepUnmatchedCorrections: engines.extraction === 'v2'
       })
+      // Una correzione che il nuovo run ha assorbito si porta via la sua selezione.
+      repo.evidence.pruneReviewer(input.documentId)
       repo.search.replaceForDocument(
         input.documentId,
         input.filename,
@@ -188,6 +202,32 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
       ocrPages: extracted.ocrPages
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Il testo come l'ha letto l'elaborazione
+// ---------------------------------------------------------------------------
+
+/** Le pagine da salvare, ognuna con la sorgente del suo testo. */
+export function pagesOf(extracted: ExtractedText): PageInput[] {
+  const ocr = new Set(extracted.ocrPages)
+  return extracted.pages.map((page) => ({
+    page: page.page,
+    textSource: extracted.source === 'DOCX' ? 'DOCX' : ocr.has(page.page) ? 'OCR' : 'NATIVE_TEXT',
+    lines: page.lines
+  }))
+}
+
+/**
+ * L'impronta del layout della prima pagina, dalle stesse righe che l'export legge quando
+ * la calcola da sé. Una prima pagina letta con OCR ha righe diverse da quelle del text
+ * layer che l'export rilegge senza OCR: resta `null`, e ci pensa l'export come per i
+ * documenti elaborati prima.
+ */
+export function firstPageFingerprint(extracted: ExtractedText): string | null {
+  const first = extracted.pages[0]
+  if (!first || extracted.ocrPages.includes(first.page)) return null
+  return templateFingerprint(firstPageLines(first))
 }
 
 // ---------------------------------------------------------------------------

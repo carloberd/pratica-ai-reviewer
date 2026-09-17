@@ -144,11 +144,20 @@ describe('export del dataset annotato', () => {
       documentType: 'payments_treasury.richiesta_pagamento',
       process: processDocument
     })
+    // La data la seleziona sul documento, come farebbe dal visualizzatore: il valore porta
+    // con sé pagina, riquadro e posizione fra le righe, e la rielaborazione non li perde.
     updateFieldValue(repo, {
       documentId: memo.id,
       fieldId: field(memo.id, 'document.issue_date').id,
-      correctedValue: '2026-09-12'
+      correctedValue: '12/09/2026',
+      pick: {
+        method: 'TEXT_SELECTION',
+        page: 1,
+        text: '12/09/2026',
+        bbox: { x: 87.6, y: 131, w: 52.7, h: 11 }
+      }
     })
+    await memo.rerun()
     submitReview(repo, { documentId: memo.id, action: 'SAVE' })
 
     // 3. Contratto scartato: entra col suo stato, senza valori confermati.
@@ -189,7 +198,8 @@ describe('export del dataset annotato', () => {
         item: null,
         kind: 'CHANGED',
         before: '27/2026',
-        after: '27/2026/B'
+        after: '27/2026/B',
+        pick: null
       },
       {
         field: 'issuer.tax_id',
@@ -197,7 +207,8 @@ describe('export del dataset annotato', () => {
         item: null,
         kind: 'FILLED',
         before: null,
-        after: '09876543210'
+        after: '09876543210',
+        pick: null
       },
       {
         field: 'money.currency',
@@ -205,7 +216,8 @@ describe('export del dataset annotato', () => {
         item: null,
         kind: 'CLEARED',
         before: 'EUR',
-        after: null
+        after: null,
+        pick: null
       },
       {
         field: 'line_items',
@@ -213,7 +225,8 @@ describe('export del dataset annotato', () => {
         item: 1,
         kind: 'CHANGED',
         before: 'Smaltimento macerie - EUR 850,00',
-        after: 'Smaltimento macerie in discarica - EUR 850,00'
+        after: 'Smaltimento macerie in discarica - EUR 850,00',
+        pick: null
       },
       {
         field: 'line_items',
@@ -221,7 +234,8 @@ describe('export del dataset annotato', () => {
         item: 2,
         kind: 'REMOVED',
         before: 'Tinteggiatura pareti - EUR 1.450,00',
-        after: null
+        after: null,
+        pick: null
       },
       {
         field: 'line_items',
@@ -229,7 +243,8 @@ describe('export del dataset annotato', () => {
         item: 3,
         kind: 'ADDED',
         before: null,
-        after: 'Tinteggiatura pareti e soffitti - EUR 1.450,00'
+        after: 'Tinteggiatura pareti e soffitti - EUR 1.450,00',
+        pick: null
       }
     ])
     expect(invoiceDoc.fields.find((f: { name: string }) => f.name === 'line_items').value).toEqual([
@@ -243,5 +258,22 @@ describe('export del dataset annotato', () => {
       proposed: null,
       corrected: true
     })
+    // «Data: 12/09/2026» è la quarta riga; il valore comincia dopo «Data: ».
+    const pick = {
+      method: 'TEXT_SELECTION',
+      page: 1,
+      text: '12/09/2026',
+      bbox: { x: 87.6, y: 131, w: 52.7, h: 11 },
+      location: { lineStart: 3, lineEnd: 3, charStart: 99, charEnd: 109 }
+    }
+    expect(
+      memoDoc.fields.find((f: { name: string }) => f.name === 'document.issue_date')
+    ).toMatchObject({ value: '12/09/2026', origin: 'REVIEWER', pick })
+    expect(memoDoc.corrections).toEqual([
+      expect.objectContaining({ field: 'document.issue_date', kind: 'FILLED', pick })
+    ])
+    expect(memoDoc.contentSha256).toMatch(/^[0-9a-f]{64}$/)
+    // Un valore scritto a mano non ha una selezione dietro.
+    expect(invoiceDoc.corrections.every((c: { pick: unknown }) => c.pick === null)).toBe(true)
   })
 })

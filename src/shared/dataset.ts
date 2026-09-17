@@ -11,6 +11,8 @@ import type {
   EvidenceItem,
   ExtractedField,
   FieldItem,
+  PickLocation,
+  PickMethod,
   ReviewDocument,
   TextSource
 } from './types'
@@ -26,7 +28,7 @@ import type {
  */
 
 export const DATASET_FORMAT = 'praticaai-reviewer/annotated-dataset'
-export const DATASET_FORMAT_VERSION = '1.0.0'
+export const DATASET_FORMAT_VERSION = '1.1.0'
 
 export type EngineVersion = 'v1' | 'v2'
 
@@ -53,6 +55,20 @@ export interface DatasetEvidence {
   bbox: BoundingBox | null
 }
 
+/**
+ * Il punto del documento da cui il revisore ha preso un valore. `location` lo ritrova fra
+ * le righe dell'elaborazione (righe unite da `\n`), `null` quando non si ritrova con
+ * certezza.
+ */
+export interface DatasetPick {
+  method: PickMethod
+  page: number
+  /** Verbatim: quello che il revisore ha selezionato, o che l'OCR ha letto nell'area. */
+  text: string
+  bbox: BoundingBox | null
+  location: PickLocation | null
+}
+
 /** `ENGINE` = proposto dal motore e confermato; `REVIEWER` = scritto dal revisore. */
 export type DatasetValueOrigin = 'ENGINE' | 'REVIEWER'
 
@@ -65,12 +81,15 @@ export interface DatasetScalarField {
   origin: DatasetValueOrigin | null
   /** Riga da cui il motore aveva letto la proposta, anche se il revisore l'ha corretta. */
   evidence: DatasetEvidence | null
+  /** Da dove il revisore ha preso il valore; `null` se l'ha scritto a mano o non l'ha toccato. */
+  pick: DatasetPick | null
 }
 
 export interface DatasetListItem {
   value: string
   origin: DatasetValueOrigin
   evidence: DatasetEvidence | null
+  pick: DatasetPick | null
 }
 
 export interface DatasetListField {
@@ -96,6 +115,8 @@ export interface DatasetCorrection {
   before: string | null
   /** Valore messo dal revisore. */
   after: string | null
+  /** Da dove il revisore ha preso `after`, se l'ha selezionato sul documento. */
+  pick: DatasetPick | null
 }
 
 export interface DatasetDocumentType {
@@ -113,6 +134,8 @@ export interface DatasetDocumentType {
 export interface DatasetDocument {
   /** Chiave stabile: `https://drive.google.com/file/d/<driveFileId>/view`. */
   driveFileId: string
+  /** Sha-256 del file elaborato: la chiave dei byte, che non dipende da Drive. */
+  contentSha256: string | null
   filename: string
   mime: string
   status: 'REVIEWED' | 'DISCARDED'
@@ -152,6 +175,21 @@ function evidenceOf(
   return { page: evidence.page, text: evidence.text, bbox: evidence.bbox ?? null }
 }
 
+function pickOf(
+  byId: Map<string, EvidenceItem>,
+  evidenceId: string | undefined
+): DatasetPick | null {
+  const evidence = evidenceId ? byId.get(evidenceId) : undefined
+  if (evidence?.origin !== 'REVIEWER' || !evidence.method) return null
+  return {
+    method: evidence.method,
+    page: evidence.page,
+    text: evidence.text,
+    bbox: evidence.bbox ?? null,
+    location: evidence.location ?? null
+  }
+}
+
 /** Chi ha messo il valore di una riga. La usa anche l'export XLSX, con la stessa semantica. */
 export function itemOrigin(item: FieldItem): DatasetValueOrigin {
   if (item.origin === 'MANUAL') return 'REVIEWER'
@@ -181,7 +219,8 @@ function toDatasetField(field: ExtractedField, byId: Map<string, EvidenceItem>):
     const items = confirmedItems(field.items).map((item) => ({
       value: currentItemValue(item)!,
       origin: itemOrigin(item),
-      evidence: evidenceOf(byId, item.evidenceId)
+      evidence: evidenceOf(byId, item.evidenceId),
+      pick: pickOf(byId, item.correctedEvidenceId)
     }))
     return { ...common, cardinality: 'many', value: items.map((item) => item.value), items }
   }
@@ -191,7 +230,8 @@ function toDatasetField(field: ExtractedField, byId: Map<string, EvidenceItem>):
     cardinality: 'one',
     value: currentFieldValue(field),
     origin: fieldOrigin(field),
-    evidence: evidenceOf(byId, field.evidenceId)
+    evidence: evidenceOf(byId, field.evidenceId),
+    pick: pickOf(byId, field.correctedEvidenceId)
   }
 }
 
@@ -219,9 +259,20 @@ export function toDatasetDocument(source: DatasetSource): DatasetDocument | null
 
   const reviewed = document.status === 'REVIEWED'
   const byId = new Map(document.evidence.map((item) => [item.id, item]))
+  const fieldsById = new Map(document.fields.map((field) => [field.id, field]))
+  /** La selezione dietro una correzione: quella della riga, o del campo singolo. */
+  const correctionPick = (correction: { fieldId: string; itemId: string | null }) => {
+    const field = fieldsById.get(correction.fieldId)
+    const source =
+      correction.itemId === null
+        ? field
+        : field?.items.find((item) => item.id === correction.itemId)
+    return pickOf(byId, source?.correctedEvidenceId)
+  }
 
   return {
     driveFileId: document.driveFileId,
+    contentSha256: document.contentSha256,
     filename: document.filename,
     mime: document.mime,
     status: document.status,
@@ -237,7 +288,8 @@ export function toDatasetDocument(source: DatasetSource): DatasetDocument | null
           item: correction.itemIndex,
           kind: correction.kind,
           before: correction.before,
-          after: correction.after
+          after: correction.after,
+          pick: correction.after === null ? null : correctionPick(correction)
         }))
       : []
   }

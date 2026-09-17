@@ -1,10 +1,11 @@
 import { type EvidenceTarget, matchSpans, unionRect } from '@shared/evidence-locate'
-import type { BoundingBox, EvidenceItem } from '@shared/types'
+import type { BoundingBox, DocumentPick, EvidenceItem } from '@shared/types'
 import { TextLayer } from 'pdfjs-dist'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cx } from '../lib/cx'
 import { api, errorMessage } from '../lib/ipc'
 import { loadPdf, type PdfDocument } from '../lib/pdf'
+import { selectionBox } from '../lib/selection'
 import styles from './document-review.module.css'
 
 /**
@@ -24,7 +25,8 @@ interface Props {
   focus: EvidenceFocus | null
   /** Etichetta del campo che sta aspettando un valore, `null` se nessuno. */
   captureTarget: string | null
-  onCapture: (text: string) => void
+  /** Il testo preso dal documento e, quando si sa, il punto da cui viene. */
+  onCapture: (text: string, pick?: DocumentPick) => void
 }
 
 interface RenderedPage {
@@ -189,14 +191,20 @@ export default function PdfViewer({
     []
   )
 
-  /** Testo selezionato con il mouse: va nel campo attivo così com'è nel documento. */
+  /**
+   * Testo selezionato con il mouse: va nel campo attivo così com'è nel documento, con la
+   * pagina e il riquadro da cui viene. Il riquadro si legge prima di togliere la selezione,
+   * che dopo non ha più rettangoli.
+   */
   function captureSelection() {
     if (mode !== 'text' || !captureTarget) return
     const selection = window.getSelection()
     const text = selection?.toString() ?? ''
     if (!text.trim()) return
+    const pick =
+      selection && selection.rangeCount > 0 ? pickOf(selection.getRangeAt(0), text) : null
     selection?.removeAllRanges()
-    onCapture(text)
+    onCapture(text, pick ?? undefined)
   }
 
   /** Ritaglia l'area evidenziata e la manda all'OCR del main. */
@@ -234,7 +242,7 @@ export default function PdfViewer({
         setCaptureError('Nessun testo riconosciuto nell’area evidenziata.')
         return
       }
-      onCapture(text)
+      onCapture(text, { method: 'AREA_OCR', page: pageNumber, text, bbox: box })
     } catch (caught) {
       setCaptureError(errorMessage(caught))
     } finally {
@@ -306,8 +314,14 @@ export default function PdfViewer({
                 .map((item) => (
                   <div
                     key={item.id}
-                    className={cx(styles.pdfHighlight, styles.pdfHighlightEvidence)}
+                    className={cx(
+                      styles.pdfHighlight,
+                      item.origin === 'REVIEWER'
+                        ? styles.pdfHighlightPicked
+                        : styles.pdfHighlightEvidence
+                    )}
                     title={item.label}
+                    data-evidence-origin={item.origin}
                     style={boxStyle(item.bbox!)}
                   />
                 ))}
@@ -367,6 +381,43 @@ export default function PdfViewer({
       </div>
     </>
   )
+}
+
+/**
+ * Pagina e riquadro di una selezione nel text layer. `null` se la selezione non comincia
+ * dentro una pagina: il testo si prende lo stesso, senza provenienza.
+ */
+function pickOf(range: Range, text: string): DocumentPick | null {
+  const start =
+    range.startContainer instanceof Element
+      ? range.startContainer
+      : range.startContainer.parentElement
+  const pageElement = start?.closest<HTMLElement>('[data-page]')
+  const page = Number(pageElement?.dataset.page)
+  if (!pageElement || !Number.isInteger(page) || page < 1) return null
+  const bbox = selectionBox(textRects(range), pageElement.getBoundingClientRect(), SCALE)
+  return { method: 'TEXT_SELECTION', page, text, ...(bbox ? { bbox } : {}) }
+}
+
+/**
+ * I rettangoli del solo testo selezionato. `Range.getClientRects()` darebbe anche il
+ * riquadro di ogni elemento compreso per intero nella selezione, e il text layer di pdf.js
+ * ne ha uno grande quanto la pagina (`endOfContent`): basterebbe a coprire tutte le righe.
+ */
+function textRects(range: Range): DOMRect[] {
+  const root = range.commonAncestorContainer
+  if (root.nodeType === Node.TEXT_NODE) return Array.from(range.getClientRects())
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  const rects: DOMRect[] = []
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!range.intersectsNode(node)) continue
+    const part = document.createRange()
+    part.selectNodeContents(node)
+    if (node === range.startContainer) part.setStart(node, range.startOffset)
+    if (node === range.endContainer) part.setEnd(node, range.endOffset)
+    rects.push(...Array.from(part.getClientRects()))
+  }
+  return rects
 }
 
 /** Il canvas è prodotto da pdf.js, quindi va innestato invece che ridisegnato da React. */

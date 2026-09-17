@@ -4,8 +4,11 @@ import type {
   BoundingBox,
   ConfidenceBand,
   EvidenceItem,
+  EvidenceOrigin,
   ExtractedField,
   FieldItem,
+  PickLocation,
+  PickMethod,
   QueueStatus,
   SemanticType,
   TextSource,
@@ -34,6 +37,8 @@ export interface DocumentRow {
   template_fingerprint: string | null
   /** Nota facoltativa lasciata dal revisore chiudendo il documento (migrazione 0007). */
   review_note: string | null
+  /** Sha-256 del file elaborato (migrazione 0010); NULL = elaborato prima. */
+  content_sha256: string | null
 }
 
 export interface FieldRow {
@@ -52,6 +57,8 @@ export interface FieldRow {
   review_status: string | null
   validation_errors_json: string | null
   role: string | null
+  /** Selezione del revisore da cui viene la correzione (migrazione 0010). */
+  corrected_evidence_id: string | null
 }
 
 /** Un elemento di un campo `many` (righe fattura, rate, ...). I valori sono JSON. */
@@ -69,6 +76,8 @@ export interface FieldItemRow {
   origin: string
   /** 1 = riga proposta tolta dal revisore. */
   removed: number
+  /** Selezione del revisore da cui viene la correzione (migrazione 0010). */
+  corrected_evidence_id: string | null
 }
 
 export interface ExtractionRunRow {
@@ -92,6 +101,14 @@ export interface EvidenceRow {
   text: string
   bbox_json: string | null
   confidence: number
+  /** `ENGINE` | `REVIEWER` (migrazione 0010). */
+  origin: string
+  /** `TEXT_SELECTION` | `AREA_OCR`, solo per le evidenze del revisore. */
+  method: string | null
+  line_start: number | null
+  line_end: number | null
+  char_start: number | null
+  char_end: number | null
 }
 
 export interface EventRow {
@@ -132,15 +149,41 @@ export function toTextSource(value: string | null): TextSource | null {
   return value === 'NATIVE_TEXT' || value === 'OCR' || value === 'DOCX' ? value : null
 }
 
+export function toEvidenceOrigin(value: string): EvidenceOrigin {
+  return value === 'REVIEWER' ? 'REVIEWER' : 'ENGINE'
+}
+
+function toPickMethod(value: string | null): PickMethod | undefined {
+  return value === 'TEXT_SELECTION' || value === 'AREA_OCR' ? value : undefined
+}
+
+/** La posizione salvata: le righe ci sono sempre quando c'è una posizione, gli offset no. */
+export function toPickLocation(
+  row: Pick<EvidenceRow, 'line_start' | 'line_end' | 'char_start' | 'char_end'>
+): PickLocation | undefined {
+  if (row.line_start === null || row.line_end === null) return undefined
+  return {
+    lineStart: row.line_start,
+    lineEnd: row.line_end,
+    charStart: row.char_start,
+    charEnd: row.char_end
+  }
+}
+
 export function toEvidenceItem(row: EvidenceRow, label: string): EvidenceItem {
   const bbox = parseBbox(row.bbox_json)
+  const method = toPickMethod(row.method)
+  const location = toPickLocation(row)
   return {
     id: row.id,
     label,
     page: row.page,
     text: row.text,
     confidence: row.confidence,
-    ...(bbox ? { bbox } : {})
+    ...(bbox ? { bbox } : {}),
+    origin: toEvidenceOrigin(row.origin),
+    ...(method ? { method } : {}),
+    ...(location ? { location } : {})
   }
 }
 
@@ -186,6 +229,7 @@ export function toFieldItem(row: FieldItemRow): FieldItem {
     ...(corrected !== null ? { correctedValue: corrected } : {}),
     confidence: row.confidence,
     ...(row.evidence_id ? { evidenceId: row.evidence_id } : {}),
+    ...(row.corrected_evidence_id ? { correctedEvidenceId: row.corrected_evidence_id } : {}),
     origin: row.origin === 'MANUAL' ? 'MANUAL' : 'ENGINE',
     removed: row.removed === 1,
     ...(row.updated_at ? { updatedAt: row.updated_at } : {})
@@ -229,6 +273,7 @@ export function toExtractedField(
     ...(row.corrected_value !== null ? { correctedValue: row.corrected_value } : {}),
     confidence: row.confidence,
     ...(row.evidence_id ? { evidenceId: row.evidence_id } : {}),
+    ...(row.corrected_evidence_id ? { correctedEvidenceId: row.corrected_evidence_id } : {}),
     required,
     semanticType: semanticTypeOf(row),
     ...(row.updated_at ? { updatedAt: row.updated_at } : {}),

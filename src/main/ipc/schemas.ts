@@ -29,23 +29,40 @@ export const setTypeSchema = z.object({
   documentType: documentTypeSlugSchema.nullable()
 })
 
+/** Coordinate di pagina: non negative, come le produce il visualizzatore. */
+const coordinate = z.number().min(0)
+
+/**
+ * Il punto del documento da cui il revisore ha preso un valore. Il testo ha un tetto più
+ * largo del valore perché è quello selezionato prima di ripiegarne gli spazi.
+ */
+export const documentPickSchema = z.object({
+  method: z.enum(['TEXT_SELECTION', 'AREA_OCR']),
+  page: z.number().int().min(1),
+  text: z.string().min(1).max(4000),
+  bbox: z.object({ x: coordinate, y: coordinate, w: coordinate, h: coordinate }).optional()
+})
+
 export const updateFieldSchema = z.object({
   documentId: z.string().min(1),
   fieldId: z.string().min(1),
-  correctedValue: z.string().max(2000).nullable()
+  correctedValue: z.string().max(2000).nullable(),
+  pick: documentPickSchema.optional()
 })
 
 /** Righe dei campi ripetuti: stesso tetto dei campi singoli. */
 export const addFieldItemSchema = z.object({
   documentId: z.string().min(1),
   fieldId: z.string().min(1),
-  value: z.string().min(1).max(2000)
+  value: z.string().min(1).max(2000),
+  pick: documentPickSchema.optional()
 })
 
 export const updateFieldItemSchema = z.object({
   documentId: z.string().min(1),
   itemId: z.string().min(1),
-  correctedValue: z.string().max(2000).nullable()
+  correctedValue: z.string().max(2000).nullable(),
+  pick: documentPickSchema.optional()
 })
 
 export const removeFieldItemSchema = z.object({

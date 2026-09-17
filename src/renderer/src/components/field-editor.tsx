@@ -8,7 +8,7 @@ import EvidenceLink from './evidence-link'
 
 interface Props {
   field: ExtractedField
-  /** L'evidenza del valore proposto, se il motore ne ha trovata una. */
+  /** Da dove viene il valore: la selezione del revisore, o la lettura del motore. */
   evidence: EvidenceItem | undefined
   disabled: boolean
   /** Il campo è quello che riceve il testo selezionato sul documento. */

@@ -592,6 +592,236 @@ describe('campo che cambia numero di valori fra due run', () => {
   })
 })
 
+describe('selezioni del revisore fra un run e l’altro', () => {
+  const pick = (r: ReturnType<typeof makeRepo>, id: string, text: string) =>
+    r.evidence.addReviewer(id, {
+      page: 1,
+      text,
+      bbox: { x: 56, y: 91, w: 40, h: 11 },
+      method: 'TEXT_SELECTION',
+      location: { lineStart: 1, lineEnd: 1, charStart: 35, charEnd: 42 }
+    })
+
+  it('la ri-estrazione sostituisce le evidenze del motore e lascia quelle del revisore', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.evidence.replaceForDocument(id, [{ page: 1, text: 'FATTURA n. 27/2026', confidence: 0.85 }])
+    const picked = pick(r, id, '27/2026/B')
+
+    r.evidence.replaceForDocument(id, [{ page: 1, text: 'FATTURA n. 27/2026', confidence: 0.85 }])
+
+    const rows = r.evidence.listForDocument(id)
+    expect(rows.map((row) => row.origin).sort()).toEqual(['ENGINE', 'REVIEWER'])
+    expect(r.evidence.get(picked)).toMatchObject({
+      origin: 'REVIEWER',
+      method: 'TEXT_SELECTION',
+      confidence: 1,
+      line_start: 1,
+      char_start: 35,
+      char_end: 42
+    })
+  })
+
+  it('la selezione segue la correzione del campo singolo, e arriva alla revisione', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, [
+      { name: 'document.number', label: 'Numero documento', value: '27/2026', confidence: 0.85 }
+    ])
+    const picked = pick(r, id, '27/2026/B')
+    r.fields.setCorrectedValue(r.fields.listForDocument(id)[0]!.id, '27/2026/B', picked)
+
+    r.fields.replaceForDocument(id, [
+      { name: 'document.number', label: 'Numero documento', value: '27/2026', confidence: 0.85 }
+    ])
+    r.evidence.pruneReviewer(id)
+
+    const document = r.getReviewDocument(id)!
+    expect(document.fields[0]).toMatchObject({
+      correctedValue: '27/2026/B',
+      correctedEvidenceId: picked
+    })
+    expect(document.evidence).toEqual([
+      expect.objectContaining({
+        id: picked,
+        origin: 'REVIEWER',
+        method: 'TEXT_SELECTION',
+        label: 'Numero documento · selezionato dal revisore',
+        location: { lineStart: 1, lineEnd: 1, charStart: 35, charEnd: 42 }
+      })
+    ])
+  })
+
+  it('una correzione riscritta senza selezione la lascia cadere, e la pulizia la toglie', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, [
+      { name: 'document.number', label: 'Numero documento', value: '27/2026', confidence: 0.85 }
+    ])
+    const fieldId = r.fields.listForDocument(id)[0]!.id
+    const picked = pick(r, id, '27/2026/B')
+    r.fields.setCorrectedValue(fieldId, '27/2026/B', picked)
+
+    r.fields.setCorrectedValue(fieldId, '27/2026/C')
+    expect(r.fields.get(fieldId)?.corrected_evidence_id).toBeNull()
+    expect(r.evidence.get(picked)).toBeDefined()
+
+    r.evidence.pruneReviewer(id)
+    expect(r.evidence.get(picked)).toBeUndefined()
+  })
+
+  it('le selezioni delle righe tornano sulla stessa riga, proposta o aggiunta a mano', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    const lines = (values: string[]) => [
+      {
+        name: 'line_items',
+        label: 'Righe documento',
+        value: null,
+        confidence: 0.85,
+        cardinality: 'many' as const,
+        items: values.map((value, itemIndex) => ({ itemIndex, value, confidence: 0.85 }))
+      }
+    ]
+    r.fields.replaceForDocument(id, lines(['Fornitura', 'Posa']))
+    const fieldId = r.fields.listForDocument(id)[0]!.id
+    const [, second] = r.fields.listItems(fieldId)
+    const onEngine = pick(r, id, 'Posa in opera')
+    const onManual = pick(r, id, 'Trasporto')
+    r.fields.setItemCorrectedValue(second!.id, 'Posa in opera', onEngine)
+    r.fields.addItem(fieldId, 'Trasporto', onManual)
+
+    r.fields.replaceForDocument(id, lines(['Fornitura', 'Posa', 'Scarico']))
+    r.evidence.pruneReviewer(id)
+
+    const items = r.fields.listItems(r.fields.listForDocument(id)[0]!.id)
+    expect(items.map((item) => [item.origin, item.corrected_evidence_id])).toEqual([
+      ['ENGINE', null],
+      ['ENGINE', onEngine],
+      ['ENGINE', null],
+      ['MANUAL', onManual]
+    ])
+    expect(r.evidence.listForDocument(id)).toHaveLength(2)
+  })
+
+  it('da uno a più la selezione passa alla riga; da più a uno resta solo se il valore è uno', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    const one = [
+      {
+        name: 'bank.iban',
+        label: 'IBAN',
+        value: null,
+        confidence: 0.85,
+        cardinality: 'one' as const
+      }
+    ]
+    const many = (values: string[]) => [
+      {
+        name: 'bank.iban',
+        label: 'IBAN',
+        value: null,
+        confidence: 0.85,
+        cardinality: 'many' as const,
+        items: values.map((value, itemIndex) => ({ itemIndex, value, confidence: 0.85 }))
+      }
+    ]
+    r.fields.replaceForDocument(id, one)
+    const picked = pick(r, id, 'IT60X054')
+    r.fields.setCorrectedValue(r.fields.listForDocument(id)[0]!.id, 'IT60X054', picked)
+
+    r.fields.replaceForDocument(id, many(['IT02L1234']))
+    const field = () => r.fields.listForDocument(id)[0]!
+    expect(r.fields.listItems(field().id).map((item) => item.corrected_evidence_id)).toEqual([
+      null,
+      picked
+    ])
+
+    // Tornando a un valore solo restano due righe: unite, non vengono da un punto solo.
+    r.fields.replaceForDocument(id, one)
+    expect(field()).toMatchObject({
+      corrected_value: 'IT02L1234; IT60X054',
+      corrected_evidence_id: null
+    })
+    r.evidence.pruneReviewer(id)
+    expect(r.evidence.get(picked)).toBeUndefined()
+  })
+
+  it('da più a uno con una riga sola la selezione resta sul campo', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, [
+      {
+        name: 'bank.iban',
+        label: 'IBAN',
+        value: null,
+        confidence: 0.85,
+        cardinality: 'many',
+        items: []
+      }
+    ])
+    const picked = pick(r, id, 'IT60X054')
+    r.fields.addItem(r.fields.listForDocument(id)[0]!.id, 'IT60X054', picked)
+
+    r.fields.replaceForDocument(id, [
+      { name: 'bank.iban', label: 'IBAN', value: null, confidence: 0.85, cardinality: 'one' }
+    ])
+    expect(r.fields.listForDocument(id)[0]).toMatchObject({
+      corrected_value: 'IT60X054',
+      corrected_evidence_id: picked
+    })
+  })
+
+  it('una correzione conservata su un campo che il run non produce tiene la sua selezione', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, [
+      { name: 'procurement.cig', label: 'CIG', value: null, confidence: 0 }
+    ])
+    const picked = pick(r, id, 'Z123456789')
+    r.fields.setCorrectedValue(r.fields.listForDocument(id)[0]!.id, 'Z123456789', picked)
+
+    r.fields.replaceForDocument(id, [], { keepUnmatchedCorrections: true })
+    expect(r.fields.listForDocument(id)[0]).toMatchObject({
+      name: 'procurement.cig',
+      corrected_evidence_id: picked
+    })
+  })
+})
+
+describe('pagine dao', () => {
+  it('conserva le righe con e senza coordinate, e le sostituisce a ogni elaborazione', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.pages.replaceForDocument(id, [
+      {
+        page: 1,
+        textSource: 'NATIVE_TEXT',
+        lines: [{ text: 'FATTURA n. 27/2026', bbox: { x: 56, y: 91, w: 181.6, h: 11 } }]
+      },
+      { page: 2, textSource: 'OCR', lines: [{ text: 'Totale EUR 6.710,00' }] }
+    ])
+    expect(r.pages.lines(id, 1)).toEqual([
+      { text: 'FATTURA n. 27/2026', bbox: { x: 56, y: 91, w: 181.6, h: 11 } }
+    ])
+    expect(r.pages.lines(id, 2)).toEqual([{ text: 'Totale EUR 6.710,00' }])
+
+    r.pages.replaceForDocument(id, [{ page: 1, textSource: 'NATIVE_TEXT', lines: [] }])
+    expect(r.pages.lines(id, 1)).toEqual([])
+    expect(r.pages.lines(id, 2)).toEqual([])
+  })
+
+  it('le righe se ne vanno col documento', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.pages.replaceForDocument(id, [
+      { page: 1, textSource: 'NATIVE_TEXT', lines: [{ text: 'riga' }] }
+    ])
+    r.documents.delete(id)
+    expect(r.pages.lines(id, 1)).toEqual([])
+  })
+})
+
 describe('extraction runs dao', () => {
   it('accumula i run dal più recente e riconosce motore e profili già usati', () => {
     const r = makeRepo()
