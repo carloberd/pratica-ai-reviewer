@@ -170,6 +170,14 @@ export function anchorRuleKey(input: {
   ].join('|')
 }
 
+/**
+ * La chiave della memoria di un modulo: quel template, finora, è stato di quel tipo. Una
+ * regola per coppia, così due tipi sullo stesso modulo sono due regole che si smentiscono.
+ */
+export function templateTypeRuleKey(documentType: string, templateFingerprint: string): string {
+  return ['TEMPLATE_TYPE', 'TEMPLATE', documentType, templateFingerprint].join('|')
+}
+
 /** Quante revisioni sostengono la regola. */
 export function ruleSupport(rule: Pick<LearningRule, 'positiveCount'>): number {
   return rule.positiveCount
@@ -204,6 +212,11 @@ export interface LearningPolicy {
   minEvidenceForPrecision: number
   /** …o dopo tante smentite di fila, anche se la storia era buona. */
   suspendAfterNegatives: number
+  /**
+   * La memoria di un modulo vale dopo tante revisioni concordi. Più prudente di
+   * un'etichetta: un tipo sbagliato cambia tutti i campi che si cercano.
+   */
+  minTemplateTypeSupport: number
 }
 
 export const DEFAULT_LEARNING_POLICY: LearningPolicy = {
@@ -213,7 +226,8 @@ export const DEFAULT_LEARNING_POLICY: LearningPolicy = {
   minClassPrecision: 0.9,
   suspendBelowPrecision: 0.7,
   minEvidenceForPrecision: 5,
-  suspendAfterNegatives: 2
+  suspendAfterNegatives: 2,
+  minTemplateTypeSupport: 3
 }
 
 /**
@@ -223,13 +237,27 @@ export const DEFAULT_LEARNING_POLICY: LearningPolicy = {
  * smesso di valere per una ragione, e tornare a fidarsene è una decisione di una persona:
  * altrimenti una sospensione a mano durerebbe fino alla prossima conferma.
  *
+ * La memoria di un modulo (`TEMPLATE_TYPE`) è più severa: nessun conflitto, mai. Se lo stesso
+ * modulo è stato chiuso con due tipi diversi, il modulo non basta a dire il tipo.
+ *
  * `recent` sono gli effetti delle prove dalla più recente.
  */
 export function nextRuleStatus(
-  rule: Pick<LearningRule, 'status' | 'scope' | 'positiveCount' | 'negativeCount'>,
+  rule: Pick<LearningRule, 'status' | 'scope' | 'positiveCount' | 'negativeCount'> & {
+    kind?: LearningRuleKind
+  },
   recent: LearningEffect[],
   policy: LearningPolicy = DEFAULT_LEARNING_POLICY
 ): LearningRuleStatus {
+  if (rule.kind === 'TEMPLATE_TYPE') {
+    if (rule.status === 'CANDIDATE') {
+      return ruleSupport(rule) >= policy.minTemplateTypeSupport && rule.negativeCount === 0
+        ? 'ACTIVE'
+        : 'CANDIDATE'
+    }
+    if (rule.status === 'ACTIVE') return rule.negativeCount > 0 ? 'SUSPENDED' : 'ACTIVE'
+    return rule.status
+  }
   const precision = rulePrecision(rule)
   if (rule.status === 'CANDIDATE') {
     const template = rule.scope === 'TEMPLATE'

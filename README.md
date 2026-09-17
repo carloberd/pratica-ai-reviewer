@@ -663,8 +663,8 @@ Il reviewer si prepara a imparare dalle revisioni: quale etichetta annuncia un c
 tipo ha un modulo che ricorre. Il piano, la compatibilità con pratica-ai e le decisioni
 stanno in [`docs/local-learning-analisi.md`](docs/local-learning-analisi.md). Il learner
 registra le revisioni salvate nel suo deposito (migrazioni `0011` e `0012`,
-`src/main/db/dao/learning.ts`) e ne ricava etichette che l'estrazione usa sui documenti
-successivi. La classificazione non impara ancora.
+`src/main/db/dao/learning.ts`) e ne ricava due cose che valgono sui documenti successivi:
+le etichette con cui un modulo annuncia i suoi campi, e il tipo di un modulo che ritorna.
 
 **Tre modalità**, salvate nel database, ogni cambio in cronologia:
 
@@ -724,6 +724,18 @@ tipo; i validatori restano l'ultima parola. L'evidenza del valore dice quale reg
 trovata (`evidence.rule_id`), e il run registra in `metrics_json.learning` modalità, regole
 disponibili e regole usate. Quando una regola si attiva o si sospende, i documenti in coda
 del suo tipo si rielaborano in sottofondo, come dopo una correzione della mappa.
+
+**Memoria dei moduli** (`src/main/learning-templates.ts`). Ogni revisione salvata con un
+tipo conta per il suo modulo, cioè per l'impronta del layout: a favore di quel tipo, contro
+ogni altro tipo con cui lo stesso modulo era stato chiuso. Tre revisioni concordi e nessun
+conflitto attivano la memoria; un solo conflitto la sospende. È più prudente di
+un'etichetta perché un tipo sbagliato cambia tutti i campi che si cercano. Nel classificatore
+v2 la memoria è un segnale a sé («già revisionato con questo tipo») che vale esattamente la
+soglia di assegnazione: da sola basta a proporre il tipo, ma non passa sopra un hard negative,
+non vince un margine troppo stretto e resta fuori dal bonus di corroborazione. Quando una
+memoria si attiva o si sospende si rielaborano i documenti in coda con quell'impronta,
+qualunque tipo abbiano. Le frasi del classificatore invece non si imparano: vedi il documento
+di analisi.
 
 **Limiti noti.** Insegnano solo le selezioni su una riga, con la posizione esatta: un'area
 letta con OCR di solito non si ritrova nel testo, e resta un esempio senza regola. Una prima

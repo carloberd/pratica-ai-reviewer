@@ -96,5 +96,6 @@ export const TYPE_SIGNAL_SOURCE_LABELS: Record<TypeSignalSource, string> = {
   filename: 'nel nome del file',
   'positive-signal': 'segnale a favore',
   'negative-signal': 'segnale contrario',
-  'hard-negative-signal': 'segnale che esclude'
+  'hard-negative-signal': 'segnale che esclude',
+  'template-memory': 'già revisionato con questo tipo'
 }

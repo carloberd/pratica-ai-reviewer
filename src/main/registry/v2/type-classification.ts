@@ -111,7 +111,9 @@ function signal(
   delta: number,
   pages: LocatablePage[]
 ): TypeSignal {
-  const location = source === 'filename' ? undefined : locatePhrase(pages, phrase)
+  // Il nome del file e la memoria del modulo non sono righe del documento.
+  const location =
+    source === 'filename' || source === 'template-memory' ? undefined : locatePhrase(pages, phrase)
   return {
     source,
     phrase,
