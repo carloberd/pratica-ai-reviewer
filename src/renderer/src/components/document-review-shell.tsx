@@ -10,6 +10,10 @@ import type {
   CacheUsage,
   DashboardKpi,
   DriveFileSummary,
+  DriveFolderSummary,
+  DriveListing,
+  DriveLocation,
+  DriveRoot,
   FetchProgress,
   RegistryTypeOption,
   ReviewAction,
@@ -42,6 +46,18 @@ import ReviewView from './review-view'
  */
 type View = 'dashboard' | 'documents' | 'history' | 'review'
 
+/** La cartella aperta in «Documenti»: la radice e le cartelle attraversate per arrivarci. */
+interface DrivePlace {
+  root: DriveRoot
+  path: DriveFolderSummary[]
+}
+
+const DRIVE_HOME: DrivePlace = { root: 'my-drive', path: [] }
+
+function locationOf(place: DrivePlace): DriveLocation {
+  return { root: place.root, folderId: place.path.at(-1)?.id ?? null }
+}
+
 export default function DocumentReviewShell() {
   const [view, setView] = useState<View>('dashboard')
   /** Dove torna il pulsante «indietro» della revisione. */
@@ -55,7 +71,8 @@ export default function DocumentReviewShell() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [progress, setProgress] = useState<FetchProgress | null>(null)
-  const [driveFiles, setDriveFiles] = useState<DriveFileSummary[]>([])
+  const [drivePlace, setDrivePlace] = useState<DrivePlace>(DRIVE_HOME)
+  const [driveListing, setDriveListing] = useState<DriveListing | null>(null)
   const [driveLoaded, setDriveLoaded] = useState(false)
   const [fetchingId, setFetchingId] = useState<string | null>(null)
   const [cache, setCache] = useState<CacheUsage | null>(null)
@@ -126,15 +143,27 @@ export default function DocumentReviewShell() {
   const logout = () =>
     run('logout', async () => {
       setAuth(await api.auth.logout())
-      setDriveFiles([])
+      setDrivePlace(DRIVE_HOME)
+      setDriveListing(null)
       setDriveLoaded(false)
     })
 
-  /** Solo metadati: aggiornare l'elenco non scarica nessun file. */
-  const loadDriveFiles = () =>
+  /**
+   * Solo metadati: aprire una cartella non scarica nessun file. Senza destinazione rilegge
+   * quella aperta, e il contenuto vecchio resta a schermo finché arriva il nuovo; spostandosi
+   * altrove invece sparisce subito, perché sarebbe il contenuto di un'altra cartella.
+   */
+  const loadDriveFiles = (place: DrivePlace = drivePlace) =>
     run('drive', async () => {
-      const [files, usage] = await Promise.all([api.drive.list(), api.drive.cacheUsage()])
-      setDriveFiles(files)
+      if (place !== drivePlace) {
+        setDrivePlace(place)
+        setDriveListing(null)
+      }
+      const [listing, usage] = await Promise.all([
+        api.drive.list(locationOf(place)),
+        api.drive.cacheUsage()
+      ])
+      setDriveListing(listing)
       setCache(usage)
       setDriveLoaded(true)
     })
@@ -212,13 +241,13 @@ export default function DocumentReviewShell() {
       setFetchingId(file.id)
       try {
         const { documentId } = await api.drive.fetch(file.id)
-        const [document, files, usage] = await Promise.all([
+        const [document, listing, usage] = await Promise.all([
           api.docs.get(documentId),
-          api.drive.list(),
+          api.drive.list(locationOf(drivePlace)),
           api.drive.cacheUsage()
         ])
         setSelected(document)
-        setDriveFiles(files)
+        setDriveListing(listing)
         setCache(usage)
         setOrigin('documents')
         setView('review')
@@ -231,13 +260,13 @@ export default function DocumentReviewShell() {
   const evictDocument = (documentId: string) =>
     run('evict', async () => {
       const { freedBytes } = await api.docs.evict(documentId)
-      const [document, files, usage] = await Promise.all([
+      const [document, listing, usage] = await Promise.all([
         api.docs.get(documentId),
-        driveLoaded ? api.drive.list() : Promise.resolve(driveFiles),
+        driveLoaded ? api.drive.list(locationOf(drivePlace)) : Promise.resolve(driveListing),
         api.drive.cacheUsage()
       ])
       setSelected(document)
-      setDriveFiles(files)
+      setDriveListing(listing)
       setCache(usage)
       setMessage(
         `Copia locale rimossa: ${formatBytes(freedBytes)} liberati. I dati estratti restano.`
@@ -438,8 +467,8 @@ export default function DocumentReviewShell() {
               <div>
                 <h2>Documenti</h2>
                 <div className={styles.muted}>
-                  I file dell&apos;account su Google Drive: doppio clic su un file per scaricarlo,
-                  analizzarlo e aprirlo in revisione.
+                  Le cartelle dell&apos;account su Google Drive: doppio clic su una cartella per
+                  aprirla, su un file per scaricarlo, analizzarlo e aprirlo in revisione.
                 </div>
               </div>
               {cache && (
@@ -451,12 +480,14 @@ export default function DocumentReviewShell() {
             </div>
             {driveLoaded || pending === 'drive' ? (
               <DriveFiles
-                files={driveFiles}
+                root={drivePlace.root}
+                path={drivePlace.path}
+                listing={driveListing}
                 fetchingId={fetchingId}
                 busy={busy}
                 loading={pending === 'drive'}
                 onOpen={openDriveFile}
-                emptyHint="L'account non ha PDF o DOCX fuori dal cestino."
+                onNavigate={(root, path) => void loadDriveFiles({ root, path })}
               />
             ) : (
               /* Un'operazione qualsiasi in corso non dice niente su Drive: finché
