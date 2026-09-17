@@ -233,9 +233,15 @@ export function registerIpcHandlers(context: IpcContext): void {
   })
 
   // I campi sono già a database — ogni modifica li scrive appena avviene. Qui si
-  // registra solo l'esito: dentro o fuori dal dataset, e perché.
+  // registra solo l'esito: dentro o fuori dal dataset, e perché. L'account collegato è
+  // l'autore delle decisioni che il learner registra.
   handle('review:submit', reviewSubmissionSchema, ({ documentId, payload }) =>
-    submitReview(repo, { documentId, action: payload.action, note: payload.note })
+    submitReview(repo, {
+      documentId,
+      action: payload.action,
+      note: payload.note,
+      actor: auth.status().email
+    })
   )
 
   // ---- dataset annotato ----------------------------------------------------
