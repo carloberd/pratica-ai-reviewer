@@ -152,7 +152,7 @@ describe('migrazioni', () => {
     // Correzione rimasta senza la riga proposta: la 0004 la teneva con valore nullo.
     item.run('orfana', 'f', 2, null, '"Trasporto"', 0)
 
-    expect(migrate(db)).toEqual(['0005', '0006', '0007', '0008', '0009', '0010', '0011'])
+    expect(migrate(db)).toEqual(['0005', '0006', '0007', '0008', '0009', '0010', '0011', '0012'])
 
     expect(
       db.prepare('SELECT id, origin, removed FROM field_items ORDER BY item_index').all()
@@ -174,7 +174,7 @@ describe('migrazioni', () => {
       "INSERT INTO documents (id, drive_file_id, filename, mime, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', '2026-01-01')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0006', '0007', '0008', '0009', '0010', '0011'])
+    expect(migrate(db)).toEqual(['0006', '0007', '0008', '0009', '0010', '0011', '0012'])
 
     // NULL = da calcolare al primo export, non «documento senza impronta».
     expect(db.prepare('SELECT template_fingerprint FROM documents').get()).toEqual({
@@ -190,7 +190,7 @@ describe('migrazioni', () => {
   it('la 0008 apre le tabelle della mappa, vuote: nessuna decisione presa prima esiste', () => {
     const db = databaseAt('0007')
 
-    expect(migrate(db)).toEqual(['0008', '0009', '0010', '0011'])
+    expect(migrate(db)).toEqual(['0008', '0009', '0010', '0011', '0012'])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_overrides').get()).toEqual({ n: 0 })
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_hint_labels').get()).toEqual({ n: 0 })
@@ -214,7 +214,7 @@ describe('migrazioni', () => {
   it('la 0009 apre la tabella delle cardinalità, vuota: ogni campo segue l’ontologia', () => {
     const db = databaseAt('0008')
 
-    expect(migrate(db)).toEqual(['0009', '0010', '0011'])
+    expect(migrate(db)).toEqual(['0009', '0010', '0011', '0012'])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_cardinality_overrides').get()).toEqual({
       n: 0
@@ -246,7 +246,7 @@ describe('migrazioni', () => {
         VALUES ('f', 'd', 'document.number', 'Numero documento', '114/2026', '114/2026-bis', 0.85, 'e');
     `)
 
-    expect(migrate(db)).toEqual(['0010', '0011'])
+    expect(migrate(db)).toEqual(['0010', '0011', '0012'])
 
     expect(db.prepare('SELECT origin, method, line_start, char_start FROM evidence').get()).toEqual(
       {
@@ -273,7 +273,7 @@ describe('migrazioni', () => {
 
   it('la 0011 apre il deposito del learner vuoto, in modalità LEARNING', () => {
     const db = databaseAt('0010')
-    expect(migrate(db)).toEqual(['0011'])
+    expect(migrate(db)).toEqual(['0011', '0012'])
 
     expect(db.prepare('SELECT id, mode FROM learning_state').all()).toEqual([
       { id: 1, mode: 'LEARNING' }
@@ -298,13 +298,31 @@ describe('migrazioni', () => {
     db.close()
   })
 
+  it('la 0012 lega evidenze ed eventi alle regole, e conta una prova per documento', () => {
+    const db = databaseAt('0011')
+    expect(migrate(db)).toEqual(['0012'])
+    const columns = (table: string) =>
+      (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map(
+        (c) => c.name
+      )
+    expect(columns('evidence')).toContain('rule_id')
+    expect(columns('learning_events')).toContain('engine_rule_id')
+    expect(columns('learning_rule_evidence')).toEqual([
+      'rule_id',
+      'document_key',
+      'event_id',
+      'effect'
+    ])
+    db.close()
+  })
+
   it('la 0007 aggiunge la nota del revisore, vuota sui documenti già chiusi', () => {
     const db = databaseAt('0006')
     db.prepare(
       "INSERT INTO documents (id, drive_file_id, filename, mime, status, reviewed_at, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', 'REVIEWED', '2026-01-02', '2026-01-01')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0007', '0008', '0009', '0010', '0011'])
+    expect(migrate(db)).toEqual(['0007', '0008', '0009', '0010', '0011', '0012'])
 
     // Chi ha chiuso un documento prima di questa versione non ha una nota da recuperare:
     // restava solo nel testo della timeline, che non è un formato da rileggere.
@@ -362,7 +380,17 @@ describe('migrazione 0004 su un database esistente', () => {
     const db = databaseAt('0003')
     seedV1(db)
 
-    expect(migrate(db)).toEqual(['0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011'])
+    expect(migrate(db)).toEqual([
+      '0004',
+      '0005',
+      '0006',
+      '0007',
+      '0008',
+      '0009',
+      '0010',
+      '0011',
+      '0012'
+    ])
 
     const rows = db
       .prepare(

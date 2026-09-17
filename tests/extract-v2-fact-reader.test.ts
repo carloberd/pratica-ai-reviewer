@@ -15,7 +15,8 @@ import {
   readIdentifier,
   readInteger,
   readMoney,
-  readNumber
+  readNumber,
+  readsOfLabel
 } from '../src/main/extract/v2/fact-reader'
 import type { ExtractionRegistryV2 } from '../src/main/extract/v2/profile-loader'
 import { testRegistryV2 } from './helpers/registry'
@@ -328,6 +329,137 @@ describe('candidati concorrenti', () => {
     ])
     expect(fact('issuer.name')).toMatchObject({ value: 'Alfa S.r.l.', reviewStatus: 'CONFLICT' })
     expect(result.conflicts).toEqual(['MULTIPLE_CANDIDATES:issuer.name'])
+  })
+})
+
+describe('etichette imparate dalle revisioni', () => {
+  const learned = (
+    fieldId: string,
+    label: string,
+    overrides: Partial<{
+      ruleId: string
+      relation: 'same-line' | 'next-line'
+      scope: 'TEMPLATE' | 'CLASS'
+    }> = {}
+  ) => ({
+    ruleId: overrides.ruleId ?? `rule-${label}`,
+    fieldId,
+    label,
+    relation: overrides.relation ?? 'same-line',
+    scope: overrides.scope ?? 'TEMPLATE'
+  })
+
+  it('un’etichetta imparata trova il valore che il registry non trova, e dice da quale regola', () => {
+    const registry = registryOf({
+      'document.issue_date': { type: 'date', labels: ['data emissione'] }
+    })
+    const pages = [page(['Promemoria interno', 'Data: 12/09/2026'])]
+    const result = extractFactsV2({
+      documentType: 'test.tipo',
+      pages,
+      registry,
+      learnedLabels: [learned('document.issue_date', 'data', { ruleId: 'r-data' })]
+    })
+    expect(result.facts[0]).toMatchObject({
+      value: '2026-09-12',
+      reviewStatus: 'AUTO_ACCEPTED',
+      evidence: [{ page: 1, text: 'Data: 12/09/2026', ruleId: 'r-data' }]
+    })
+    // Senza, il campo resta vuoto: il miglioramento viene dalla regola.
+    expect(extract(registry, pages).fact('document.issue_date').value).toBeNull()
+  })
+
+  it('passa davanti all’etichetta più lunga del registry', () => {
+    const registry = registryOf({
+      'money.total': { type: 'money', labels: ['totale documento'] }
+    })
+    const result = extractFactsV2({
+      documentType: 'test.tipo',
+      pages: [page(['Totale documento EUR 86.420,00', 'Da pagare EUR 80.000,00'])],
+      registry,
+      learnedLabels: [learned('money.total', 'da pagare', { scope: 'CLASS' })]
+    })
+    expect(result.facts[0]).toMatchObject({ value: '80000.00', reviewStatus: 'AUTO_ACCEPTED' })
+  })
+
+  it('una regola di template passa davanti a una di tipo', () => {
+    const registry = registryOf({ 'money.total': { type: 'money', labels: [] } })
+    const result = extractFactsV2({
+      documentType: 'test.tipo',
+      pages: [page(['Totale EUR 1.000,00', 'Saldo EUR 900,00'])],
+      registry,
+      learnedLabels: [
+        learned('money.total', 'totale', { scope: 'CLASS', ruleId: 'class' }),
+        learned('money.total', 'saldo', { scope: 'TEMPLATE', ruleId: 'template' })
+      ]
+    })
+    expect(result.facts[0]).toMatchObject({
+      value: '900.00',
+      evidence: [{ ruleId: 'template' }]
+    })
+  })
+
+  it('la stessa etichetta del registry, imparata, vale col livello della regola', () => {
+    const registry = registryOf({ 'money.total': { type: 'money', labels: ['totale'] } })
+    const result = extractFactsV2({
+      documentType: 'test.tipo',
+      pages: [page(['Totale EUR 1.000,00'])],
+      registry,
+      learnedLabels: [learned('money.total', 'Totale', { ruleId: 'r-totale' })]
+    })
+    expect(result.facts[0]?.evidence[0]?.ruleId).toBe('r-totale')
+  })
+
+  it('una regola legge solo nella sua relazione', () => {
+    const registry = registryOf({ 'document.issue_date': { type: 'date', labels: [] } })
+    const lines = ['Data', '12/09/2026']
+    const read = (relation: 'same-line' | 'next-line') =>
+      extractFactsV2({
+        documentType: 'test.tipo',
+        pages: [page(lines)],
+        registry,
+        learnedLabels: [learned('document.issue_date', 'data', { relation })]
+      }).facts[0]?.value
+    expect(read('next-line')).toBe('2026-09-12')
+    expect(read('same-line')).toBeNull()
+  })
+
+  it('i validatori restano l’ultima parola anche per un’etichetta imparata', () => {
+    const registry = registryOf({
+      'bank.iban': { type: 'identifier', format: 'iban', labels: [], validators: ['iban_checksum'] }
+    })
+    const result = extractFactsV2({
+      documentType: 'test.tipo',
+      pages: [page(['Coordinate: IT61X0542811101000000123456'])],
+      registry,
+      learnedLabels: [learned('bank.iban', 'coordinate')]
+    })
+    expect(result.facts[0]).toMatchObject({
+      value: 'IT61X0542811101000000123456',
+      validationErrors: ['INVALID_IBAN'],
+      reviewStatus: 'NEEDS_REVIEW'
+    })
+  })
+
+  it('un’etichetta per un campo fuori dal profilo non cambia niente', () => {
+    const registry = registryOf({ 'money.total': { type: 'money', labels: ['totale'] } })
+    const result = extractFactsV2({
+      documentType: 'test.tipo',
+      pages: [page(['Data: 12/09/2026', 'Totale EUR 10,00'])],
+      registry,
+      learnedLabels: [learned('document.issue_date', 'data')]
+    })
+    expect(result.facts.map((fact) => fact.fieldId)).toEqual(['money.total'])
+  })
+
+  it('le letture di un’etichetta: dove compare e cosa legge', () => {
+    const spec = registryOf({ 'money.total': { type: 'money', labels: [] } }).field('money.total')!
+    const lines = [{ text: 'Totale EUR 10,00' }, { text: 'Totale' }, { text: '20,00' }]
+    expect(readsOfLabel('money.total', spec, lines, 'Totale')).toEqual([
+      { line: 0, valueLine: 0, sameLine: true, labelEnd: 6, value: '10.00' },
+      { line: 1, valueLine: 2, sameLine: false, labelEnd: 6, value: '20.00' }
+    ])
+    expect(readsOfLabel('money.total', spec, lines, 'totale', 'next-line')).toHaveLength(1)
   })
 })
 
