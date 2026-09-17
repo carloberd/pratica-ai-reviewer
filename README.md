@@ -317,6 +317,22 @@ un'area, che viene rasterizzata a scala 3 e letta dallo stesso worker tesseract 
 precompilazione. Il PDF in cache non viene mai toccato: resta identico byte per byte a
 quello su Drive.
 
+**Da dove viene un valore selezionato.** Insieme al valore il renderer manda il punto da
+cui è stato preso: pagina, riquadro in coordinate di pagina e modo (`TEXT_SELECTION` o
+`AREA_OCR`; nei DOCX solo la pagina). Il main ne fa un'evidenza del revisore collegata
+alla correzione (`corrected_evidence_id`, accanto all'`evidence_id` della proposta del
+motore) e la ritrova fra le righe che l'elaborazione ha salvato in `document_pages`: righe
+toccate e offset nel testo della pagina, cioè le righe unite da `\n`
+(`src/shared/pick-locate.ts`). Sono le righe del motore di estrazione e non quelle del
+text layer, perché è su queste che una regola imparata dalla selezione verrà applicata.
+Quando il testo compare più volte e il riquadro non basta a distinguerlo, restano le righe
+senza offset: una posizione indovinata insegnerebbe un'etichetta sbagliata.
+
+La selezione vale finché è il valore del campo. Riscritto a mano, riportato alla proposta
+o tolto, il valore non viene più da lì e l'evidenza sparisce; una rielaborazione la
+conserva insieme alla correzione. Nel PDF le selezioni del revisore si vedono con un
+riquadro tratteggiato, distinto da quello del motore, e il link sotto il campo porta lì.
+
 ---
 
 ## Export del dataset annotato
@@ -341,7 +357,7 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.0.0",
+    "formatVersion": "1.1.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": { "name": "praticaai-reviewer", "version": "1.1.0" },
     // motori e versioni dell'app al momento dell'export
@@ -351,6 +367,7 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
   },
   "documents": [{
     "driveFileId": "…",               // chiave stabile: https://drive.google.com/file/d/<id>/view
+    "contentSha256": "…",             // sha-256 del file elaborato, null se elaborato prima della 1.1.0
     "filename": "…", "mime": "…", "textSource": "NATIVE_TEXT",
     "status": "REVIEWED",             // o DISCARDED
     "reviewedAt": "…",
@@ -364,16 +381,24 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
     "fields": [
       { "name": "document.number", "label": "Numero documento", "role": "required", "cardinality": "one",
         "value": "27/2026/B", "origin": "REVIEWER",
-        "evidence": { "page": 1, "text": "FATTURA n. 27/2026 del 14/09/2026", "bbox": { "x": 56, "y": 91, "w": 181.6, "h": 11 } } },
+        "evidence": { "page": 1, "text": "FATTURA n. 27/2026 del 14/09/2026", "bbox": { "x": 56, "y": 91, "w": 181.6, "h": 11 } },
+        "pick": null },
+      { "name": "document.issue_date", "label": "Data emissione", "role": "core", "cardinality": "one",
+        "value": "14/09/2026", "origin": "REVIEWER",
+        "evidence": { "page": 1, "text": "FATTURA n. 27/2026 del 14/09/2026", "bbox": { … } },
+        // selezionato sul documento: righe e offset nel testo della pagina salvato dall'elaborazione
+        "pick": { "method": "TEXT_SELECTION", "page": 1, "text": "14/09/2026",
+                  "bbox": { "x": 182.6, "y": 91, "w": 55, "h": 11 },
+                  "location": { "lineStart": 1, "lineEnd": 1, "charStart": 47, "charEnd": 57 } } },
       { "name": "line_items", "label": "Righe documento", "role": "core", "cardinality": "many",
         "value": ["Demolizione tramezzi - EUR 3.200,00", "…"],
-        "items": [{ "value": "Demolizione tramezzi - EUR 3.200,00", "origin": "ENGINE", "evidence": { … } }] }
+        "items": [{ "value": "Demolizione tramezzi - EUR 3.200,00", "origin": "ENGINE", "evidence": { … }, "pick": null }] }
     ],
     "corrections": [
       { "field": "document.number", "label": "Numero documento", "item": null,
-        "kind": "CHANGED", "before": "27/2026", "after": "27/2026/B" },
+        "kind": "CHANGED", "before": "27/2026", "after": "27/2026/B", "pick": null },
       { "field": "line_items", "label": "Righe documento", "item": 2,
-        "kind": "REMOVED", "before": "Tinteggiatura pareti - EUR 1.450,00", "after": null }
+        "kind": "REMOVED", "before": "Tinteggiatura pareti - EUR 1.450,00", "after": null, "pick": null }
     ]
   }]
 }
@@ -388,6 +413,13 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
   ed evidenza; le righe tolte non ci sono.
 - `evidence` è la riga da cui il motore aveva letto la proposta, con `bbox` in unità di
   pagina pdf.js a scala 1 (origine in alto a sinistra) o `null` senza coordinate.
+- `pick` è il punto da cui il revisore ha preso il valore, sui campi e sulle correzioni:
+  `null` se l'ha scritto a mano o non l'ha toccato. `text` è verbatim, `bbox` come per
+  `evidence`, `location` le righe toccate e gli offset `[charStart, charEnd)` nel testo
+  della pagina come l'ha letto l'elaborazione (righe unite da `\n`); gli offset sono `null`
+  quando il testo non si ritrova con certezza, `location` intera quando mancano le righe.
+- `contentSha256` identifica i byte del file indipendentemente da Drive: è la chiave su
+  cui pratica-ai indicizza il feedback. La `1.1.0` aggiunge solo campi alla `1.0.0`.
 - `corrections` è la misura di quanto aiuta la precompilazione: una voce per campo
   toccato, una per riga nei ripetuti. `kind` vale `CHANGED` (proposta diversa),
   `FILLED` (il motore non aveva proposto niente), `CLEARED` (proposta svuotata), `ADDED`
@@ -452,10 +484,12 @@ riconoscere i documenti usciti dallo stesso stampato: si collassano gli spazi, o
 sequenza di lettere diventa `A` e ogni sequenza di cifre `9`, la riga si tronca a 120
 caratteri e la lista di righe si riassume nei primi 16 caratteri di uno SHA-256
 (`src/shared/template-fingerprint.ts`). Stesso stampato con dati diversi, stessa
-impronta. Si calcola dalla copia in cache al primo export che ne ha bisogno e resta sulla
-colonna `documents.template_fingerprint` (migrazione `0006`), perché il layout di un
-documento non cambia. Un documento la cui copia locale non c'è più esce con l'impronta
-vuota: per un export non si riscarica niente da Drive.
+impronta. La calcola l'elaborazione, dalle stesse righe che salva, e resta sulla colonna
+`documents.template_fingerprint` (migrazione `0006`). Fanno eccezione i documenti
+elaborati prima della migrazione `0010` e quelli con la prima pagina letta con OCR: per
+loro l'impronta si ricava dalla copia in cache al primo export che ne ha bisogno. Un
+documento così, la cui copia locale non c'è più, esce con l'impronta vuota: per un export
+non si riscarica niente da Drive.
 
 Il test `tests/xlsx-export.test.ts` scrive il file dalle fixture e lo rilegge con
 exceljs: intestazioni, conteggi, impronte e valori confermati.
@@ -631,7 +665,7 @@ Tutto sotto la cartella dati dell'app
 
 | File | Contenuto |
 |---|---|
-| `praticaai-reviewer.db` | documenti, campi e righe dei campi ripetuti, evidenze, classificazione, eventi, indice FTS5, le correzioni alla mappa «tipo ↔ dati» e la loro cronologia |
+| `praticaai-reviewer.db` | documenti, campi e righe dei campi ripetuti, evidenze del motore e selezioni del revisore, righe del testo per pagina, classificazione, eventi, indice FTS5, le correzioni alla mappa «tipo ↔ dati» e la loro cronologia |
 | `cache/<drive_file_id>.pdf\|.docx` | copia locale dei file di Drive |
 | `tokens.bin` | refresh token, cifrato con `safeStorage` (Keychain / DPAPI) |
 | `tessdata-cache/` | modelli tesseract scompattati |
