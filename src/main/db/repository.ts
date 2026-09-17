@@ -11,6 +11,7 @@ import { createEventsDao } from './dao/events'
 import { createEvidenceDao } from './dao/evidence'
 import { createExtractionRunsDao } from './dao/extraction-runs'
 import { createFieldsDao } from './dao/fields'
+import { createProfileMapDao } from './dao/profile-map'
 import { createSearchDao } from './dao/search'
 import type { Db } from './index'
 import {
@@ -40,6 +41,7 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
   const events = createEventsDao(db)
   const search = createSearchDao(db)
   const extractionRuns = createExtractionRunsDao(db)
+  const profileMap = createProfileMapDao(db)
 
   const requiredFields = deps.requiredFields ?? (() => [...UNIVERSAL_FIELDS])
   const typeLabel = deps.typeLabel ?? (() => null)
@@ -115,6 +117,8 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
     events,
     search,
     extractionRuns,
+    /** La mappa «tipo ↔ dati da estrarre» corretta dal revisore, e la sua cronologia. */
+    profileMap,
 
     listSummaries(filters: DocumentFilters = {}): ReviewDocumentSummary[] {
       const ftsIds = filters.query?.trim()
