@@ -11,6 +11,7 @@ import {
   rulePrecision,
   ruleSupport
 } from './local-learning'
+import { praticaaiTypeId, praticaaiTypeIdOrNull } from './registry-alignment'
 
 /**
  * La scheda «Apprendimento» e l'export delle regole: quello che il revisore vede di quanto
@@ -183,7 +184,7 @@ export interface LearningExportResult {
 // ---------------------------------------------------------------------------
 
 export const LEARNING_BUNDLE_FORMAT = 'praticaai-reviewer/learned-rules'
-export const LEARNING_BUNDLE_VERSION = '1.0.0'
+export const LEARNING_BUNDLE_VERSION = '1.1.0'
 
 export interface LearningBundleManifest {
   format: typeof LEARNING_BUNDLE_FORMAT
@@ -198,11 +199,13 @@ export interface LearningBundleManifest {
   templateFingerprintAlgorithm: string
 }
 
-/** Una regola nel file: la forma del database, coi nomi dei campi di pratica-ai accanto. */
+/** Una regola nel file: la forma del database, coi nomi di pratica-ai accanto. */
 export interface LearningBundleRule extends Omit<LearningRule, 'pattern'> {
   pattern: Record<string, unknown>
   /** Il nome del campo nel registry V5.1 di pratica-ai, `null` se non ha un equivalente. */
   registryField: string | null
+  /** Il tipo come lo chiama pratica-ai. */
+  registryDocumentType: string
   support: number
   precision: number | null
 }
@@ -211,7 +214,13 @@ export interface LearningBundle {
   manifest: LearningBundleManifest
   rules: LearningBundleRule[]
   /** Le decisioni del revisore: nessun valore, nessun testo del documento. */
-  events: Array<LearningEvent & { registryField: string | null }>
+  events: Array<
+    LearningEvent & {
+      registryField: string | null
+      registryDocumentType: string | null
+      registryPredictedType: string | null
+    }
+  >
   actions: LearningAction[]
 }
 
@@ -245,12 +254,18 @@ export function buildLearningBundle(input: {
       .map((rule) => ({
         ...rule,
         registryField: registryField(rule.fieldId),
+        registryDocumentType: praticaaiTypeId(rule.documentType),
         support: ruleSupport(rule),
         precision: rulePrecision(rule)
       })),
     events: [...input.events]
       .sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id))
-      .map((event) => ({ ...event, registryField: registryField(event.fieldId) })),
+      .map((event) => ({
+        ...event,
+        registryField: registryField(event.fieldId),
+        registryDocumentType: praticaaiTypeIdOrNull(event.documentType),
+        registryPredictedType: praticaaiTypeIdOrNull(event.predictedType)
+      })),
     actions: [...input.actions].sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id))
   }
 }

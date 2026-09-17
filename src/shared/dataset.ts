@@ -6,6 +6,7 @@ import {
   currentItemValue,
   documentCorrections
 } from './field-edits'
+import { praticaaiTypeIdOrNull } from './registry-alignment'
 import type {
   BoundingBox,
   EvidenceItem,
@@ -28,7 +29,7 @@ import type {
  */
 
 export const DATASET_FORMAT = 'praticaai-reviewer/annotated-dataset'
-export const DATASET_FORMAT_VERSION = '1.2.0'
+export const DATASET_FORMAT_VERSION = '1.3.0'
 
 export type EngineVersion = 'v1' | 'v2'
 
@@ -136,6 +137,8 @@ export interface DatasetCorrection {
 export interface DatasetDocumentType {
   id: string | null
   label: string | null
+  /** Gli stessi tipi come li chiama pratica-ai: uguali, meno le tre classi con slug diverso. */
+  registry: { id: string | null; proposed: string | null }
   /** Chi ha deciso il tipo che resta: il revisore a mano, o il classificatore. */
   chosenBy: 'REVIEWER' | 'ENGINE' | null
   /** Il tipo proposto dal classificatore, `null` se non ne aveva assegnato uno. */
@@ -261,6 +264,10 @@ function toDocumentType(document: ReviewDocument): DatasetDocumentType {
   return {
     id: document.documentType,
     label: document.documentTypeLabel,
+    registry: {
+      id: praticaaiTypeIdOrNull(document.documentType),
+      proposed: praticaaiTypeIdOrNull(proposed)
+    },
     chosenBy,
     proposed,
     proposedConfidence: proposed ? (document.classification?.confidence ?? null) : null,
