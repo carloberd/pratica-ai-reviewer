@@ -1,10 +1,26 @@
-import { LEARNING_MODE_LABELS } from '@shared/local-learning'
+import {
+  DEFAULT_LEARNING_POLICY,
+  documentKey,
+  isAnchorPattern,
+  LEARNING_MODE_LABELS,
+  type LearningAction,
+  type LearningEffect,
+  type LearningEvent,
+  type LearningPolicy,
+  type LearningRule,
+  nextRuleStatus,
+  rulePrecision,
+  ruleSupport
+} from '@shared/local-learning'
 import { describeLearnedReview, reviewLearningEvents } from '@shared/review-learning'
 import type { ReviewAction, ReviewDocument } from '@shared/types'
+import type { LearningWriter } from './db/dao/learning'
 import type { Repository } from './db/repository'
+import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
+import { anchorRuleInputs, deriveAnchor } from './learning-anchors'
 
 /**
- * La revisione salvata, registrata per il learner.
+ * La revisione chiusa, registrata per il learner, e quello che ne impara.
  *
  * Si impara qui e non a ogni modifica di un campo: mentre il revisore lavora i valori sono
  * provvisori, e il salvataggio è la decisione finale. Il documento è quello letto prima di
@@ -14,34 +30,208 @@ import type { Repository } from './db/repository'
  * suoi eventi perderebbe l'unico dato che non si può ricostruire, e degli eventi senza la
  * revisione insegnerebbero qualcosa che non è successo.
  *
- * Ritorna la frase per la timeline, `null` quando non c'è niente da dire (uno scarto).
+ * Da una revisione salvata:
+ * - un valore selezionato sul documento insegna l'etichetta che lo annuncia, per il template
+ *   e per il tipo (`learning-anchors.ts`);
+ * - un valore proposto da una regola la mette alla prova: confermato la sostiene, corretto
+ *   la smentisce — a meno che il revisore non abbia selezionato proprio quello che la regola
+ *   legge, e la correzione sia solo di forma;
+ * - le regole toccate si promuovono o si sospendono con `nextRuleStatus`.
+ *
+ * Una prova vale per documento: chiudere di nuovo un documento sostituisce le sue prove,
+ * scartarlo le toglie.
  */
-export function learnFromReview(
-  repo: Repository,
-  input: {
-    document: ReviewDocument
-    action: ReviewAction
-    at: string
-    /** Chi ha salvato: l'account collegato. `null` se non si sa, e allora non si registra. */
-    actor: string | null
-  }
-): string | null {
-  // Un documento scartato è fuori dal dataset, e fuori da quello che il motore impara.
-  if (input.action !== 'SAVE') return null
 
+export interface LearnFromReviewInput {
+  document: ReviewDocument
+  action: ReviewAction
+  at: string
+  /** Chi ha salvato: l'account collegato. `null` se non si sa, e allora non si registra. */
+  actor: string | null
+  /** Senza registry v2 non si ricavano etichette: gli eventi si registrano lo stesso. */
+  registry?: ExtractionRegistryV2 | undefined
+  policy?: LearningPolicy
+}
+
+export interface LearnedReview {
+  /** La frase per la timeline, `null` quando non c'è niente da dire. */
+  note: string | null
+  /** I tipi con una regola appena attivata o sospesa: la loro coda va rielaborata. */
+  changedTypes: string[]
+}
+
+const NOTHING: LearnedReview = { note: null, changedTypes: [] }
+
+/** Le correzioni che danno un valore: da lì si impara dove stava. */
+const TEACHES = new Set(['CHANGED', 'FILLED', 'ADDED'])
+
+export function learnFromReview(repo: Repository, input: LearnFromReviewInput): LearnedReview {
   const mode = repo.learning.mode()
-  if (mode !== 'LEARNING') return `${LEARNING_MODE_LABELS[mode]}: revisione non registrata.`
-  if (!input.actor) {
-    return 'Apprendimento: revisione non registrata, nessun account collegato.'
+  const policy = input.policy ?? DEFAULT_LEARNING_POLICY
+  const key = documentKey({
+    contentSha256: input.document.contentSha256,
+    documentId: input.document.id
+  })
+
+  if (input.action !== 'SAVE') {
+    // Uno scarto non insegna niente, e toglie quello che il documento aveva insegnato.
+    if (mode !== 'LEARNING') return NOTHING
+    const settled = repo.learning.acquire((writer) =>
+      settle(writer, writer.retractDocument(key, input.at), input.at, policy)
+    )
+    if (!settled || settled.touched === 0) return NOTHING
+    return {
+      note: `Apprendimento: tolte le prove di questo documento da ${plural(settled.touched, 'regola', 'regole')}.${describeActions(settled.actions)}`,
+      changedTypes: settled.changedTypes
+    }
   }
 
+  if (mode !== 'LEARNING') {
+    return { note: `${LEARNING_MODE_LABELS[mode]}: revisione non registrata.`, changedTypes: [] }
+  }
+  if (!input.actor) {
+    return {
+      note: 'Apprendimento: revisione non registrata, nessun account collegato.',
+      changedTypes: []
+    }
+  }
+
+  const templateFingerprint = repo.documents.get(input.document.id)?.template_fingerprint ?? null
   const events = reviewLearningEvents(input.document, {
     at: input.at,
     actor: input.actor,
-    templateFingerprint: repo.documents.get(input.document.id)?.template_fingerprint ?? null
+    templateFingerprint
   })
-  repo.learning.acquire((writer) => {
-    for (const event of events) writer.addEvent(event)
+
+  const settled = repo.learning.acquire((writer) => {
+    const touched = writer.retractDocument(key, input.at)
+    for (const event of events.map((entry) => writer.addEvent(entry))) {
+      for (const [rule, effect] of proofs(writer, repo, event, input)) {
+        touched.push(writer.recordEvidence(rule.id, event.id, effect, input.at))
+      }
+    }
+    return settle(writer, touched, input.at, policy)
   })
-  return describeLearnedReview(events)
+
+  return {
+    note: `${describeLearnedReview(events)}${describeActions(settled?.actions ?? [])}`,
+    changedTypes: settled?.changedTypes ?? []
+  }
+}
+
+/** Le regole che un evento sostiene o smentisce, creando quelle che insegna. */
+function proofs(
+  writer: LearningWriter,
+  repo: Repository,
+  event: LearningEvent,
+  input: LearnFromReviewInput
+): Array<[LearningRule, LearningEffect]> {
+  const result: Array<[LearningRule, LearningEffect]> = []
+  const taught: LearningRule[] = []
+
+  const spec = event.fieldId ? input.registry?.field(event.fieldId) : undefined
+  const location = event.pick?.location
+  if (
+    event.kind === 'FIELD_VALUE' &&
+    TEACHES.has(event.outcome) &&
+    spec &&
+    event.fieldId &&
+    event.documentType &&
+    event.pick &&
+    location
+  ) {
+    const pattern = deriveAnchor({
+      lines: repo.pages.lines(event.documentId, event.pick.page),
+      location,
+      fieldId: event.fieldId,
+      spec
+    })
+    if (pattern) {
+      for (const rule of anchorRuleInputs({
+        pattern,
+        documentType: event.documentType,
+        fieldId: event.fieldId,
+        templateFingerprint: event.templateFingerprint
+      })) {
+        const existing = writer.findRule(rule.ruleKey) ?? writer.createRule(rule, input.at)
+        taught.push(existing)
+        result.push([existing, 'POSITIVE'])
+      }
+    }
+  }
+
+  if (event.engineRuleId && !taught.some((rule) => rule.id === event.engineRuleId)) {
+    // La regola che aveva proposto il valore: se il revisore l'ha selezionato altrove o
+    // l'ha riscritto, la regola ha letto la cosa sbagliata.
+    const confirmed = event.outcome === 'CONFIRMED'
+    const engineRule = ruleById(writer, repo, event.engineRuleId)
+    if (engineRule) result.push([engineRule, confirmed ? 'POSITIVE' : 'NEGATIVE'])
+  }
+  return result
+}
+
+function ruleById(writer: LearningWriter, repo: Repository, id: string): LearningRule | undefined {
+  const rule = repo.learning.getRule(id)
+  return rule ? writer.findRule(rule.ruleKey) : undefined
+}
+
+interface Settled {
+  touched: number
+  actions: LearningAction[]
+  changedTypes: string[]
+}
+
+/** Porta ogni regola toccata allo stato che le sue prove chiedono. */
+function settle(
+  writer: LearningWriter,
+  rules: LearningRule[],
+  at: string,
+  policy: LearningPolicy
+): Settled {
+  const keys = [...new Set(rules.map((rule) => rule.ruleKey))]
+  const actions: LearningAction[] = []
+  const changedTypes = new Set<string>()
+  for (const ruleKey of keys) {
+    const rule = writer.findRule(ruleKey)
+    if (!rule) continue
+    const next = nextRuleStatus(
+      rule,
+      writer.recentEffects(rule.id, policy.suspendAfterNegatives),
+      policy
+    )
+    if (next === rule.status) continue
+    actions.push(writer.changeRuleStatus(rule.id, next, { at, detail: describeRule(rule, next) }))
+    changedTypes.add(rule.documentType)
+  }
+  return { touched: keys.length, actions, changedTypes: [...changedTypes] }
+}
+
+function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`
+}
+
+function percent(value: number | null): string {
+  return value === null ? '—' : `${Math.round(value * 100)}%`
+}
+
+/** La riga di cronologia di un cambio di stato, coi numeri che l'hanno deciso. */
+function describeRule(rule: LearningRule, next: string): string {
+  const what = isAnchorPattern(rule.pattern)
+    ? `Etichetta «${rule.pattern.label}» per ${rule.fieldId}`
+    : `Regola ${rule.kind}`
+  const where = rule.scope === 'TEMPLATE' ? `sul template ${rule.templateFingerprint}` : 'sul tipo'
+  const numbers = `${plural(ruleSupport(rule), 'conferma', 'conferme')}, precisione ${percent(rulePrecision(rule))}`
+  const verb =
+    next === 'ACTIVE' ? 'attivata' : next === 'SUSPENDED' ? 'sospesa' : next.toLowerCase()
+  return `${what} ${where} (${rule.documentType}) ${verb}: ${numbers}.`
+}
+
+function describeActions(actions: LearningAction[]): string {
+  const promoted = actions.filter((action) => action.after === 'ACTIVE').length
+  const suspended = actions.filter((action) => action.after === 'SUSPENDED').length
+  const parts = [
+    promoted > 0 ? plural(promoted, 'regola attivata', 'regole attivate') : null,
+    suspended > 0 ? plural(suspended, 'regola sospesa', 'regole sospese') : null
+  ].filter((part) => part !== null)
+  return parts.length === 0 ? '' : ` ${parts.join(', ')}.`
 }

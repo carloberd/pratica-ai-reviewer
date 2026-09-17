@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { averageConfidence, bandOf } from '@shared/confidence'
 import type { RegistryFieldName } from '@shared/fields'
 import { fieldLabel, sortFieldNames, UNIVERSAL_FIELDS } from '@shared/fields'
+import { appliesRules, LEARNER_VERSION, type LearningMode } from '@shared/local-learning'
 import { TYPE_MATCH_REASON_LABELS } from '@shared/review-workspace'
 import { firstPageLines, templateFingerprint } from '@shared/template-fingerprint'
 import type { EngineSelection } from './config'
@@ -15,8 +16,9 @@ import { prefillFields } from './extract/heuristics'
 import type { OcrService } from './extract/ocr'
 import { extractText } from './extract/text'
 import type { ExtractedText } from './extract/types'
-import { extractFactsV2 } from './extract/v2/fact-reader'
+import { extractFactsV2, type LearnedLabel } from './extract/v2/fact-reader'
 import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
+import { learnedLabelsFor } from './learning-anchors'
 import type { Registry } from './registry'
 import type { TypeMatchV2 } from './registry/v2/classify-v2'
 import type { ClassifierConfigV2 } from './registry/v2/config'
@@ -116,6 +118,14 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
     const documentType = manualType ?? classification.documentType
     const typeConfidence = manualType ? null : classification.confidence
 
+    const fingerprint = firstPageFingerprint(extracted)
+    // Le regole apprese valgono in LEARNING e FROZEN; in BASELINE decide solo il registry.
+    const learningMode = repo.learning.mode()
+    const learnedLabels =
+      documentType && appliesRules(learningMode)
+        ? learnedLabelsFor(repo.learning.activeRules(), documentType, fingerprint)
+        : []
+
     const prepared =
       engines.extraction === 'v2'
         ? prepareV2({
@@ -124,7 +134,8 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
             extracted,
             classification,
             manualType: manualType !== null,
-            startedAt
+            startedAt,
+            learning: { mode: learningMode, labels: learnedLabels }
           })
         : prepareV1(registry, documentType, extracted)
 
@@ -133,7 +144,7 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
     repo.transaction(() => {
       repo.documents.setContentIdentity(input.documentId, {
         contentSha256,
-        templateFingerprint: firstPageFingerprint(extracted)
+        templateFingerprint: fingerprint
       })
       // Le righe su cui si ritroveranno le selezioni del revisore: le stesse del motore.
       repo.pages.replaceForDocument(input.documentId, pagesOf(extracted))
@@ -302,6 +313,8 @@ function prepareV2(input: {
   classification: Classification
   manualType: boolean
   startedAt: string
+  /** Modalità del learner ed etichette delle regole attive per questo documento. */
+  learning: { mode: LearningMode; labels: LearnedLabel[] }
 }): PreparedExtraction {
   const { registry, documentType, extracted } = input
   const run = (
@@ -351,7 +364,8 @@ function prepareV2(input: {
     documentType,
     pages: extracted.pages,
     registry,
-    fromOcr: extracted.source === 'OCR'
+    fromOcr: extracted.source === 'OCR',
+    learnedLabels: input.learning.labels
   })
 
   const evidence: EvidenceInput[] = []
@@ -361,7 +375,14 @@ function prepareV2(input: {
     confidence: number
   ) => {
     const id = randomUUID()
-    evidence.push({ id, page: item.page, text: item.text, bbox: item.bbox ?? null, confidence })
+    evidence.push({
+      id,
+      page: item.page,
+      text: item.text,
+      bbox: item.bbox ?? null,
+      confidence,
+      ruleId: item.ruleId ?? null
+    })
     return id
   }
 
@@ -440,7 +461,21 @@ function prepareV2(input: {
         confidence: result.confidence,
         filledFields: filled,
         totalFields: result.facts.length,
-        reviewStatus: countBy(result.facts.map((fact) => fact.reviewStatus))
+        reviewStatus: countBy(result.facts.map((fact) => fact.reviewStatus)),
+        // Con quale apprendimento è uscito questo run: le regole disponibili e quelle che
+        // hanno davvero dato un valore. Un benchmark dichiara così cosa ha misurato.
+        learning: {
+          mode: input.learning.mode,
+          learnerVersion: LEARNER_VERSION,
+          activeRules: [...new Set(input.learning.labels.map((label) => label.ruleId))].length,
+          appliedRuleIds: [
+            ...new Set(
+              result.facts.flatMap((fact) =>
+                fact.evidence.flatMap((item) => (item.ruleId ? [item.ruleId] : []))
+              )
+            )
+          ].sort()
+        }
       }
     })
   }

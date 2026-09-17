@@ -9,6 +9,7 @@ import type {
 } from '@shared/types'
 import type { Repository } from './db/repository'
 import { ReviewerError } from './errors'
+import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
 import { learnFromReview } from './review-learning'
 
 /** Lo stato in cui l'azione lascia il documento, cioè se entrerà nel dataset o no. */
@@ -101,7 +102,9 @@ export function buildReviewPayload(
  * l'export la rilegge: il testo della timeline è per gli occhi e non è un formato.
  *
  * Nella stessa transazione una revisione salvata diventa eventi per il learner
- * (`learnFromReview`), e la riga di timeline dice se e quanto è stato registrato.
+ * (`learnFromReview`), e la riga di timeline dice se e quanto è stato registrato. Se una
+ * regola comincia o smette di valere, `onRulesChanged` riceve i tipi da rielaborare, dopo
+ * che la transazione è chiusa.
  */
 export function submitReview(
   repo: Repository,
@@ -112,6 +115,9 @@ export function submitReview(
     now?: Date
     /** L'account che salva; senza, la revisione non si registra per il learner. */
     actor?: string | null
+    /** Il registry v2, per ricavare le etichette dai valori selezionati. */
+    registry?: ExtractionRegistryV2 | undefined
+    onRulesChanged?: (documentTypes: string[]) => void
   }
 ): ReviewDocument {
   const document = repo.getReviewDocument(input.documentId)
@@ -121,12 +127,13 @@ export function submitReview(
   const { title, detail } = describeReview(payload)
   const at = (input.now ?? new Date()).toISOString()
 
-  repo.transaction(() => {
+  const learned = repo.transaction(() => {
     const learned = learnFromReview(repo, {
       document,
       action: input.action,
       at,
-      actor: input.actor ?? null
+      actor: input.actor ?? null,
+      registry: input.registry
     })
     repo.documents.setReviewOutcome(
       input.documentId,
@@ -134,8 +141,15 @@ export function submitReview(
       at,
       payload.note ?? null
     )
-    repo.events.add(input.documentId, title, learned ? `${detail} ${learned}` : detail, at)
+    repo.events.add(
+      input.documentId,
+      title,
+      learned.note ? `${detail} ${learned.note}` : detail,
+      at
+    )
+    return learned
   })
+  if (learned.changedTypes.length > 0) input.onRulesChanged?.(learned.changedTypes)
 
   return repo.getReviewDocument(input.documentId)!
 }

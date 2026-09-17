@@ -72,7 +72,17 @@ export interface LearningEventInput {
   fieldId: string | null
   itemIndex: number | null
   engineConfidence: number | null
+  /** La regola appresa che aveva proposto il valore del motore, se ce n'era una. */
+  engineRuleId: string | null
   pick: LearningPick | null
+}
+
+/**
+ * Il documento a cui si riferisce una prova: lo sha-256 del file, o l'id del documento
+ * quando l'hash manca. Una regola ha al più una prova per documento.
+ */
+export function documentKey(event: Pick<LearningEventInput, 'contentSha256' | 'documentId'>) {
+  return event.contentSha256 ?? `document:${event.documentId}`
 }
 
 export interface LearningEvent extends LearningEventInput {
@@ -119,6 +129,47 @@ export interface LearningRule extends LearningRuleInput {
   learnerVersion: string
 }
 
+/**
+ * Dove sta il valore rispetto all'etichetta: sulla stessa riga, dopo; oppure in testa alla
+ * riga successiva, con l'etichetta a fine riga. Le stesse due letture del motore.
+ */
+export type AnchorRelation = 'same-line' | 'next-line'
+
+/** La forma di una regola `EXTRACTION_ANCHOR`. */
+export interface AnchorPattern {
+  /** Ripiegata come la ripiega il motore: minuscole, senza accenti né punteggiatura. */
+  label: string
+  relation: AnchorRelation
+}
+
+export function isAnchorPattern(
+  pattern: Record<string, unknown>
+): pattern is AnchorPattern & Record<string, unknown> {
+  return (
+    typeof pattern.label === 'string' &&
+    (pattern.relation === 'same-line' || pattern.relation === 'next-line')
+  )
+}
+
+/** La chiave di una regola d'etichetta: tipo, ambito, impronta, campo e forma. */
+export function anchorRuleKey(input: {
+  scope: LearningRuleScope
+  documentType: string
+  fieldId: string
+  templateFingerprint: string | null
+  pattern: AnchorPattern
+}): string {
+  return [
+    'EXTRACTION_ANCHOR',
+    input.scope,
+    input.documentType,
+    input.scope === 'TEMPLATE' ? input.templateFingerprint : '*',
+    input.fieldId,
+    input.pattern.relation,
+    input.pattern.label
+  ].join('|')
+}
+
 /** Quante revisioni sostengono la regola. */
 export function ruleSupport(rule: Pick<LearningRule, 'positiveCount'>): number {
   return rule.positiveCount
@@ -130,6 +181,74 @@ export function rulePrecision(
 ): number | null {
   const total = rule.positiveCount + rule.negativeCount
   return total === 0 ? null : rule.positiveCount / total
+}
+
+/**
+ * Quando una regola comincia o smette di valere. Soglie iniziali della specifica, da
+ * calibrare sui documenti veri.
+ */
+export interface LearningPolicy {
+  /** Una regola di template vale dopo tante conferme, senza nessuna smentita. */
+  minTemplateSupport: number
+  minTemplatePrecision: number
+  /** Una regola di tipo vale su tutti i moduli del tipo: chiede più conferme. */
+  minClassSupport: number
+  minClassPrecision: number
+  /** Una regola attiva si sospende sotto questa precisione… */
+  suspendBelowPrecision: number
+  /**
+   * …ma solo con abbastanza prove perché il rapporto dica qualcosa: dopo due conferme una
+   * smentita fa il 67%, e non è una regola sbagliata. Prima di allora decidono le smentite
+   * di fila.
+   */
+  minEvidenceForPrecision: number
+  /** …o dopo tante smentite di fila, anche se la storia era buona. */
+  suspendAfterNegatives: number
+}
+
+export const DEFAULT_LEARNING_POLICY: LearningPolicy = {
+  minTemplateSupport: 2,
+  minTemplatePrecision: 1,
+  minClassSupport: 3,
+  minClassPrecision: 0.9,
+  suspendBelowPrecision: 0.7,
+  minEvidenceForPrecision: 5,
+  suspendAfterNegatives: 2
+}
+
+/**
+ * Lo stato che una regola dovrebbe avere, date le sue prove.
+ *
+ * Il learner promuove e sospende da sé; non riattiva e non scarta. Una regola sospesa ha
+ * smesso di valere per una ragione, e tornare a fidarsene è una decisione di una persona:
+ * altrimenti una sospensione a mano durerebbe fino alla prossima conferma.
+ *
+ * `recent` sono gli effetti delle prove dalla più recente.
+ */
+export function nextRuleStatus(
+  rule: Pick<LearningRule, 'status' | 'scope' | 'positiveCount' | 'negativeCount'>,
+  recent: LearningEffect[],
+  policy: LearningPolicy = DEFAULT_LEARNING_POLICY
+): LearningRuleStatus {
+  const precision = rulePrecision(rule)
+  if (rule.status === 'CANDIDATE') {
+    const template = rule.scope === 'TEMPLATE'
+    const support = template ? policy.minTemplateSupport : policy.minClassSupport
+    const minimum = template ? policy.minTemplatePrecision : policy.minClassPrecision
+    return ruleSupport(rule) >= support && precision !== null && precision >= minimum
+      ? 'ACTIVE'
+      : 'CANDIDATE'
+  }
+  if (rule.status === 'ACTIVE') {
+    const streak = recent.slice(0, policy.suspendAfterNegatives)
+    const contradicted =
+      streak.length === policy.suspendAfterNegatives &&
+      streak.every((effect) => effect === 'NEGATIVE')
+    const measured = rule.positiveCount + rule.negativeCount >= policy.minEvidenceForPrecision
+    const imprecise = measured && precision !== null && precision < policy.suspendBelowPrecision
+    return contradicted || imprecise ? 'SUSPENDED' : 'ACTIVE'
+  }
+  return rule.status
 }
 
 export type LearningActionKind =

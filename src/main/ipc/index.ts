@@ -234,13 +234,20 @@ export function registerIpcHandlers(context: IpcContext): void {
 
   // I campi sono già a database — ogni modifica li scrive appena avviene. Qui si
   // registra solo l'esito: dentro o fuori dal dataset, e perché. L'account collegato è
-  // l'autore delle decisioni che il learner registra.
+  // l'autore delle decisioni che il learner registra; se una regola cambia stato, i
+  // documenti in coda del suo tipo si rielaborano in sottofondo.
   handle('review:submit', reviewSubmissionSchema, ({ documentId, payload }) =>
     submitReview(repo, {
       documentId,
       action: payload.action,
       note: payload.note,
-      actor: auth.status().email
+      actor: auth.status().email,
+      registry: context.profiles?.refinement.registry,
+      onRulesChanged: (documentTypes) => {
+        if (!context.profiles || !context.process) return
+        const deps = refinement()
+        for (const documentType of documentTypes) reprocessQueueOfType(deps, documentType, null)
+      }
     })
   )
 
