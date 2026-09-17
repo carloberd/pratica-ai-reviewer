@@ -25,7 +25,8 @@ function fieldMeasure(overrides: Partial<ProfileFieldMeasure> = {}): ProfileFiel
     confirmedRate: 1,
     correctedRate: 0,
     manualRate: 0,
-    signal: 'OK'
+    signal: 'OK',
+    decision: null
   }
   return { ...base, ...overrides }
 }
@@ -88,15 +89,17 @@ function measure(overrides: Partial<ProfileTypeMeasure> = {}): ProfileTypeMeasur
   }
 }
 
+const ONTOLOGY = [
+  { id: 'bank.iban', label: 'IBAN', hint: 'bank.iban' },
+  { id: 'procurement.cig', label: 'CIG', hint: 'procurement.cig · Codice gara' }
+]
+
 function workspace(overrides: Partial<ProfileWorkspace> = {}): ProfileWorkspace {
   return {
     types: [measure()],
-    store: {
-      directory: '/registry/v2',
-      writable: true,
-      repositoryRoot: '/repo',
-      mode: 'COMMITTED'
-    },
+    ontology: ONTOLOGY,
+    recent: [],
+    standingEdits: 0,
     ...overrides
   }
 }
@@ -121,24 +124,54 @@ describe('schermata «Istruzioni per tipo»', () => {
     expect(view).toContain('13% proposti e corretti')
     expect(view).toContain('38% scritti a mano dal revisore')
     expect(view).toContain('Rielabora i 12 documenti')
-    expect(view).toContain('Ogni correzione riscrive i JSON del registry')
+    expect(view).toContain('Le correzioni restano qui dentro e valgono subito per il motore')
   })
 
-  it('il campo mai usato è segnalato col numero di documenti e col pulsante per toglierlo', () => {
+  it('il campo mai usato è segnalato col numero di documenti e col pulsante per scartarlo', () => {
     const markup = html(<ProfileInsights {...props} workspace={workspace()} />)
     const view = text(<ProfileInsights {...props} workspace={workspace()} />)
     expect(markup).toContain('data-field="document.number" data-signal="NEVER_USED"')
     expect(view).toContain('Mai usato: su 12 documenti di questo tipo non ha mai avuto un valore')
-    expect(view).toContain('Togli dal profilo')
+    expect(view).toContain('Segna non utile')
+  })
+
+  it('i campi scartati restano visibili, con il modo di rimetterli', () => {
+    const excluded = fieldMeasure({
+      fieldId: 'procurement.cig',
+      label: 'CIG',
+      role: null,
+      inProfile: false,
+      confirmed: 0,
+      filled: 0,
+      empty: 12,
+      confirmedRate: 0,
+      signal: 'EXCLUDED',
+      decision: 'excluded'
+    })
+    const view = text(
+      <ProfileInsights
+        {...props}
+        workspace={workspace({ types: [measure({ fields: [excluded] })] })}
+      />
+    )
+    expect(view).toContain('Campi segnati non utili per questo tipo')
+    expect(view).toContain('CIG')
+    expect(view).toContain('Ripristina')
+  })
+
+  it('si può aggiungere un campo qualsiasi dell’ontologia, non solo quelli già visti', () => {
+    const view = text(<ProfileInsights {...props} workspace={workspace()} />)
+    expect(view).toContain('Aggiungi un campo che la mappa non prevede')
+    expect(view).toContain('Tutti i 2 campi dell')
   })
 
   it('il campo che il revisore aggiunge sempre è proposto per l’aggiunta, con quante volte', () => {
     const markup = html(<ProfileInsights {...props} workspace={workspace()} />)
     const view = text(<ProfileInsights {...props} workspace={workspace()} />)
     expect(markup).toContain('data-field="bank.iban" data-signal="MISSING_FROM_PROFILE"')
-    expect(view).toContain('Campi che il revisore aggiunge e il profilo non prevede')
+    expect(view).toContain('Campi che il revisore compila e la mappa non prevede')
     expect(view).toContain('9 su 12 (75%)')
-    expect(view).toContain('Aggiungi al profilo')
+    expect(view).toContain('Aggiungi alla mappa')
   })
 
   it('marca i profili verificati su documenti reali e quelli senza profilo esplicito', () => {
@@ -255,12 +288,12 @@ describe('conferma sui profili verificati', () => {
             documentType: 'accounting.fattura',
             fieldId: 'document.number'
           },
-          description: 'togliere document.number dal profilo di accounting.fattura'
+          description: 'segnare Numero documento come non utile per accounting.fattura'
         }}
       />
     )
     expect(view).toContain('Questo profilo è stato costruito su documenti reali')
-    expect(view).toContain('togliere document.number dal profilo di accounting.fattura')
+    expect(view).toContain('segnare Numero documento come non utile per accounting.fattura')
     expect(view).toContain('Sì, correggi il profilo')
     expect(view).toContain('Annulla')
   })
@@ -269,20 +302,29 @@ describe('conferma sui profili verificati', () => {
 describe('tabella dei campi', () => {
   it('un profilo senza campi lo dice invece di mostrare una tabella vuota', () => {
     const view = text(
-      <ProfileFields measure={measure({ fields: [] })} disabled={false} onEdit={() => {}} />
+      <ProfileFields
+        measure={measure({ fields: [] })}
+        ontology={ONTOLOGY}
+        disabled={false}
+        onEdit={() => {}}
+      />
     )
-    expect(view).toContain('Il profilo di questo tipo non chiede nessun campo')
-    expect(view).toContain('il revisore non ha compilato campi fuori dal profilo')
+    expect(view).toContain('La mappa di questo tipo non chiede nessun campo')
+    expect(view).toContain('il revisore non ha compilato campi fuori dalla mappa')
   })
 
   it('ogni campo del profilo ha il pulsante per insegnare un’etichetta al motore', () => {
-    const view = text(<ProfileFields measure={measure()} disabled={false} onEdit={() => {}} />)
-    // Uno per ognuno dei due campi del profilo; il candidato all'aggiunta non ce l'ha.
+    const view = text(
+      <ProfileFields measure={measure()} ontology={ONTOLOGY} disabled={false} onEdit={() => {}} />
+    )
+    // Uno per ognuno dei due campi della mappa; il candidato all'aggiunta non ce l'ha.
     expect(count(view, "Aggiungi un'etichetta")).toBe(2)
   })
 
   it('i campi bloccati quando c’è un’operazione in corso', () => {
-    const markup = html(<ProfileFields measure={measure()} disabled onEdit={() => {}} />)
+    const markup = html(
+      <ProfileFields measure={measure()} ontology={ONTOLOGY} disabled onEdit={() => {}} />
+    )
     expect(markup).toContain('disabled=""')
   })
 })

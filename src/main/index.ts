@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs'
-import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import type { ProfileOverlay } from '@shared/profile-overlay'
 import { app, BrowserWindow, dialog } from 'electron'
 import { createAuthService } from './auth/service'
 import { type EngineSelection, loadEngines } from './config'
@@ -46,7 +46,6 @@ function start(): void {
 
   const engines = loadEngines()
   const registry = createRegistry(registryDir())
-  const v2 = loadRegistryV2(engines)
   const db = openDatabase({ file: databaseFile() })
   teardown.push(() => db.close())
 
@@ -54,6 +53,11 @@ function start(): void {
     requiredFields: (documentType) => registry.requiredFor(documentType),
     typeLabel: (documentType) => registry.label(documentType)
   })
+
+  // Il registry v2 arriva dopo il database perché le correzioni del revisore stanno lì:
+  // i profili del pack restano quelli, e quello che il motore legge è il pack con sopra
+  // le decisioni prese nella schermata «Mappa tipi ↔ dati».
+  const v2 = loadRegistryV2(engines, () => repo.profileMap.overlay())
 
   mkdirSync(tessdataCacheDir(), { recursive: true })
   const ocr = createOcrService({
@@ -96,22 +100,16 @@ function start(): void {
             refinement: {
               registry: v2.extractionRegistryV2,
               registryDirectory: registryV2Dir(),
-              typeLabel: (documentType: string) => registry.label(documentType),
-              exportFile: async (file: { name: string; content: string }) => {
-                const path = await chooseSavePath(
-                  `Esporta ${file.name} da sostituire a mano`,
-                  file.name
-                )
-                if (path) await writeFile(path, file.content, 'utf8')
-                return path
-              }
+              typeLabel: (documentType: string) => registry.label(documentType)
             },
             manifest: () => ({
               app: { name: app.getName(), version: app.getVersion() },
               schemaVersion: v2.extractionRegistryV2?.schemaVersion() ?? null
             }),
             choosePath: (defaultName: string) =>
-              chooseSavePath('Esporta il report delle istruzioni per tipo', defaultName)
+              chooseSavePath('Esporta il report delle istruzioni per tipo', defaultName),
+            chooseDirectory: (defaultName: string) =>
+              chooseExportFolder('Dove salvare la mappa corretta', defaultName)
           }
         }
       : {})
@@ -142,7 +140,10 @@ function start(): void {
  * nomi legacy serve comunque a ritrovare le correzioni cambiando motore, ma col v1 un
  * file illeggibile non deve impedire l'avvio.
  */
-function loadRegistryV2(engines: EngineSelection): {
+function loadRegistryV2(
+  engines: EngineSelection,
+  overlay: () => ProfileOverlay
+): {
   classifierConfigV2: ReturnType<typeof loadClassifierConfigV2> | undefined
   extractionRegistryV2: ReloadableExtractionRegistryV2 | undefined
   legacyFieldMap: Record<string, string>
@@ -161,10 +162,29 @@ function loadRegistryV2(engines: EngineSelection): {
       engines.classifier === 'v2' ? loadClassifierConfigV2(registryV2Dir()) : undefined,
     extractionRegistryV2:
       engines.extraction === 'v2'
-        ? createReloadableExtractionRegistryV2(registryV2Dir(), registryDir())
+        ? createReloadableExtractionRegistryV2(registryV2Dir(), registryDir(), overlay)
         : undefined,
     legacyFieldMap
   }
+}
+
+/**
+ * Finestra «scegli la cartella», per l'export della mappa: i file della mappa corretta
+ * sono quattro e vanno insieme, quindi si sceglie dove crearne la cartella e non un file
+ * per volta.
+ */
+async function chooseExportFolder(title: string, folderName: string): Promise<string | null> {
+  const options = {
+    title,
+    defaultPath: app.getPath('documents'),
+    properties: ['openDirectory', 'createDirectory'] as Array<'openDirectory' | 'createDirectory'>,
+    buttonLabel: 'Esporta qui'
+  }
+  const result = mainWindow
+    ? await dialog.showOpenDialog(mainWindow, options)
+    : await dialog.showOpenDialog(options)
+  const parent = result.canceled ? undefined : result.filePaths[0]
+  return parent ? join(parent, folderName) : null
 }
 
 /** Finestra «salva con nome», sulla finestra principale quando c'è. */

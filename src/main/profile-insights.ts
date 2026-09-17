@@ -77,6 +77,7 @@ function originOf(registry: ExtractionRegistryV2, documentType: string): Profile
 /** Gli ingressi puri per un tipo: il profilo attuale e i documenti annotati che votano. */
 function inputFor(deps: ProfileInsightsDeps, documentType: string): MeasuredTypeInput {
   const { repo, registry } = deps
+  // Il profilo che il motore usa davvero: registry più le decisioni del revisore.
   const profile = registry.profile(documentType)
 
   const documents = repo.documents
@@ -98,6 +99,8 @@ function inputFor(deps: ProfileInsightsDeps, documentType: string): MeasuredType
     schemaState: profile?.schema_state ?? null,
     fieldTested: isFieldTestedProfile(profile),
     profileFields: profileFieldsOf(registry, documentType),
+    decisions: repo.profileMap.forType(documentType),
+    fieldLabel: (fieldId) => registry.field(fieldId)?.label_it ?? null,
     documents
   }
 }

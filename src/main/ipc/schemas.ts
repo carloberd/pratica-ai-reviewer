@@ -95,7 +95,7 @@ export function imageByteLength(value: unknown): number {
 }
 
 // ---------------------------------------------------------------------------
-// Istruzioni per tipo
+// Mappa tipi ↔ dati da estrarre
 // ---------------------------------------------------------------------------
 
 /** Id di un campo dell'ontologia v2, es. `document.number`. */
@@ -108,9 +108,9 @@ const fieldIdSchema = z
 const fieldRoleSchema = z.enum(['required', 'core', 'optional', 'conditional'])
 
 /**
- * Una correzione al profilo di un tipo. Il ponte IPC è un confine: un id di campo
- * inventato o un ruolo che non esiste si ferma qui, prima di arrivare a un JSON che il
- * motore deve poter rileggere all'avvio.
+ * Una correzione alla mappa «tipo ↔ dati da estrarre». Il ponte IPC è un confine: un id
+ * di campo inventato o un ruolo che non esiste si ferma qui, prima di diventare una
+ * decisione sul database che il motore applicherebbe a ogni documento.
  */
 export const profileEditSchema = z.object({
   edit: z.discriminatedUnion('kind', [
@@ -132,6 +132,11 @@ export const profileEditSchema = z.object({
       role: fieldRoleSchema
     }),
     z.object({
+      kind: z.literal('RESTORE_FIELD'),
+      documentType: documentTypeSlugSchema,
+      fieldId: fieldIdSchema
+    }),
+    z.object({
       kind: z.literal('ADD_HINT_LABEL'),
       documentType: documentTypeSlugSchema,
       fieldId: fieldIdSchema,
@@ -141,5 +146,8 @@ export const profileEditSchema = z.object({
 })
 
 export const profileTypeSchema = z.object({ documentType: documentTypeSlugSchema })
+
+/** L'azione della cronologia da annullare. */
+export const profileActionSchema = z.object({ actionId: z.string().uuid() })
 
 export const profileReportSchema = z.object({ format: z.enum(['json', 'csv']) })
