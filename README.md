@@ -198,11 +198,16 @@ indirizzo, e l'app non la vede mai passare. Il redirect torna comunque sul loopb
 scambio codice→token avviene nel main. Se il consenso non arriva entro cinque minuti la
 porta si chiude e il login va ripetuto.
 
-**Download su richiesta.** «Documenti» mostra l'elenco dell'account — `files.list`
-paginata su PDF e DOCX fuori dal cestino — e basta: è solo metadato, non scarica niente.
-Il contenuto arriva al doppio clic su una riga, un file per volta, che lo scarica in
-cache, lo analizza e apre la revisione. Tirare giù l'intero Drive in un colpo
-riempirebbe il disco di documenti che nessuno aprirà.
+**Download su richiesta.** «Documenti» mostra Drive com'è, una cartella per volta: le tre
+radici della barra laterale di Drive — «Il mio Drive», «Condivisi con me», «Drive
+condivisi» — come schede, e sotto il percorso della cartella aperta. Ogni cartella è una
+`files.list` paginata sui figli diretti (sottocartelle, PDF e DOCX fuori dal cestino),
+con le cartelle in cima e poi i file, in ordine di nome; i Drive condivisi arrivano da
+`drives.list`. Le scorciatoie si aprono come l'originale: a una cartella ci si entra, a un
+documento si legge coi metadati del bersaglio. È solo metadato, non scarica niente, e non
+visita l'albero intero: si scende un livello per volta. Il doppio clic su una cartella la
+apre; su un file lo scarica in cache, lo analizza e apre la revisione. Tirare giù l'intero
+Drive in un colpo riempirebbe il disco di documenti che nessuno aprirà.
 
 Ogni file è deduplicato per `drive_file_id` — l'id che Drive dà al file, salvato
 `UNIQUE NOT NULL` su `documents` e mai riscritto dalle sincronizzazioni successive.
