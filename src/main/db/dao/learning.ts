@@ -1,0 +1,473 @@
+import { randomUUID } from 'node:crypto'
+import {
+  isLearningMode,
+  LEARNER_VERSION,
+  LEARNING_MODE_LABELS,
+  type LearningAction,
+  type LearningActionKind,
+  type LearningActionNumbers,
+  type LearningCounts,
+  type LearningEffect,
+  type LearningEvent,
+  type LearningEventInput,
+  type LearningEventKind,
+  type LearningMode,
+  type LearningOutcome,
+  type LearningRule,
+  type LearningRuleInput,
+  type LearningRuleKind,
+  type LearningRuleScope,
+  type LearningRuleStatus,
+  rulePrecision,
+  ruleSupport
+} from '@shared/local-learning'
+import type { PickMethod } from '@shared/types'
+import type { Db } from '../index'
+import { parseBbox, toPickLocation } from '../rows'
+
+/**
+ * Il deposito del learner locale (migrazione 0011): modalità, eventi, regole, prove e
+ * cronologia.
+ *
+ * La regola che lo governa sta nella forma, non in un controllo sparso: tutto quello che
+ * il learner scrive passa da `acquire`, che lo esegue in una transazione e solo in
+ * modalità `LEARNING`. In `FROZEN` e `BASELINE` il lavoro non parte nemmeno, quindi non
+ * c'è una scrittura dimenticata che possa contaminare un benchmark.
+ *
+ * Le regole attive si chiedono a ogni documento elaborato: stanno in memoria e si
+ * rileggono dopo una scrittura, come l'overlay della mappa.
+ */
+
+interface EventRow {
+  id: string
+  at: string
+  actor: string
+  document_id: string
+  content_sha256: string | null
+  template_fingerprint: string | null
+  text_source: string | null
+  kind: string
+  outcome: string
+  document_type: string | null
+  predicted_type: string | null
+  predicted_confidence: number | null
+  field_id: string | null
+  item_index: number | null
+  engine_confidence: number | null
+  pick_method: string | null
+  pick_page: number | null
+  pick_bbox_json: string | null
+  pick_line_start: number | null
+  pick_line_end: number | null
+  pick_char_start: number | null
+  pick_char_end: number | null
+  learner_version: string
+}
+
+interface RuleRow {
+  id: string
+  kind: string
+  scope: string
+  document_type: string
+  field_id: string | null
+  template_fingerprint: string | null
+  pattern_json: string
+  rule_key: string
+  status: string
+  positive_count: number
+  negative_count: number
+  last_positive_at: string | null
+  last_negative_at: string | null
+  created_at: string
+  updated_at: string
+  learner_version: string
+}
+
+interface ActionRow {
+  id: string
+  at: string
+  kind: string
+  rule_id: string | null
+  before_state: string | null
+  after_state: string | null
+  detail: string
+  numbers_json: string | null
+  reverts_id: string | null
+  reverted_at: string | null
+}
+
+function toEvent(row: EventRow): LearningEvent {
+  const location = toPickLocation({
+    line_start: row.pick_line_start,
+    line_end: row.pick_line_end,
+    char_start: row.pick_char_start,
+    char_end: row.pick_char_end
+  })
+  return {
+    id: row.id,
+    at: row.at,
+    actor: row.actor,
+    documentId: row.document_id,
+    contentSha256: row.content_sha256,
+    templateFingerprint: row.template_fingerprint,
+    textSource: row.text_source as LearningEvent['textSource'],
+    kind: row.kind as LearningEventKind,
+    outcome: row.outcome as LearningOutcome,
+    documentType: row.document_type,
+    predictedType: row.predicted_type,
+    predictedConfidence: row.predicted_confidence,
+    fieldId: row.field_id,
+    itemIndex: row.item_index,
+    engineConfidence: row.engine_confidence,
+    pick:
+      row.pick_method === null || row.pick_page === null
+        ? null
+        : {
+            method: row.pick_method as PickMethod,
+            page: row.pick_page,
+            bbox: parseBbox(row.pick_bbox_json) ?? null,
+            location: location ?? null
+          },
+    learnerVersion: row.learner_version
+  }
+}
+
+function toRule(row: RuleRow): LearningRule {
+  return {
+    id: row.id,
+    kind: row.kind as LearningRuleKind,
+    scope: row.scope as LearningRuleScope,
+    documentType: row.document_type,
+    fieldId: row.field_id,
+    templateFingerprint: row.template_fingerprint,
+    pattern: JSON.parse(row.pattern_json) as Record<string, unknown>,
+    ruleKey: row.rule_key,
+    status: row.status as LearningRuleStatus,
+    positiveCount: row.positive_count,
+    negativeCount: row.negative_count,
+    lastPositiveAt: row.last_positive_at,
+    lastNegativeAt: row.last_negative_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    learnerVersion: row.learner_version
+  }
+}
+
+function toAction(row: ActionRow): LearningAction {
+  return {
+    id: row.id,
+    at: row.at,
+    kind: row.kind as LearningActionKind,
+    ruleId: row.rule_id,
+    before: row.before_state,
+    after: row.after_state,
+    detail: row.detail,
+    numbers: row.numbers_json ? (JSON.parse(row.numbers_json) as LearningActionNumbers) : null,
+    revertsId: row.reverts_id,
+    revertedAt: row.reverted_at
+  }
+}
+
+/**
+ * L'azione che un cambio di stato rappresenta. I passaggi che non hanno un nome non sono
+ * permessi: una regola scartata non torna, e una candidata non si sospende perché non
+ * valeva ancora.
+ */
+const TRANSITIONS: Record<
+  LearningRuleStatus,
+  Partial<Record<LearningRuleStatus, LearningActionKind>>
+> = {
+  CANDIDATE: { ACTIVE: 'RULE_PROMOTED', REJECTED: 'RULE_REJECTED' },
+  ACTIVE: { SUSPENDED: 'RULE_SUSPENDED', REJECTED: 'RULE_REJECTED' },
+  SUSPENDED: { ACTIVE: 'RULE_REACTIVATED', REJECTED: 'RULE_REJECTED' },
+  REJECTED: {}
+}
+
+/** Le scritture del learner: si ottengono solo dentro `acquire`. */
+export interface LearningWriter {
+  /** Registra una decisione del revisore. */
+  addEvent(input: LearningEventInput): LearningEvent
+  findRule(ruleKey: string): LearningRule | undefined
+  /** Una regola nuova nasce candidata, e non lascia righe in cronologia. */
+  createRule(input: LearningRuleInput, at: string): LearningRule
+  /**
+   * Un evento che sostiene o smentisce una regola. Conta una volta sola per coppia
+   * regola-evento: ripetere la stessa prova non gonfia i contatori.
+   */
+  recordEvidence(ruleId: string, eventId: string, effect: LearningEffect, at: string): LearningRule
+  /** Promuove, sospende, riattiva o scarta una regola, e lo scrive in cronologia. */
+  changeRuleStatus(
+    ruleId: string,
+    status: LearningRuleStatus,
+    change: { at: string; detail: string }
+  ): LearningAction
+}
+
+export function createLearningDao(db: Db) {
+  const insertEvent = db.prepare(`
+    INSERT INTO learning_events (
+      id, at, actor, document_id, content_sha256, template_fingerprint, text_source, kind, outcome,
+      document_type, predicted_type, predicted_confidence, field_id, item_index, engine_confidence,
+      pick_method, pick_page, pick_bbox_json, pick_line_start, pick_line_end, pick_char_start,
+      pick_char_end, learner_version
+    ) VALUES (
+      @id, @at, @actor, @documentId, @contentSha256, @templateFingerprint, @textSource, @kind, @outcome,
+      @documentType, @predictedType, @predictedConfidence, @fieldId, @itemIndex, @engineConfidence,
+      @pickMethod, @pickPage, @pickBboxJson, @pickLineStart, @pickLineEnd, @pickCharStart,
+      @pickCharEnd, @learnerVersion
+    )
+  `)
+  const insertRule = db.prepare(`
+    INSERT INTO learning_rules (
+      id, kind, scope, document_type, field_id, template_fingerprint, pattern_json, rule_key,
+      status, created_at, updated_at, learner_version
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'CANDIDATE', ?, ?, ?)
+  `)
+  const insertAction = db.prepare(`
+    INSERT INTO learning_actions (id, at, kind, rule_id, before_state, after_state, detail, numbers_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `)
+  const selectRule = db.prepare('SELECT * FROM learning_rules WHERE id = ?')
+  const selectRuleByKey = db.prepare('SELECT * FROM learning_rules WHERE rule_key = ?')
+
+  let activeCache: LearningRule[] | null = null
+
+  function mode(): LearningMode {
+    const row = db.prepare('SELECT mode FROM learning_state WHERE id = 1').get() as
+      | { mode: string }
+      | undefined
+    // La riga la crea la migrazione e il CHECK ne vincola il valore: se manca è un bug.
+    if (!row || !isLearningMode(row.mode)) throw new Error('Stato del learner illeggibile.')
+    return row.mode
+  }
+
+  function rule(id: string): LearningRule {
+    const row = selectRule.get(id) as RuleRow | undefined
+    if (!row) throw new Error(`Regola ${id} inesistente.`)
+    return toRule(row)
+  }
+
+  function addAction(action: Omit<LearningAction, 'id' | 'revertsId' | 'revertedAt'>) {
+    const id = randomUUID()
+    insertAction.run(
+      id,
+      action.at,
+      action.kind,
+      action.ruleId,
+      action.before,
+      action.after,
+      action.detail,
+      action.numbers ? JSON.stringify(action.numbers) : null
+    )
+    return { ...action, id, revertsId: null, revertedAt: null }
+  }
+
+  const writer: LearningWriter = {
+    addEvent(input) {
+      const event: LearningEvent = { ...input, id: randomUUID(), learnerVersion: LEARNER_VERSION }
+      insertEvent.run({
+        ...event,
+        pickMethod: event.pick?.method ?? null,
+        pickPage: event.pick?.page ?? null,
+        pickBboxJson: event.pick?.bbox ? JSON.stringify(event.pick.bbox) : null,
+        pickLineStart: event.pick?.location?.lineStart ?? null,
+        pickLineEnd: event.pick?.location?.lineEnd ?? null,
+        pickCharStart: event.pick?.location?.charStart ?? null,
+        pickCharEnd: event.pick?.location?.charEnd ?? null
+      })
+      return event
+    },
+
+    findRule(ruleKey) {
+      const row = selectRuleByKey.get(ruleKey) as RuleRow | undefined
+      return row ? toRule(row) : undefined
+    },
+
+    createRule(input, at) {
+      const id = randomUUID()
+      insertRule.run(
+        id,
+        input.kind,
+        input.scope,
+        input.documentType,
+        input.fieldId,
+        input.scope === 'TEMPLATE' ? input.templateFingerprint : null,
+        JSON.stringify(input.pattern),
+        input.ruleKey,
+        at,
+        at,
+        LEARNER_VERSION
+      )
+      return rule(id)
+    },
+
+    recordEvidence(ruleId, eventId, effect, at) {
+      const inserted = db
+        .prepare(
+          'INSERT OR IGNORE INTO learning_rule_evidence (rule_id, event_id, effect) VALUES (?, ?, ?)'
+        )
+        .run(ruleId, eventId, effect)
+      if (inserted.changes > 0) {
+        const column = effect === 'POSITIVE' ? 'positive' : 'negative'
+        db.prepare(`
+          UPDATE learning_rules
+             SET ${column}_count = ${column}_count + 1, last_${column}_at = ?, updated_at = ?
+           WHERE id = ?
+        `).run(at, at, ruleId)
+      }
+      return rule(ruleId)
+    },
+
+    changeRuleStatus(ruleId, status, change) {
+      const current = rule(ruleId)
+      const kind = TRANSITIONS[current.status][status]
+      if (!kind) {
+        throw new Error(`Una regola ${current.status} non può diventare ${status}.`)
+      }
+      db.prepare('UPDATE learning_rules SET status = ?, updated_at = ? WHERE id = ?').run(
+        status,
+        change.at,
+        ruleId
+      )
+      return addAction({
+        at: change.at,
+        kind,
+        ruleId,
+        before: current.status,
+        after: status,
+        detail: change.detail,
+        numbers: { support: ruleSupport(current), precision: rulePrecision(current) }
+      })
+    }
+  }
+
+  return {
+    mode,
+
+    /**
+     * Cambia modalità e lo scrive in cronologia. Chiedere la modalità in cui si è già non
+     * scrive niente: `null`.
+     */
+    setMode(next: LearningMode, at: string = new Date().toISOString()): LearningAction | null {
+      return db.transaction(() => {
+        const previous = mode()
+        if (previous === next) return null
+        db.prepare('UPDATE learning_state SET mode = ?, updated_at = ? WHERE id = 1').run(next, at)
+        activeCache = null
+        return addAction({
+          at,
+          kind: 'MODE_CHANGED',
+          ruleId: null,
+          before: previous,
+          after: next,
+          detail: `${LEARNING_MODE_LABELS[previous]} → ${LEARNING_MODE_LABELS[next]}.`,
+          numbers: null
+        })
+      })()
+    },
+
+    /**
+     * Esegue il lavoro del learner in una transazione, solo in modalità `LEARNING`; nelle
+     * altre ritorna `null` senza chiamarlo. Un errore dentro il lavoro annulla tutto
+     * quello che aveva scritto.
+     */
+    acquire<T>(work: (writer: LearningWriter) => T): T | null {
+      try {
+        return db.transaction(() => (mode() === 'LEARNING' ? work(writer) : null))()
+      } finally {
+        activeCache = null
+      }
+    },
+
+    /** Le regole che valgono adesso, dalla più recente. */
+    activeRules(): LearningRule[] {
+      if (!activeCache) {
+        activeCache = (
+          db
+            .prepare(
+              "SELECT * FROM learning_rules WHERE status = 'ACTIVE' ORDER BY updated_at DESC"
+            )
+            .all() as RuleRow[]
+        ).map(toRule)
+      }
+      return activeCache
+    },
+
+    getRule(id: string): LearningRule | undefined {
+      const row = selectRule.get(id) as RuleRow | undefined
+      return row ? toRule(row) : undefined
+    },
+
+    listRules(
+      filter: { status?: LearningRuleStatus; kind?: LearningRuleKind; documentType?: string } = {}
+    ): LearningRule[] {
+      const where: string[] = []
+      const params: string[] = []
+      if (filter.status) {
+        where.push('status = ?')
+        params.push(filter.status)
+      }
+      if (filter.kind) {
+        where.push('kind = ?')
+        params.push(filter.kind)
+      }
+      if (filter.documentType) {
+        where.push('document_type = ?')
+        params.push(filter.documentType)
+      }
+      return (
+        db
+          .prepare(
+            `SELECT * FROM learning_rules ${where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''}
+             ORDER BY updated_at DESC, rowid DESC`
+          )
+          .all(...params) as RuleRow[]
+      ).map(toRule)
+    },
+
+    /** Gli eventi dietro una regola, in ordine di tempo. */
+    ruleEvidence(ruleId: string): Array<{ event: LearningEvent; effect: LearningEffect }> {
+      return (
+        db
+          .prepare(`
+            SELECT e.*, r.effect FROM learning_rule_evidence r
+              JOIN learning_events e ON e.id = r.event_id
+             WHERE r.rule_id = ?
+          ORDER BY e.at, e.rowid
+          `)
+          .all(ruleId) as Array<EventRow & { effect: string }>
+      ).map((row) => ({ event: toEvent(row), effect: row.effect as LearningEffect }))
+    },
+
+    listEvents(filter: { documentId?: string } = {}): LearningEvent[] {
+      const rows = filter.documentId
+        ? db
+            .prepare('SELECT * FROM learning_events WHERE document_id = ? ORDER BY at, rowid')
+            .all(filter.documentId)
+        : db.prepare('SELECT * FROM learning_events ORDER BY at, rowid').all()
+      return (rows as EventRow[]).map(toEvent)
+    },
+
+    /** La cronologia, dalla più recente. */
+    listActions(): LearningAction[] {
+      return (
+        db
+          .prepare('SELECT * FROM learning_actions ORDER BY at DESC, rowid DESC')
+          .all() as ActionRow[]
+      ).map(toAction)
+    },
+
+    counts(): LearningCounts {
+      const events = db.prepare('SELECT COUNT(*) AS n FROM learning_events').get() as { n: number }
+      const rules: LearningCounts['rules'] = { CANDIDATE: 0, ACTIVE: 0, SUSPENDED: 0, REJECTED: 0 }
+      for (const row of db
+        .prepare('SELECT status, COUNT(*) AS n FROM learning_rules GROUP BY status')
+        .all() as Array<{ status: LearningRuleStatus; n: number }>) {
+        rules[row.status] = row.n
+      }
+      return { events: events.n, rules }
+    }
+  }
+}
+
+export type LearningDao = ReturnType<typeof createLearningDao>

@@ -269,9 +269,45 @@ scrittura su `document_type_feedback`.
 
    Conseguenze: la modalità e, in `FROZEN`, l'istantanea delle regole applicate finiscono in
    `extraction_runs.metrics_json`; ogni cambio di modalità è un'azione in cronologia; il
-   cambio di modalità non rielabora da solo i documenti già revisionati. I nomi sono una
-   proposta da confermare in PR 2.
+   cambio di modalità non rielabora da solo i documenti già revisionati. Nomi confermati
+   (17/09/2026).
 2. **Estrazione prima** (PR 1–4), classificazione dopo.
 3. **Righe salvate durante l'elaborazione.** Il learner ritrova la riga dalla posizione della
    selezione sulle stesse righe usate dal `fact-reader`, OCR compreso. La regola resta
    espressa in testo (etichetta, relazione, lettore), non in coordinate.
+
+---
+
+## Avanzamento
+
+### PR 1 — fatta (#11)
+
+Selezione con pagina, riquadro e modo; evidenza `REVIEWER` collegata alla correzione;
+righe per pagina in `document_pages` e posizione della selezione fra quelle righe; sha-256
+del file e impronta calcolati in elaborazione; dataset JSON `1.1.0`. Da verificare
+nell'app: il riquadro calcolato da una selezione reale nel text layer di pdf.js.
+
+### PR 2 — deposito e modalità
+
+Migrazione `0011_learning_store`, tipi in `src/shared/local-learning.ts`, DAO in
+`src/main/db/dao/learning.ts`. Scelte rispetto alla migrazione proposta dal pacchetto:
+
+- **Modalità su una riga sola** (`learning_state`, `id = 1`) con CHECK sulle tre modalità,
+  invece di una tabella chiave/valore. La versione del learner è una costante del codice
+  (`LEARNER_VERSION`), scritta su eventi e regole: descrive la logica, non lo stato.
+- **Eventi senza valori né testo**: decisione (`kind` + `outcome`, lo stesso vocabolario
+  delle correzioni del dataset più `CONFIRMED`), tipo proposto e scelto, campo, riga,
+  confidence del motore, posizione della selezione, autore, sha-256, impronta. Nessuna
+  foreign key verso `documents`: il registro sopravvive al documento.
+- **Supporto e precisione non salvati**: si ricavano da `positive_count` e
+  `negative_count`, che una prova incrementa una volta sola per coppia regola-evento.
+- **`rule_key` univoca**: la stessa regola imparata due volte è una riga sola.
+- **Cronologia solo per i cambi di stato** (promozione, sospensione, riattivazione,
+  scarto) e di modalità: le candidate nascono senza riga, o ogni revisione ne scriverebbe
+  decine. I passaggi ammessi sono fissati nel DAO; una regola scartata non torna.
+- **Scritture solo dentro `acquire`**, in transazione e solo in `LEARNING`: la garanzia su
+  `FROZEN` e `BASELINE` è strutturale, e il test lo verifica eseguendo lo stesso lavoro
+  nelle tre modalità.
+
+Non c'è ancora un canale IPC né UI per la modalità: arrivano con la PR 6. Finché la PR 3
+non registra le revisioni, il deposito resta vuoto.
