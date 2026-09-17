@@ -2,9 +2,8 @@ import type { ProfileEdit } from '@shared/profile-edit'
 import {
   type ActivityFeed,
   describeBundle,
-  describeEdit,
-  type ProfileWorkspace,
-  type TypeRerunResult
+  describeMapEdit,
+  type TypeFieldMap
 } from '@shared/profile-workspace'
 import type {
   AuthStatus,
@@ -29,7 +28,6 @@ import DriveFiles from './drive-files'
 import ExportMenu, { type ExportFormat } from './export-menu'
 import HistoryView from './history-view'
 import { KpiSkeleton } from './loading-skeleton'
-import ProfileInsights from './profile-insights'
 import ReviewView from './review-view'
 
 /**
@@ -37,11 +35,12 @@ import ReviewView from './review-view'
  *
  * I menu stanno in cima perché la revisione ha bisogno di tutta l'altezza della
  * finestra per il documento: una colonna laterale se ne mangerebbe una parte senza
- * dare niente in cambio. Le voci sono quattro — la dashboard, i documenti su Drive, la
- * mappa «tipo ↔ dati» e la cronologia — mentre la revisione si apre da una riga e non è
- * una destinazione a sé.
+ * dare niente in cambio. Le voci sono tre — la dashboard, i documenti su Drive e la
+ * cronologia — mentre la revisione si apre da una riga e non è una destinazione a sé. I
+ * campi da estrarre per tipo si correggono dentro la revisione, dal documento che ha fatto
+ * notare l'errore.
  */
-type View = 'dashboard' | 'documents' | 'profiles' | 'history' | 'review'
+type View = 'dashboard' | 'documents' | 'history' | 'review'
 
 export default function DocumentReviewShell() {
   const [view, setView] = useState<View>('dashboard')
@@ -60,10 +59,7 @@ export default function DocumentReviewShell() {
   const [driveLoaded, setDriveLoaded] = useState(false)
   const [fetchingId, setFetchingId] = useState<string | null>(null)
   const [cache, setCache] = useState<CacheUsage | null>(null)
-  const [profiles, setProfiles] = useState<ProfileWorkspace | null>(null)
-  const [profilesLoaded, setProfilesLoaded] = useState(false)
-  const [profileType, setProfileType] = useState<string | null>(null)
-  const [rerun, setRerun] = useState<TypeRerunResult | null>(null)
+  const [fieldMap, setFieldMap] = useState<TypeFieldMap | null>(null)
   const [history, setHistory] = useState<ActivityFeed | null>(null)
   const [historyLoaded, setHistoryLoaded] = useState(false)
   /**
@@ -148,18 +144,6 @@ export default function DocumentReviewShell() {
     if (!driveLoaded && auth?.signedIn && !pending) void loadDriveFiles()
   }
 
-  /** Le misure si calcolano sul database locale: non servono né Drive né login. */
-  const loadProfiles = () =>
-    run('profiles', async () => {
-      setProfiles(await api.profiles.list())
-      setProfilesLoaded(true)
-    })
-
-  const showProfiles = () => {
-    setView('profiles')
-    if (!profilesLoaded && !pending) void loadProfiles()
-  }
-
   /** La cronologia si rilegge dopo ogni azione che ci finisce dentro. */
   const loadHistory = () =>
     run('history', async () => {
@@ -174,42 +158,52 @@ export default function DocumentReviewShell() {
     if (!historyLoaded && !pending) void loadHistory()
   }
 
-  const editProfile = (edit: ProfileEdit) =>
-    run('profile-edit', async () => {
-      const { outcome, workspace } = await api.profiles.edit(edit)
-      setProfiles(workspace)
-      setProfileType(edit.documentType)
-      // Il re-run di prima parlava della mappa di prima: il prima/dopo si rifà.
-      setRerun(null)
-      setHistoryLoaded(false)
-      setMessage(describeEdit(outcome.action))
+  /** La mappa del tipo del documento aperto: si legge sul database locale, senza Drive. */
+  const loadFieldMap = () => {
+    if (!selected?.documentType) return
+    const documentId = selected.id
+    void run('map', async () => {
+      setFieldMap(await api.map.get(documentId))
     })
+  }
 
-  const revertAction = (actionId: string) =>
-    run('profile-revert', async () => {
-      const { outcome, workspace } = await api.profiles.revert(actionId)
-      setProfiles(workspace)
-      setHistory(await api.history.list())
-      setRerun(null)
-      setMessage(outcome.action.detail)
-    })
-
-  const rerunProfile = (documentType: string) =>
-    run('profile-rerun', async () => {
-      const result = await api.profiles.rerun(documentType)
-      setProfiles(result.workspace)
-      setRerun(result.rerun)
+  /**
+   * Una correzione alla mappa dalla revisione: il main la scrive e rielabora il documento,
+   * che torna aggiornato insieme alla mappa. «Dati» mostra già i campi nuovi.
+   */
+  const editMap = (edit: ProfileEdit) => {
+    if (!selected) return
+    const documentId = selected.id
+    void run('map-edit', async () => {
+      const result = await api.map.edit(documentId, edit)
+      setSelected(result.document)
+      setFieldMap(result.map)
       setHistoryLoaded(false)
+      setMessage(describeMapEdit(result))
       await refresh()
     })
+  }
 
-  const exportProfileReport = (format: 'json' | 'csv') =>
-    run('profile-export', async () => {
-      const result = await api.profiles.export(format)
-      if (!result.saved) return
-      setMessage(
-        `Report salvato in ${result.path}: ${result.types} tipi, ${result.documents} documenti annotati.`
-      )
+  const revertMap = (actionId: string) => {
+    if (!selected) return
+    const documentId = selected.id
+    void run('map-revert', async () => {
+      const result = await api.map.revert(documentId, actionId)
+      setSelected(result.document)
+      setFieldMap(result.map)
+      setHistoryLoaded(false)
+      setMessage(describeMapEdit(result))
+      await refresh()
+    })
+  }
+
+  /** Annulla dalla Cronologia: la mappa torna com'era, fuori da un documento. */
+  const revertAction = (actionId: string) =>
+    run('profile-revert', async () => {
+      const action = await api.profiles.revert(actionId)
+      setHistory(await api.history.list())
+      setFieldMap(null)
+      setMessage(action.detail)
     })
 
   /** Doppio clic su un file: lo scarica, lo analizza e apre la revisione. */
@@ -356,9 +350,6 @@ export default function DocumentReviewShell() {
           <NavButton active={view === 'documents'} onClick={showDocuments}>
             Documenti
           </NavButton>
-          <NavButton active={view === 'profiles'} onClick={showProfiles}>
-            Mappa tipi ↔ dati
-          </NavButton>
           <NavButton active={view === 'history'} onClick={showHistory}>
             Cronologia
           </NavButton>
@@ -480,35 +471,6 @@ export default function DocumentReviewShell() {
           </>
         )}
 
-        {view === 'profiles' && (
-          <>
-            <div className={styles.sectionHeader}>
-              <div>
-                <h2>Mappa tipi ↔ dati</h2>
-                <div className={styles.muted}>
-                  Quali dati vanno estratti da ogni tipo, e quanto la precompilazione ci prende,
-                  secondo i documenti già revisionati. Gli scartati non contano.
-                </div>
-              </div>
-            </div>
-            <ProfileInsights
-              workspace={profiles}
-              loading={pending === 'profiles'}
-              busy={busy}
-              selected={profileType}
-              rerun={rerun}
-              onSelect={(documentType) => {
-                setProfileType(documentType)
-                setRerun(null)
-              }}
-              onEdit={editProfile}
-              onRerun={rerunProfile}
-              onExport={exportProfileReport}
-              onOpenDocument={(id) => openDocument(id, 'profiles')}
-            />
-          </>
-        )}
-
         {view === 'history' && (
           <HistoryView
             feed={history}
@@ -533,6 +495,10 @@ export default function DocumentReviewShell() {
               onDecide={decide}
               onAssignType={assignType}
               onEvict={() => evictDocument(selected.id)}
+              fieldMap={fieldMap}
+              onLoadFieldMap={loadFieldMap}
+              onMapEdit={editMap}
+              onMapRevert={revertMap}
             />
           ) : (
             <div className={cx(styles.card, styles.empty)}>

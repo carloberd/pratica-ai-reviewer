@@ -27,7 +27,7 @@ type Filter = 'all' | 'MAP' | 'DOCUMENT'
 
 const FILTERS: Array<{ id: Filter; label: string; hint: string }> = [
   { id: 'all', label: 'Tutto', hint: 'Correzioni alla mappa e annotazioni, in ordine di tempo' },
-  { id: 'MAP', label: 'Mappa tipi ↔ dati', hint: 'Solo le correzioni alla mappa' },
+  { id: 'MAP', label: 'Campi da estrarre', hint: 'Solo le correzioni alla mappa dei campi' },
   { id: 'DOCUMENT', label: 'Documenti', hint: 'Solo gli eventi della revisione' }
 ]
 
@@ -93,7 +93,7 @@ export default function HistoryView({ feed, loading, busy, onRevert, onOpenDocum
       {entries.length === 0 ? (
         <div className={styles.muted}>
           Niente da mostrare qui. Le righe arrivano dalle annotazioni sui documenti e dalle
-          correzioni fatte in «Mappa tipi ↔ dati».
+          correzioni fatte in «Campi da estrarre», dentro la revisione.
         </div>
       ) : (
         <ol className={styles.historyList}>
