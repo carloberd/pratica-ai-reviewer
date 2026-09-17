@@ -657,6 +657,36 @@ sottofondo all'avvio li riprende.
 
 ---
 
+## Apprendimento locale
+
+Il reviewer si prepara a imparare dalle revisioni: quale etichetta annuncia un campo, quale
+tipo ha un modulo che ricorre. Il piano, la compatibilità con pratica-ai e le decisioni
+stanno in [`docs/local-learning-analisi.md`](docs/local-learning-analisi.md). Per ora c'è
+il deposito (migrazione `0011`, `src/main/db/dao/learning.ts`): nessuna regola cambia
+ancora l'estrazione, e nessuna revisione ci scrive.
+
+**Tre modalità**, salvate nel database, ogni cambio in cronologia:
+
+| Modalità | Registra le revisioni | Applica le regole attive |
+|---|---|---|
+| `LEARNING` (predefinita) | sì | sì |
+| `FROZEN` | no | sì |
+| `BASELINE` | no | no, solo registry: per benchmark e holdout |
+
+**Cosa si tiene.** Un evento per ogni decisione del revisore — tipo confermato o cambiato,
+campo confermato, corretto, compilato, svuotato — con l'autore, lo sha-256 del file e la
+posizione della selezione, ma senza valori né testo del documento. Gli eventi non si
+aggiornano, non si cancellano e sopravvivono al documento, come `document_type_feedback`
+in pratica-ai. Le regole nascono candidate, e diventano attive, sospese o scartate solo
+passando dalla cronologia; supporto e precisione si calcolano dai contatori delle prove.
+
+**La garanzia su `FROZEN` e `BASELINE`** sta nella forma del codice: il learner scrive solo
+dentro `learning.acquire(work)`, che esegue il lavoro in una transazione e solo in
+`LEARNING`. Nelle altre modalità il lavoro non parte, quindi non esiste una scrittura
+dimenticata che possa contaminare una misura.
+
+---
+
 ## Dove finiscono i dati
 
 Tutto sotto la cartella dati dell'app
@@ -665,7 +695,7 @@ Tutto sotto la cartella dati dell'app
 
 | File | Contenuto |
 |---|---|
-| `praticaai-reviewer.db` | documenti, campi e righe dei campi ripetuti, evidenze del motore e selezioni del revisore, righe del testo per pagina, classificazione, eventi, indice FTS5, le correzioni alla mappa «tipo ↔ dati» e la loro cronologia |
+| `praticaai-reviewer.db` | documenti, campi e righe dei campi ripetuti, evidenze del motore e selezioni del revisore, righe del testo per pagina, classificazione, eventi, indice FTS5, le correzioni alla mappa «tipo ↔ dati» e la loro cronologia, il deposito del learner |
 | `cache/<drive_file_id>.pdf\|.docx` | copia locale dei file di Drive |
 | `tokens.bin` | refresh token, cifrato con `safeStorage` (Keychain / DPAPI) |
 | `tessdata-cache/` | modelli tesseract scompattati |
