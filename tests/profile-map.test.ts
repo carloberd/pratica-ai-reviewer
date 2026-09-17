@@ -14,7 +14,7 @@ import {
   exportProfileBundle,
   revertProfileAction
 } from '../src/main/profile-map'
-import { type RefinementDeps, rerunTypeExtraction } from '../src/main/profile-refinement'
+import { editMapFromDocument, type RefinementDeps } from '../src/main/profile-refinement'
 import { submitReview } from '../src/main/review'
 import {
   CHANGELOG_FILE,
@@ -34,9 +34,9 @@ import {
 } from './helpers/registry'
 
 /**
- * Il ciclo intero su documenti veri: si annota, si misura, si corregge la mappa, si
- * rielabora dalla cache e si guarda il prima/dopo. Poi si annulla, e alla fine si
- * esporta.
+ * Il ciclo intero su documenti veri: si annota, si misura, si corregge la mappa dal
+ * documento aperto, che si rielabora dalla cache, e si guardano i numeri. Poi si annulla,
+ * e alla fine si esporta.
  *
  * La cartella del registry qui è quella vera del repo, e resta intatta: è il punto della
  * migrazione 0008. Le correzioni stanno nel database in memoria di questo test, e i file
@@ -175,35 +175,32 @@ describe('segnare non utile un campo che quel tipo non ha', () => {
       inProfile: false
     })
 
-    const rerun = await rerunTypeExtraction(deps, FATTURA)
-    expect(rerun.processed).toHaveLength(2)
-    expect(rerun.failed).toEqual([])
-    expect(rerun.after.fields.find((entry) => entry.fieldId === 'procurement.cig')).toMatchObject({
-      inProfile: false
-    })
-
     db.close()
   })
 })
 
 describe('aggiungere un campo che nessun documento ha mai portato', () => {
   it('entra nella mappa e il motore comincia a cercarlo', async () => {
-    const { deps, measured, db } = await annotated()
+    const { deps, measured, native, db } = await annotated()
 
     expect(measured('document.title')).toBeUndefined()
 
-    const action = editProfileMap(deps, {
+    const result = await editMapFromDocument(deps, native, {
       kind: 'ADD_FIELD',
       documentType: FATTURA,
       fieldId: 'document.title',
       role: 'optional'
     })
 
-    expect(action.after).toBe('optional')
+    expect(result.action.after).toBe('optional')
     expect(deps.registry.profile(FATTURA)!.optional_fields).toContain('document.title')
 
-    const rerun = await rerunTypeExtraction(deps, FATTURA)
-    expect(rerun.after.fields.map((entry) => entry.fieldId)).toContain('document.title')
+    // Il documento da cui è partita la correzione ha già il campo nuovo.
+    expect(result.reprocessed).toBe(true)
+    expect(result.document.fields.map((entry) => entry.name)).toContain('document.title')
+    expect(
+      result.map.measure.fields.find((entry) => entry.fieldId === 'document.title')
+    ).toMatchObject({ inProfile: true, role: 'optional' })
 
     db.close()
   })
@@ -226,12 +223,16 @@ describe('aggiungere un campo che nessun documento ha mai portato', () => {
 })
 
 describe('insegnare al motore l’etichetta che gli manca', () => {
-  it('porta il campo da «scritto a mano» a «confermato», e il delta lo dimostra', async () => {
+  it('porta il campo da «scritto a mano» a «confermato» sul documento aperto', async () => {
     const { deps, measured, repo, native, field, db } = await annotated()
 
     expect(measured('issuer.tax_id')).toMatchObject({ manual: 1, confirmed: 0, manualRate: 0.5 })
 
-    editProfileMap(deps, {
+    // Una correzione su un altro campo, che la rielaborazione non deve perdere.
+    const number = field(native, 'document.number')
+    updateFieldValue(repo, { documentId: native, fieldId: number.id, correctedValue: '99/2026' })
+
+    const result = await editMapFromDocument(deps, native, {
       kind: 'ADD_HINT_LABEL',
       documentType: FATTURA,
       fieldId: 'issuer.tax_id',
@@ -240,28 +241,17 @@ describe('insegnare al motore l’etichetta che gli manca', () => {
 
     expect(deps.registry.hints('issuer.tax_id')).toContain('Partita IVA')
 
-    const rerun = await rerunTypeExtraction(deps, FATTURA)
-
     // Ora il motore lo trova, e propone proprio il valore che il revisore aveva scritto:
     // quella non è più una correzione.
     expect(field(native, 'issuer.tax_id').value).toBe('01234567890')
-    expect(rerun.after.fields.find((entry) => entry.fieldId === 'issuer.tax_id')).toMatchObject({
-      manual: 0,
-      confirmed: 1,
-      corrected: 0
-    })
+    expect(
+      result.map.measure.fields.find((entry) => entry.fieldId === 'issuer.tax_id')
+    ).toMatchObject({ manual: 0, confirmed: 1, corrected: 0 })
 
-    const moved = rerun.delta.fields.find((entry) => entry.fieldId === 'issuer.tax_id')!
-    expect(moved.before!.manualRate).toBe(0.5)
-    expect(moved.after!.manualRate).toBe(0)
-    expect(rerun.delta.unchanged).toBe(false)
-
-    // Le correzioni del revisore sopravvivono al re-run: il numero corretto è ancora lì.
-    const number = repo
-      .getReviewDocument(rerun.processed.find((id) => id !== native)!)!
-      .fields.find((entry) => entry.name === 'document.number')!
-    expect(number.value).toBe('27/2026')
-    expect(number.correctedValue).toBe('27/2026/B')
+    // Le correzioni del revisore sopravvivono alla rielaborazione.
+    const after = result.document.fields.find((entry) => entry.name === 'document.number')!
+    expect(after.value).toBe(number.value)
+    expect(after.correctedValue).toBe('99/2026')
 
     db.close()
   })
@@ -347,7 +337,6 @@ describe('la cronologia', () => {
       documentType: FATTURA,
       fieldId: 'procurement.cig'
     })
-    await rerunTypeExtraction(deps, FATTURA)
 
     const activity = collectActivity(deps)
     const sources = new Set(activity.map((entry) => entry.source))
@@ -355,7 +344,6 @@ describe('la cronologia', () => {
 
     const map = activity.filter((entry) => entry.source === 'MAP')
     expect(map.map((entry) => entry.title)).toContain('Campo segnato non utile')
-    expect(map.map((entry) => entry.title)).toContain('Documenti rielaborati')
 
     const documents = activity.filter((entry) => entry.source === 'DOCUMENT')
     expect(documents.some((entry) => entry.filename === 'fattura-nativa.pdf')).toBe(true)

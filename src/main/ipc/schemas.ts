@@ -112,7 +112,8 @@ const fieldRoleSchema = z.enum(['required', 'core', 'optional', 'conditional'])
  * di campo inventato o un ruolo che non esiste si ferma qui, prima di diventare una
  * decisione sul database che il motore applicherebbe a ogni documento.
  */
-export const profileEditSchema = z.object({
+export const mapEditSchema = z.object({
+  documentId: z.string().min(1),
   edit: z.discriminatedUnion('kind', [
     z.object({
       kind: z.literal('REMOVE_FIELD'),
@@ -145,9 +146,11 @@ export const profileEditSchema = z.object({
   ])
 })
 
-export const profileTypeSchema = z.object({ documentType: documentTypeSlugSchema })
-
 /** L'azione della cronologia da annullare. */
 export const profileActionSchema = z.object({ actionId: z.string().uuid() })
 
-export const profileReportSchema = z.object({ format: z.enum(['json', 'csv']) })
+/** Lo stesso annullamento, fatto dal documento aperto che poi si rielabora. */
+export const mapRevertSchema = z.object({
+  documentId: z.string().min(1),
+  actionId: z.string().uuid()
+})
