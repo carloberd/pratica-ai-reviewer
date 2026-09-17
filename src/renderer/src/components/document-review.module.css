@@ -255,6 +255,65 @@
   margin-top: 3px;
 }
 
+/* ---- navigazione di Drive ----
+   Le radici come schede, sotto il percorso: si torna su di un livello o di dieci con
+   un clic solo, senza tasto «indietro». */
+
+.driveNav {
+  margin-bottom: 12px;
+}
+.crumb:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.crumbStep {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.crumb {
+  border: 0;
+  background: transparent;
+  padding: 3px 6px;
+  border-radius: 6px;
+  color: #2f6fd0;
+  font: inherit;
+  cursor: pointer;
+}
+.crumb:hover:not(:disabled) {
+  background: #eaf1fb;
+}
+.crumbCurrent {
+  padding: 3px 6px;
+  font-weight: 700;
+  color: #243139;
+}
+.crumbSeparator {
+  color: #a3adb3;
+}
+.entryName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.entryIcon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: #7c8a93;
+}
+.entryIconFile {
+  color: #9aa5ab;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -931,6 +990,14 @@
   margin-left: 6px;
   color: #8b969d;
   font-weight: 500;
+}
+.tab:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+/* In «Documenti» le schede stanno sullo sfondo della pagina, allineate al contenuto. */
+.tabsFlush {
+  padding: 0;
 }
 
 /* ---- select con ricerca ---- */
