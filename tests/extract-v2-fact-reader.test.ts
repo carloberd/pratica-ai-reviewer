@@ -68,7 +68,9 @@ function registryOf(
   })
   return {
     profile: (type) => (type === 'test.tipo' ? profile : null),
+    baseProfile: (type) => (type === 'test.tipo' ? profile : null),
     field: (id) => (fields[id] ? entry(id, fields[id]) : null),
+    allFields: () => Object.entries(fields).map(([id, spec]) => entry(id, spec)),
     hints: (id) => fields[id]?.labels ?? [],
     profileSource: (type) => (type === 'test.tipo' ? 'V2_EXPLICIT' : 'MISSING'),
     legacyNames: (id) => fields[id]?.legacy ?? [],

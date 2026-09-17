@@ -1,27 +1,20 @@
 import { describe, expect, it } from 'vitest'
+import type { ProfileAction } from '../src/shared/profile-history'
 import type { ProfileTypeMeasure } from '../src/shared/profile-metrics'
 import {
+  describeBundle,
+  describeEdit,
   describeRerun,
   describeStore,
-  describeWriteOutcome,
-  type ProfileStoreStatus,
+  type ProfileBundleResult,
   type TypeRerunResult
 } from '../src/shared/profile-workspace'
 
 /**
- * Le frasi che il revisore legge dopo una correzione o un re-run. Sono parte del
- * contratto quanto i numeri: una degradazione dichiarata male vale una degradazione
- * nascosta.
+ * Le frasi che il revisore legge dopo una correzione, un re-run o un export. Sono parte
+ * del contratto quanto i numeri: se una schermata dice che il lavoro è al sicuro mentre
+ * è solo su questa macchina, la frase è un difetto.
  */
-
-function store(mode: ProfileStoreStatus['mode']): ProfileStoreStatus {
-  return {
-    directory: '/registry/v2',
-    writable: mode !== 'EXPORT_REQUIRED',
-    repositoryRoot: mode === 'COMMITTED' ? '/repo' : null,
-    mode
-  }
-}
 
 const EMPTY_MEASURE = {
   documentType: 'accounting.fattura',
@@ -63,56 +56,65 @@ function rerun(overrides: Partial<TypeRerunResult> = {}): TypeRerunResult {
   }
 }
 
-describe('cosa succederà alla prossima correzione', () => {
-  it('lo dice prima di farla, in tutti e tre i casi', () => {
-    expect(describeStore(store('COMMITTED'))).toContain('commit dedicato')
-    expect(describeStore(store('WRITTEN'))).toContain('senza commit')
-    expect(describeStore(store('EXPORT_REQUIRED'))).toContain('sola lettura')
+describe('dove finisce una correzione', () => {
+  it('senza correzioni dice dove valgono e come si portano fuori', () => {
+    const message = describeStore(0)
+    expect(message).toContain('restano qui dentro e valgono subito per il motore')
+    expect(message).toContain('Esporta → Mappa tipi ↔ dati')
+  })
+
+  it('con delle correzioni in piedi le conta: sono su questa installazione', () => {
+    expect(describeStore(1)).toContain('1 correzione in piedi')
+    expect(describeStore(7)).toContain('7 correzioni in piedi')
+    expect(describeStore(7)).toContain('per portarle in pratica-ai')
   })
 })
 
-describe('com’è andata', () => {
-  const subject = 'profile(accounting.fattura): rimuove document.number, mai usato su 12 documenti'
+describe('com’è andata una correzione', () => {
+  const action: ProfileAction = {
+    id: 'a1',
+    at: '2026-09-17T08:00:00.000Z',
+    kind: 'REMOVE_FIELD',
+    documentType: 'accounting.fattura',
+    fieldId: 'procurement.cig',
+    label: null,
+    before: 'conditional',
+    after: 'excluded',
+    previousOverride: null,
+    detail: '«CIG» (procurement.cig) segnato non utile per accounting.fattura.',
+    reason: null,
+    revertsId: null,
+    revertedAt: null
+  }
 
-  it('col commit dice quale', () => {
-    expect(
-      describeWriteOutcome({ mode: 'COMMITTED', paths: ['/a.json'], commit: 'a1b2c3d', subject })
-    ).toBe(`${subject} — commit a1b2c3d.`)
+  it('ripete la decisione e dice dove si annulla', () => {
+    const message = describeEdit(action)
+    expect(message).toContain('segnato non utile')
+    expect(message).toContain('Cronologia')
+  })
+})
+
+describe('esito dell’export della mappa', () => {
+  const bundle: ProfileBundleResult = {
+    saved: true,
+    directory: '/Users/x/Documents/mappa-tipi-2026-09-17',
+    paths: ['/a.json', '/b.json', '/c.json', '/d.json'],
+    types: 2,
+    fields: 5,
+    edits: 5
+  }
+
+  it('dice dove sono i file, quanti tipi e che il registry non è cambiato', () => {
+    const message = describeBundle(bundle)
+    expect(message).toContain('mappa-tipi-2026-09-17')
+    expect(message).toContain('2 tipi corretti')
+    expect(message).toContain('5 campi decisi')
+    expect(message).toContain('4 file')
+    expect(message).toContain('non sono stati toccati')
   })
 
-  it('senza git dice che è salvato e non versionato', () => {
-    const message = describeWriteOutcome({
-      mode: 'WRITTEN',
-      paths: ['/a.json'],
-      subject,
-      reason: 'la cartella non sta in un repository git.'
-    })
-    expect(message).toContain('salvato senza commit')
-    expect(message).toContain('non sta in un repository git')
-  })
-
-  it('con la cartella di sola lettura dice dove sta il file da sostituire', () => {
-    const message = describeWriteOutcome({
-      mode: 'EXPORT_REQUIRED',
-      files: ['class_extraction_profiles_v2.json'],
-      exportedTo: ['/Users/x/Documents/class_extraction_profiles_v2.json'],
-      subject,
-      reason: 'La cartella è di sola lettura.'
-    })
-    expect(message).toContain('/Users/x/Documents/class_extraction_profiles_v2.json')
-    expect(message).toContain('sostituiscilo a mano in class_extraction_profiles_v2.json')
-  })
-
-  it('export annullato: il registry non è cambiato, e si dice', () => {
-    expect(
-      describeWriteOutcome({
-        mode: 'EXPORT_REQUIRED',
-        files: ['class_extraction_profiles_v2.json'],
-        exportedTo: [],
-        subject,
-        reason: 'La cartella è di sola lettura.'
-      })
-    ).toContain('export annullato: il registry non è stato modificato')
+  it('annullato: non è stato scritto niente, e lo dice', () => {
+    expect(describeBundle({ ...bundle, saved: false })).toContain('non è stato scritto niente')
   })
 })
 

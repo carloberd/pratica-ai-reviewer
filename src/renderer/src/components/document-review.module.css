@@ -1197,7 +1197,7 @@ details > .candidatesTitle {
   justify-self: start;
 }
 
-/* Istruzioni per tipo: elenco dei tipi a sinistra, profilo e numeri a destra. */
+/* Mappa tipi ↔ dati: elenco dei tipi a sinistra, campi e numeri a destra. */
 .profileShell {
   display: grid;
   grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
@@ -1316,4 +1316,83 @@ details > .candidatesTitle {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+/* Aggiungere un campo qualsiasi dell'ontologia, in fondo alla mappa di un tipo. */
+.addFieldPanel {
+  padding: 14px 16px;
+  margin: 16px 0 4px;
+  border-color: #d8e2ea;
+  background: #fbfcfd;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* La riga che separa l'export del dataset da quello della mappa: sono due cose. */
+.menuSeparator {
+  height: 1px;
+  margin: 6px 0;
+  background: #e6ebef;
+}
+
+/* Cronologia */
+.historyPanel {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.historyList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.historyRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 4px;
+  border-top: 1px solid #eef2f5;
+}
+.historyRow:first-child {
+  border-top: none;
+}
+.historyRowReverted {
+  opacity: 0.55;
+}
+.historyWhen {
+  flex: 0 0 150px;
+  font-size: 12px;
+  color: #6b7a85;
+  font-variant-numeric: tabular-nums;
+}
+.historyBody {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.historyRowReverted .historyBody {
+  text-decoration: line-through;
+  text-decoration-color: #b9c4cc;
+}
+.historyTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.buttonLink {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #2f6fd0;
+  align-self: flex-start;
+}
+.buttonLink:hover {
+  text-decoration: underline;
 }

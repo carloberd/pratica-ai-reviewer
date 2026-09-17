@@ -14,12 +14,13 @@ import { TableSkeleton } from './loading-skeleton'
 import ProfileFields, { type FieldAction } from './profile-fields'
 
 /**
- * «Istruzioni per tipo»: da che parte la precompilazione aiuta e da che parte no.
+ * «Mappa tipi ↔ dati»: da che parte la precompilazione aiuta e da che parte no.
  *
- * Si sceglie un tipo documento e si vede il profilo attuale accanto ai numeri delle
+ * Si sceglie un tipo documento e si vede cosa la mappa chiede accanto ai numeri delle
  * annotazioni già fatte, con l'elenco dei documenti che li alimentano. Da qui si
- * corregge l'istruzione, e il pulsante di rielaborazione dice, in numeri, se la
- * correzione è servita.
+ * corregge, e il pulsante di rielaborazione dice, in numeri, se la correzione è servita.
+ * Ogni correzione resta nel database di questa installazione e si annulla dalla
+ * cronologia: i file per pratica-ai escono solo dall'export.
  *
  * Niente gergo: «confermati dal motore», «corretti», «scritti a mano». Chi legge non ha
  * scritto il codice e non deve sapere cosa sia un profilo v2.
@@ -173,7 +174,9 @@ export default function ProfileInsights({
               </button>
             </div>
 
-            {workspace && <div className={styles.muted}>{describeStore(workspace.store)}</div>}
+            {workspace && (
+              <div className={styles.muted}>{describeStore(workspace.standingEdits)}</div>
+            )}
 
             {pendingAction && (
               <ConfirmEdit
@@ -189,7 +192,12 @@ export default function ProfileInsights({
 
             {rerun && rerun.documentType === measure.documentType && <RerunDelta rerun={rerun} />}
 
-            <ProfileFields measure={measure} disabled={busy} onEdit={requestEdit} />
+            <ProfileFields
+              measure={measure}
+              ontology={workspace?.ontology ?? []}
+              disabled={busy}
+              onEdit={requestEdit}
+            />
 
             <div className={styles.panelLabel}>
               Documenti che alimentano questi numeri

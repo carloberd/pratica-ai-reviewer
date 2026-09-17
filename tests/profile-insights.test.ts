@@ -48,10 +48,17 @@ const LABELS: Record<string, string> = {
 }
 
 function fakeRegistry(profiles: Record<string, ClassExtractionProfile>): ExtractionRegistryV2 {
+  const field = (fieldId: string) =>
+    LABELS[fieldId] ? ({ id: fieldId, label_it: LABELS[fieldId] } as FieldOntologyEntry) : null
+
   return {
     profile: (documentType) => profiles[documentType] ?? null,
-    field: (fieldId) =>
-      LABELS[fieldId] ? ({ id: fieldId, label_it: LABELS[fieldId] } as FieldOntologyEntry) : null,
+    baseProfile: (documentType) => profiles[documentType] ?? null,
+    field,
+    allFields: () =>
+      Object.keys(LABELS)
+        .map(field)
+        .filter((entry): entry is FieldOntologyEntry => entry !== null),
     hints: () => [],
     profileSource: (documentType): ProfileSource =>
       profiles[documentType] ? 'V2_EXPLICIT' : 'MISSING',

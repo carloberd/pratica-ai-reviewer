@@ -1,6 +1,8 @@
 import type { ProfileEdit } from '@shared/profile-edit'
 import {
-  describeWriteOutcome,
+  type ActivityFeed,
+  describeBundle,
+  describeEdit,
   type ProfileWorkspace,
   type TypeRerunResult
 } from '@shared/profile-workspace'
@@ -25,6 +27,7 @@ import styles from './document-review.module.css'
 import DocumentTable from './document-table'
 import DriveFiles from './drive-files'
 import ExportMenu, { type ExportFormat } from './export-menu'
+import HistoryView from './history-view'
 import { KpiSkeleton } from './loading-skeleton'
 import ProfileInsights from './profile-insights'
 import ReviewView from './review-view'
@@ -34,11 +37,11 @@ import ReviewView from './review-view'
  *
  * I menu stanno in cima perché la revisione ha bisogno di tutta l'altezza della
  * finestra per il documento: una colonna laterale se ne mangerebbe una parte senza
- * dare niente in cambio. Le voci sono tre — la dashboard, i documenti su Drive e le
- * istruzioni per tipo — mentre la revisione si apre da una riga e non è una
- * destinazione a sé.
+ * dare niente in cambio. Le voci sono quattro — la dashboard, i documenti su Drive, la
+ * mappa «tipo ↔ dati» e la cronologia — mentre la revisione si apre da una riga e non è
+ * una destinazione a sé.
  */
-type View = 'dashboard' | 'documents' | 'profiles' | 'review'
+type View = 'dashboard' | 'documents' | 'profiles' | 'history' | 'review'
 
 export default function DocumentReviewShell() {
   const [view, setView] = useState<View>('dashboard')
@@ -61,6 +64,8 @@ export default function DocumentReviewShell() {
   const [profilesLoaded, setProfilesLoaded] = useState(false)
   const [profileType, setProfileType] = useState<string | null>(null)
   const [rerun, setRerun] = useState<TypeRerunResult | null>(null)
+  const [history, setHistory] = useState<ActivityFeed | null>(null)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
   /**
    * La prima lettura del database è finita. Prima che lo sia, «nessun documento» non è
    * una risposta: è una domanda ancora aperta, e darla per buona significa smentirsi
@@ -155,14 +160,38 @@ export default function DocumentReviewShell() {
     if (!profilesLoaded && !pending) void loadProfiles()
   }
 
+  /** La cronologia si rilegge dopo ogni azione che ci finisce dentro. */
+  const loadHistory = () =>
+    run('history', async () => {
+      setHistory(await api.history.list())
+      setHistoryLoaded(true)
+    })
+
+  const showHistory = () => {
+    setView('history')
+    // Si rilegge solo se nel frattempo è successo qualcosa: una correzione, un re-run,
+    // un export o un documento chiuso.
+    if (!historyLoaded && !pending) void loadHistory()
+  }
+
   const editProfile = (edit: ProfileEdit) =>
     run('profile-edit', async () => {
       const { outcome, workspace } = await api.profiles.edit(edit)
       setProfiles(workspace)
       setProfileType(edit.documentType)
-      // Il re-run di prima parlava del profilo di prima: il prima/dopo si rifà.
+      // Il re-run di prima parlava della mappa di prima: il prima/dopo si rifà.
       setRerun(null)
-      setMessage(describeWriteOutcome(outcome.write))
+      setHistoryLoaded(false)
+      setMessage(describeEdit(outcome.action))
+    })
+
+  const revertAction = (actionId: string) =>
+    run('profile-revert', async () => {
+      const { outcome, workspace } = await api.profiles.revert(actionId)
+      setProfiles(workspace)
+      setHistory(await api.history.list())
+      setRerun(null)
+      setMessage(outcome.action.detail)
     })
 
   const rerunProfile = (documentType: string) =>
@@ -170,6 +199,7 @@ export default function DocumentReviewShell() {
       const result = await api.profiles.rerun(documentType)
       setProfiles(result.workspace)
       setRerun(result.rerun)
+      setHistoryLoaded(false)
       await refresh()
     })
 
@@ -272,6 +302,14 @@ export default function DocumentReviewShell() {
         return
       }
 
+      if (format === 'map') {
+        const result = await api.profiles.exportMap()
+        if (!result.saved) return
+        setHistoryLoaded(false)
+        setMessage(describeBundle(result))
+        return
+      }
+
       const result = await api.dataset.exportXlsx()
       if (!result.saved) return
       const fields = result.fields === 1 ? '1 riga campo' : `${result.fields} righe campo`
@@ -283,6 +321,7 @@ export default function DocumentReviewShell() {
     const documentId = selected.id
     void run('decide', async () => {
       setSelected(await api.review.submit(documentId, action, note))
+      setHistoryLoaded(false)
       await refresh()
       setMessage(
         action === 'DISCARD'
@@ -318,7 +357,10 @@ export default function DocumentReviewShell() {
             Documenti
           </NavButton>
           <NavButton active={view === 'profiles'} onClick={showProfiles}>
-            Istruzioni per tipo
+            Mappa tipi ↔ dati
+          </NavButton>
+          <NavButton active={view === 'history'} onClick={showHistory}>
+            Cronologia
           </NavButton>
         </nav>
         <span className={styles.spacer} />
@@ -377,7 +419,13 @@ export default function DocumentReviewShell() {
               <ExportMenu
                 busy={busy}
                 pending={
-                  pending === 'export-json' ? 'json' : pending === 'export-xlsx' ? 'xlsx' : null
+                  pending === 'export-json'
+                    ? 'json'
+                    : pending === 'export-xlsx'
+                      ? 'xlsx'
+                      : pending === 'export-map'
+                        ? 'map'
+                        : null
                 }
                 onExport={(format) => void exportDataset(format)}
               />
@@ -436,10 +484,10 @@ export default function DocumentReviewShell() {
           <>
             <div className={styles.sectionHeader}>
               <div>
-                <h2>Istruzioni per tipo</h2>
+                <h2>Mappa tipi ↔ dati</h2>
                 <div className={styles.muted}>
-                  Quanto aiuta la precompilazione, tipo per tipo e campo per campo, secondo i
-                  documenti già revisionati. Gli scartati non contano.
+                  Quali dati vanno estratti da ogni tipo, e quanto la precompilazione ci prende,
+                  secondo i documenti già revisionati. Gli scartati non contano.
                 </div>
               </div>
             </div>
@@ -459,6 +507,16 @@ export default function DocumentReviewShell() {
               onOpenDocument={(id) => openDocument(id, 'profiles')}
             />
           </>
+        )}
+
+        {view === 'history' && (
+          <HistoryView
+            feed={history}
+            loading={pending === 'history'}
+            busy={busy}
+            onRevert={revertAction}
+            onOpenDocument={(id) => openDocument(id, 'history')}
+          />
         )}
 
         {view === 'review' &&

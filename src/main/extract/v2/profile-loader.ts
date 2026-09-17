@@ -1,4 +1,10 @@
 import type { ClassExtractionProfile, FieldOntologyEntry } from '@shared/extraction-v2'
+import {
+  applyHintOverlay,
+  applyOverlay,
+  EMPTY_OVERLAY,
+  type ProfileOverlay
+} from '@shared/profile-overlay'
 import { z } from 'zod'
 import { readRegistryJson } from '../../registry/v2/read-json'
 
@@ -7,8 +13,13 @@ export const LEGACY_FIELD_MAP_FILE = 'legacy_field_map_v2.json'
 export type ProfileSource = 'V2_EXPLICIT' | 'LEGACY_FALLBACK' | 'MISSING'
 
 export interface ExtractionRegistryV2 {
+  /** Il profilo che il motore deve usare: registry più le correzioni del revisore. */
   profile(documentType: string): ClassExtractionProfile | null
+  /** Il profilo come sta nel registry, senza correzioni: serve all'export e ai numeri. */
+  baseProfile(documentType: string): ClassExtractionProfile | null
   field(fieldId: string): FieldOntologyEntry | null
+  /** Tutti i campi dell'ontologia, in ordine di etichetta: il menu che li elenca tutti. */
+  allFields(): FieldOntologyEntry[]
   hints(fieldId: string): string[]
   profileSource(documentType: string): ProfileSource
   /** Nomi campo v1 che la mappa legacy porta su questo id dell'ontologia. */
@@ -114,7 +125,8 @@ const ROLE_KEYS = [
  */
 export function createExtractionRegistryV2(
   v2Directory: string,
-  legacyRegistryDirectory: string
+  legacyRegistryDirectory: string,
+  overlay: () => ProfileOverlay = () => EMPTY_OVERLAY
 ): ExtractionRegistryV2 {
   const profiles = readRegistryJson(
     v2Directory,
@@ -192,12 +204,26 @@ export function createExtractionRegistryV2(
     return profile
   }
 
+  const sortedFields = Object.values(ontology.fields).sort((a, b) =>
+    a.label_it.localeCompare(b.label_it, 'it')
+  )
+
+  function baseProfile(documentType: string): ClassExtractionProfile | null {
+    return profiles.profiles[documentType] ?? fallbackProfile(documentType)
+  }
+
   return {
     profile(documentType) {
-      return profiles.profiles[documentType] ?? fallbackProfile(documentType)
+      const base = baseProfile(documentType)
+      // Le decisioni del revisore stanno nel database e si applicano qui: il motore
+      // vede già la mappa corretta, senza che nessuno abbia riscritto un JSON.
+      return base ? applyOverlay(base, overlay().fields[documentType]) : null
     },
+    baseProfile,
     field: (fieldId) => ontology.fields[fieldId] ?? null,
-    hints: (fieldId) => hints.hints[fieldId]?.labels ?? [],
+    allFields: () => sortedFields,
+    hints: (fieldId) =>
+      applyHintOverlay(hints.hints[fieldId]?.labels ?? [], overlay().hintLabels[fieldId]),
     profileSource(documentType) {
       if (profiles.profiles[documentType]) return 'V2_EXPLICIT'
       if (legacySchemas[documentType]) return 'LEGACY_FALLBACK'
@@ -214,9 +240,9 @@ function unique(values: Array<string | null>): string[] {
 
 export interface ReloadableExtractionRegistryV2 extends ExtractionRegistryV2 {
   /**
-   * Rilegge i JSON dei profili dal disco. Serve dopo una correzione fatta dalla
-   * schermata «Istruzioni per tipo»: senza, il re-run girerebbe con i profili caricati
-   * all'avvio e il prima/dopo non mostrerebbe niente.
+   * Rilegge i JSON dei profili dal disco. Le correzioni del revisore non passano più di
+   * qui — stanno nel database e si applicano a ogni lettura — ma il registry sul disco
+   * può cambiare sotto (un pack aggiornato), e questo lo rilegge senza riavviare.
    *
    * Se i nuovi file non sono validi l'errore risale al chiamante e resta in uso il
    * registry di prima: un JSON scritto male non deve lasciare l'app senza profili.
@@ -230,19 +256,22 @@ export interface ReloadableExtractionRegistryV2 extends ExtractionRegistryV2 {
  */
 export function createReloadableExtractionRegistryV2(
   v2Directory: string,
-  legacyRegistryDirectory: string
+  legacyRegistryDirectory: string,
+  overlay: () => ProfileOverlay = () => EMPTY_OVERLAY
 ): ReloadableExtractionRegistryV2 {
-  let current = createExtractionRegistryV2(v2Directory, legacyRegistryDirectory)
+  let current = createExtractionRegistryV2(v2Directory, legacyRegistryDirectory, overlay)
 
   return {
     profile: (documentType) => current.profile(documentType),
+    baseProfile: (documentType) => current.baseProfile(documentType),
     field: (fieldId) => current.field(fieldId),
+    allFields: () => current.allFields(),
     hints: (fieldId) => current.hints(fieldId),
     profileSource: (documentType) => current.profileSource(documentType),
     legacyNames: (fieldId) => current.legacyNames(fieldId),
     schemaVersion: () => current.schemaVersion(),
     reload() {
-      current = createExtractionRegistryV2(v2Directory, legacyRegistryDirectory)
+      current = createExtractionRegistryV2(v2Directory, legacyRegistryDirectory, overlay)
     }
   }
 }

@@ -68,8 +68,13 @@ export const api = {
   profiles: {
     list: () => call(() => window.reviewer.profiles.list()),
     edit: (edit: ProfileEdit) => call(() => window.reviewer.profiles.edit(edit)),
+    revert: (actionId: string) => call(() => window.reviewer.profiles.revert(actionId)),
     rerun: (documentType: string) => call(() => window.reviewer.profiles.rerun(documentType)),
-    export: (format: 'json' | 'csv') => call(() => window.reviewer.profiles.export(format))
+    export: (format: 'json' | 'csv') => call(() => window.reviewer.profiles.export(format)),
+    exportMap: () => call(() => window.reviewer.profiles.exportMap())
+  },
+  history: {
+    list: () => call(() => window.reviewer.history.list())
   },
   review: {
     submit: (documentId: string, action: ReviewAction, note?: string) =>

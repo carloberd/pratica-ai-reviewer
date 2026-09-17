@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { ProfileEdit } from '../shared/profile-edit'
 import type {
+  ActivityFeed,
+  ProfileBundleResult,
   ProfileEditOutcome,
   ProfileReportResult,
   ProfileWorkspace,
@@ -84,14 +86,20 @@ export const reviewerApi = {
     /** Lo stesso dataset in foglio di calcolo: due tabelle, `documents` e `fields`. */
     exportXlsx: () => invoke<IpcResultOf<XlsxExportResult>>('dataset:export-xlsx')
   },
-  /** Misure e correzione delle istruzioni di estrazione, tipo per tipo. */
+  /** Misure e correzione della mappa «tipo documento ↔ dati da estrarre». */
   profiles: {
     list: () => invoke<IpcResultOf<ProfileWorkspace>>('profiles:list'),
-    /** Corregge i JSON sorgente del registry e ne fa un commit dedicato. */
+    /** Scrive la decisione sul database: nessun file del registry viene toccato. */
     edit: (edit: ProfileEdit) =>
       invoke<IpcResultOf<{ outcome: ProfileEditOutcome; workspace: ProfileWorkspace }>>(
         'profiles:edit',
         { edit }
+      ),
+    /** Annulla un'azione della cronologia e rimette lo stato che c'era prima. */
+    revert: (actionId: string) =>
+      invoke<IpcResultOf<{ outcome: ProfileEditOutcome; workspace: ProfileWorkspace }>>(
+        'profiles:revert',
+        { actionId }
       ),
     /** Rielabora dalla cache i documenti annotati di un tipo e confronta i numeri. */
     rerun: (documentType: string) =>
@@ -100,7 +108,13 @@ export const reviewerApi = {
         { documentType }
       ),
     export: (format: 'json' | 'csv') =>
-      invoke<IpcResultOf<ProfileReportResult>>('profiles:export', { format })
+      invoke<IpcResultOf<ProfileReportResult>>('profiles:export', { format }),
+    /** I file della mappa corretta, da portare in pratica-ai. */
+    exportMap: () => invoke<IpcResultOf<ProfileBundleResult>>('profiles:export-map')
+  },
+  /** Cronologia unica: correzioni alla mappa ed eventi dei documenti. */
+  history: {
+    list: () => invoke<IpcResultOf<ActivityFeed>>('history:list')
   },
   review: {
     submit: (input: { documentId: string; payload: ReviewSubmission }) =>

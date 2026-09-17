@@ -2,8 +2,11 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { type DatasetManifestInput, datasetFileName } from '@shared/dataset'
 import { datasetXlsxFileName } from '@shared/dataset-xlsx'
+import { bundleFolderName } from '@shared/profile-bundle'
 import { profileReportFileName } from '@shared/profile-report'
 import type {
+  ActivityFeed,
+  ProfileBundleResult,
   ProfileEditOutcome,
   ProfileReportResult,
   ProfileWorkspace,
@@ -35,11 +38,17 @@ import {
 import { cachePathFor } from '../paths'
 import {
   collectProfileReport,
+  collectTypeMeasure,
   collectTypeMeasures,
   writeProfileReportFile
 } from '../profile-insights'
-import { editTypeProfile, type RefinementDeps, rerunTypeExtraction } from '../profile-refinement'
-import { profileStoreStatus } from '../profile-store'
+import {
+  collectActivity,
+  editProfileMap,
+  exportProfileBundle,
+  revertProfileAction
+} from '../profile-map'
+import { type RefinementDeps, rerunTypeExtraction } from '../profile-refinement'
 import { assignDocumentType } from '../reprocess'
 import { submitReview } from '../review'
 import { collectXlsxRows, writeXlsxFile } from '../xlsx-export'
@@ -50,6 +59,7 @@ import {
   documentRefSchema,
   fetchDriveFileSchema,
   ocrRegionSchema,
+  profileActionSchema,
   profileEditSchema,
   profileReportSchema,
   profileTypeSchema,
@@ -84,17 +94,19 @@ export interface IpcContext {
     chooseXlsxPath: (defaultName: string) => Promise<string | null>
   }
   /**
-   * Schermata «Istruzioni per tipo»: misure sui profili, correzione dei JSON sorgente e
-   * re-run sui documenti annotati. Assente col motore di estrazione v1, che non ha
-   * profili da misurare.
+   * Schermata «Mappa tipi ↔ dati»: misure sui profili, correzioni (che vanno sul
+   * database, non sui JSON) e re-run sui documenti annotati. Assente col motore di
+   * estrazione v1, che non ha profili da misurare.
    */
   profiles?: {
     /** Tutto quello che serve a misurare, correggere e rielaborare. */
     refinement: Omit<RefinementDeps, 'repo' | 'process'>
-    /** Versioni per il manifest del report. */
+    /** Versioni per il manifest del report e dell'export della mappa. */
     manifest: () => { app: { name: string; version: string }; schemaVersion: string | null }
     /** Percorso scelto dal revisore per il report, `null` se annulla. */
     choosePath: (defaultName: string) => Promise<string | null>
+    /** Cartella dove scrivere i file della mappa corretta, `null` se annulla. */
+    chooseDirectory: (defaultName: string) => Promise<string | null>
   }
 }
 
@@ -298,26 +310,58 @@ export function registerIpcHandlers(context: IpcContext): void {
     }
   }
 
-  handle('profiles:list', noInput, (): ProfileWorkspace => {
-    const deps = refinement()
+  /** Tutto quello che la schermata mostra, in una risposta sola. */
+  function workspace(deps: RefinementDeps): ProfileWorkspace {
     return {
       types: collectTypeMeasures(deps),
-      store: profileStoreStatus(deps.registryDirectory)
+      // Tutti i campi dell'ontologia, non solo quelli già visti su un documento: un tipo
+      // può avere bisogno di un dato che nessuna annotazione ha ancora prodotto.
+      ontology: deps.registry.allFields().map((field) => ({
+        id: field.id,
+        label: field.label_it,
+        hint:
+          field.description && field.description !== field.label_it
+            ? `${field.id} · ${field.description}`
+            : field.id
+      })),
+      recent: deps.repo.profileMap.listActions(20),
+      standingEdits: deps.repo.profileMap.countStandingEdits()
     }
-  })
+  }
 
+  handle('profiles:list', noInput, (): ProfileWorkspace => workspace(refinement()))
+
+  /**
+   * Una correzione alla mappa. Scrive due righe sul database — la decisione e la
+   * cronologia — e non tocca nessun file: da qui in poi il motore vede la mappa
+   * corretta, e i JSON del registry restano quelli del programmer pack.
+   */
   handle(
     'profiles:edit',
     profileEditSchema,
-    async ({ edit }): Promise<{ outcome: ProfileEditOutcome; workspace: ProfileWorkspace }> => {
+    ({ edit }): { outcome: ProfileEditOutcome; workspace: ProfileWorkspace } => {
       const deps = refinement()
-      const outcome = await editTypeProfile(deps, edit)
+      const action = editProfileMap(deps, edit)
       return {
-        outcome,
-        workspace: {
-          types: collectTypeMeasures(deps),
-          store: profileStoreStatus(deps.registryDirectory)
-        }
+        outcome: { action, measure: collectTypeMeasure(deps, edit.documentType) },
+        workspace: workspace(deps)
+      }
+    }
+  )
+
+  /** Annulla un'azione della cronologia e rimette lo stato che c'era prima. */
+  handle(
+    'profiles:revert',
+    profileActionSchema,
+    ({ actionId }): { outcome: ProfileEditOutcome; workspace: ProfileWorkspace } => {
+      const deps = refinement()
+      const action = revertProfileAction(deps, actionId)
+      return {
+        outcome: {
+          action,
+          measure: action.documentType ? collectTypeMeasure(deps, action.documentType) : null
+        },
+        workspace: workspace(deps)
       }
     }
   )
@@ -328,13 +372,7 @@ export function registerIpcHandlers(context: IpcContext): void {
     async ({ documentType }): Promise<{ rerun: TypeRerunResult; workspace: ProfileWorkspace }> => {
       const deps = refinement()
       const rerun = await rerunTypeExtraction(deps, documentType)
-      return {
-        rerun,
-        workspace: {
-          types: collectTypeMeasures(deps),
-          store: profileStoreStatus(deps.registryDirectory)
-        }
-      }
+      return { rerun, workspace: workspace(deps) }
     }
   )
 
@@ -368,6 +406,57 @@ export function registerIpcHandlers(context: IpcContext): void {
       return { saved: true, path, types, documents }
     }
   )
+
+  /**
+   * I file della mappa corretta, da portare in pratica-ai. È l'unico momento in cui il
+   * lavoro del revisore diventa un file, e il file lo scrive dove decide lui.
+   */
+  handle('profiles:export-map', noInput, async (): Promise<ProfileBundleResult> => {
+    const profiles = context.profiles
+    if (!profiles) {
+      throw new ReviewerError(
+        'UNSUPPORTED',
+        'La mappa per tipo esiste solo col motore di estrazione v2.'
+      )
+    }
+    const deps = refinement()
+    if (repo.profileMap.countStandingEdits() === 0) {
+      throw new ReviewerError(
+        'NOT_FOUND',
+        'Nessuna correzione da esportare: la mappa è ancora quella del registry.'
+      )
+    }
+
+    const now = new Date()
+    const directory = await profiles.chooseDirectory(bundleFolderName(now))
+    if (!directory) {
+      return { saved: false, directory: null, paths: [], types: 0, fields: 0, edits: 0 }
+    }
+
+    const bundle = await exportProfileBundle(
+      deps,
+      { ...profiles.manifest(), exportedAt: now.toISOString() },
+      directory
+    )
+    return {
+      saved: true,
+      directory: bundle.directory,
+      paths: bundle.paths,
+      types: bundle.types,
+      fields: bundle.fields,
+      edits: bundle.edits
+    }
+  })
+
+  // ---- cronologia ----------------------------------------------------------
+  /** Azioni sulla mappa ed eventi dei documenti, in una lista sola. */
+  handle('history:list', noInput, (): ActivityFeed => {
+    const deps = refinement()
+    return {
+      entries: collectActivity(deps),
+      standingEdits: repo.profileMap.countStandingEdits()
+    }
+  })
 
   // ---- ricerca -------------------------------------------------------------
   handle('search:query', searchSchema, ({ text }) =>

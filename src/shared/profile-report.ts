@@ -61,7 +61,8 @@ export function serializeProfileReport(report: ProfileReport): string {
 export const SIGNAL_LABELS: Record<FieldSignal, string> = {
   OK: '',
   NEVER_USED: 'mai usato',
-  MISSING_FROM_PROFILE: 'assente dal profilo'
+  MISSING_FROM_PROFILE: 'assente dal profilo',
+  EXCLUDED: 'segnato non utile'
 }
 
 const CSV_COLUMNS = [
@@ -81,7 +82,8 @@ const CSV_COLUMNS = [
   'quota_confermati',
   'quota_corretti',
   'quota_a_mano',
-  'segnale'
+  'segnale',
+  'decisione_revisore'
 ] as const
 
 /** Virgolette raddoppiate e campo quotato quando serve: il CSV di RFC 4180. */
@@ -118,7 +120,8 @@ export function profileReportCsv(types: ProfileTypeMeasure[]): string {
           field.confirmedRate,
           field.correctedRate,
           field.manualRate,
-          SIGNAL_LABELS[field.signal]
+          SIGNAL_LABELS[field.signal],
+          field.decision ?? ''
         ]
           .map(csvCell)
           .join(',')
