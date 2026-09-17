@@ -69,6 +69,7 @@ export function reviewDocument(overrides: Partial<ReviewDocument> = {}): ReviewD
     timeline: [],
     classification: null,
     reviewedAt: null,
+    reviewNote: null,
     ...overrides
   }
 }

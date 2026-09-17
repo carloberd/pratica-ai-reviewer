@@ -110,13 +110,21 @@ export function createDocumentsDao(db: Db) {
       db.prepare('UPDATE documents SET status = ? WHERE id = ?').run(status, id)
     },
 
-    /** Esito del revisore: lo stato e il momento in cui è stato deciso. */
-    setReviewOutcome(id: string, status: QueueStatus, reviewedAt: string): void {
-      db.prepare('UPDATE documents SET status = ?, reviewed_at = ? WHERE id = ?').run(
-        status,
-        reviewedAt,
-        id
-      )
+    /**
+     * Esito del revisore: lo stato, il momento in cui è stato deciso e la nota.
+     *
+     * La nota si sovrascrive a ogni decisione, anche con `null`: riaprire un documento e
+     * richiuderlo senza scrivere niente vuol dire che la nota di prima non vale più.
+     */
+    setReviewOutcome(
+      id: string,
+      status: QueueStatus,
+      reviewedAt: string,
+      note: string | null = null
+    ): void {
+      db.prepare(
+        'UPDATE documents SET status = ?, reviewed_at = ?, review_note = ? WHERE id = ?'
+      ).run(status, reviewedAt, note, id)
     },
 
     /** Esito del classificatore, come JSON di `TypeClassification` senza etichette. */

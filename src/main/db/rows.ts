@@ -32,6 +32,8 @@ export interface DocumentRow {
   reviewed_at: string | null
   /** Impronta del layout della prima pagina (migrazione 0006); NULL = non ancora calcolata. */
   template_fingerprint: string | null
+  /** Nota facoltativa lasciata dal revisore chiudendo il documento (migrazione 0007). */
+  review_note: string | null
 }
 
 export interface FieldRow {
