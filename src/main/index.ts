@@ -92,6 +92,7 @@ function start(): void {
       chooseXlsxPath: (defaultName) =>
         chooseSavePath('Esporta il dataset annotato in Excel', defaultName)
     },
+    learning: { legacyFieldMap: v2.legacyFieldMap ?? {} },
     // Senza profili v2 non c'è una mappa da correggere: la scheda resta, e i canali
     // rispondono che non è disponibile su questa istanza.
     ...(v2.extractionRegistryV2

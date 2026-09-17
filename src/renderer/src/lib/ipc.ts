@@ -1,3 +1,5 @@
+import type { ManualRuleStatus } from '@shared/learning-workspace'
+import type { LearningMode } from '@shared/local-learning'
 import type { ProfileEdit } from '@shared/profile-edit'
 import type { DocumentPick, DriveLocation, IpcErrorCode, ReviewAction } from '@shared/types'
 
@@ -101,6 +103,13 @@ export const api = {
   profiles: {
     revert: (actionId: string) => call(() => window.reviewer.profiles.revert(actionId)),
     exportMap: () => call(() => window.reviewer.profiles.exportMap())
+  },
+  learning: {
+    overview: () => call(() => window.reviewer.learning.overview()),
+    setMode: (mode: LearningMode) => call(() => window.reviewer.learning.setMode(mode)),
+    setRuleStatus: (ruleId: string, status: ManualRuleStatus) =>
+      call(() => window.reviewer.learning.setRuleStatus(ruleId, status)),
+    export: () => call(() => window.reviewer.learning.export())
   },
   history: {
     list: () => call(() => window.reviewer.history.list())

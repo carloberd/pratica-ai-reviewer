@@ -1,7 +1,7 @@
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.1.0",
+    "formatVersion": "1.2.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": {
       "name": "praticaai-reviewer",
@@ -19,6 +19,12 @@
       "reviewed": 2,
       "discarded": 1,
       "corrections": 7
+    },
+    "learning": {
+      "mode": "LEARNING",
+      "learnerVersion": "local-learner/0.1.0",
+      "activeRules": 0,
+      "rulesFingerprint": null
     }
   },
   "documents": [

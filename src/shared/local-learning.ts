@@ -237,16 +237,21 @@ export const DEFAULT_LEARNING_POLICY: LearningPolicy = {
  * smesso di valere per una ragione, e tornare a fidarsene è una decisione di una persona:
  * altrimenti una sospensione a mano durerebbe fino alla prossima conferma.
  *
- * La memoria di un modulo (`TEMPLATE_TYPE`) è più severa: nessun conflitto, mai. Se lo stesso
- * modulo è stato chiuso con due tipi diversi, il modulo non basta a dire il tipo.
+ * La memoria di un modulo (`TEMPLATE_TYPE`) è più severa: nessun conflitto per attivarsi, e
+ * un conflitto la sospende. Se lo stesso modulo è stato chiuso con due tipi diversi, il
+ * modulo non basta a dire il tipo.
  *
- * `recent` sono gli effetti delle prove dalla più recente.
+ * `sinceActive` sono gli effetti delle prove arrivate dopo l'ultima volta che la regola è
+ * diventata attiva, dalla più recente. Una regola attiva si giudica solo su quelle: chi la
+ * riattiva a mano ha già visto le smentite di prima, e la prima revisione dopo non deve
+ * risospenderla per quelle. È anche una precisione mobile: una regola buona per mesi che
+ * comincia a sbagliare si sospende sugli errori recenti, non sulla sua storia.
  */
 export function nextRuleStatus(
   rule: Pick<LearningRule, 'status' | 'scope' | 'positiveCount' | 'negativeCount'> & {
     kind?: LearningRuleKind
   },
-  recent: LearningEffect[],
+  sinceActive: LearningEffect[],
   policy: LearningPolicy = DEFAULT_LEARNING_POLICY
 ): LearningRuleStatus {
   if (rule.kind === 'TEMPLATE_TYPE') {
@@ -255,7 +260,7 @@ export function nextRuleStatus(
         ? 'ACTIVE'
         : 'CANDIDATE'
     }
-    if (rule.status === 'ACTIVE') return rule.negativeCount > 0 ? 'SUSPENDED' : 'ACTIVE'
+    if (rule.status === 'ACTIVE') return sinceActive.includes('NEGATIVE') ? 'SUSPENDED' : 'ACTIVE'
     return rule.status
   }
   const precision = rulePrecision(rule)
@@ -268,12 +273,14 @@ export function nextRuleStatus(
       : 'CANDIDATE'
   }
   if (rule.status === 'ACTIVE') {
-    const streak = recent.slice(0, policy.suspendAfterNegatives)
+    const streak = sinceActive.slice(0, policy.suspendAfterNegatives)
     const contradicted =
       streak.length === policy.suspendAfterNegatives &&
       streak.every((effect) => effect === 'NEGATIVE')
-    const measured = rule.positiveCount + rule.negativeCount >= policy.minEvidenceForPrecision
-    const imprecise = measured && precision !== null && precision < policy.suspendBelowPrecision
+    const confirmed = sinceActive.filter((effect) => effect === 'POSITIVE').length
+    const imprecise =
+      sinceActive.length >= policy.minEvidenceForPrecision &&
+      confirmed / sinceActive.length < policy.suspendBelowPrecision
     return contradicted || imprecise ? 'SUSPENDED' : 'ACTIVE'
   }
   return rule.status

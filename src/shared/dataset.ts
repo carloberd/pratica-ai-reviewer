@@ -28,7 +28,7 @@ import type {
  */
 
 export const DATASET_FORMAT = 'praticaai-reviewer/annotated-dataset'
-export const DATASET_FORMAT_VERSION = '1.1.0'
+export const DATASET_FORMAT_VERSION = '1.2.0'
 
 export type EngineVersion = 'v1' | 'v2'
 
@@ -46,6 +46,20 @@ export interface DatasetManifest {
     schemaVersion: string | null
   }
   counts: { documents: number; reviewed: number; discarded: number; corrections: number }
+  /** Con quale apprendimento locale lavorava il motore; `null` se non si sa. */
+  learning: DatasetLearningSnapshot | null
+}
+
+/**
+ * La modalità del learner e le regole attive al momento dell'export. Due export con la
+ * stessa impronta sono stati precompilati dalle stesse regole: un benchmark la dichiara.
+ */
+export interface DatasetLearningSnapshot {
+  mode: 'LEARNING' | 'FROZEN' | 'BASELINE'
+  learnerVersion: string
+  activeRules: number
+  /** Sha-256 (16 caratteri) delle chiavi delle regole attive, `null` se non ce ne sono. */
+  rulesFingerprint: string | null
 }
 
 export interface DatasetEvidence {
@@ -164,7 +178,8 @@ export interface DatasetSource {
   extraction: DatasetDocument['extraction']
 }
 
-export type DatasetManifestInput = Pick<DatasetManifest, 'exportedAt' | 'app' | 'engines'>
+export type DatasetManifestInput = Pick<DatasetManifest, 'exportedAt' | 'app' | 'engines'> &
+  Partial<Pick<DatasetManifest, 'learning'>>
 
 function evidenceOf(
   byId: Map<string, EvidenceItem>,
@@ -323,7 +338,8 @@ export function buildDataset(
         reviewed: documents.filter((document) => document.status === 'REVIEWED').length,
         discarded: documents.filter((document) => document.status === 'DISCARDED').length,
         corrections: documents.reduce((sum, document) => sum + document.corrections.length, 0)
-      }
+      },
+      learning: manifest.learning ?? null
     },
     documents
   }
