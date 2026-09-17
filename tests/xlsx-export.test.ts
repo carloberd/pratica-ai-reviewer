@@ -111,7 +111,11 @@ describe('export XLSX del dataset annotato', () => {
       fieldId: field(invoice.id, 'document.number').id,
       correctedValue: '27/2026/B'
     })
-    submitReview(repo, { documentId: invoice.id, action: 'SAVE' })
+    submitReview(repo, {
+      documentId: invoice.id,
+      action: 'SAVE',
+      note: 'importi verificati col cliente'
+    })
 
     // 2. Lo stesso stampato con dati diversi non c'è fra le fixture: una seconda copia
     // dello stesso file basta a provare che l'impronta del layout coincide.
@@ -151,7 +155,11 @@ describe('export XLSX del dataset annotato', () => {
     copyFileSync(fixture('promemoria-ignoto.pdf'), evicted)
     const gone = await open('promemoria-ignoto.pdf', { path: evicted, driveFileId: 'drive-gone' })
     unlinkSync(evicted)
-    submitReview(repo, { documentId: gone.id, action: 'DISCARD' })
+    submitReview(repo, {
+      documentId: gone.id,
+      action: 'DISCARD',
+      note: 'scansione tagliata a metà'
+    })
 
     // 5. Ancora in coda: resta fuori da tutti e due i fogli.
     await open('in-coda.pdf', { path: fixture('fattura-nativa.pdf'), driveFileId: 'drive-coda' })
@@ -178,7 +186,12 @@ describe('export XLSX del dataset annotato', () => {
 
     // Il documento ancora in coda non c'è, lo scartato sì ma senza campi.
     const byId = (id: string) => documents.find((row) => row.document_id === id)!
-    expect(byId(gone.id)).toMatchObject({ review_status: 'DISCARDED', template_fingerprint: null })
+    expect(byId(gone.id)).toMatchObject({
+      review_status: 'DISCARDED',
+      template_fingerprint: null,
+      // Lo scartato non ha campi: la nota è tutto quello che dice perché è fuori.
+      review_note: 'scansione tagliata a metà'
+    })
     expect(fields.filter((row) => row.document_id === gone.id)).toEqual([])
     expect(documents.filter((row) => row.review_status === 'REVIEWED')).toHaveLength(3)
 
@@ -190,6 +203,9 @@ describe('export XLSX del dataset annotato', () => {
     expect(typeof invoiceRow.classifier_confidence).toBe('number')
     expect(typeof invoiceRow.margin).toBe('number')
     expect(invoiceRow.runner_up).toBeNull()
+    expect(invoiceRow.review_note).toBe('importi verificati col cliente')
+    // Chi ha chiuso il documento senza scrivere niente lascia la cella vuota.
+    expect(byId(legacyId).review_note).toBeNull()
 
     // Il run più recente è quello che vale: runner-up e margine vengono da lì.
     expect(byId(twin.id)).toMatchObject({

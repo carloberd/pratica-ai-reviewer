@@ -177,7 +177,8 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
           .map((item) => toEvidenceItem(item, labelByEvidence.get(item.id) ?? 'Evidenza')),
         timeline: events.listForDocument(id).map(toTimelineItem),
         classification: parseClassification(row.classification_json, typeLabel),
-        reviewedAt: row.reviewed_at
+        reviewedAt: row.reviewed_at,
+        reviewNote: row.review_note
       }
     },
 

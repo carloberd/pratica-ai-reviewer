@@ -85,9 +85,41 @@ describe('righe dell’export XLSX', () => {
         runner_up: 'accounting.nota_credito',
         margin: 0.42,
         template_fingerprint: 'a1b2c3d4e5f60718',
-        review_status: 'REVIEWED'
+        review_status: 'REVIEWED',
+        review_note: null
       }
     ])
+  })
+
+  it('la nota del revisore esce sulla riga del documento, anche se scartato', () => {
+    const { documents } = buildXlsxRows([
+      source({
+        document: reviewDocument({ status: 'REVIEWED', reviewNote: 'timbro illeggibile' })
+      }),
+      source({
+        document: reviewDocument({
+          id: 'doc-2',
+          driveFileId: 'drive-2',
+          filename: 'Zeta scarto.pdf',
+          status: 'DISCARDED',
+          reviewNote: 'scansione tagliata a metà'
+        })
+      })
+    ])
+
+    // È proprio sugli scartati che la nota conta: la riga non ha campi, e il motivo per
+    // cui il documento è fuori dal dataset sta solo lì.
+    expect(documents.map((row) => [row.review_status, row.review_note])).toEqual([
+      ['REVIEWED', 'timbro illeggibile'],
+      ['DISCARDED', 'scansione tagliata a metà']
+    ])
+  })
+
+  it('una nota di soli spazi vale come assente: in foglio sarebbe una cella finta piena', () => {
+    const { documents } = buildXlsxRows([
+      source({ document: reviewDocument({ status: 'REVIEWED', reviewNote: '   ' }) })
+    ])
+    expect(documents[0]!.review_note).toBeNull()
   })
 
   it('tipo assegnato a mano: nessuna predizione, ma la verità c’è lo stesso', () => {

@@ -118,7 +118,7 @@ describe('flusso di revisione', () => {
     expect(document.fields.find((f) => f.name === 'issuer_name')?.correctedValue).toBeUndefined()
   })
 
-  it('submitReview fissa stato, momento della decisione e riga di timeline', () => {
+  it('submitReview fissa stato, momento della decisione, nota e riga di timeline', () => {
     const { repo: r, id } = setup()
     correct(r, id, 'issuer_name', 'Alfa S.r.l.')
 
@@ -131,6 +131,9 @@ describe('flusso di revisione', () => {
 
     expect(document.status).toBe('REVIEWED')
     expect(document.reviewedAt).toBe('2026-09-16T09:30:00.000Z')
+    // La nota sta su una colonna sua, non solo nel testo della timeline: è da lì che
+    // l'export la rilegge.
+    expect(document.reviewNote).toBe('ok')
     expect(document.timeline.at(-1)).toMatchObject({
       at: '2026-09-16T09:30:00.000Z',
       title: 'Revisionato con correzioni'
@@ -138,5 +141,14 @@ describe('flusso di revisione', () => {
     expect(() => submitReview(r, { documentId: 'nessuno', action: 'SAVE' })).toThrow(
       'Documento non trovato'
     )
+  })
+
+  it('richiudere un documento senza scrivere niente cancella la nota di prima', () => {
+    const { repo: r, id } = setup()
+    submitReview(r, { documentId: id, action: 'SAVE', note: 'da ricontrollare' })
+    expect(r.getReviewDocument(id)!.reviewNote).toBe('da ricontrollare')
+
+    submitReview(r, { documentId: id, action: 'SAVE' })
+    expect(r.getReviewDocument(id)!.reviewNote).toBeNull()
   })
 })

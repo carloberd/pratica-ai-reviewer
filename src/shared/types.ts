@@ -139,6 +139,8 @@ export interface ReviewDocument {
   classification: TypeClassification | null
   /** v2 reviewer: quando il revisore ha salvato o scartato il documento. */
   reviewedAt: string | null
+  /** Nota facoltativa scritta dal revisore chiudendo il documento; `null` se non l'ha scritta. */
+  reviewNote: string | null
 }
 
 /** v2 reviewer: motivo per cui il classificatore ha assegnato o no il tipo. */

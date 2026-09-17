@@ -29,6 +29,8 @@ export interface XlsxDocumentRow {
   /** Impronta del layout della prima pagina; vuota se la copia locale non è più in cache. */
   template_fingerprint: string | null
   review_status: 'REVIEWED' | 'DISCARDED'
+  /** Nota scritta dal revisore chiudendo il documento; vuota se non l'ha scritta. */
+  review_note: string | null
 }
 
 export interface XlsxFieldRow {
@@ -73,7 +75,8 @@ export const XLSX_DOCUMENT_COLUMNS: Array<keyof XlsxDocumentRow> = [
   'runner_up',
   'margin',
   'template_fingerprint',
-  'review_status'
+  'review_status',
+  'review_note'
 ]
 
 export const XLSX_FIELD_COLUMNS: Array<keyof XlsxFieldRow> = [
@@ -136,7 +139,10 @@ function toDocumentRow(source: XlsxSource): XlsxDocumentRow {
     runner_up: runnerUp,
     margin,
     template_fingerprint: source.templateFingerprint,
-    review_status: document.status === 'DISCARDED' ? 'DISCARDED' : 'REVIEWED'
+    review_status: document.status === 'DISCARDED' ? 'DISCARDED' : 'REVIEWED',
+    // Una nota di soli spazi non è una nota: in foglio sarebbe una cella che sembra
+    // piena e non dice niente.
+    review_note: document.reviewNote?.trim() ? document.reviewNote.trim() : null
   }
 }
 

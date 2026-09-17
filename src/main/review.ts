@@ -93,8 +93,11 @@ export function buildReviewPayload(
 /**
  * Registra l'esito scelto dal revisore. I campi sono già a database — ogni modifica li
  * scrive nel momento in cui avviene — quindi qui si fissano solo lo stato (dentro o fuori
- * dal dataset), il momento della decisione e la riga di timeline che racconta cosa è
- * cambiato.
+ * dal dataset), il momento della decisione, la nota e la riga di timeline che racconta
+ * cosa è cambiato.
+ *
+ * La nota finisce sia nella timeline, che la racconta, sia su una colonna sua, da cui
+ * l'export la rilegge: il testo della timeline è per gli occhi e non è un formato.
  */
 export function submitReview(
   repo: Repository,
@@ -108,7 +111,12 @@ export function submitReview(
   const at = (input.now ?? new Date()).toISOString()
 
   repo.transaction(() => {
-    repo.documents.setReviewOutcome(input.documentId, statusForAction(input.action), at)
+    repo.documents.setReviewOutcome(
+      input.documentId,
+      statusForAction(input.action),
+      at,
+      payload.note ?? null
+    )
     repo.events.add(input.documentId, title, detail, at)
   })
 

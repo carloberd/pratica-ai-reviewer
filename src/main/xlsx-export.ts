@@ -109,6 +109,7 @@ const WIDTHS: Record<string, number> = {
   margin: 10,
   template_fingerprint: 18,
   review_status: 14,
+  review_note: 60,
   field_name: 26,
   label: 26,
   role: 12,
