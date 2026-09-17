@@ -661,9 +661,9 @@ sottofondo all'avvio li riprende.
 
 Il reviewer si prepara a imparare dalle revisioni: quale etichetta annuncia un campo, quale
 tipo ha un modulo che ricorre. Il piano, la compatibilità con pratica-ai e le decisioni
-stanno in [`docs/local-learning-analisi.md`](docs/local-learning-analisi.md). Per ora c'è
-il deposito (migrazione `0011`, `src/main/db/dao/learning.ts`): nessuna regola cambia
-ancora l'estrazione, e nessuna revisione ci scrive.
+stanno in [`docs/local-learning-analisi.md`](docs/local-learning-analisi.md). Per ora il
+learner registra le revisioni salvate nel suo deposito (migrazione `0011`,
+`src/main/db/dao/learning.ts`), ma nessuna regola cambia ancora l'estrazione.
 
 **Tre modalità**, salvate nel database, ogni cambio in cronologia:
 
@@ -679,6 +679,16 @@ posizione della selezione, ma senza valori né testo del documento. Gli eventi n
 aggiornano, non si cancellano e sopravvivono al documento, come `document_type_feedback`
 in pratica-ai. Le regole nascono candidate, e diventano attive, sospese o scartate solo
 passando dalla cronologia; supporto e precisione si calcolano dai contatori delle prove.
+
+**Quando si registra.** Al salvataggio di una revisione, non a ogni modifica di un campo:
+i valori mentre si lavora sono provvisori, il salvataggio è la decisione. Gli eventi
+(`src/shared/review-learning.ts`) sono uno per il tipo — confermato, cambiato, scelto dove
+il motore non ne aveva, tolto — e uno per ogni campo o riga che il motore aveva proposto o
+che il revisore ha toccato; un campo vuoto che nessuno ha toccato non dice niente. Si
+scrivono nella stessa transazione che chiude il documento: se la registrazione fallisce,
+la revisione non si salva. Uno scarto non insegna niente. L'autore è l'account Google
+collegato: senza account la revisione si salva ma non si registra. La riga di timeline
+della revisione dice cosa è stato registrato, o perché no.
 
 **La garanzia su `FROZEN` e `BASELINE`** sta nella forma del codice: il learner scrive solo
 dentro `learning.acquire(work)`, che esegue il lavoro in una transazione e solo in
