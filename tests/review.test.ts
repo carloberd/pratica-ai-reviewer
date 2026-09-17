@@ -56,6 +56,7 @@ function document(overrides: Partial<ReviewDocument> = {}): ReviewDocument {
     timeline: [],
     classification: null,
     reviewedAt: null,
+    reviewNote: null,
     ...overrides
   }
 }

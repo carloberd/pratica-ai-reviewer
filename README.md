@@ -410,6 +410,7 @@ Il foglio **`documents`**, una riga per documento chiuso:
 | `margin` | distacco fra primo e secondo candidato |
 | `template_fingerprint` | impronta del layout della prima pagina |
 | `review_status` | `REVIEWED` o `DISCARDED` |
+| `review_note` | la nota del revisore, se l'ha scritta |
 
 Il foglio **`fields`**, una riga per campo — e una riga per ogni riga dei campi ripetuti,
 che `item_index` ordina: `document_id`, `field_name`, `label`, `role`, `cardinality`,
@@ -421,7 +422,15 @@ che `item_index` ordina: `document_id`, `field_name`, `label`, `role`, `cardinal
   li calcola: non si inventano. Vengono dall'audit dell'**ultimo** run del documento,
   che è quello che corrisponde ai campi di adesso.
 - Degli scartati resta la riga in `documents` col loro stato, senza campi: nessuno ne ha
-  confermato i valori, come nell'export JSON.
+  confermato i valori, come nell'export JSON. Su di loro `review_note` è l'unica cosa che
+  dice **perché** il documento è fuori dal dataset.
+- `review_note` è la nota facoltativa scritta chiudendo il documento. Sta sulla colonna
+  `documents.review_note` (migrazione `0007`): prima finiva solo dentro il testo della
+  riga di timeline, che si legge a occhio e non è un formato. Si sovrascrive a ogni
+  decisione, anche quando è vuota — richiudere un documento senza scrivere niente vuol
+  dire che la nota di prima non vale più — e i documenti chiusi prima di questa versione
+  escono con la cella vuota. Nell'export JSON non c'è: cambiare il formato del benchmark
+  per un campo di testo libero non vale il `formatVersion` che costerebbe.
 - A differenza del JSON, le righe **tolte** dal revisore ci sono, con `value_final`
   vuoto: quello che il motore aveva proposto è una misura e non si perde, esattamente
   come per un campo singolo svuotato.
