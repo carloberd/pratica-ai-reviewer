@@ -2,6 +2,11 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { type DatasetManifestInput, datasetFileName } from '@shared/dataset'
 import { datasetXlsxFileName } from '@shared/dataset-xlsx'
+import {
+  type LearningExportResult,
+  type LearningOverview,
+  learningBundleFileName
+} from '@shared/learning-workspace'
 import { bundleFolderName } from '@shared/profile-bundle'
 import type { ProfileAction } from '@shared/profile-history'
 import type {
@@ -33,6 +38,12 @@ import {
   updateFieldItem,
   updateFieldValue
 } from '../field-edits'
+import {
+  exportLearnedRules,
+  type LearningWorkspaceDeps,
+  learningOverview,
+  setRuleStatusByHand
+} from '../learning-workspace'
 import { cachePathFor } from '../paths'
 import { collectActivity, exportProfileBundle, revertProfileAction } from '../profile-map'
 import {
@@ -45,6 +56,7 @@ import {
 } from '../profile-refinement'
 import { assignDocumentType } from '../reprocess'
 import { submitReview } from '../review'
+import type { RulesChange } from '../review-learning'
 import { collectXlsxRows, writeXlsxFile } from '../xlsx-export'
 import {
   addFieldItemSchema,
@@ -53,6 +65,8 @@ import {
   documentRefSchema,
   driveLocationSchema,
   fetchDriveFileSchema,
+  learningModeSchema,
+  learningRuleStatusSchema,
   mapEditSchema,
   mapRevertSchema,
   ocrRegionSchema,
@@ -99,6 +113,10 @@ export interface IpcContext {
     manifest: () => { app: { name: string; version: string }; schemaVersion: string | null }
     /** Cartella dove scrivere i file della mappa corretta, `null` se annulla. */
     chooseDirectory: (defaultName: string) => Promise<string | null>
+  }
+  /** La scheda «Apprendimento»: i nomi dei campi V5.1 per l'export delle regole. */
+  learning?: {
+    legacyFieldMap: Record<string, string>
   }
 }
 
@@ -244,14 +262,20 @@ export function registerIpcHandlers(context: IpcContext): void {
       note: payload.note,
       actor: auth.status().email,
       registry: context.profiles?.refinement.registry,
-      onRulesChanged: ({ documentTypes, templateFingerprints }) => {
-        if (!context.profiles || !context.process) return
-        const deps = refinement()
-        for (const documentType of documentTypes) reprocessQueueOfType(deps, documentType, null)
-        for (const fingerprint of templateFingerprints) reprocessQueueOfTemplate(deps, fingerprint)
-      }
+      onRulesChanged: reprocessAfter
     })
   )
+
+  /**
+   * Una regola ha cominciato o smesso di valere: i documenti in coda che ne dipendono si
+   * rielaborano in sottofondo, per tipo (etichette) o per impronta (memoria dei moduli).
+   */
+  function reprocessAfter({ documentTypes, templateFingerprints }: RulesChange): void {
+    if (!context.profiles || !context.process) return
+    const deps = refinement()
+    for (const documentType of documentTypes) reprocessQueueOfType(deps, documentType, null)
+    for (const fingerprint of templateFingerprints) reprocessQueueOfTemplate(deps, fingerprint)
+  }
 
   // ---- dataset annotato ----------------------------------------------------
   handle('dataset:export', noInput, async (): Promise<DatasetExportResult> => {
@@ -401,6 +425,61 @@ export function registerIpcHandlers(context: IpcContext): void {
       entries: collectActivity(deps),
       standingEdits: repo.profileMap.countStandingEdits()
     }
+  })
+
+  // ---- apprendimento --------------------------------------------------------
+  function learning(): LearningWorkspaceDeps {
+    const registry = context.profiles?.refinement.registry
+    const typeLabel = context.profiles?.refinement.typeLabel
+    return {
+      repo,
+      names: {
+        typeLabel: (documentType) => typeLabel?.(documentType) ?? null,
+        fieldLabel: (fieldId) => registry?.field(fieldId)?.label_it ?? null
+      }
+    }
+  }
+
+  /** Modalità, contatori, regole e cronologia del learner. */
+  handle('learning:overview', noInput, (): LearningOverview => learningOverview(learning()))
+
+  /**
+   * Cambia modalità. Non rielabora niente: vale dai documenti elaborati da adesso, e i
+   * documenti già precompilati restano come il revisore li ha visti.
+   */
+  handle('learning:set-mode', learningModeSchema, ({ mode }): LearningOverview => {
+    repo.learning.setMode(mode)
+    return learningOverview(learning())
+  })
+
+  /** Sospende, riattiva o scarta una regola, e rielabora la coda che ne dipende. */
+  handle(
+    'learning:set-rule-status',
+    learningRuleStatusSchema,
+    ({ ruleId, status }): LearningOverview => {
+      const { change } = setRuleStatusByHand(learning(), ruleId, status)
+      reprocessAfter(change)
+      return learningOverview(learning())
+    }
+  )
+
+  /** Il file delle regole apprese, per pratica-ai. */
+  handle('learning:export', noInput, async (): Promise<LearningExportResult> => {
+    if (!context.dataset) {
+      throw new ReviewerError('UNSUPPORTED', 'Export non disponibile su questa istanza.')
+    }
+    const now = new Date()
+    const path = await context.dataset.choosePath(learningBundleFileName(now))
+    if (!path) return { saved: false, path: null, rules: 0, events: 0 }
+    return exportLearnedRules(
+      {
+        ...learning(),
+        legacyFieldMap: context.learning?.legacyFieldMap ?? {},
+        app: context.dataset.manifest().app
+      },
+      path,
+      now
+    )
   })
 
   // ---- ricerca -------------------------------------------------------------

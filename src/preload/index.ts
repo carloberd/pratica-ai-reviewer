@@ -1,4 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type {
+  LearningExportResult,
+  LearningOverview,
+  ManualRuleStatus
+} from '../shared/learning-workspace'
+import type { LearningMode } from '../shared/local-learning'
 import type { ProfileEdit } from '../shared/profile-edit'
 import type { ProfileAction } from '../shared/profile-history'
 import type {
@@ -114,6 +120,15 @@ export const reviewerApi = {
     exportMap: () => invoke<IpcResultOf<ProfileBundleResult>>('profiles:export-map')
   },
   /** Cronologia unica: correzioni alla mappa ed eventi dei documenti. */
+  /** La scheda «Apprendimento»: modalità, regole e il loro export. */
+  learning: {
+    overview: () => invoke<IpcResultOf<LearningOverview>>('learning:overview'),
+    setMode: (mode: LearningMode) =>
+      invoke<IpcResultOf<LearningOverview>>('learning:set-mode', { mode }),
+    setRuleStatus: (ruleId: string, status: ManualRuleStatus) =>
+      invoke<IpcResultOf<LearningOverview>>('learning:set-rule-status', { ruleId, status }),
+    export: () => invoke<IpcResultOf<LearningExportResult>>('learning:export')
+  },
   history: {
     list: () => invoke<IpcResultOf<ActivityFeed>>('history:list')
   },

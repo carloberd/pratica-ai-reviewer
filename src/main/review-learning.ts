@@ -225,11 +225,7 @@ function settle(
   for (const ruleKey of keys) {
     const rule = writer.findRule(ruleKey)
     if (!rule) continue
-    const next = nextRuleStatus(
-      rule,
-      writer.recentEffects(rule.id, policy.suspendAfterNegatives),
-      policy
-    )
+    const next = nextRuleStatus(rule, writer.effectsSinceActive(rule.id), policy)
     if (next === rule.status) continue
     actions.push(writer.changeRuleStatus(rule.id, next, { at, detail: describeRule(rule, next) }))
     if (rule.kind === 'TEMPLATE_TYPE' && rule.templateFingerprint) {
@@ -256,8 +252,21 @@ function percent(value: number | null): string {
   return value === null ? '—' : `${Math.round(value * 100)}%`
 }
 
-/** La riga di cronologia di un cambio di stato, coi numeri che l'hanno deciso. */
-function describeRule(rule: LearningRule, next: string): string {
+/**
+ * La riga di cronologia di un cambio di stato, coi numeri che l'hanno deciso. `byHand` per
+ * i cambi decisi dalla scheda «Apprendimento»: lì la ragione è la persona, non i numeri.
+ */
+export function describeRule(rule: LearningRule, next: string, byHand = false): string {
+  if (byHand) {
+    const verb = next === 'ACTIVE' ? 'riattivata' : next === 'SUSPENDED' ? 'sospesa' : 'scartata'
+    const what =
+      rule.kind === 'TEMPLATE_TYPE'
+        ? `Memoria del modulo ${rule.templateFingerprint} come ${rule.documentType}`
+        : isAnchorPattern(rule.pattern)
+          ? `Etichetta «${rule.pattern.label}» per ${rule.fieldId}`
+          : `Regola ${rule.kind}`
+    return `${what} ${verb} a mano: ${plural(ruleSupport(rule), 'conferma', 'conferme')}, ${plural(rule.negativeCount, 'smentita', 'smentite')}.`
+  }
   if (rule.kind === 'TEMPLATE_TYPE') {
     const verb =
       next === 'ACTIVE' ? 'attivata' : next === 'SUSPENDED' ? 'sospesa' : next.toLowerCase()
