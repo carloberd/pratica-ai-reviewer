@@ -13,7 +13,8 @@ import type {
   DashboardStats,
   DatasetExportResult,
   DocumentFilters,
-  DriveFileSummary,
+  DriveListing,
+  DriveLocation,
   FetchProgress,
   FetchResult,
   RegistryTypeOption,
@@ -47,8 +48,8 @@ export const reviewerApi = {
     logout: () => invoke<IpcResultOf<AuthStatus>>('auth:logout')
   },
   drive: {
-    /** Solo metadati: nessun file viene scaricato. */
-    list: () => invoke<IpcResultOf<DriveFileSummary[]>>('drive:list'),
+    /** Il contenuto di una cartella. Solo metadati: nessun file viene scaricato. */
+    list: (location: DriveLocation) => invoke<IpcResultOf<DriveListing>>('drive:list', location),
     /** Scarica ed elabora un singolo file, su richiesta. */
     fetch: (driveFileId: string, options?: { force?: boolean }) =>
       invoke<IpcResultOf<FetchResult>>('drive:fetch', {

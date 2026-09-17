@@ -1,5 +1,5 @@
 import type { ProfileEdit } from '@shared/profile-edit'
-import type { IpcErrorCode, ReviewAction } from '@shared/types'
+import type { DriveLocation, IpcErrorCode, ReviewAction } from '@shared/types'
 
 /**
  * Il main risponde sempre con `{ ok: true, data }` oppure `{ ok: false, error }`:
@@ -89,7 +89,7 @@ export const api = {
       )
   },
   drive: {
-    list: () => call(() => window.reviewer.drive.list()),
+    list: (location: DriveLocation) => call(() => window.reviewer.drive.list(location)),
     fetch: (driveFileId: string, options?: { force?: boolean }) =>
       call(() => window.reviewer.drive.fetch(driveFileId, options)),
     cacheUsage: () => call(() => window.reviewer.drive.cacheUsage())
