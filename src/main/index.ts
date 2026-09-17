@@ -56,7 +56,7 @@ function start(): void {
 
   // Il registry v2 arriva dopo il database perché le correzioni del revisore stanno lì:
   // i profili del pack restano quelli, e quello che il motore legge è il pack con sopra
-  // le decisioni prese nella schermata «Mappa tipi ↔ dati».
+  // le decisioni prese dalla scheda «Campi da estrarre» della revisione.
   const v2 = loadRegistryV2(engines, () => repo.profileMap.overlay())
 
   mkdirSync(tessdataCacheDir(), { recursive: true })
@@ -92,8 +92,8 @@ function start(): void {
       chooseXlsxPath: (defaultName) =>
         chooseSavePath('Esporta il dataset annotato in Excel', defaultName)
     },
-    // Senza profili v2 non c'è niente da misurare: la voce di menu resta, e i canali
-    // rispondono che la schermata non è disponibile su questa istanza.
+    // Senza profili v2 non c'è una mappa da correggere: la scheda resta, e i canali
+    // rispondono che non è disponibile su questa istanza.
     ...(v2.extractionRegistryV2
       ? {
           profiles: {
@@ -106,8 +106,6 @@ function start(): void {
               app: { name: app.getName(), version: app.getVersion() },
               schemaVersion: v2.extractionRegistryV2?.schemaVersion() ?? null
             }),
-            choosePath: (defaultName: string) =>
-              chooseSavePath('Esporta il report delle istruzioni per tipo', defaultName),
             chooseDirectory: (defaultName: string) =>
               chooseExportFolder('Dove salvare la mappa corretta', defaultName)
           }

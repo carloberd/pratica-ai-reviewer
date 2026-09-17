@@ -2,9 +2,15 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { openDatabase } from '../src/main/db'
 import { createRepository } from '../src/main/db/repository'
 import { createReloadableExtractionRegistryV2 } from '../src/main/extract/v2/profile-loader'
-import { updateFieldValue } from '../src/main/field-edits'
 import { createDocumentProcessor } from '../src/main/pipeline'
-import { type RefinementDeps, rerunTypeExtraction } from '../src/main/profile-refinement'
+import {
+  documentFieldMap,
+  editMapFromDocument,
+  type RefinementDeps,
+  reprocessQueueOfType,
+  revertMapFromDocument
+} from '../src/main/profile-refinement'
+
 import { submitReview } from '../src/main/review'
 import {
   fixture,
@@ -16,10 +22,8 @@ import {
 } from './helpers/registry'
 
 /**
- * Il re-run: cosa rielabora e cosa lascia fuori.
- *
- * Solo dalla cache, solo i documenti annotati di quel tipo. Il giro completo — correggere
- * la mappa, rielaborare, guardare il delta — sta in `profile-map.test.ts`.
+ * La mappa corretta dal documento aperto: cosa si rielabora subito, cosa in sottofondo e
+ * cosa resta com'è. Il giro completo sui numeri sta in `profile-map.test.ts`.
  */
 
 const PDF = 'application/pdf'
@@ -60,9 +64,9 @@ async function setup() {
     process
   }
 
-  async function open(filename: string) {
+  async function open(filename: string, driveFileId = `drive-${filename}`) {
     const { id } = repo.documents.upsertFromDrive({
-      driveFileId: `drive-${filename}`,
+      driveFileId,
       filename,
       mime: PDF,
       receivedAt: '2026-09-10T08:00:00.000Z'
@@ -78,43 +82,114 @@ async function setup() {
   return { repo, db, deps, open, field }
 }
 
-/** Due fatture vere, annotate. */
-async function annotated() {
-  const context = await setup()
-  const { repo, open, field } = context
+describe('la mappa del documento aperto', () => {
+  it('c’è anche per un tipo mai revisionato, coi numeri a zero', async () => {
+    const { deps, open, db } = await setup()
+    const id = await open('fattura-righe.pdf')
 
-  const withRows = await open('fattura-righe.pdf')
-  updateFieldValue(repo, {
-    documentId: withRows,
-    fieldId: field(withRows, 'document.number').id,
-    correctedValue: '27/2026/B'
-  })
-  submitReview(repo, { documentId: withRows, action: 'SAVE' })
-
-  const native = await open('fattura-nativa.pdf')
-  submitReview(repo, { documentId: native, action: 'SAVE' })
-
-  return { ...context, withRows, native }
-}
-
-describe('re-run: cosa resta fuori', () => {
-  it('salta i documenti senza copia locale invece di riscaricarli', async () => {
-    const { deps, repo, native, db } = await annotated()
-    repo.documents.setCachedPath(native, null)
-
-    const rerun = await rerunTypeExtraction(deps, FATTURA)
-    expect(rerun.processed).toHaveLength(1)
-    expect(rerun.skipped).toHaveLength(1)
-    expect(rerun.skipped[0]!.filename).toBe('fattura-nativa.pdf')
-    expect(rerun.skipped[0]!.reason).toContain('copia locale')
-    expect(rerun.retyped).toEqual([])
+    const map = documentFieldMap(deps, id)
+    expect(map.documentType).toBe(FATTURA)
+    expect(map.editable).toBe(true)
+    expect(map.measure.totals.documents).toBe(0)
+    expect(map.measure.fields.filter((entry) => entry.inProfile).length).toBeGreaterThan(0)
+    expect(map.ontology.length).toBeGreaterThan(100)
+    expect(map.undoable).toEqual([])
 
     db.close()
   })
 
-  it('un tipo senza documenti annotati non si rielabora', async () => {
-    const { deps, db } = await setup()
-    await expect(rerunTypeExtraction(deps, FATTURA)).rejects.toThrow(/Nessun documento annotato/)
+  it('senza tipo non c’è una mappa: la frase manda a «Dati»', async () => {
+    const { deps, repo, open, db } = await setup()
+    const id = await open('fattura-righe.pdf')
+    repo.documents.setType(id, null, null)
+
+    expect(() => documentFieldMap(deps, id)).toThrow(/assegnalo in «Dati»/)
+
+    db.close()
+  })
+})
+
+describe('correggere la mappa dal documento', () => {
+  it('rielabora subito il documento e lascia la correzione annullabile da lì', async () => {
+    const { deps, open, db } = await setup()
+    const id = await open('fattura-righe.pdf')
+
+    const added = await editMapFromDocument(deps, id, {
+      kind: 'ADD_FIELD',
+      documentType: FATTURA,
+      fieldId: 'document.title',
+      role: 'core'
+    })
+    expect(added.reprocessed).toBe(true)
+    expect(added.document.fields.map((entry) => entry.name)).toContain('document.title')
+    expect(added.map.undoable.map((action) => action.id)).toEqual([added.action.id])
+
+    const reverted = await revertMapFromDocument(deps, id, added.action.id)
+    expect(reverted.action.kind).toBe('REVERT')
+    expect(reverted.document.fields.map((entry) => entry.name)).not.toContain('document.title')
+    expect(reverted.map.undoable).toEqual([])
+
+    db.close()
+  })
+
+  it('senza copia locale la correzione vale, ma il documento resta quello di prima', async () => {
+    const { deps, repo, open, db } = await setup()
+    const id = await open('fattura-righe.pdf')
+    repo.documents.setCachedPath(id, null)
+
+    const result = await editMapFromDocument(deps, id, {
+      kind: 'ADD_FIELD',
+      documentType: FATTURA,
+      fieldId: 'document.title',
+      role: 'core'
+    })
+    expect(result.reprocessed).toBe(false)
+    expect(result.document.fields.map((entry) => entry.name)).not.toContain('document.title')
+    expect(deps.registry.profile(FATTURA)!.core_fields).toContain('document.title')
+
+    db.close()
+  })
+
+  it('da un documento si corregge solo la mappa del suo tipo', async () => {
+    const { deps, open, db } = await setup()
+    const id = await open('fattura-righe.pdf')
+
+    await expect(
+      editMapFromDocument(deps, id, {
+        kind: 'ADD_FIELD',
+        documentType: 'hr.unilav',
+        fieldId: 'document.title',
+        role: 'core'
+      })
+    ).rejects.toThrow(/solo la sua mappa/)
+    expect(deps.repo.profileMap.listActions()).toEqual([])
+
+    db.close()
+  })
+
+  it('i documenti in coda dello stesso tipo si rielaborano in sottofondo, i salvati no', async () => {
+    const { deps, repo, open, db } = await setup()
+    const current = await open('fattura-righe.pdf')
+    const queued = await open('fattura-righe.pdf', 'drive-copia-in-coda')
+    const saved = await open('fattura-nativa.pdf')
+    submitReview(repo, { documentId: saved, action: 'SAVE' })
+
+    const names = (id: string) => repo.getReviewDocument(id)!.fields.map((entry) => entry.name)
+
+    const result = await editMapFromDocument(deps, current, {
+      kind: 'ADD_FIELD',
+      documentType: FATTURA,
+      fieldId: 'document.title',
+      role: 'core'
+    })
+    expect(result.queued).toBe(1)
+
+    // Il sottofondo è una coda sola: si aspetta che finisca.
+    await reprocessQueueOfType(deps, 'nessun.tipo', null).done
+
+    expect(names(queued)).toContain('document.title')
+    expect(names(saved)).not.toContain('document.title')
+
     db.close()
   })
 })

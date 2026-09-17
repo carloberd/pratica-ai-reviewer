@@ -3,14 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import type { FieldInput } from '../src/main/db/dao/fields'
 import type { Repository } from '../src/main/db/repository'
 import type { ExtractionRegistryV2, ProfileSource } from '../src/main/extract/v2/profile-loader'
-import {
-  collectProfileReport,
-  collectTypeMeasure,
-  collectTypeMeasures,
-  measuredTypes,
-  profileFieldsOf
-} from '../src/main/profile-insights'
-import { profileReportCsv } from '../src/shared/profile-report'
+import { collectTypeMap, collectTypeMeasure, profileFieldsOf } from '../src/main/profile-insights'
 import { createTestRepository, seedDocument } from './helpers/db'
 
 /**
@@ -177,8 +170,7 @@ function scenario() {
 
 describe('misure sui profili dal database', () => {
   it('votano solo i documenti revisionati: scartati e in coda restano fuori', () => {
-    const { deps, repo } = scenario()
-    expect(measuredTypes(repo)).toEqual([FATTURA])
+    const { deps } = scenario()
 
     const measure = collectTypeMeasure(deps, FATTURA)!
     expect(measure.totals.documents).toBe(3)
@@ -252,7 +244,20 @@ describe('misure sui profili dal database', () => {
   it('senza documenti annotati di quel tipo non ci sono misure da mostrare', () => {
     const { deps } = scenario()
     expect(collectTypeMeasure(deps, 'hr.unilav')).toBeNull()
-    expect(collectTypeMeasures(deps).map((entry) => entry.documentType)).toEqual([FATTURA])
+  })
+
+  it('la mappa di un tipo mai revisionato ha i campi del profilo, coi numeri a zero', () => {
+    const { repo } = scenario()
+    const deps = { repo, registry: fakeRegistry({ 'hr.unilav': profile() }) }
+    const map = collectTypeMap(deps, 'hr.unilav')
+    expect(map.totals.documents).toBe(0)
+    expect(map.fields.map((entry) => entry.fieldId)).toEqual([
+      'document.issue_date',
+      'document.number',
+      'issuer.name',
+      'line_items'
+    ])
+    expect(map.fields.every((entry) => entry.inProfile && entry.signal === 'OK')).toBe(true)
   })
 
   it('i profili verificati su documenti reali sono marcati', () => {
@@ -275,29 +280,5 @@ describe('misure sui profili dal database', () => {
       { fieldId: 'line_items', label: 'Righe documento', role: 'optional' }
     ])
     expect(profileFieldsOf(registry, 'ignoto.tipo')).toEqual([])
-  })
-})
-
-describe('report d’insieme', () => {
-  it('il JSON porta manifest e misure, il CSV una riga per campo', () => {
-    const { deps } = scenario()
-    const report = collectProfileReport(deps, {
-      exportedAt: '2026-09-16T18:00:00.000Z',
-      app: { name: 'praticaai-reviewer', version: '1.1.0' },
-      schemaVersion: '2.0.0'
-    })
-
-    expect(report.manifest).toMatchObject({
-      format: 'praticaai-reviewer/profile-metrics',
-      schemaVersion: '2.0.0',
-      counts: { types: 1, documents: 3, fields: 5 }
-    })
-
-    const csv = profileReportCsv(report.types)
-    const rows = csv.trim().split('\n')
-    expect(rows[0]).toContain('tipo_documento,nome_tipo,profilo')
-    expect(rows).toHaveLength(6)
-    expect(rows.find((row) => row.includes('document.number'))).toContain('mai usato')
-    expect(rows.find((row) => row.includes('bank.iban'))).toContain('assente dal profilo')
   })
 })
