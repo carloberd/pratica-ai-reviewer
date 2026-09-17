@@ -155,6 +155,10 @@ describe('export XLSX del dataset annotato', () => {
     copyFileSync(fixture('promemoria-ignoto.pdf'), evicted)
     const gone = await open('promemoria-ignoto.pdf', { path: evicted, driveFileId: 'drive-gone' })
     unlinkSync(evicted)
+    // L'impronta la calcola già l'elaborazione: senza, il documento è uno elaborato prima
+    // della 0010, l'unico caso in cui l'export la cerca nella copia locale che non c'è più.
+    expect(repo.documents.get(gone.id)!.template_fingerprint).not.toBeNull()
+    db.prepare('UPDATE documents SET template_fingerprint = NULL WHERE id = ?').run(gone.id)
     submitReview(repo, {
       documentId: gone.id,
       action: 'DISCARD',

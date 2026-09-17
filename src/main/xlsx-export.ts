@@ -8,7 +8,7 @@ import {
   type XlsxRows,
   type XlsxSource
 } from '@shared/dataset-xlsx'
-import { templateFingerprint } from '@shared/template-fingerprint'
+import { firstPageLines, templateFingerprint } from '@shared/template-fingerprint'
 import ExcelJS from 'exceljs'
 import type { Repository } from './db/repository'
 import type { DocumentRow } from './db/rows'
@@ -30,10 +30,7 @@ const readFirstPageLines: FirstPageLines = async ({ path, mime }) => {
   // coda per un export costerebbe più di quanto valga. Una scansione senza text layer
   // non ha righe, e resta senza impronta.
   const extracted = await extractText({ filePath: path, mime })
-  const first = extracted.pages[0]
-  if (!first) return []
-  if (first.lines.length > 0) return first.lines.map((line) => line.text)
-  return first.text.split(/\r?\n/)
+  return firstPageLines(extracted.pages[0])
 }
 
 export interface XlsxCollectDeps {
@@ -43,9 +40,10 @@ export interface XlsxCollectDeps {
 /**
  * L'impronta del documento: quella già calcolata, o una nuova dalla copia in cache.
  *
- * Il layout di un documento non cambia, quindi si calcola una volta sola e resta sulla
- * colonna `template_fingerprint`. Senza copia locale l'impronta manca e basta: per un
- * export non si riscarica niente da Drive.
+ * L'elaborazione la calcola da sé; qui si ricava solo per i documenti elaborati prima che
+ * lo facesse, o con la prima pagina letta con OCR. Poi resta sulla colonna
+ * `template_fingerprint`. Senza copia locale l'impronta manca e basta: per un export non
+ * si riscarica niente da Drive.
  */
 async function ensureFingerprint(
   repo: Repository,

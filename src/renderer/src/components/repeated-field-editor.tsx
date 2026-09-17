@@ -75,7 +75,9 @@ export default function RepeatedFieldEditor({
         <table className={styles.itemTable}>
           <tbody>
             {rows.map((item) => {
-              const evidence = item.evidenceId ? evidenceById.get(item.evidenceId) : undefined
+              // La selezione del revisore, se il valore viene da lì; altrimenti la lettura del motore.
+              const evidenceId = item.correctedEvidenceId ?? item.evidenceId
+              const evidence = evidenceId ? evidenceById.get(evidenceId) : undefined
               return (
                 <ItemRow
                   key={item.id}
@@ -193,16 +195,15 @@ function ItemRow({
             </div>
           )}
           <div className={styles.itemFoot}>
-            {evidence ? (
+            {evidence && (
               <EvidenceLink
                 target={targetOfEvidence(evidence)}
                 active={evidenceShown}
                 onFocus={onFocusEvidence}
               />
-            ) : (
-              item.origin === 'MANUAL' && (
-                <span className={cx(styles.pill, styles.pillChanged)}>aggiunta a mano</span>
-              )
+            )}
+            {item.origin === 'MANUAL' && (
+              <span className={cx(styles.pill, styles.pillChanged)}>aggiunta a mano</span>
             )}
             <span className={styles.spacer} />
             {item.removed ? (

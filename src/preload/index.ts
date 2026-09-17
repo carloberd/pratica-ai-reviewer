@@ -13,6 +13,7 @@ import type {
   DashboardStats,
   DatasetExportResult,
   DocumentFilters,
+  DocumentPick,
   DriveListing,
   DriveLocation,
   FetchProgress,
@@ -69,14 +70,23 @@ export const reviewerApi = {
     evict: (id: string) => invoke<IpcResultOf<{ freedBytes: number }>>('docs:evict', { id }),
     types: () => invoke<IpcResultOf<RegistryTypeOption[]>>('docs:types')
   },
+  /** `pick` è il punto del documento da cui viene il valore; assente se scritto a mano. */
   fields: {
-    update: (input: { documentId: string; fieldId: string; correctedValue: string | null }) =>
-      invoke<IpcResultOf<ReviewDocument>>('fields:update', input),
+    update: (input: {
+      documentId: string
+      fieldId: string
+      correctedValue: string | null
+      pick?: DocumentPick
+    }) => invoke<IpcResultOf<ReviewDocument>>('fields:update', input),
     /** Riga aggiunta a mano a un campo ripetuto. */
-    addItem: (input: { documentId: string; fieldId: string; value: string }) =>
+    addItem: (input: { documentId: string; fieldId: string; value: string; pick?: DocumentPick }) =>
       invoke<IpcResultOf<ReviewDocument>>('fields:item-add', input),
-    updateItem: (input: { documentId: string; itemId: string; correctedValue: string | null }) =>
-      invoke<IpcResultOf<ReviewDocument>>('fields:item-update', input),
+    updateItem: (input: {
+      documentId: string
+      itemId: string
+      correctedValue: string | null
+      pick?: DocumentPick
+    }) => invoke<IpcResultOf<ReviewDocument>>('fields:item-update', input),
     removeItem: (input: { documentId: string; itemId: string; removed: boolean }) =>
       invoke<IpcResultOf<ReviewDocument>>('fields:item-remove', input)
   },

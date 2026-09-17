@@ -20,6 +20,7 @@ function document(overrides: Partial<ReviewDocument> = {}): ReviewDocument {
     source: 'Google Drive',
     textSource: 'NATIVE_TEXT',
     cachedPath: null,
+    contentSha256: null,
     warnings: [],
     fields: [
       {

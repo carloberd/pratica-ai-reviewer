@@ -1,7 +1,7 @@
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.0.0",
+    "formatVersion": "1.1.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": {
       "name": "praticaai-reviewer",
@@ -24,6 +24,7 @@
   "documents": [
     {
       "driveFileId": "drive-contratto-consulenza.docx",
+      "contentSha256": "f4f8fee34a3d2b7571f931c3ae4218d979ab14faa400b36ab01512a1d2321c9c",
       "filename": "contratto-consulenza.docx",
       "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "status": "DISCARDED",
@@ -48,6 +49,7 @@
     },
     {
       "driveFileId": "drive-fattura-righe.pdf",
+      "contentSha256": "503486a613f97b7027697b2eeb6a288ff6d87e0dd541f49e19aaa96ffabb3f65",
       "filename": "fattura-righe.pdf",
       "mime": "application/pdf",
       "status": "REVIEWED",
@@ -84,7 +86,8 @@
               "w": 181.6,
               "h": 11
             }
-          }
+          },
+          "pick": null
         },
         {
           "name": "document.issue_date",
@@ -102,7 +105,8 @@
               "w": 181.6,
               "h": 11
             }
-          }
+          },
+          "pick": null
         },
         {
           "name": "issuer.name",
@@ -120,7 +124,8 @@
               "w": 166.3,
               "h": 11
             }
-          }
+          },
+          "pick": null
         },
         {
           "name": "recipient.name",
@@ -138,7 +143,8 @@
               "w": 189.49,
               "h": 11
             }
-          }
+          },
+          "pick": null
         },
         {
           "name": "money.total",
@@ -156,7 +162,8 @@
               "w": 166.31,
               "h": 11
             }
-          }
+          },
+          "pick": null
         },
         {
           "name": "issuer.tax_id",
@@ -165,7 +172,8 @@
           "cardinality": "one",
           "value": "09876543210",
           "origin": "REVIEWER",
-          "evidence": null
+          "evidence": null,
+          "pick": null
         },
         {
           "name": "recipient.tax_id",
@@ -174,7 +182,8 @@
           "cardinality": "one",
           "value": null,
           "origin": null,
-          "evidence": null
+          "evidence": null,
+          "pick": null
         },
         {
           "name": "money.taxable",
@@ -192,7 +201,8 @@
               "w": 158.34,
               "h": 11
             }
-          }
+          },
+          "pick": null
         },
         {
           "name": "money.tax",
@@ -210,7 +220,8 @@
               "w": 148.59,
               "h": 11
             }
-          }
+          },
+          "pick": null
         },
         {
           "name": "money.currency",
@@ -228,7 +239,8 @@
               "w": 60.52,
               "h": 11
             }
-          }
+          },
+          "pick": null
         },
         {
           "name": "payment.due_date",
@@ -237,7 +249,8 @@
           "cardinality": "one",
           "value": null,
           "origin": null,
-          "evidence": null
+          "evidence": null,
+          "pick": null
         },
         {
           "name": "line_items",
@@ -262,7 +275,8 @@
                   "w": 276.32,
                   "h": 11
                 }
-              }
+              },
+              "pick": null
             },
             {
               "value": "Smaltimento macerie in discarica - EUR 850,00",
@@ -276,12 +290,14 @@
                   "w": 265.32,
                   "h": 11
                 }
-              }
+              },
+              "pick": null
             },
             {
               "value": "Tinteggiatura pareti e soffitti - EUR 1.450,00",
               "origin": "REVIEWER",
-              "evidence": null
+              "evidence": null,
+              "pick": null
             }
           ]
         },
@@ -292,7 +308,8 @@
           "cardinality": "one",
           "value": null,
           "origin": null,
-          "evidence": null
+          "evidence": null,
+          "pick": null
         },
         {
           "name": "procurement.cig",
@@ -301,7 +318,8 @@
           "cardinality": "one",
           "value": null,
           "origin": null,
-          "evidence": null
+          "evidence": null,
+          "pick": null
         },
         {
           "name": "procurement.cup",
@@ -310,7 +328,8 @@
           "cardinality": "one",
           "value": null,
           "origin": null,
-          "evidence": null
+          "evidence": null,
+          "pick": null
         }
       ],
       "corrections": [
@@ -320,7 +339,8 @@
           "item": null,
           "kind": "CHANGED",
           "before": "27/2026",
-          "after": "27/2026/B"
+          "after": "27/2026/B",
+          "pick": null
         },
         {
           "field": "issuer.tax_id",
@@ -328,7 +348,8 @@
           "item": null,
           "kind": "FILLED",
           "before": null,
-          "after": "09876543210"
+          "after": "09876543210",
+          "pick": null
         },
         {
           "field": "money.currency",
@@ -336,7 +357,8 @@
           "item": null,
           "kind": "CLEARED",
           "before": "EUR",
-          "after": null
+          "after": null,
+          "pick": null
         },
         {
           "field": "line_items",
@@ -344,7 +366,8 @@
           "item": 1,
           "kind": "CHANGED",
           "before": "Smaltimento macerie - EUR 850,00",
-          "after": "Smaltimento macerie in discarica - EUR 850,00"
+          "after": "Smaltimento macerie in discarica - EUR 850,00",
+          "pick": null
         },
         {
           "field": "line_items",
@@ -352,7 +375,8 @@
           "item": 2,
           "kind": "REMOVED",
           "before": "Tinteggiatura pareti - EUR 1.450,00",
-          "after": null
+          "after": null,
+          "pick": null
         },
         {
           "field": "line_items",
@@ -360,12 +384,14 @@
           "item": 3,
           "kind": "ADDED",
           "before": null,
-          "after": "Tinteggiatura pareti e soffitti - EUR 1.450,00"
+          "after": "Tinteggiatura pareti e soffitti - EUR 1.450,00",
+          "pick": null
         }
       ]
     },
     {
       "driveFileId": "drive-promemoria-ignoto.pdf",
+      "contentSha256": "78e69fa5ffeba9f7f61d796afb276ceda18759a6ee4cc817e02432f8b9fb4d78",
       "filename": "promemoria-ignoto.pdf",
       "mime": "application/pdf",
       "status": "REVIEWED",
@@ -391,9 +417,26 @@
           "label": "Data emissione",
           "role": "core",
           "cardinality": "one",
-          "value": "2026-09-12",
+          "value": "12/09/2026",
           "origin": "REVIEWER",
-          "evidence": null
+          "evidence": null,
+          "pick": {
+            "method": "TEXT_SELECTION",
+            "page": 1,
+            "text": "12/09/2026",
+            "bbox": {
+              "x": 87.6,
+              "y": 131,
+              "w": 52.7,
+              "h": 11
+            },
+            "location": {
+              "lineStart": 3,
+              "lineEnd": 3,
+              "charStart": 99,
+              "charEnd": 109
+            }
+          }
         },
         {
           "name": "payment.date",
@@ -402,7 +445,8 @@
           "cardinality": "one",
           "value": null,
           "origin": null,
-          "evidence": null
+          "evidence": null,
+          "pick": null
         },
         {
           "name": "payment.reference",
@@ -411,7 +455,8 @@
           "cardinality": "one",
           "value": null,
           "origin": null,
-          "evidence": null
+          "evidence": null,
+          "pick": null
         },
         {
           "name": "payment.method",
@@ -420,7 +465,8 @@
           "cardinality": "one",
           "value": null,
           "origin": null,
-          "evidence": null
+          "evidence": null,
+          "pick": null
         },
         {
           "name": "money.amount",
@@ -438,7 +484,8 @@
               "w": 173.01,
               "h": 11
             }
-          }
+          },
+          "pick": null
         },
         {
           "name": "money.currency",
@@ -447,7 +494,8 @@
           "cardinality": "one",
           "value": null,
           "origin": null,
-          "evidence": null
+          "evidence": null,
+          "pick": null
         },
         {
           "name": "bank.iban",
@@ -456,7 +504,8 @@
           "cardinality": "one",
           "value": null,
           "origin": null,
-          "evidence": null
+          "evidence": null,
+          "pick": null
         },
         {
           "name": "document.number",
@@ -465,7 +514,8 @@
           "cardinality": "one",
           "value": null,
           "origin": null,
-          "evidence": null
+          "evidence": null,
+          "pick": null
         },
         {
           "name": "issuer.name",
@@ -474,7 +524,8 @@
           "cardinality": "one",
           "value": null,
           "origin": null,
-          "evidence": null
+          "evidence": null,
+          "pick": null
         },
         {
           "name": "recipient.name",
@@ -483,7 +534,8 @@
           "cardinality": "one",
           "value": null,
           "origin": null,
-          "evidence": null
+          "evidence": null,
+          "pick": null
         }
       ],
       "corrections": [
@@ -493,7 +545,24 @@
           "item": null,
           "kind": "FILLED",
           "before": null,
-          "after": "2026-09-12"
+          "after": "12/09/2026",
+          "pick": {
+            "method": "TEXT_SELECTION",
+            "page": 1,
+            "text": "12/09/2026",
+            "bbox": {
+              "x": 87.6,
+              "y": 131,
+              "w": 52.7,
+              "h": 11
+            },
+            "location": {
+              "lineStart": 3,
+              "lineEnd": 3,
+              "charStart": 99,
+              "charEnd": 109
+            }
+          }
         }
       ]
     }
