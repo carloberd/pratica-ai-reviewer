@@ -1,3 +1,4 @@
+import type { EvidenceItem } from '@shared/types'
 import { describe, expect, it } from 'vitest'
 import RepeatedFieldEditor from '../../src/renderer/src/components/repeated-field-editor'
 import { item, listField } from '../helpers/review-document'
@@ -22,7 +23,7 @@ describe('RepeatedFieldEditor', () => {
     item({ id: 'b', index: 1, value: 'Posa', correctedValue: 'Posa in opera' }),
     item({ id: 'd', index: 3, value: 'Doppione', removed: true })
   ])
-  const evidenceById = new Map([
+  const evidenceById = new Map<string, EvidenceItem>([
     [
       'ev-a',
       {
@@ -30,7 +31,8 @@ describe('RepeatedFieldEditor', () => {
         label: 'Righe · riga 1',
         page: 1,
         text: 'Righe documento: Fornitura',
-        confidence: 0.85
+        confidence: 0.85,
+        origin: 'ENGINE'
       }
     ]
   ])

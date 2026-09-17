@@ -50,7 +50,13 @@ export interface ReplaceFieldsOptions {
 
 type KeptCorrection = Pick<
   FieldRow,
-  'name' | 'label' | 'value' | 'confidence' | 'updated_at' | 'semantic_type'
+  | 'name'
+  | 'label'
+  | 'value'
+  | 'confidence'
+  | 'updated_at'
+  | 'semantic_type'
+  | 'corrected_evidence_id'
 > & { corrected_value: string }
 
 /** Intervento del revisore su una riga proposta: correzione, rimozione o entrambe. */
@@ -58,6 +64,8 @@ interface KeptEngineItem {
   corrected_value_json: string | null
   removed: number
   updated_at: string | null
+  /** La selezione dietro la correzione: segue la correzione ovunque finisca. */
+  corrected_evidence_id: string | null
 }
 
 /** Una riga che dopo il nuovo run appartiene al revisore: aggiunta a mano o rimasta orfana. */
@@ -65,6 +73,7 @@ interface KeptReviewerItem {
   sortIndex: number
   corrected_value_json: string
   updated_at: string | null
+  corrected_evidence_id: string | null
 }
 
 interface KeptItems {
@@ -97,7 +106,8 @@ function singleToItems(
       engine.set(target.itemIndex, {
         corrected_value_json: null,
         removed: 1,
-        updated_at: kept.updated_at
+        updated_at: kept.updated_at,
+        corrected_evidence_id: null
       })
     }
   } else if (!items.some((item) => same(item, corrected))) {
@@ -105,13 +115,15 @@ function singleToItems(
       engine.set(target.itemIndex, {
         corrected_value_json: JSON.stringify(corrected),
         removed: 0,
-        updated_at: kept.updated_at
+        updated_at: kept.updated_at,
+        corrected_evidence_id: kept.corrected_evidence_id
       })
     } else {
       manual.push({
         sortIndex: 0,
         corrected_value_json: JSON.stringify(corrected),
-        updated_at: kept.updated_at
+        updated_at: kept.updated_at,
+        corrected_evidence_id: kept.corrected_evidence_id
       })
     }
   }
@@ -127,16 +139,17 @@ const JOINED_ITEMS_SEPARATOR = '; '
  * `; ` se sono più d'una: nessun valore sparisce, e il revisore vede in «Dati» cosa tenere.
  * Se restano uguali a quello che il motore propone adesso, non c'è niente da correggere.
  */
-function itemsToSingle(
-  rows: PreviousItemRow[],
-  proposed: string | null
-): { corrected_value: string; updated_at: string | null } | null {
-  const values = [...rows]
+function itemsToSingle(rows: PreviousItemRow[], proposed: string | null): KeptSingle | null {
+  const kept = [...rows]
     .sort((a, b) => a.item_index - b.item_index)
     .filter((row) => row.removed === 0)
-    .map((row) => parseItemValue(row.corrected_value_json) ?? parseItemValue(row.value_json))
-    .map((value) => value?.trim() ?? '')
-    .filter((value) => value !== '')
+    .map((row) => ({
+      value:
+        (parseItemValue(row.corrected_value_json) ?? parseItemValue(row.value_json))?.trim() ?? '',
+      evidence: row.corrected_value_json === null ? null : row.corrected_evidence_id
+    }))
+    .filter((entry) => entry.value !== '')
+  const values = kept.map((entry) => entry.value)
   const updatedAt =
     rows
       .map((row) => row.updated_at)
@@ -146,15 +159,33 @@ function itemsToSingle(
   const engine = proposed?.trim() || null
 
   if (values.length === 0) {
-    return engine === null ? null : { corrected_value: '', updated_at: updatedAt }
+    return engine === null
+      ? null
+      : { corrected_value: '', updated_at: updatedAt, corrected_evidence_id: null }
   }
   const joined = values.join(JOINED_ITEMS_SEPARATOR)
-  return joined === engine ? null : { corrected_value: joined, updated_at: updatedAt }
+  // Una selezione vale per un valore: più righe unite non vengono da un punto solo.
+  const evidence = kept.length === 1 ? (kept[0]?.evidence ?? null) : null
+  return joined === engine
+    ? null
+    : { corrected_value: joined, updated_at: updatedAt, corrected_evidence_id: evidence }
+}
+
+/** La correzione che un campo singolo ritrova dopo il nuovo run. */
+interface KeptSingle {
+  corrected_value: string
+  updated_at: string | null
+  corrected_evidence_id: string | null
 }
 
 type PreviousItemRow = Pick<
   FieldItemRow,
-  'item_index' | 'value_json' | 'corrected_value_json' | 'removed' | 'updated_at'
+  | 'item_index'
+  | 'value_json'
+  | 'corrected_value_json'
+  | 'removed'
+  | 'updated_at'
+  | 'corrected_evidence_id'
 > & { name: string }
 
 function errorsJson(errors: string[] | null | undefined): string | null {
@@ -164,13 +195,15 @@ function errorsJson(errors: string[] | null | undefined): string | null {
 export function createFieldsDao(db: Db) {
   const insert = db.prepare(`
     INSERT INTO fields (id, document_id, name, label, value, corrected_value, confidence, evidence_id,
-                        updated_at, semantic_type, cardinality, review_status, validation_errors_json, role)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'one'), ?, ?, ?)
+                        updated_at, semantic_type, cardinality, review_status, validation_errors_json, role,
+                        corrected_evidence_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'one'), ?, ?, ?, ?)
   `)
   const insertItem = db.prepare(`
     INSERT INTO field_items (id, field_id, item_index, value_json, corrected_value_json, confidence,
-                             evidence_id, validation_errors_json, updated_at, origin, removed)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                             evidence_id, validation_errors_json, updated_at, origin, removed,
+                             corrected_evidence_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   /** Le righe del revisore vanno in coda, nell'ordine in cui stavano. */
@@ -188,7 +221,8 @@ export function createFieldsDao(db: Db) {
         null,
         item.updated_at,
         'MANUAL',
-        0
+        0,
+        item.corrected_evidence_id
       )
       index += 1
     }
@@ -204,7 +238,8 @@ export function createFieldsDao(db: Db) {
       orphaned.push({
         sortIndex,
         corrected_value_json: item.corrected_value_json,
-        updated_at: item.updated_at
+        updated_at: item.updated_at,
+        corrected_evidence_id: item.corrected_evidence_id
       })
     }
     return orphaned
@@ -226,7 +261,8 @@ export function createFieldsDao(db: Db) {
     ): void {
       const previous = db
         .prepare(`
-          SELECT name, label, value, corrected_value, confidence, updated_at, semantic_type
+          SELECT name, label, value, corrected_value, confidence, updated_at, semantic_type,
+                 corrected_evidence_id
             FROM fields
            WHERE document_id = ? AND corrected_value IS NOT NULL AND cardinality = 'one'
         `)
@@ -236,7 +272,7 @@ export function createFieldsDao(db: Db) {
       const previousItems = db
         .prepare(`
           SELECT f.name, f.label, f.semantic_type, i.item_index, i.origin, i.removed,
-                 i.corrected_value_json, i.updated_at
+                 i.corrected_value_json, i.updated_at, i.corrected_evidence_id
             FROM field_items i JOIN fields f ON f.id = i.field_id
            WHERE f.document_id = ? AND (i.corrected_value_json IS NOT NULL OR i.removed = 1)
         ORDER BY f.name, i.item_index
@@ -245,7 +281,12 @@ export function createFieldsDao(db: Db) {
         Pick<FieldRow, 'name' | 'label' | 'semantic_type'> &
           Pick<
             FieldItemRow,
-            'item_index' | 'origin' | 'removed' | 'corrected_value_json' | 'updated_at'
+            | 'item_index'
+            | 'origin'
+            | 'removed'
+            | 'corrected_value_json'
+            | 'updated_at'
+            | 'corrected_evidence_id'
           >
       >
       const itemCorrections = new Map<string, KeptItems>()
@@ -261,14 +302,16 @@ export function createFieldsDao(db: Db) {
             kept.manual.push({
               sortIndex: row.item_index,
               corrected_value_json: row.corrected_value_json,
-              updated_at: row.updated_at
+              updated_at: row.updated_at,
+              corrected_evidence_id: row.corrected_evidence_id
             })
           }
         } else {
           kept.engine.set(row.item_index, {
             corrected_value_json: row.corrected_value_json,
             removed: row.removed,
-            updated_at: row.updated_at
+            updated_at: row.updated_at,
+            corrected_evidence_id: row.corrected_evidence_id
           })
         }
         itemCorrections.set(row.name, kept)
@@ -278,7 +321,8 @@ export function createFieldsDao(db: Db) {
       // ora chiede un valore solo, è l'elenco intero che il revisore aveva davanti.
       const allItems = db
         .prepare(`
-          SELECT f.name, i.item_index, i.value_json, i.corrected_value_json, i.removed, i.updated_at
+          SELECT f.name, i.item_index, i.value_json, i.corrected_value_json, i.removed, i.updated_at,
+                 i.corrected_evidence_id
             FROM field_items i JOIN fields f ON f.id = i.field_id
            WHERE f.document_id = ?
         `)
@@ -308,7 +352,7 @@ export function createFieldsDao(db: Db) {
 
         // Un campo ripetuto che ora chiede un valore solo: le sue righe toccate dal revisore
         // diventano la correzione, a meno che il campo singolo non ne abbia già una.
-        let single: { corrected_value: string; updated_at: string | null } | null = kept ?? null
+        let single: KeptSingle | null = kept ?? null
         if (!many && !kept) {
           const itemsName = matchName(itemCorrections, field.name)
           if (itemsName) {
@@ -331,7 +375,8 @@ export function createFieldsDao(db: Db) {
           field.cardinality ?? null,
           field.reviewStatus ?? null,
           errorsJson(field.validationErrors),
-          field.role ?? null
+          field.role ?? null,
+          many ? null : (single?.corrected_evidence_id ?? null)
         )
 
         if (!many) continue
@@ -362,7 +407,8 @@ export function createFieldsDao(db: Db) {
             errorsJson(item.validationErrors),
             edit?.updated_at ?? null,
             'ENGINE',
-            edit?.removed ?? 0
+            edit?.removed ?? 0,
+            edit?.corrected_evidence_id ?? null
           )
           written.add(item.itemIndex)
           nextIndex = Math.max(nextIndex, item.itemIndex + 1)
@@ -391,7 +437,8 @@ export function createFieldsDao(db: Db) {
           'one',
           'NEEDS_REVIEW',
           null,
-          'optional'
+          'optional',
+          kept.corrected_evidence_id
         )
       }
       // Lo stesso per un campo ripetuto: restano le righe che il revisore ha scritto.
@@ -414,7 +461,8 @@ export function createFieldsDao(db: Db) {
           'many',
           'NEEDS_REVIEW',
           null,
-          'optional'
+          'optional',
+          null
         )
         insertReviewerItems(id, 0, rows)
       }
@@ -433,11 +481,21 @@ export function createFieldsDao(db: Db) {
     /**
      * Registra la correzione umana. `null` annulla la correzione e riporta il campo
      * al valore precompilato: `value` non viene mai sovrascritto.
+     *
+     * `evidenceId` è la selezione da cui viene il valore. Ogni correzione riscrive anche
+     * quella: un valore scritto a mano dopo una selezione non viene più da lì.
      */
-    setCorrectedValue(id: string, correctedValue: string | null): void {
-      db.prepare('UPDATE fields SET corrected_value = ?, updated_at = ? WHERE id = ?').run(
+    setCorrectedValue(
+      id: string,
+      correctedValue: string | null,
+      evidenceId: string | null = null
+    ): void {
+      db.prepare(
+        'UPDATE fields SET corrected_value = ?, updated_at = ?, corrected_evidence_id = ? WHERE id = ?'
+      ).run(
         correctedValue,
         correctedValue === null ? null : new Date().toISOString(),
+        correctedValue === null ? null : evidenceId,
         id
       )
     },
@@ -486,8 +544,8 @@ export function createFieldsDao(db: Db) {
         .get(itemId) as (FieldItemRow & { document_id: string }) | undefined
     },
 
-    /** Riga scritta dal revisore, in coda alle altre. */
-    addItem(fieldId: string, value: string): string {
+    /** Riga scritta dal revisore, in coda alle altre; `evidenceId` se l'ha selezionata. */
+    addItem(fieldId: string, value: string, evidenceId: string | null = null): string {
       const row = db
         .prepare('SELECT MAX(item_index) AS last FROM field_items WHERE field_id = ?')
         .get(fieldId) as { last: number | null }
@@ -503,7 +561,8 @@ export function createFieldsDao(db: Db) {
         null,
         new Date().toISOString(),
         'MANUAL',
-        0
+        0,
+        evidenceId
       )
       return id
     },
@@ -523,12 +582,17 @@ export function createFieldsDao(db: Db) {
     },
 
     /** Come `setCorrectedValue`, per un elemento di un campo `many`. */
-    setItemCorrectedValue(itemId: string, correctedValue: string | null): void {
+    setItemCorrectedValue(
+      itemId: string,
+      correctedValue: string | null,
+      evidenceId: string | null = null
+    ): void {
       db.prepare(
-        'UPDATE field_items SET corrected_value_json = ?, updated_at = ? WHERE id = ?'
+        'UPDATE field_items SET corrected_value_json = ?, updated_at = ?, corrected_evidence_id = ? WHERE id = ?'
       ).run(
         correctedValue === null ? null : JSON.stringify(correctedValue),
         correctedValue === null ? null : new Date().toISOString(),
+        correctedValue === null ? null : evidenceId,
         itemId
       )
     }

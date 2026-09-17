@@ -1,5 +1,5 @@
 import { findTextRange } from '@shared/evidence-locate'
-import type { EvidenceItem, ReviewDocument } from '@shared/types'
+import type { DocumentPick, EvidenceItem, ReviewDocument } from '@shared/types'
 import { useEffect, useRef, useState } from 'react'
 import { api, errorMessage } from '../lib/ipc'
 import styles from './document-review.module.css'
@@ -12,7 +12,8 @@ interface Props {
   focus: EvidenceFocus | null
   /** Etichetta del campo che sta aspettando un valore, `null` se nessuno. */
   captureTarget: string | null
-  onCapture: (text: string) => void
+  /** Il testo preso dal documento e, quando si sa, il punto da cui viene. */
+  onCapture: (text: string, pick?: DocumentPick) => void
 }
 
 const PDF_MIME = 'application/pdf'
@@ -70,7 +71,7 @@ function DocxText({
   documentId: string
   focus: EvidenceFocus | null
   captureTarget: string | null
-  onCapture: (text: string) => void
+  onCapture: (text: string, pick?: DocumentPick) => void
 }) {
   const [text, setText] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -103,14 +104,17 @@ function DocxText({
   if (error) return <div className={styles.error}>{error}</div>
   if (text === null) return <div className={styles.spinner}>Estraggo il testo…</div>
 
-  /** Anche qui la selezione compila il campo attivo: il DOCX è testo, niente OCR. */
+  /**
+   * Anche qui la selezione compila il campo attivo: il DOCX è testo, niente OCR. Una pagina
+   * sola e nessuna coordinata: il main ritrova la selezione dal testo.
+   */
   function capture() {
     if (!captureTarget) return
     const selection = window.getSelection()
     const selected = selection?.toString() ?? ''
     if (!selected.trim()) return
     selection?.removeAllRanges()
-    onCapture(selected)
+    onCapture(selected, { method: 'TEXT_SELECTION', page: 1, text: selected })
   }
 
   return (

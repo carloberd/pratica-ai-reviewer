@@ -1,4 +1,5 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -8,7 +9,14 @@ import { createRepository } from '../src/main/db/repository'
 import type { OcrService } from '../src/main/extract/ocr'
 import { createOcrEngine } from '../src/main/extract/ocr-engine'
 import { extractText } from '../src/main/extract/text'
-import { createDocumentProcessor, EXTRACTION_ENGINE_V2_VERSION } from '../src/main/pipeline'
+import { updateFieldValue } from '../src/main/field-edits'
+import {
+  createDocumentProcessor,
+  EXTRACTION_ENGINE_V2_VERSION,
+  firstPageFingerprint,
+  pagesOf
+} from '../src/main/pipeline'
+import { templateFingerprint } from '../src/shared/template-fingerprint'
 import { createTestRepository, databaseAt } from './helpers/db'
 import {
   fixture,
@@ -672,6 +680,113 @@ describe('motore v2 — rielaborazione e correzioni', () => {
     const rows = repo.fields.listForDocument(id)
     expect(rows).toHaveLength(8)
     expect(rows.find((f) => f.name === 'total_amount')?.corrected_value).toBe('86420.50')
+    repo.close()
+  })
+})
+
+describe('il testo su cui si ritrovano le selezioni', () => {
+  it('salva hash del file, righe con coordinate e impronta della prima pagina', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'fattura-nativa.pdf', PDF)
+    await processorFor(repo, V2)(inputFor(id, 'fattura-nativa.pdf', PDF))
+
+    const extracted = await extractText({ filePath: fixture('fattura-nativa.pdf'), mime: PDF })
+    const lines = repo.pages.lines(id, 1)
+    expect(lines).toEqual(extracted.pages[0]!.lines)
+    expect(lines[2]).toEqual({
+      text: 'FATTURA n. 114/2026 del 08/09/2026',
+      bbox: { x: 56, y: 111, w: 187.71, h: 11 }
+    })
+
+    const row = repo.documents.get(id)!
+    expect(row.content_sha256).toBe(
+      createHash('sha256')
+        .update(readFileSync(fixture('fattura-nativa.pdf')))
+        .digest('hex')
+    )
+    // La stessa impronta che l'export ricaverebbe dalle stesse righe.
+    expect(row.template_fingerprint).toBe(templateFingerprint(lines.map((line) => line.text)))
+    expect(repo.getReviewDocument(id)!.contentSha256).toBe(row.content_sha256)
+    repo.close()
+  })
+
+  it('un DOCX ha una pagina sola, di righe senza coordinate', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'contratto-consulenza.docx', DOCX)
+    await processorFor(repo, V2)(inputFor(id, 'contratto-consulenza.docx', DOCX))
+
+    const lines = repo.pages.lines(id, 1)
+    expect(lines.length).toBeGreaterThan(0)
+    expect(lines.every((line) => line.bbox === undefined)).toBe(true)
+    expect(repo.pages.lines(id, 2)).toEqual([])
+    expect(repo.documents.get(id)!.template_fingerprint).not.toBeNull()
+    repo.close()
+  })
+
+  it('ogni pagina dice da dove viene il suo testo', () => {
+    const lines = [{ text: 'riga' }]
+    expect(
+      pagesOf({
+        source: 'OCR',
+        ocrPages: [2],
+        pages: [
+          { page: 1, text: 'riga', lines },
+          { page: 2, text: 'riga', lines }
+        ]
+      }).map((page) => [page.page, page.textSource])
+    ).toEqual([
+      [1, 'NATIVE_TEXT'],
+      [2, 'OCR']
+    ])
+    expect(
+      pagesOf({ source: 'DOCX', ocrPages: [], pages: [{ page: 1, text: 'riga', lines }] })[0]
+        ?.textSource
+    ).toBe('DOCX')
+  })
+
+  it('una prima pagina letta con OCR resta senza impronta: la ricava l’export', () => {
+    const page = { page: 1, text: 'DURC', lines: [{ text: 'DURC' }] }
+    expect(firstPageFingerprint({ source: 'OCR', ocrPages: [1], pages: [page] })).toBeNull()
+    expect(firstPageFingerprint({ source: 'NATIVE_TEXT', ocrPages: [], pages: [page] })).toBe(
+      templateFingerprint(['DURC'])
+    )
+    expect(firstPageFingerprint({ source: 'NATIVE_TEXT', ocrPages: [], pages: [] })).toBeNull()
+  })
+
+  it('una selezione resta alla rielaborazione, con la sua posizione', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'fattura-nativa.pdf', PDF)
+    const process = processorFor(repo, V2)
+    const input = inputFor(id, 'fattura-nativa.pdf', PDF)
+    await process(input)
+
+    // «70.836,07» compare due volte: sulla riga della fornitura e su quella del totale
+    // imponibile. Il revisore seleziona il secondo, e il riquadro lo distingue.
+    const field = repo.getReviewDocument(id)!.fields.find((f) => f.name === 'money.taxable')!
+    expect(field.value).toBe('70836.07')
+    updateFieldValue(repo, {
+      documentId: id,
+      fieldId: field.id,
+      correctedValue: '70.836,07',
+      pick: {
+        method: 'TEXT_SELECTION',
+        page: 1,
+        text: '70.836,07',
+        bbox: { x: 172.7, y: 311, w: 47.7, h: 11 }
+      }
+    })
+    await process(input)
+
+    const document = repo.getReviewDocument(id)!
+    const after = document.fields.find((f) => f.name === 'money.taxable')!
+    expect(after.correctedValue).toBe('70.836,07')
+    expect(document.evidence.find((e) => e.id === after.correctedEvidenceId)).toMatchObject({
+      origin: 'REVIEWER',
+      location: { lineStart: 9, lineEnd: 9, charStart: 254, charEnd: 263 }
+    })
+    // Le evidenze del motore non si moltiplicano, quella del revisore resta una.
+    expect(document.evidence.filter((e) => e.origin === 'REVIEWER')).toHaveLength(1)
+    expect(document.evidence.filter((e) => e.origin === 'ENGINE')).toHaveLength(8)
     repo.close()
   })
 })

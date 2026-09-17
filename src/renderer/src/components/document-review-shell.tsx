@@ -9,6 +9,7 @@ import type {
   AuthStatus,
   CacheUsage,
   DashboardKpi,
+  DocumentPick,
   DriveFileSummary,
   DriveFolderSummary,
   DriveListing,
@@ -280,11 +281,11 @@ export default function DocumentReviewShell() {
       setView('review')
     })
 
-  const commitField = (fieldId: string, value: string | null) => {
+  const commitField = (fieldId: string, value: string | null, pick?: DocumentPick) => {
     if (!selected) return
     const documentId = selected.id
     void run('field', async () => {
-      setSelected(await api.fields.update(documentId, fieldId, value))
+      setSelected(await api.fields.update(documentId, fieldId, value, pick))
     })
   }
 
@@ -297,14 +298,14 @@ export default function DocumentReviewShell() {
     })
   }
 
-  const commitItem = (itemId: string, value: string | null) =>
-    editDocument('field', (documentId) => api.fields.updateItem(documentId, itemId, value))
+  const commitItem = (itemId: string, value: string | null, pick?: DocumentPick) =>
+    editDocument('field', (documentId) => api.fields.updateItem(documentId, itemId, value, pick))
 
   const removeItem = (itemId: string, removed: boolean) =>
     editDocument('field', (documentId) => api.fields.removeItem(documentId, itemId, removed))
 
-  const addItem = (fieldId: string, value: string) =>
-    editDocument('field', (documentId) => api.fields.addItem(documentId, fieldId, value))
+  const addItem = (fieldId: string, value: string, pick?: DocumentPick) =>
+    editDocument('field', (documentId) => api.fields.addItem(documentId, fieldId, value, pick))
 
   /**
    * Salva il dataset annotato dove sceglie il revisore, nella forma che ha scelto: lo

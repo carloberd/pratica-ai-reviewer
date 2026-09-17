@@ -79,7 +79,9 @@ export default function FieldsPanel({
         />
       )
     }
-    const fieldEvidence = field.evidenceId ? evidenceById.get(field.evidenceId) : undefined
+    // La selezione del revisore, se il valore viene da lì; altrimenti la lettura del motore.
+    const evidenceId = field.correctedEvidenceId ?? field.evidenceId
+    const fieldEvidence = evidenceId ? evidenceById.get(evidenceId) : undefined
     return (
       <FieldEditor
         key={field.id}

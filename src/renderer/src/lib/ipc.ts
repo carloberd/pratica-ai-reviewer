@@ -1,5 +1,5 @@
 import type { ProfileEdit } from '@shared/profile-edit'
-import type { DriveLocation, IpcErrorCode, ReviewAction } from '@shared/types'
+import type { DocumentPick, DriveLocation, IpcErrorCode, ReviewAction } from '@shared/types'
 
 /**
  * Il main risponde sempre con `{ ok: true, data }` oppure `{ ok: false, error }`:
@@ -52,12 +52,38 @@ export const api = {
     evict: (id: string) => call(() => window.reviewer.docs.evict(id))
   },
   fields: {
-    update: (documentId: string, fieldId: string, correctedValue: string | null) =>
-      call(() => window.reviewer.fields.update({ documentId, fieldId, correctedValue })),
-    addItem: (documentId: string, fieldId: string, value: string) =>
-      call(() => window.reviewer.fields.addItem({ documentId, fieldId, value })),
-    updateItem: (documentId: string, itemId: string, correctedValue: string | null) =>
-      call(() => window.reviewer.fields.updateItem({ documentId, itemId, correctedValue })),
+    update: (
+      documentId: string,
+      fieldId: string,
+      correctedValue: string | null,
+      pick?: DocumentPick
+    ) =>
+      call(() =>
+        window.reviewer.fields.update({
+          documentId,
+          fieldId,
+          correctedValue,
+          ...(pick ? { pick } : {})
+        })
+      ),
+    addItem: (documentId: string, fieldId: string, value: string, pick?: DocumentPick) =>
+      call(() =>
+        window.reviewer.fields.addItem({ documentId, fieldId, value, ...(pick ? { pick } : {}) })
+      ),
+    updateItem: (
+      documentId: string,
+      itemId: string,
+      correctedValue: string | null,
+      pick?: DocumentPick
+    ) =>
+      call(() =>
+        window.reviewer.fields.updateItem({
+          documentId,
+          itemId,
+          correctedValue,
+          ...(pick ? { pick } : {})
+        })
+      ),
     removeItem: (documentId: string, itemId: string, removed: boolean) =>
       call(() => window.reviewer.fields.removeItem({ documentId, itemId, removed }))
   },

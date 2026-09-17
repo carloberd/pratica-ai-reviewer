@@ -58,6 +58,46 @@ export interface EvidenceItem {
   confidence: number
   /** v1 reviewer: coordinate pagina pdf.js, assenti quando il text layer non le espone. */
   bbox?: BoundingBox
+  /** v3 reviewer: letta dal motore, o selezionata sul documento dal revisore. */
+  origin: EvidenceOrigin
+  /** v3 reviewer: come il revisore ha preso il valore; solo per le evidenze `REVIEWER`. */
+  method?: PickMethod
+  /** v3 reviewer: dove cade fra le righe salvate dall'elaborazione, quando si ritrova. */
+  location?: PickLocation
+}
+
+/** v3 reviewer: chi ha trovato il testo di un'evidenza. */
+export type EvidenceOrigin = 'ENGINE' | 'REVIEWER'
+
+/** v3 reviewer: selezione nel text layer, oppure area della pagina letta con OCR. */
+export type PickMethod = 'TEXT_SELECTION' | 'AREA_OCR'
+
+/**
+ * v3 reviewer: un valore preso dal documento, come lo manda il renderer. È il segnale da
+ * cui il motore imparerà quale etichetta annuncia un campo, quindi porta il punto esatto e
+ * non solo il testo.
+ */
+export interface DocumentPick {
+  method: PickMethod
+  /** 1-based. Un DOCX ha una pagina sola. */
+  page: number
+  /** Verbatim: il testo selezionato, o letto con OCR, prima di ripulirne gli spazi. */
+  text: string
+  /** Coordinate pagina pdf.js a scala 1, origine in alto a sinistra; assenti nel DOCX. */
+  bbox?: BoundingBox
+}
+
+/**
+ * v3 reviewer: dove cade una selezione fra le righe della pagina salvate
+ * dall'elaborazione. Il testo della pagina è quelle righe unite da `\n`.
+ */
+export interface PickLocation {
+  /** Indici 0-based della prima e dell'ultima riga toccate. */
+  lineStart: number
+  lineEnd: number
+  /** Offset `[charStart, charEnd)` nel testo della pagina; `null` se il testo non si ritrova. */
+  charStart: number | null
+  charEnd: number | null
 }
 
 export interface ExtractedField {
@@ -72,6 +112,8 @@ export interface ExtractedField {
   correctedValue?: string
   confidence: number
   evidenceId?: string
+  /** v3 reviewer: la selezione sul documento da cui viene la correzione, se c'è. */
+  correctedEvidenceId?: string
   /** v1 reviewer: il campo è fra i `required` dello schema del tipo. */
   required: boolean
   semanticType: SemanticType
@@ -99,6 +141,8 @@ export interface FieldItem {
   correctedValue?: string
   confidence: number
   evidenceId?: string
+  /** v3 reviewer: la selezione sul documento da cui viene la correzione, se c'è. */
+  correctedEvidenceId?: string
   origin: FieldItemOrigin
   /** Riga proposta che il revisore ha tolto: resta visibile per poterla ripristinare. */
   removed: boolean
@@ -131,6 +175,8 @@ export interface ReviewDocument {
   source: string
   textSource: TextSource | null
   cachedPath: string | null
+  /** v3 reviewer: sha-256 del file elaborato; `null` se elaborato prima di questa versione. */
+  contentSha256: string | null
   warnings: string[]
   fields: ExtractedField[]
   evidence: EvidenceItem[]

@@ -11,6 +11,7 @@ import { createEventsDao } from './dao/events'
 import { createEvidenceDao } from './dao/evidence'
 import { createExtractionRunsDao } from './dao/extraction-runs'
 import { createFieldsDao } from './dao/fields'
+import { createPagesDao } from './dao/pages'
 import { createProfileMapDao } from './dao/profile-map'
 import { createSearchDao } from './dao/search'
 import type { Db } from './index'
@@ -42,6 +43,7 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
   const search = createSearchDao(db)
   const extractionRuns = createExtractionRunsDao(db)
   const profileMap = createProfileMapDao(db)
+  const pages = createPagesDao(db)
 
   const requiredFields = deps.requiredFields ?? (() => [...UNIVERSAL_FIELDS])
   const typeLabel = deps.typeLabel ?? (() => null)
@@ -117,6 +119,8 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
     events,
     search,
     extractionRuns,
+    /** Le righe del testo salvate dall'elaborazione, su cui si ritrovano le selezioni. */
+    pages,
     /** La mappa «tipo ↔ dati da estrarre» corretta dal revisore, e la sua cronologia. */
     profileMap,
 
@@ -141,17 +145,19 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
 
       // L'etichetta di un'evidenza è quella del campo che la cita: nello schema del
       // task la tabella `evidence` non ha una colonna label. Le righe dei campi ripetuti
-      // hanno ciascuna la sua.
+      // hanno ciascuna la sua, e una selezione del revisore lo dice.
       const labelByEvidence = new Map<string, string>()
+      const label = (evidenceId: string | null, text: string) => {
+        if (evidenceId && !labelByEvidence.has(evidenceId)) labelByEvidence.set(evidenceId, text)
+      }
       for (const field of fieldRows) {
         for (const item of itemsByField.get(field.id) ?? []) {
-          if (item.evidence_id && !labelByEvidence.has(item.evidence_id)) {
-            labelByEvidence.set(item.evidence_id, `${field.label} · riga ${item.item_index + 1}`)
-          }
+          const row = `${field.label} · riga ${item.item_index + 1}`
+          label(item.evidence_id, row)
+          label(item.corrected_evidence_id, `${row} · selezionato dal revisore`)
         }
-        if (field.evidence_id && !labelByEvidence.has(field.evidence_id)) {
-          labelByEvidence.set(field.evidence_id, field.label)
-        }
+        label(field.evidence_id, field.label)
+        label(field.corrected_evidence_id, `${field.label} · selezionato dal revisore`)
       }
 
       const missing = missingRequiredOf(fieldRows, row.document_type)
@@ -172,6 +178,7 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
         source: 'Google Drive',
         textSource: toTextSource(row.text_source),
         cachedPath: row.cached_path,
+        contentSha256: row.content_sha256,
         warnings: warningsFor(row, missing),
         fields: fieldRows.map((field) =>
           toExtractedField(field, isRequired(field, required), itemsByField.get(field.id))
