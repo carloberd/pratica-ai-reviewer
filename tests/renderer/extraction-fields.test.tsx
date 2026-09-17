@@ -27,7 +27,9 @@ function fieldMeasure(overrides: Partial<ProfileFieldMeasure> = {}): ProfileFiel
     correctedRate: 0,
     manualRate: 0,
     signal: 'OK',
-    decision: null
+    decision: null,
+    cardinality: 'one',
+    cardinalityDecision: null
   }
   return { ...base, ...overrides }
 }
@@ -137,6 +139,26 @@ describe('scheda «Campi da estrarre»', () => {
     expect(view).toContain('12 confermati · 0 corretti · 0 a mano su 12')
     expect(count(view, 'Aggiungi etichetta')).toBe(2)
     expect(count(view, 'Segna non utile')).toBe(2)
+  })
+
+  it('ogni campo della mappa dice se chiede un solo valore o più valori, e si cambia da lì', () => {
+    const many = fieldMeasure({
+      fieldId: 'bank.iban',
+      label: 'IBAN',
+      role: 'conditional',
+      cardinality: 'many',
+      cardinalityDecision: 'many'
+    })
+    const map = fieldMap({ measure: measure({ fields: [fieldMeasure(), many] }) })
+    const markup = html(<ExtractionFields {...props} map={map} />)
+
+    expect(count(markup, 'aria-label="Quanti valori per ')).toBe(2)
+    expect(markup).toContain('data-cardinality="one"')
+    expect(markup).toContain('data-cardinality="many"')
+    expect(markup).toContain('<option value="many" selected="">più valori</option>')
+    expect(markup).toContain('<option value="one" selected="">un solo valore</option>')
+    // Solo la decisione presa qui è marcata: l'altro campo segue l'ontologia.
+    expect(count(text(<ExtractionFields {...props} map={map} />), 'modificato')).toBe(1)
   })
 
   it('il campo mai usato è segnalato col numero di documenti', () => {

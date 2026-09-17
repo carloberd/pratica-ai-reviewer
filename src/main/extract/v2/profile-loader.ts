@@ -1,5 +1,6 @@
 import type { ClassExtractionProfile, FieldOntologyEntry } from '@shared/extraction-v2'
 import {
+  applyCardinalityOverlay,
   applyHintOverlay,
   applyOverlay,
   EMPTY_OVERLAY,
@@ -217,7 +218,12 @@ export function createExtractionRegistryV2(
       const base = baseProfile(documentType)
       // Le decisioni del revisore stanno nel database e si applicano qui: il motore
       // vede già la mappa corretta, senza che nessuno abbia riscritto un JSON.
-      return base ? applyOverlay(base, overlay().fields[documentType]) : null
+      if (!base) return null
+      const current = overlay()
+      return applyCardinalityOverlay(
+        applyOverlay(base, current.fields[documentType]),
+        current.cardinality[documentType]
+      )
     },
     baseProfile,
     field: (fieldId) => ontology.fields[fieldId] ?? null,
