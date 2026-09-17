@@ -309,5 +309,34 @@ Migrazione `0011_learning_store`, tipi in `src/shared/local-learning.ts`, DAO in
   `FROZEN` e `BASELINE` è strutturale, e il test lo verifica eseguendo lo stesso lavoro
   nelle tre modalità.
 
-Non c'è ancora un canale IPC né UI per la modalità: arrivano con la PR 6. Finché la PR 3
-non registra le revisioni, il deposito resta vuoto.
+Non c'è ancora un canale IPC né UI per la modalità: arrivano con la PR 6.
+
+### PR 3 — registrazione alla chiusura della review
+
+`src/shared/review-learning.ts` trasforma il documento salvato in eventi (funzione pura,
+riusabile in pratica-ai); `src/main/review-learning.ts` li scrive con `learning.acquire`
+dentro la transazione di `submitReview`. Scelte:
+
+- **Niente opzione C** di `proposed/HOOK_REVIEW_SUBMIT.md` (payload costruito dall'IPC): la
+  chiusura non tocca i campi, quindi il documento letto prima della transazione è già lo
+  stato finale, e `submitReview` lo passa al learner senza duplicare logica.
+- **Stessa transazione** della revisione, come `document_type_feedback` in pratica-ai:
+  una revisione senza eventi perde il dato che non si ricostruisce, eventi senza revisione
+  insegnano qualcosa che non è successo.
+- **Solo `SAVE`**: uno scarto è fuori dal dataset e da quello che il motore impara.
+- **Autore obbligatorio**: l'email dell'account collegato; senza, non si registra e la
+  timeline lo dice.
+- **Eventi**: tipo `CONFIRMED`/`CHANGED`/`FILLED`/`CLEARED` (niente evento se la proposta
+  non è nota: tipo messo a mano senza classificazione salvata); campi e righe con gli esiti
+  delle correzioni più `CONFIRMED` per le proposte tenute; nessun evento per un campo vuoto
+  non toccato. La selezione va sull'evento del valore che il revisore ha messo.
+
+Da tenere presente nella PR 4:
+
+- **Richiudere un documento registra di nuovo** gli stessi eventi. Il registro non si
+  riscrive, quindi è la derivazione delle regole che deve contare una prova per documento
+  (per `content_sha256`), non per evento, o un documento salvato due volte vale doppio.
+- **Un documento salvato e poi scartato** ha già i suoi eventi: la derivazione deve
+  considerare solo l'ultima chiusura di ogni documento.
+- **Campi del motore v1** arrivano coi nomi legacy (`issue_date`): vanno tradotti con
+  `legacy_field_map_v2.json` o ignorati.
