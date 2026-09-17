@@ -206,7 +206,7 @@ describe('l’export delle regole', () => {
     const bundle = JSON.parse(written)
     expect(bundle.manifest).toMatchObject({
       format: 'praticaai-reviewer/learned-rules',
-      formatVersion: '1.0.0',
+      formatVersion: '1.1.0',
       exportedAt: AT,
       app: { name: 'praticaai-reviewer', version: '1.5.0' },
       learnerVersion: 'local-learner/0.1.0',
@@ -222,6 +222,7 @@ describe('l’export delle regole', () => {
     ])
     expect(bundle.rules[1]).toMatchObject({
       registryField: 'issue_date',
+      registryDocumentType: TYPE,
       support: 2,
       precision: 1
     })

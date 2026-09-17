@@ -1,7 +1,7 @@
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.2.0",
+    "formatVersion": "1.3.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": {
       "name": "praticaai-reviewer",
@@ -39,6 +39,10 @@
       "documentType": {
         "id": "contracts_general.contratto_consulenza",
         "label": "contratto consulenza",
+        "registry": {
+          "id": "contracts_general.contratto_consulenza",
+          "proposed": "contracts_general.contratto_consulenza"
+        },
         "chosenBy": "ENGINE",
         "proposed": "contracts_general.contratto_consulenza",
         "proposedConfidence": 0.945,
@@ -64,6 +68,10 @@
       "documentType": {
         "id": "accounting.fattura",
         "label": "fattura",
+        "registry": {
+          "id": "accounting.fattura",
+          "proposed": "accounting.fattura"
+        },
         "chosenBy": "ENGINE",
         "proposed": "accounting.fattura",
         "proposedConfidence": 0.8267,
@@ -406,6 +414,10 @@
       "documentType": {
         "id": "payments_treasury.richiesta_pagamento",
         "label": "richiesta pagamento",
+        "registry": {
+          "id": "payments_treasury.richiesta_pagamento",
+          "proposed": null
+        },
         "chosenBy": "REVIEWER",
         "proposed": null,
         "proposedConfidence": null,

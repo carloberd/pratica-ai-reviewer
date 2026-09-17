@@ -357,7 +357,7 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.2.0",
+    "formatVersion": "1.3.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": { "name": "praticaai-reviewer", "version": "1.1.0" },
     // motori e versioni dell'app al momento dell'export
@@ -376,6 +376,8 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
     "reviewedAt": "…",
     "documentType": {
       "id": "accounting.fattura", "label": "fattura",
+      // gli stessi tipi come li chiama pratica-ai: vedi «I nomi dei tipi»
+      "registry": { "id": "accounting.fattura", "proposed": "accounting.fattura" },
       "chosenBy": "ENGINE",           // REVIEWER se scelto a mano
       "proposed": "accounting.fattura", "proposedConfidence": 0.8267,
       "corrected": false              // il revisore ha scelto un tipo diverso dalla proposta
@@ -423,9 +425,38 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
   quando il testo non si ritrova con certezza, `location` intera quando mancano le righe.
 - `contentSha256` identifica i byte del file indipendentemente da Drive: è la chiave su
   cui pratica-ai indicizza il feedback.
+- `registry` porta gli stessi due tipi come li chiama pratica-ai: uguali a `id` e
+  `proposed` tranne per le tre classi con slug diverso (vedi «I nomi dei tipi»).
 - `learning` dice in che modalità era il learner e quali regole valevano: due export con la
   stessa `rulesFingerprint` sono stati precompilati dalle stesse regole, ed è quello che un
-  benchmark deve dichiarare accanto ai suoi numeri. `1.1.0` e `1.2.0` aggiungono solo campi.
+  benchmark deve dichiarare accanto ai suoi numeri. Dalla `1.0.0` alla `1.3.0` si aggiungono
+  solo campi.
+
+### I nomi dei tipi
+
+Il reviewer parla la lingua del programmer pack (`resources/registry/v2`), pratica-ai quella
+del suo `document-registry` V5.1. Sulle 500 classi coincidono, **meno tre**: classi che i due
+progetti hanno aggiunto per conto proprio, con lo stesso nome canonico e uno slug diverso.
+
+| Qui | In pratica-ai | |
+|---|---|---|
+| `contracts_general.contratto_raggruppamento_temporaneo_imprese` | `contracts_general.rti` | contratto RTI |
+| `hse_risk.autocertificazione_idoneita_tecnico_professionale` | `hse_risk.idoneita_autocertificazione` | autocertificazione idoneità tecnico-professionale |
+| `payroll_contributions.dichiarazione_regolarita_retributiva` | `payroll_contributions.regolarita_retributiva` | dichiarazione regolarità retributiva |
+
+Nessuno dei due registry si tocca — sono snapshot, e la regola è la stessa di là: non si
+modificano, si somma qualcosa in lettura — quindi la traduzione sta in
+`src/shared/registry-alignment.ts` e si applica alle frontiere. Negli export (dataset e
+regole apprese) ogni tipo esce anche con lo slug di pratica-ai; assegnando un tipo a mano,
+uno slug copiato da pratica-ai vale come il suo, o resterebbe un tipo senza profilo. Dentro
+l'app e nel database gli id restano quelli del pack, che è chi fornisce i profili.
+
+Non sono un disallineamento le classi che esistono da un lato solo: qui
+`certifications_licenses.ricevuta_presentazione_suap` e
+`governance_compliance.questionario_adeguata_verifica_cliente_aml`, di là `fiscal_tax.durf`,
+`finance_corporate.piano_finanziario` e `payroll_contributions.rateazione_inps`. Sono
+vocabolari a versioni diverse, e si allineano quando uno dei due pacchetti si aggiorna. La
+mappa dei campi da estrarre invece esce con gli id del pack, perché è il pack a consumarla.
 - `corrections` è la misura di quanto aiuta la precompilazione: una voce per campo
   toccato, una per riga nei ripetuti. `kind` vale `CHANGED` (proposta diversa),
   `FILLED` (il motore non aveva proposto niente), `CLEARED` (proposta svuotata), `ADDED`
@@ -765,7 +796,7 @@ risospenderebbe per le smentite di prima. È anche una precisione mobile: una re
 per mesi che comincia a sbagliare si sospende sugli errori recenti, non sulla sua storia.
 
 **«Esporta le regole»** scrive un JSON con regole, decisioni registrate e cronologia
-(`praticaai-reviewer/learned-rules`), coi nomi dei campi anche nella forma V5.1 di
+(`praticaai-reviewer/learned-rules`), coi nomi dei campi e dei tipi anche nella forma di
 pratica-ai dove esiste la corrispondenza, e con l'algoritmo dell'impronta dichiarato nel
 manifest: quelle di template valgono solo su chi calcola l'impronta allo stesso modo.
 Nessun valore dei documenti esce, come nel deposito.
