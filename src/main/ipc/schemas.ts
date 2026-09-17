@@ -63,8 +63,20 @@ export const reviewSubmissionSchema = z.object({
   })
 })
 
+/** Gli id di Drive sono lettere, cifre, `-` e `_`: finiscono dentro una query di Drive. */
+const driveId = z
+  .string()
+  .min(1)
+  .max(200)
+  .regex(/^[\w-]+$/)
+
+export const driveLocationSchema = z.object({
+  root: z.enum(['my-drive', 'shared-with-me', 'shared-drives']),
+  folderId: driveId.nullable()
+})
+
 export const fetchDriveFileSchema = z.object({
-  driveFileId: z.string().min(1).max(200),
+  driveFileId: driveId,
   force: z.boolean().default(false)
 })
 

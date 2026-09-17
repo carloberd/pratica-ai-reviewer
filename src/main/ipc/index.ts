@@ -50,6 +50,7 @@ import {
   documentFiltersSchema,
   documentIdSchema,
   documentRefSchema,
+  driveLocationSchema,
   fetchDriveFileSchema,
   mapEditSchema,
   mapRevertSchema,
@@ -134,37 +135,39 @@ export function registerIpcHandlers(context: IpcContext): void {
   handle('auth:logout', noInput, () => auth.logout())
 
   // ---- drive ---------------------------------------------------------------
-  // Solo metadati: l'elenco non scarica niente.
-  handle('drive:list', noInput, async () => {
+  // Solo metadati, una cartella per volta: l'elenco non scarica niente.
+  handle('drive:list', driveLocationSchema, async (location) => {
     const drive = createDriveClient(await auth.client())
-    const files = await drive.listFiles()
-    return files.map((file) => {
-      const local = repo.documents.getByDriveFileId(file.id)
-      const cached = Boolean(local?.cached_path && existsSync(local.cached_path))
-      const stale = Boolean(
-        local &&
-          file.modifiedTime &&
-          (local.received_at === null || file.modifiedTime > local.received_at)
-      )
-      return {
-        id: file.id,
-        name: file.name,
-        mimeType: file.mimeType,
-        modifiedTime: file.modifiedTime,
-        size: file.size,
-        documentId: local?.id ?? null,
-        cached: cached && !stale,
-        stale,
-        status: local ? toStatus(local.status) : null
-      }
-    })
+    const { folders, files } = await drive.listFolder(location)
+    return {
+      folders,
+      files: files.map((file) => {
+        const local = repo.documents.getByDriveFileId(file.id)
+        const cached = Boolean(local?.cached_path && existsSync(local.cached_path))
+        const stale = Boolean(
+          local &&
+            file.modifiedTime &&
+            (local.received_at === null || file.modifiedTime > local.received_at)
+        )
+        return {
+          id: file.id,
+          name: file.name,
+          mimeType: file.mimeType,
+          modifiedTime: file.modifiedTime,
+          size: file.size,
+          documentId: local?.id ?? null,
+          cached: cached && !stale,
+          stale,
+          status: local ? toStatus(local.status) : null
+        }
+      })
+    }
   })
 
   /** Scarica ed elabora un file solo quando il revisore lo apre davvero. */
   handle('drive:fetch', fetchDriveFileSchema, async ({ driveFileId, force }) => {
     const drive = createDriveClient(await auth.client())
-    const files = await drive.listFiles()
-    const file = files.find((candidate) => candidate.id === driveFileId)
+    const file = await drive.getFile(driveFileId)
     if (!file) {
       throw new ReviewerError('NOT_FOUND', 'Il file non è più presente su Google Drive.')
     }

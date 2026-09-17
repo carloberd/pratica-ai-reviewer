@@ -312,6 +312,31 @@ export interface DriveFileSummary {
   status: QueueStatus | null
 }
 
+/**
+ * Le tre radici della barra laterale di Drive. «Il mio Drive» e i Drive condivisi sono
+ * alberi veri; «Condivisi con me» è un elenco piatto, da cui però si entra nelle cartelle.
+ */
+export type DriveRoot = 'my-drive' | 'shared-with-me' | 'shared-drives'
+
+/** Dove si sta guardando: la radice, oppure una cartella dentro di essa. */
+export interface DriveLocation {
+  root: DriveRoot
+  /** `null` = la radice stessa. Per un Drive condiviso, l'id del Drive è la sua cartella radice. */
+  folderId: string | null
+}
+
+export interface DriveFolderSummary {
+  id: string
+  name: string
+  modifiedTime: string | null
+}
+
+/** Il contenuto di una cartella: sottocartelle e documenti, già in ordine di nome. */
+export interface DriveListing {
+  folders: DriveFolderSummary[]
+  files: DriveFileSummary[]
+}
+
 export interface SearchHit {
   documentId: string
   filename: string
