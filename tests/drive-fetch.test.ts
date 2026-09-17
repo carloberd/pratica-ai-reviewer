@@ -2,14 +2,21 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { DRIVE_QUERY, type DriveClient, type DriveFile } from '../src/main/drive/client'
+import {
+  buildListing,
+  type DriveClient,
+  type DriveFile,
+  listingQuery,
+  shortcutFileTargets
+} from '../src/main/drive/client'
 import { cacheUsage, evictCachedFile, fetchDriveFile } from '../src/main/drive/fetch'
 import { createTestRepository } from './helpers/db'
 
 /** Drive è mockato su fixture: i test non toccano la rete né le credenziali. */
 function fakeDrive(onDownload?: (id: string, dest: string) => void): DriveClient {
   return {
-    listFiles: async () => [],
+    listFolder: async () => ({ folders: [], files: [] }),
+    getFile: async () => null,
     download: async (fileId, destination) => {
       writeFileSync(destination, `contenuto di ${fileId}`)
       onDownload?.(fileId, destination)
@@ -44,11 +51,119 @@ afterEach(() => {
   cacheRoot = null
 })
 
+const FOLDER = 'application/vnd.google-apps.folder'
+const SHORTCUT = 'application/vnd.google-apps.shortcut'
+const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
 describe('query Drive', () => {
-  it('chiede solo PDF e DOCX fuori dal cestino', () => {
-    expect(DRIVE_QUERY).toContain("mimeType='application/pdf'")
-    expect(DRIVE_QUERY).toContain('wordprocessingml.document')
-    expect(DRIVE_QUERY).toContain('trashed=false')
+  it('chiede cartelle, PDF, DOCX e scorciatoie fuori dal cestino', () => {
+    const query = listingQuery({ root: 'my-drive', folderId: null })!
+    expect(query).toContain("mimeType='application/pdf'")
+    expect(query).toContain('wordprocessingml.document')
+    expect(query).toContain(`mimeType='${FOLDER}'`)
+    expect(query).toContain(`mimeType='${SHORTCUT}'`)
+    expect(query).toContain('trashed=false')
+  })
+
+  it('la radice di «Il mio Drive» e una cartella sono i loro figli diretti', () => {
+    expect(listingQuery({ root: 'my-drive', folderId: null })).toMatch(/^'root' in parents and /)
+    expect(listingQuery({ root: 'shared-with-me', folderId: 'abc_1-2' })).toMatch(
+      /^'abc_1-2' in parents and /
+    )
+  })
+
+  it('«Condivisi con me» è un elenco, i Drive condivisi non passano da files.list', () => {
+    expect(listingQuery({ root: 'shared-with-me', folderId: null })).toMatch(
+      /^sharedWithMe=true and /
+    )
+    expect(listingQuery({ root: 'shared-drives', folderId: null })).toBeNull()
+  })
+
+  it("un apice nell'id non esce dalla stringa della query", () => {
+    expect(listingQuery({ root: 'my-drive', folderId: "x' or '1'='1" })).toMatch(
+      /^'x\\' or \\'1\\'=\\'1' in parents/
+    )
+  })
+})
+
+describe('contenuto di una cartella', () => {
+  it('cartelle in cima, poi i documenti, ciascuno in ordine di nome', () => {
+    const listing = buildListing([
+      {
+        id: 'b',
+        name: 'b.pdf',
+        mimeType: PDF,
+        modifiedTime: '2026-09-01T10:00:00.000Z',
+        size: '12'
+      },
+      { id: 'f2', name: 'Fatture 10', mimeType: FOLDER },
+      { id: 'a', name: 'A.docx', mimeType: DOCX },
+      { id: 'f1', name: 'Fatture 9', mimeType: FOLDER },
+      { id: 'x', name: 'foglio', mimeType: 'application/vnd.google-apps.spreadsheet' }
+    ])
+
+    expect(listing.folders.map((folder) => folder.name)).toEqual(['Fatture 9', 'Fatture 10'])
+    expect(listing.files.map((file) => file.name)).toEqual(['A.docx', 'b.pdf'])
+    expect(listing.files[1]).toEqual({
+      id: 'b',
+      name: 'b.pdf',
+      mimeType: PDF,
+      modifiedTime: '2026-09-01T10:00:00.000Z',
+      size: 12
+    })
+  })
+
+  it('una scorciatoia a una cartella si apre come la cartella originale', () => {
+    const listing = buildListing([
+      {
+        id: 's1',
+        name: 'Pratiche (scorciatoia)',
+        mimeType: SHORTCUT,
+        shortcutDetails: { targetId: 'folder-1', targetMimeType: FOLDER }
+      }
+    ])
+    expect(listing.folders).toEqual([
+      { id: 'folder-1', name: 'Pratiche (scorciatoia)', modifiedTime: null }
+    ])
+  })
+
+  it('una scorciatoia a un documento porta i metadati del bersaglio, senza doppioni', () => {
+    const entries = [
+      {
+        id: 's1',
+        name: 'Fattura (scorciatoia)',
+        mimeType: SHORTCUT,
+        shortcutDetails: { targetId: 'f1', targetMimeType: PDF }
+      },
+      {
+        id: 's2',
+        name: 'Foglio',
+        mimeType: SHORTCUT,
+        shortcutDetails: {
+          targetId: 'sheet',
+          targetMimeType: 'application/vnd.google-apps.spreadsheet'
+        }
+      },
+      {
+        id: 's3',
+        name: 'Sparito',
+        mimeType: SHORTCUT,
+        shortcutDetails: { targetId: 'gone', targetMimeType: PDF }
+      },
+      {
+        id: 'f1',
+        name: 'Fattura.pdf',
+        mimeType: PDF,
+        modifiedTime: '2026-09-01T10:00:00.000Z',
+        size: '10'
+      }
+    ]
+
+    expect(shortcutFileTargets(entries)).toEqual(['f1', 'gone'])
+
+    const listing = buildListing(entries, new Map([['f1', driveFile()]]))
+    expect(listing.folders).toEqual([])
+    expect(listing.files).toEqual([driveFile()])
   })
 })
 
@@ -150,7 +265,8 @@ describe('apertura di un file di Drive', () => {
   it('se il download fallisce non resta un documento con una copia locale falsa', async () => {
     const repo = createTestRepository()
     const drive: DriveClient = {
-      listFiles: async () => [],
+      listFolder: async () => ({ folders: [], files: [] }),
+      getFile: async () => null,
       download: async () => {
         throw new Error('download interrotto')
       }
