@@ -422,3 +422,36 @@ mette nella stessa fase, con `mergeClassifierConfig`. Non le ho fatte per tre ra
 La memoria dei moduli copre il caso più frequente — lo stesso stampato che ritorna — senza
 nessuno di questi rischi. Le frasi valgono una PR a sé quando ci saranno abbastanza
 revisioni per misurarle; gli eventi `DOCUMENT_TYPE` le conservano già.
+
+### PR 6 — scheda, governo delle regole ed export
+
+`src/shared/learning-workspace.ts` (modello e bundle), `src/main/learning-workspace.ts`
+(panoramica, cambi a mano, impronta, export), `src/renderer/.../learning-view.tsx`, canali
+`learning:*`. Scelte:
+
+- **Niente «annulla» generico sulle regole.** Annullare una promozione è sospendere,
+  annullare una sospensione è riattivare: con tre azioni (sospendi, riattiva, scarta) la
+  cronologia resta append-only e non serve una semantica di revert per le regole. Il
+  `REVERT` del pacchetto resta nei tipi per le azioni future.
+- **Una candidata non si attiva a mano**: valere è quello che le revisioni decidono, e
+  saltarle è proprio ciò che il learner evita. Si può scartare, se è chiaramente sbagliata.
+- **Le azioni a mano valgono in ogni modalità**: `FROZEN` ferma quello che il learner impara
+  da sé, non chi lo governa.
+- **Una regola attiva si giudica solo sulle prove dall'ultima attivazione**
+  (`effectsSinceActive`). Senza questo, riattivare a mano non serviva a niente: la prima
+  revisione dopo avrebbe risospeso la regola per le smentite già viste. È anche la
+  «rolling precision» di `06_SECURITY_HOLDOUT`.
+- **Cambiare modalità non rielabora niente**, come deciso il 17/09: vale dai documenti
+  elaborati da quel momento. Sospendere o riattivare invece rielabora la coda che dipende
+  dalla regola.
+- **Export in un file solo** (`praticaai-reviewer/learned-rules`): regole con supporto e
+  precisione, eventi, cronologia, nomi dei campi anche in V5.1, algoritmo dell'impronta
+  dichiarato. Ordinato per chiave e data: due export dello stesso database differiscono solo
+  nella data.
+- **Snapshot nel dataset**: il manifest (`1.2.0`) porta modalità, versione del learner,
+  numero di regole attive e un'impronta delle loro chiavi. È la riga che un benchmark
+  dichiara: «misurato con queste regole».
+
+Con questa PR i criteri di accettazione del pacchetto sono coperti, con due differenze
+dichiarate: le frasi apprese del classificatore non ci sono (vedi PR 5) e il revert di una
+regola è la coppia sospendi/riattiva.

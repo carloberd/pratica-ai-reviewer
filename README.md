@@ -357,13 +357,16 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.1.0",
+    "formatVersion": "1.2.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": { "name": "praticaai-reviewer", "version": "1.1.0" },
     // motori e versioni dell'app al momento dell'export
     "engines": { "classifier": "v2", "extraction": "v2", "classifierVersion": "2.0.0-draft.1",
                  "extractionEngineVersion": "extraction-brain-v2/2.1.0-draft.1", "schemaVersion": "2.0.0" },
-    "counts": { "documents": 3, "reviewed": 2, "discarded": 1, "corrections": 7 }
+    "counts": { "documents": 3, "reviewed": 2, "discarded": 1, "corrections": 7 },
+    // con quale apprendimento locale lavorava il motore: l'impronta è delle regole attive
+    "learning": { "mode": "LEARNING", "learnerVersion": "local-learner/0.1.0",
+                  "activeRules": 2, "rulesFingerprint": "9c1f0a7d54b2e318" }
   },
   "documents": [{
     "driveFileId": "…",               // chiave stabile: https://drive.google.com/file/d/<id>/view
@@ -419,7 +422,10 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
   della pagina come l'ha letto l'elaborazione (righe unite da `\n`); gli offset sono `null`
   quando il testo non si ritrova con certezza, `location` intera quando mancano le righe.
 - `contentSha256` identifica i byte del file indipendentemente da Drive: è la chiave su
-  cui pratica-ai indicizza il feedback. La `1.1.0` aggiunge solo campi alla `1.0.0`.
+  cui pratica-ai indicizza il feedback.
+- `learning` dice in che modalità era il learner e quali regole valevano: due export con la
+  stessa `rulesFingerprint` sono stati precompilati dalle stesse regole, ed è quello che un
+  benchmark deve dichiarare accanto ai suoi numeri. `1.1.0` e `1.2.0` aggiungono solo campi.
 - `corrections` è la misura di quanto aiuta la precompilazione: una voce per campo
   toccato, una per riga nei ripetuti. `kind` vale `CHANGED` (proposta diversa),
   `FILLED` (il motore non aveva proposto niente), `CLEARED` (proposta svuotata), `ADDED`
@@ -736,6 +742,33 @@ non vince un margine troppo stretto e resta fuori dal bonus di corroborazione. Q
 memoria si attiva o si sospende si rielaborano i documenti in coda con quell'impronta,
 qualunque tipo abbiano. Le frasi del classificatore invece non si imparano: vedi il documento
 di analisi.
+
+**La scheda «Apprendimento»** (voce di menu in alto, con la modalità sempre accanto) mostra
+quello che il motore ha imparato e lo governa:
+
+- la modalità, con cosa fa ognuna delle tre: cambiarla vale dai documenti elaborati da
+  quel momento, i documenti già precompilati restano come sono;
+- i contatori: decisioni registrate, regole attive, sospese, candidate;
+- le regole, prima quelle che stanno cambiando la precompilazione, ognuna con la frase che
+  dice cosa ha imparato («Data emissione» sta dopo «data» sul modulo …), i suoi numeri e
+  l'ultima prova. Da qui una regola si **sospende**, si **riattiva** o si **scarta** —
+  scartare chiede un secondo clic e non si annulla. Il learner promuove e sospende da sé,
+  ma non riattiva: quella è una decisione di una persona;
+- la cronologia del learner, dove le decisioni automatiche e quelle a mano stanno insieme.
+
+Quando si sospende o si riattiva una regola, i documenti in coda che ne dipendono si
+rielaborano come dopo una promozione.
+
+**Una regola riattivata riparte.** Una regola attiva si giudica solo sulle prove arrivate
+dopo l'ultima attivazione: altrimenti la prima revisione dopo una riattivazione a mano la
+risospenderebbe per le smentite di prima. È anche una precisione mobile: una regola buona
+per mesi che comincia a sbagliare si sospende sugli errori recenti, non sulla sua storia.
+
+**«Esporta le regole»** scrive un JSON con regole, decisioni registrate e cronologia
+(`praticaai-reviewer/learned-rules`), coi nomi dei campi anche nella forma V5.1 di
+pratica-ai dove esiste la corrispondenza, e con l'algoritmo dell'impronta dichiarato nel
+manifest: quelle di template valgono solo su chi calcola l'impronta allo stesso modo.
+Nessun valore dei documenti esce, come nel deposito.
 
 **Limiti noti.** Insegnano solo le selezioni su una riga, con la posizione esatta: un'area
 letta con OCR di solito non si ritrova nel testo, e resta un esempio senza regola. Una prima
