@@ -55,11 +55,15 @@ describe('memoria dei moduli', () => {
     expect(nextRuleStatus(rule(30, 1), [])).toBe('CANDIDATE')
   })
 
-  it('un solo conflitto la sospende, e non torna da sola', () => {
+  it('un conflitto dall’attivazione la sospende, e non torna da sola', () => {
     const active = { kind: 'TEMPLATE_TYPE' as const, scope: 'TEMPLATE' as const, positiveCount: 30 }
     expect(nextRuleStatus({ ...active, status: 'ACTIVE', negativeCount: 0 }, [])).toBe('ACTIVE')
+    expect(
+      nextRuleStatus({ ...active, status: 'ACTIVE', negativeCount: 1 }, ['POSITIVE', 'NEGATIVE'])
+    ).toBe('SUSPENDED')
+    // Riattivata a mano dopo un conflitto: il conflitto di prima non la risospende.
     expect(nextRuleStatus({ ...active, status: 'ACTIVE', negativeCount: 1 }, ['POSITIVE'])).toBe(
-      'SUSPENDED'
+      'ACTIVE'
     )
     expect(nextRuleStatus({ ...active, status: 'SUSPENDED', negativeCount: 1 }, [])).toBe(
       'SUSPENDED'

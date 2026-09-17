@@ -246,12 +246,26 @@ describe('quando una regola vale', () => {
     expect(nextRuleStatus(rule('CANDIDATE', 'CLASS', 8, 1), [])).toBe('CANDIDATE')
   })
 
-  it('una regola attiva si sospende dopo due smentite di fila, o sotto il 70%', () => {
+  it('una regola attiva si sospende dopo due smentite di fila, o sotto il 70% dall’attivazione', () => {
     const active = rule('ACTIVE', 'TEMPLATE', 10, 2)
     expect(nextRuleStatus(active, ['NEGATIVE', 'POSITIVE'])).toBe('ACTIVE')
     expect(nextRuleStatus(active, ['NEGATIVE', 'NEGATIVE'])).toBe('SUSPENDED')
-    expect(nextRuleStatus(rule('ACTIVE', 'CLASS', 3, 2), ['POSITIVE'])).toBe('SUSPENDED')
-    expect(nextRuleStatus(rule('ACTIVE', 'CLASS', 4, 1), ['POSITIVE'])).toBe('ACTIVE')
+    const window = ['POSITIVE', 'NEGATIVE', 'POSITIVE', 'NEGATIVE', 'NEGATIVE'] as const
+    expect(nextRuleStatus(rule('ACTIVE', 'CLASS', 30, 0), [...window])).toBe('SUSPENDED')
+    expect(
+      nextRuleStatus(rule('ACTIVE', 'CLASS', 30, 0), [
+        'POSITIVE',
+        'POSITIVE',
+        'NEGATIVE',
+        'POSITIVE',
+        'POSITIVE'
+      ])
+    ).toBe('ACTIVE')
+  })
+
+  it('le smentite di prima dell’attivazione non contano: una regola riattivata riparte', () => {
+    // Storia pessima, ma dall'ultima attivazione solo conferme.
+    expect(nextRuleStatus(rule('ACTIVE', 'TEMPLATE', 2, 8), ['POSITIVE'])).toBe('ACTIVE')
   })
 
   it('con poche prove la precisione non basta a sospendere: decidono le smentite di fila', () => {

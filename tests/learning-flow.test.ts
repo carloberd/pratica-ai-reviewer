@@ -3,6 +3,7 @@ import { openDatabase } from '../src/main/db'
 import { createRepository } from '../src/main/db/repository'
 import { createReloadableExtractionRegistryV2 } from '../src/main/extract/v2/profile-loader'
 import { updateFieldValue } from '../src/main/field-edits'
+import { setRuleStatusByHand } from '../src/main/learning-workspace'
 import { createDocumentProcessor } from '../src/main/pipeline'
 import {
   type RefinementDeps,
@@ -259,6 +260,41 @@ describe('il motore impara dove il revisore prende la data', () => {
     await flow.open('novembre')
     expect(flow.date('novembre').value).toBe('')
     expect(flow.lastRun('novembre').learning).toMatchObject({ activeRules: 0, appliedRuleIds: [] })
+  })
+
+  it('riattivata a mano dopo due smentite, la regola riparte: la revisione dopo non la risospende', async () => {
+    const flow = setup()
+    for (const month of ['settembre', 'ottobre'] as const) {
+      await flow.open(month)
+      flow.pickDate(month)
+      flow.save(month)
+    }
+    for (const month of ['dicembre', 'gennaio'] as const) {
+      await flow.open(month)
+      updateFieldValue(flow.repo, {
+        documentId: flow.idOf(month),
+        fieldId: flow.date(month).id,
+        correctedValue: ''
+      })
+      flow.save(month)
+    }
+    expect(flow.rule('TEMPLATE')).toMatchObject({ status: 'SUSPENDED', negativeCount: 2 })
+
+    const { change } = setRuleStatusByHand(
+      { repo: flow.repo, names: { typeLabel: () => null, fieldLabel: () => null } },
+      flow.rule('TEMPLATE').id,
+      'ACTIVE'
+    )
+    expect(change.documentTypes).toEqual([TYPE])
+
+    await flow.open('novembre')
+    expect(flow.date('novembre').value).toBe('2026-11-07')
+    flow.save('novembre')
+    expect(flow.rule('TEMPLATE')).toMatchObject({
+      status: 'ACTIVE',
+      positiveCount: 3,
+      negativeCount: 2
+    })
   })
 
   it('selezionare la stessa data che la regola ha letto non la smentisce: cambia solo la forma', async () => {

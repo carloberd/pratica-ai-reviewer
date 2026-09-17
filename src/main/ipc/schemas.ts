@@ -71,6 +71,17 @@ export const removeFieldItemSchema = z.object({
   removed: z.boolean()
 })
 
+/** La modalità del learner scelta dalla scheda «Apprendimento». */
+export const learningModeSchema = z.object({
+  mode: z.enum(['LEARNING', 'FROZEN', 'BASELINE'])
+})
+
+/** Un cambio di stato di una regola deciso da una persona. */
+export const learningRuleStatusSchema = z.object({
+  ruleId: z.string().min(1),
+  status: z.enum(['ACTIVE', 'SUSPENDED', 'REJECTED'])
+})
+
 /** Il renderer manda l'azione scelta dal revisore: la `decision` la deriva il main. */
 export const reviewSubmissionSchema = z.object({
   documentId: z.string().min(1),

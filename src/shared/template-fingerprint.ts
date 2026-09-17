@@ -13,6 +13,12 @@ import { createHash } from 'node:crypto'
  * Qui non c'è né database né filesystem: entrano le righe di testo, esce la stringa.
  */
 
+/**
+ * Il nome dell'algoritmo, per chi legge un'impronta fuori da qui: un'altra estrazione del
+ * testo (il markdown di pratica-ai) darebbe impronte diverse per lo stesso documento.
+ */
+export const TEMPLATE_FINGERPRINT_ALGORITHM = 'reviewer/pdfjs-first-page-lines/sha256-16'
+
 /** Oltre questa lunghezza la riga trasformata viene troncata. */
 export const TEMPLATE_LINE_LENGTH = 120
 
