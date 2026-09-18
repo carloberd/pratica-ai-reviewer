@@ -17,7 +17,7 @@ import type { ReviewAction, ReviewDocument } from '@shared/types'
 import type { LearningWriter } from './db/dao/learning'
 import type { Repository } from './db/repository'
 import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
-import { anchorRuleInputs, deriveAnchor } from './learning-anchors'
+import { anchorRuleInputs, deriveAnchor, documentEntityWords } from './learning-anchors'
 import { templateTypeRuleInput } from './learning-templates'
 
 /**
@@ -181,7 +181,8 @@ function proofs(
         pattern,
         documentType: event.documentType,
         fieldId: event.fieldId,
-        templateFingerprint: event.templateFingerprint
+        templateFingerprint: event.templateFingerprint,
+        entityWords: documentEntityWords(input.document, event.fieldId)
       })) {
         const existing = writer.findRule(rule.ruleKey) ?? writer.createRule(rule, input.at)
         taught.push(existing)
