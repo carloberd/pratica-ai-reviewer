@@ -265,7 +265,9 @@ describe('export del dataset annotato', () => {
       page: 1,
       text: '12/09/2026',
       bbox: { x: 87.6, y: 131, w: 52.7, h: 11 },
-      location: { lineStart: 3, lineEnd: 3, charStart: 99, charEnd: 109 }
+      location: { lineStart: 3, lineEnd: 3, charStart: 99, charEnd: 109 },
+      // Il testo selezionato è quello del documento: non c'è nessuna lettura da sistemare.
+      textCorrected: false
     }
     expect(
       memoDoc.fields.find((f: { name: string }) => f.name === 'document.issue_date')
