@@ -5,7 +5,11 @@ import type { RegistryFieldName } from '@shared/fields'
 import { fieldLabel, sortFieldNames, UNIVERSAL_FIELDS } from '@shared/fields'
 import { appliesRules, LEARNER_VERSION, type LearningMode } from '@shared/local-learning'
 import { TYPE_MATCH_REASON_LABELS } from '@shared/review-workspace'
-import { firstPageLines, templateFingerprint } from '@shared/template-fingerprint'
+import {
+  firstPageLines,
+  normalizedTemplateSignature,
+  templateFingerprint
+} from '@shared/template-fingerprint'
 import type { EngineSelection } from './config'
 import type { EvidenceInput } from './db/dao/evidence'
 import type { ExtractionRunInput } from './db/dao/extraction-runs'
@@ -104,10 +108,11 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
       .digest('hex')
 
     const fingerprint = firstPageFingerprint(extracted)
+    const templateSignature = firstPageTemplateSignature(extracted)
     // Le regole apprese valgono in LEARNING e FROZEN; in BASELINE decide solo il registry.
     const learningMode = repo.learning.mode()
     const rules = appliesRules(learningMode) ? repo.learning.activeRules() : []
-    const templateMemory = templateMemoryFor(rules, fingerprint)
+    const templateMemory = templateMemoryFor(rules, fingerprint, templateSignature)
 
     const classification = classifyWithSelectedEngine({
       engine: engines.classifier,
@@ -126,7 +131,9 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
     const documentType = manualType ?? classification.documentType
     const typeConfidence = manualType ? null : classification.confidence
 
-    const learnedLabels = documentType ? learnedLabelsFor(rules, documentType, fingerprint) : []
+    const learnedLabels = documentType
+      ? learnedLabelsFor(rules, documentType, fingerprint, templateSignature)
+      : []
 
     const prepared =
       engines.extraction === 'v2'
@@ -150,7 +157,8 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
     repo.transaction(() => {
       repo.documents.setContentIdentity(input.documentId, {
         contentSha256,
-        templateFingerprint: fingerprint
+        templateFingerprint: fingerprint,
+        templateSignature
       })
       // Le righe su cui si ritroveranno le selezioni del revisore: le stesse del motore.
       repo.pages.replaceForDocument(input.documentId, pagesOf(extracted))
@@ -269,6 +277,17 @@ export function firstPageFingerprint(extracted: ExtractedText): string | null {
   if (!first || extracted.ocrPages.includes(first.page)) return null
   if (extracted.ocrFailedPages.includes(first.page)) return null
   return templateFingerprint(firstPageLines(first))
+}
+
+/**
+ * La firma della prima pagina, con la stessa disciplina dell'impronta: niente da una
+ * pagina letta con OCR, che non è il modulo ma come si è riusciti a leggerlo.
+ */
+export function firstPageTemplateSignature(extracted: ExtractedText) {
+  const first = extracted.pages[0]
+  if (!first || extracted.ocrPages.includes(first.page)) return null
+  if (extracted.ocrFailedPages.includes(first.page)) return null
+  return normalizedTemplateSignature(firstPageLines(first))
 }
 
 // ---------------------------------------------------------------------------

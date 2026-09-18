@@ -1,3 +1,7 @@
+import {
+  DEFAULT_TEMPLATE_SIMILARITY_THRESHOLD,
+  type NormalizedTemplateSignature
+} from './template-fingerprint'
 import type { BoundingBox, PickLocation, PickMethod, TextSource } from './types'
 
 /**
@@ -62,6 +66,8 @@ export interface LearningEventInput {
   documentId: string
   contentSha256: string | null
   templateFingerprint: string | null
+  /** Firma confrontabile della testata; assente sugli eventi scritti prima della 0016. */
+  templateSignature?: NormalizedTemplateSignature | null
   textSource: TextSource | null
   kind: LearningEventKind
   outcome: LearningOutcome
@@ -150,6 +156,12 @@ export interface AnchorPattern {
   /** Ripiegata come la ripiega il motore: minuscole, senza accenti né punteggiatura. */
   label: string
   relation: AnchorRelation
+  /**
+   * La testata del modulo da cui la regola viene, solo sulla variante `TEMPLATE`. È quella
+   * che permette di riconoscere lo stesso modulo su un documento che l'impronta esatta
+   * mancherebbe; assente sulle regole scritte prima della 0016, che valgono per impronta.
+   */
+  templateSignature?: NormalizedTemplateSignature
 }
 
 export function isAnchorPattern(
@@ -173,7 +185,11 @@ export function anchorRuleKey(input: {
     'EXTRACTION_ANCHOR',
     input.scope,
     input.documentType,
-    input.scope === 'TEMPLATE' ? input.templateFingerprint : '*',
+    // Con la firma, la chiave è quella del cluster: due esemplari dello stesso modulo che
+    // l'impronta esatta separava finiscono sulla stessa regola, e le loro prove si sommano.
+    input.scope === 'TEMPLATE'
+      ? (input.pattern.templateSignature?.fingerprint ?? input.templateFingerprint)
+      : '*',
     input.fieldId,
     input.pattern.relation,
     input.pattern.label
@@ -227,6 +243,12 @@ export interface LearningPolicy {
    * un'etichetta: un tipo sbagliato cambia tutti i campi che si cercano.
    */
   minTemplateTypeSupport: number
+  /**
+   * Quante ancore in comune servono perché due testate siano lo stesso modulo, e quindi
+   * perché le loro revisioni si sommino sulla stessa regola di scope `TEMPLATE`. Sotto
+   * questa soglia sono due moduli diversi e non si insegnano niente a vicenda.
+   */
+  minTemplateSimilarity: number
 }
 
 export const DEFAULT_LEARNING_POLICY: LearningPolicy = {
@@ -237,7 +259,8 @@ export const DEFAULT_LEARNING_POLICY: LearningPolicy = {
   suspendBelowPrecision: 0.7,
   minEvidenceForPrecision: 5,
   suspendAfterNegatives: 2,
-  minTemplateTypeSupport: 3
+  minTemplateTypeSupport: 3,
+  minTemplateSimilarity: DEFAULT_TEMPLATE_SIMILARITY_THRESHOLD
 }
 
 /**

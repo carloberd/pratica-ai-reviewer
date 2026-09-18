@@ -22,6 +22,7 @@ import {
   rulePrecision,
   ruleSupport
 } from '@shared/local-learning'
+import { parseNormalizedTemplateSignature } from '@shared/template-fingerprint'
 import type { PickMethod } from '@shared/types'
 import type { Db } from '../index'
 import { parseBbox, toPickLocation } from '../rows'
@@ -46,6 +47,7 @@ interface EventRow {
   document_id: string
   content_sha256: string | null
   template_fingerprint: string | null
+  template_signature_json: string | null
   text_source: string | null
   kind: string
   outcome: string
@@ -113,6 +115,7 @@ function toEvent(row: EventRow): LearningEvent {
     documentId: row.document_id,
     contentSha256: row.content_sha256,
     templateFingerprint: row.template_fingerprint,
+    templateSignature: parseNormalizedTemplateSignature(row.template_signature_json),
     textSource: row.text_source as LearningEvent['textSource'],
     kind: row.kind as LearningEventKind,
     outcome: row.outcome as LearningOutcome,
@@ -224,12 +227,14 @@ export interface LearningWriter {
 export function createLearningDao(db: Db) {
   const insertEvent = db.prepare(`
     INSERT INTO learning_events (
-      id, at, actor, document_id, content_sha256, template_fingerprint, text_source, kind, outcome,
+      id, at, actor, document_id, content_sha256, template_fingerprint, template_signature_json,
+      text_source, kind, outcome,
       document_type, predicted_type, predicted_confidence, field_id, item_index, engine_confidence,
       engine_rule_id, pick_method, pick_page, pick_bbox_json, pick_line_start, pick_line_end,
       pick_char_start, pick_char_end, learner_version, replayed_at
     ) VALUES (
-      @id, @at, @actor, @documentId, @contentSha256, @templateFingerprint, @textSource, @kind, @outcome,
+      @id, @at, @actor, @documentId, @contentSha256, @templateFingerprint, @templateSignatureJson,
+      @textSource, @kind, @outcome,
       @documentType, @predictedType, @predictedConfidence, @fieldId, @itemIndex, @engineConfidence,
       @engineRuleId, @pickMethod, @pickPage, @pickBboxJson, @pickLineStart, @pickLineEnd,
       @pickCharStart, @pickCharEnd, @learnerVersion, @replayedAt
@@ -294,9 +299,17 @@ export function createLearningDao(db: Db) {
 
   const writer: LearningWriter = {
     addEvent(input) {
-      const event: LearningEvent = { ...input, id: randomUUID(), learnerVersion: LEARNER_VERSION }
+      const event: LearningEvent = {
+        ...input,
+        templateSignature: input.templateSignature ?? null,
+        id: randomUUID(),
+        learnerVersion: LEARNER_VERSION
+      }
       insertEvent.run({
         ...event,
+        templateSignatureJson: event.templateSignature
+          ? JSON.stringify(event.templateSignature)
+          : null,
         pickMethod: event.pick?.method ?? null,
         pickPage: event.pick?.page ?? null,
         pickBboxJson: event.pick?.bbox ? JSON.stringify(event.pick.bbox) : null,

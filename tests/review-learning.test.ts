@@ -6,6 +6,10 @@ import { createDocumentProcessor } from '../src/main/pipeline'
 import { assignDocumentType } from '../src/main/reprocess'
 import { submitReview } from '../src/main/review'
 import type { LearningMode } from '../src/shared/local-learning'
+import {
+  normalizedTemplateSignature,
+  templateFingerprint
+} from '../src/shared/template-fingerprint'
 import { createTestRepository, seedDocument } from './helpers/db'
 import {
   fixture,
@@ -202,5 +206,76 @@ describe('dal documento vero al registro', () => {
     })
     expect(row.content_sha256).toMatch(/^[0-9a-f]{64}$/)
     db.close()
+  })
+})
+
+/**
+ * Due esemplari dello stesso stampato che l'impronta esatta separava: una riga in più sul
+ * secondo, quindi due impronte. Prima della firma ognuno imparava una regola di template a
+ * supporto 1, e nessuna delle due arrivava mai ad attivarsi.
+ */
+describe('due esemplari dello stesso modulo insegnano alla stessa regola', () => {
+  const TESTATA = [
+    'RICHIESTA PAGAMENTO',
+    'Ufficio tesoreria',
+    'Beneficiario: Alfa S.r.l.',
+    'Causale: saldo fattura'
+  ]
+
+  function esemplare(
+    r: NonNullable<typeof repo>,
+    driveFileId: string,
+    righe: string[],
+    data: string
+  ): string {
+    const id = seedDocument(r, { driveFileId, filename: `${driveFileId}.pdf` })
+    const lines = [...righe, `Data contabile: ${data}`].map((text) => ({ text }))
+    r.pages.replaceForDocument(id, [{ page: 1, textSource: 'NATIVE_TEXT', lines }])
+    r.documents.setContentIdentity(id, {
+      contentSha256: driveFileId,
+      templateFingerprint: templateFingerprint(lines.map((line) => line.text)),
+      templateSignature: normalizedTemplateSignature(lines.map((line) => line.text))
+    })
+    r.documents.setExtraction(id, {
+      documentType: 'accounting.fattura',
+      typeConfidence: 0.9,
+      confidence: 0.8,
+      confidenceBand: 'MEDIUM',
+      textSource: 'NATIVE_TEXT'
+    })
+    r.fields.replaceForDocument(id, [
+      { name: 'document.issue_date', label: 'Data emissione', value: '', confidence: 0 }
+    ])
+    const field = r.fields.listForDocument(id)[0]!
+    updateFieldValue(r, {
+      documentId: id,
+      fieldId: field.id,
+      correctedValue: data,
+      pick: { method: 'TEXT_SELECTION', page: 1, text: data }
+    })
+    return id
+  }
+
+  it('una sola regola di template, con le prove di tutti e due: attiva', () => {
+    const r = createTestRepository()
+    repo = r
+    const registry = testRegistryV2()
+
+    const primo = esemplare(r, 'doc-1', TESTATA, '12/09/2026')
+    // Il secondo ha una riga in più: stessa testata, altra impronta.
+    const secondo = esemplare(r, 'doc-2', [...TESTATA, 'Copia per archivio'], '10/10/2026')
+    expect(r.documents.get(primo)!.template_fingerprint).not.toBe(
+      r.documents.get(secondo)!.template_fingerprint
+    )
+
+    submitReview(r, { documentId: primo, action: 'SAVE', now: NOW, actor: ACTOR, registry })
+    submitReview(r, { documentId: secondo, action: 'SAVE', now: NOW, actor: ACTOR, registry })
+
+    const template = r.learning
+      .listRules({ kind: 'EXTRACTION_ANCHOR' })
+      .filter((rule) => rule.scope === 'TEMPLATE')
+    expect(template).toHaveLength(1)
+    expect(template[0]!.positiveCount).toBe(2)
+    expect(template[0]!.status).toBe('ACTIVE')
   })
 })

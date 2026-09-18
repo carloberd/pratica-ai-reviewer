@@ -197,6 +197,8 @@ export interface LearningBundleManifest {
   counts: LearningCounts
   /** Come sono calcolate le impronte dei moduli nelle regole di template. */
   templateFingerprintAlgorithm: string
+  /** Come sono calcolate le firme confrontabili; assente negli export prima della 0016. */
+  normalizedTemplateSignatureAlgorithm?: string
 }
 
 /** Una regola nel file: la forma del database, coi nomi di pratica-ai accanto. */

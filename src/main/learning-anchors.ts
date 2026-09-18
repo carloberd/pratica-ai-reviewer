@@ -4,12 +4,17 @@ import {
   type AnchorPattern,
   type AnchorRelation,
   anchorRuleKey,
+  DEFAULT_LEARNING_POLICY,
   isAnchorPattern,
   type LearningRule,
   type LearningRuleInput,
   type LearningRuleScope
 } from '@shared/local-learning'
 import type { PageLine } from '@shared/pick-locate'
+import {
+  type NormalizedTemplateSignature,
+  templateSignatureSimilarity
+} from '@shared/template-fingerprint'
 import type { PickLocation, ReviewDocument } from '@shared/types'
 import { fold } from './extract/heuristics'
 import { type LearnedLabel, readsOfLabel } from './extract/v2/fact-reader'
@@ -151,6 +156,8 @@ export function anchorRuleInputs(input: {
   documentType: string
   fieldId: string
   templateFingerprint: string | null
+  /** La testata di questo documento: entra nella regola di template, e la fa ritrovare. */
+  templateSignature?: NormalizedTemplateSignature | null
   /** Le parole che qui sono un dato; vuoto se non si sa, e allora si impara come prima. */
   entityWords?: Set<string>
 }): LearningRuleInput[] {
@@ -162,14 +169,19 @@ export function anchorRuleInputs(input: {
 
   return scopes.map((scope) => {
     const templateFingerprint = scope === 'TEMPLATE' ? input.templateFingerprint : null
+    // La firma sta solo sulla regola di template: è lì che serve a dire «lo stesso modulo».
+    const pattern =
+      scope === 'TEMPLATE' && input.templateSignature
+        ? { ...input.pattern, templateSignature: input.templateSignature }
+        : { ...input.pattern }
     return {
       kind: 'EXTRACTION_ANCHOR',
       scope,
       documentType: input.documentType,
       fieldId: input.fieldId,
       templateFingerprint,
-      pattern: { ...input.pattern },
-      ruleKey: anchorRuleKey({ ...input, scope, templateFingerprint })
+      pattern,
+      ruleKey: anchorRuleKey({ ...input, scope, templateFingerprint, pattern })
     }
   })
 }
@@ -177,17 +189,27 @@ export function anchorRuleInputs(input: {
 /**
  * Le etichette delle regole attive che valgono per un documento: del suo tipo, e di tipo o
  * del suo template.
+ *
+ * «Il suo template» sono due cose: l'impronta identica, che fa valere anche le regole
+ * scritte prima della firma, e una testata abbastanza somigliante. Senza la seconda una
+ * regola di template varrebbe soltanto sul documento da cui è stata imparata.
  */
 export function learnedLabelsFor(
   rules: LearningRule[],
   documentType: string,
-  templateFingerprint: string | null
+  templateFingerprint: string | null,
+  templateSignature?: NormalizedTemplateSignature | null
 ): LearnedLabel[] {
   return rules.flatMap((rule) => {
     if (rule.kind !== 'EXTRACTION_ANCHOR' || rule.status !== 'ACTIVE') return []
     if (rule.documentType !== documentType || !rule.fieldId) return []
-    if (rule.scope === 'TEMPLATE' && rule.templateFingerprint !== templateFingerprint) return []
     if (!isAnchorPattern(rule.pattern)) return []
+    if (
+      rule.scope === 'TEMPLATE' &&
+      !sameTemplate(rule.templateFingerprint, rule.pattern, templateFingerprint, templateSignature)
+    ) {
+      return []
+    }
     return [
       {
         ruleId: rule.id,
@@ -198,4 +220,18 @@ export function learnedLabelsFor(
       }
     ]
   })
+}
+
+/** Lo stesso modulo: impronta identica, oppure testate abbastanza somiglianti. */
+function sameTemplate(
+  ruleFingerprint: string | null,
+  rulePattern: AnchorPattern,
+  templateFingerprint: string | null,
+  templateSignature: NormalizedTemplateSignature | null | undefined
+): boolean {
+  if (templateFingerprint !== null && ruleFingerprint === templateFingerprint) return true
+  return (
+    templateSignatureSimilarity(rulePattern.templateSignature, templateSignature) >=
+    DEFAULT_LEARNING_POLICY.minTemplateSimilarity
+  )
 }
