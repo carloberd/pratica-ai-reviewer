@@ -175,6 +175,22 @@ I 122 eventi coprono **11 documenti distinti**, tutti in una sola sessione di og
 
 Se le revisioni storiche sono ricostruibili dal dataset, un replay one-shot degli eventi porterebbe subito il support a livelli utili — ma solo dopo aver sistemato il fingerprint, altrimenti si moltiplicano regole a support 1.
 
+### ✅ Risolto — PR #30, `bugfix/learner-missing-review-history`
+
+Le revisioni storiche sono ricostruibili, e non serve passare dal dataset: valori, correzioni e selezioni stanno a database, e da lì si ricava esattamente quello che `submitReview` avrebbe registrato al momento della chiusura.
+
+Nuovo pulsante **«Ripassa le revisioni»** nella scheda Apprendimento, con `src/main/learning-replay.ts` dietro:
+
+- **idempotente** — `learnFromReview` comincia ritirando le prove di quel documento, quindi rilanciarlo non gonfia i contatori;
+- vale solo in **LEARNING**: il ripasso è una registrazione come le altre;
+- rielabora la coda dei tipi e dei moduli toccati, come fa una promozione.
+
+Migrazione `0014`: `learning_events.replayed_at`. Su un evento ripassato `at` resta il momento in cui il revisore aveva deciso — è quello che conta per la cronologia — e `replayed_at` dice quando la riga è stata scritta. La colonna serve perché `actor` su un evento ripassato è l'account che ha lanciato il ripasso, **non** necessariamente chi aveva chiuso quella revisione: chi ha chiuso non è mai stato salvato sul documento, e un registro append-only che «dice sempre chi l'ha dato» non deve affermare una cosa che non sa. Un evento registrato sul momento ha `replayedAt: null`. Il bundle delle regole apprese passa a 1.2.0.
+
+**L'ordine conta:** va lanciato *dopo* la PR #24, non prima. Con l'impronta vecchia — una per documento — il ripasso non farebbe che moltiplicare regole di template a support 1.
+
+Verifiche: gate completo verde (706 test); `tests/learning-replay.test.ts` (6 test su documenti veri: si revisiona in FROZEN, dove non si registra niente, poi si passa a LEARNING e si ripassa — recupero, `at` contro `replayedAt`, attribuzione, idempotenza su due lanci, l'evento registrato sul momento che non ha data di ripasso, e il ripasso fuori da LEARNING che non registra), più il test della 0014 e uno sul pulsante.
+
 ## 5. Problemi di qualità del dataset
 
 **Le date non sono normalizzate.** Su 57 valori data, 45 sono in formato libero e solo 12 in ISO — e la divisione è netta per origine:
@@ -250,3 +266,20 @@ Questo non è un bug da correggere in un modulo — è il flusso di revisione. S
 4. **Normalizzare le date all'inserimento** — senza questo non si può misurare nulla sulle date.
 5. **`origin` sui campi `many`** (fatto), e far sì che correggere un valore passi più spesso dalla selezione sul documento: oggi solo 3 `CHANGED` su 31 lasciano una traccia da cui imparare.
 6. **Stop-list sui pattern CLASS** per i token che coincidono con entità del documento (fatto).
+7. **Ripassare le revisioni già chiuse** perché il learner veda anche quelle di prima che fosse acceso (fatto, dopo il punto 1).
+
+---
+
+## Stato dei sei punti
+
+| # | Problema | Esito |
+|---|---|---|
+| 1 | Impronta del modulo, una per documento | ✅ PR #24 |
+| 2 | Classificatore senza proposta su 27 documenti su 41 | ⚠️ PR #25 — l'export adesso dice *perché*; la taratura aspetta un export nuovo |
+| 3 | `document.number` e `document.issue_date` letti dentro citazioni | ⚠️ PR #26 — 16 dei 18 casi coperti; due senza contesto restano |
+| 4 | Il learner non ha visto le revisioni di prima | ✅ PR #30 |
+| 5 | `origin` mancante sui campi ripetuti | ✅ PR #28 (e §5 corretto) |
+| 5b | Date del revisore non normalizzate | ✅ PR #27 |
+| 6 | Ancore CLASS costruite su nomi propri | ✅ PR #29 |
+
+Resta aperto, e non è codice: **3 correzioni `CHANGED` su 31 lasciano una selezione**. Finché correggere costa meno che selezionare, il learner resta a digiuno proprio sui casi da cui imparerebbe di più.
