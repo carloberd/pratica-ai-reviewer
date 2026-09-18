@@ -164,6 +164,25 @@ describe('documenti da rielaborare col motore v2', () => {
     expect(isStale(r.documents.get(id)!)).toBe(true)
   })
 
+  it('un passaggio su un testo incompleto per l’OCR non conta', async () => {
+    const r = makeRepo()
+    const isStale = needsV2Extraction(r, testRegistryV2())
+    const id = cachedDocument(r, 'durc-scansionato.pdf')
+
+    // `v2Processor` non ha un servizio OCR: la pagina scansionata resta senza testo.
+    await v2Processor(r)({
+      documentId: id,
+      cachedPath: fixture('durc-scansionato.pdf'),
+      mime: 'application/pdf',
+      filename: 'durc-scansionato.pdf'
+    })
+
+    expect(r.extractionRuns.listForDocument(id)[0]?.status).toBe('FAILED_OCR')
+    expect(r.documents.get(id)!.text_source).toBe('OCR_FAILED')
+    // Prima il run valeva come passaggio e il documento non veniva mai ripassato.
+    expect(isStale(r.documents.get(id)!)).toBe(true)
+  })
+
   it('i documenti revisionati o scartati non si toccano', () => {
     const r = makeRepo()
     const isStale = needsV2Extraction(r, testRegistryV2())

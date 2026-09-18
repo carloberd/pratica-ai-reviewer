@@ -854,6 +854,25 @@ describe('extraction runs dao', () => {
     expect(r.extractionRuns.hasRun(id, 'altro', '2.0.0')).toBe(false)
   })
 
+  it('un run chiuso su un OCR non riuscito non conta come passaggio', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    r.extractionRuns.add(id, {
+      engineVersion: 'extraction-brain-v2/test',
+      schemaVersion: '2.0.0',
+      documentType: 'payroll_contributions.durc',
+      startedAt: '2026-09-16T10:00:00.000Z',
+      completedAt: '2026-09-16T10:00:01.000Z',
+      status: 'FAILED_OCR',
+      missingRequired: [],
+      conflicts: [],
+      metrics: { ocrFailedPages: [1] }
+    })
+    // Il rigo resta nello storico, ma il documento va ripassato.
+    expect(r.extractionRuns.listForDocument(id)).toHaveLength(1)
+    expect(r.extractionRuns.hasRun(id, 'extraction-brain-v2/test', '2.0.0')).toBe(false)
+  })
+
   it('i run spariscono col documento', () => {
     const r = makeRepo()
     const id = seedDocument(r)

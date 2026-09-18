@@ -34,7 +34,8 @@ export const BAND_LABELS: Record<ConfidenceBand, string> = {
 export const TEXT_SOURCE_LABELS: Record<TextSource, string> = {
   NATIVE_TEXT: 'Testo nativo',
   OCR: 'OCR (tesseract)',
-  DOCX: 'Testo DOCX'
+  DOCX: 'Testo DOCX',
+  OCR_FAILED: 'OCR non riuscito'
 }
 
 export function textSourceLabel(source: TextSource | null): string {
