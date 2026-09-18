@@ -589,6 +589,9 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
   for (const fieldId of fieldIds) {
     const spec = input.registry.field(fieldId)
     if (!spec) {
+      // Un campo che il profilo chiede e l'ontologia non descrive non si può cercare: non
+      // si sa con che etichette né con che lettore. Ma non può nemmeno sparire, o il run
+      // chiuderebbe con copertura piena su un obbligatorio mai cercato.
       conflicts.push(`UNKNOWN_FIELD:${fieldId}`)
       continue
     }
@@ -639,8 +642,17 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
 
   for (const fieldId of fieldIds) {
     const spec = specs.get(fieldId)
-    if (!spec) continue
     const role = roleOf(profile, fieldId)
+    if (!spec) {
+      // Il campo resta nel run, vuoto e con il motivo: `UNKNOWN_FIELD` fra gli errori dice
+      // che non è stato cercato, non che il documento non ce l'ha.
+      if (role === 'required') missingRequired.push(fieldId)
+      facts.push({
+        ...emptyFact(fieldId, role, cardinalityOf(profile, fieldId, 'one')),
+        validationErrors: ['UNKNOWN_FIELD']
+      })
+      continue
+    }
     const list = candidates.get(fieldId) ?? []
 
     if (cardinality(fieldId, spec) === 'many') {
