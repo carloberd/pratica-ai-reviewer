@@ -13,6 +13,12 @@ interface StoredLine {
   bbox?: unknown
 }
 
+interface PageRow {
+  page: number
+  text_source: TextSource
+  lines_json: string
+}
+
 function toBbox(value: unknown): BoundingBox | undefined {
   if (typeof value !== 'object' || value === null) return undefined
   const { x, y, w, h } = value as Record<string, unknown>
@@ -22,6 +28,25 @@ function toBbox(value: unknown): BoundingBox | undefined {
     typeof h === 'number'
     ? { x, y, w, h }
     : undefined
+}
+
+/**
+ * Le righe salvate, o niente: un `lines_json` illeggibile disabilita la posizione di quella
+ * pagina invece di far cadere la lettura del documento. La selezione resta senza offset, il
+ * valore si salva lo stesso.
+ */
+function parseLines(json: string): PageLine[] {
+  try {
+    const parsed: unknown = JSON.parse(json)
+    if (!Array.isArray(parsed)) return []
+    return parsed.flatMap((entry: StoredLine) => {
+      if (typeof entry?.text !== 'string') return []
+      const bbox = toBbox(entry.bbox)
+      return [bbox ? { text: entry.text, bbox } : { text: entry.text }]
+    })
+  } catch {
+    return []
+  }
 }
 
 /**
@@ -55,18 +80,26 @@ export function createPagesDao(db: Db) {
         .prepare('SELECT lines_json FROM document_pages WHERE document_id = ? AND page = ?')
         .get(documentId, page) as { lines_json: string } | undefined
       if (!row) return []
-      try {
-        const parsed: unknown = JSON.parse(row.lines_json)
-        if (!Array.isArray(parsed)) return []
-        return parsed.flatMap((entry: StoredLine) => {
-          if (typeof entry?.text !== 'string') return []
-          const bbox = toBbox(entry.bbox)
-          return [bbox ? { text: entry.text, bbox } : { text: entry.text }]
-        })
-      } catch {
-        // Righe illeggibili: la selezione resta senza posizione, il valore si salva lo stesso.
-        return []
-      }
+      return parseLines(row.lines_json)
+    },
+
+    /**
+     * Tutte le pagine di un documento, in ordine. Serve a ritrovare un valore che il
+     * revisore ha digitato invece di selezionarlo (`src/main/inferred-pick.ts`): lì la
+     * garanzia è che il valore compaia una volta sola nel **documento**, non nella pagina,
+     * quindi vanno guardate tutte.
+     */
+    list(documentId: string): PageInput[] {
+      const rows = db
+        .prepare(
+          'SELECT page, text_source, lines_json FROM document_pages WHERE document_id = ? ORDER BY page'
+        )
+        .all(documentId) as PageRow[]
+      return rows.map((row) => ({
+        page: row.page,
+        textSource: row.text_source,
+        lines: parseLines(row.lines_json)
+      }))
     }
   }
 }
