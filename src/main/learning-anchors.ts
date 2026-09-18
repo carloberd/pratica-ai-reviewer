@@ -1,14 +1,16 @@
 import type { FieldOntologyEntry } from '@shared/extraction-v2'
+import { currentFieldValue, currentItemValue } from '@shared/field-edits'
 import {
   type AnchorPattern,
   type AnchorRelation,
   anchorRuleKey,
   isAnchorPattern,
   type LearningRule,
-  type LearningRuleInput
+  type LearningRuleInput,
+  type LearningRuleScope
 } from '@shared/local-learning'
 import type { PageLine } from '@shared/pick-locate'
-import type { PickLocation } from '@shared/types'
+import type { PickLocation, ReviewDocument } from '@shared/types'
 import { fold } from './extract/heuristics'
 import { type LearnedLabel, readsOfLabel } from './extract/v2/fact-reader'
 
@@ -96,16 +98,68 @@ export function deriveAnchor(input: {
 }
 
 /**
+ * Le parole che in questo documento sono un dato, non un'etichetta: quelle dei valori
+ * confermati degli **altri** campi.
+ *
+ * Un'etichetta si ricava dal testo che precede il valore, e su un documento italiano quel
+ * testo è spesso il nome di qualcuno. Nell'export del 18/09/2026 il learner aveva imparato
+ * questa, di scope CLASS:
+ *
+ * ```
+ * procurement.preventivo | document.issue_date | label «massetti» same-line
+ * ```
+ *
+ * «Massetti» è il nome del cliente, non un'etichetta di preventivo: come ancora di classe
+ * si applicherebbe a tutti i preventivi, sbagliando su ogni cliente diverso.
+ *
+ * Il campo dell'ancora resta fuori dall'insieme: la sua etichetta precede il suo valore,
+ * quindi non ne fa parte, e toglierlo protegge le etichette buone che somigliano al valore
+ * che annunciano — «Spett.le» davanti a una ragione sociale.
+ */
+export function documentEntityWords(document: ReviewDocument, exceptFieldId: string): Set<string> {
+  const words = new Set<string>()
+  for (const field of document.fields) {
+    if (field.id === exceptFieldId) continue
+    const values = [currentFieldValue(field), ...field.items.map(currentItemValue)]
+    for (const value of values) {
+      if (!value) continue
+      for (const word of fold(value).split(' ')) {
+        if (word.replace(/[^a-z]/g, '').length >= MIN_LABEL_LETTERS) words.add(word)
+      }
+    }
+  }
+  return words
+}
+
+/** L'etichetta è fatta di parole che in questo documento sono un dato. */
+function madeOfDocumentData(label: string, entityWords: Set<string>): boolean {
+  const words = label.split(' ').filter(Boolean)
+  return words.length > 0 && words.every((word) => entityWords.has(word))
+}
+
+/**
  * Le regole che una selezione insegna: una per il tipo, e una per il template quando il
  * documento ha un'impronta. La stessa etichetta vale di più sul modulo da cui viene.
+ *
+ * Un'etichetta fatta delle parole che in questo documento sono un dato non diventa una
+ * regola di **classe**: varrebbe per tutti i documenti del tipo, e funzionerebbe solo su
+ * quelli dello stesso cliente. Di **template** sì: sullo stesso stampato il nome di chi
+ * lo emette è parte del modulo, non del dato.
  */
 export function anchorRuleInputs(input: {
   pattern: AnchorPattern
   documentType: string
   fieldId: string
   templateFingerprint: string | null
+  /** Le parole che qui sono un dato; vuoto se non si sa, e allora si impara come prima. */
+  entityWords?: Set<string>
 }): LearningRuleInput[] {
-  const scopes = input.templateFingerprint ? (['TEMPLATE', 'CLASS'] as const) : (['CLASS'] as const)
+  const scopes: LearningRuleScope[] = []
+  if (input.templateFingerprint) scopes.push('TEMPLATE')
+  // Senza impronta e con un'etichetta che è un dato non resta niente da imparare: quella
+  // regola varrebbe per un documento solo, e non è lì che sta il documento.
+  if (!madeOfDocumentData(input.pattern.label, input.entityWords ?? new Set())) scopes.push('CLASS')
+
   return scopes.map((scope) => {
     const templateFingerprint = scope === 'TEMPLATE' ? input.templateFingerprint : null
     return {
