@@ -72,6 +72,32 @@ issuer.name        'il soggetto ovvero i soggetti dal/i qu...' -> 'FIDITALIA S.P
 
 10 dei 31 CHANGED sono su `document.issue_date` e 8 su `document.number`: **due terzi degli errori di valore stanno in due campi**, ed entrambi hanno la stessa causa. È il punto con il miglior rapporto sforzo/resa.
 
+### ✅ Risolto in parte — PR #26, `bugfix/label-reads-inside-references`
+
+Guardando l'evidenza dietro ognuno dei 18 CHANGED su questi due campi, la causa è più precisa di «prende il primo match»: **il motore legge un'etichetta generica dentro una citazione**. Le etichette di questi due campi finiscono per essere «n» e «del», che compaiono dappertutto:
+
+| evidenza (verbatim dal documento) | letto | corretto in |
+|---|---|---|
+| `(ai sensi del D.Lgs. 9 aprile 2008, n. 81 e s.m.i.)` | `2008-04-09` | `16/12/2025` |
+| `garanzia RC Auto (art. 17 del Decreto Legislativo n. 68 del 6/5/2011)` | `68` | `2022/67284` |
+| `Via G. Carducci, N. 1551 CEREGNANO (RO)` | `1551` | `CA81933SM` |
+| `pratica con atto del 06/03/2017 Data deposito: 21/03/2017` | `2017-03-06` | `19/03/2026` |
+| `Rif.to Ns. Offerta n.3260/26 del 16/06/2026` | `2026-06-16` | `18/06/2026` |
+
+Tre famiglie: la **norma citata**, l'**indirizzo** (dove il civico si legge come numero di documento) e il **rimando a un altro documento**.
+
+Nuovo modulo `src/main/extract/reference-context.ts`, usato da tutti e due i lettori. Quando l'etichetta cade dentro una citazione, la lettura si scarta:
+
+- **indietro** (3 parole di lettere) valgono tutti i marcatori. I numeri non consumano la finestra, o `artt. 1-5-6-7 del…` la esaurirebbe prima di arrivare a `artt`;
+- **avanti** valgono solo quelli della norma, perché in «ai sensi **del** D.Lgs. 9 aprile 2008» la citazione comincia *dopo* l'etichetta. I marcatori di indirizzo restano fuori dalla finestra in avanti, o «Data emissione: 12/09/2026 — Via Roma 5» verrebbe scartata a torto;
+- un campo che **cita di mestiere** è esente, e lo dice la sua etichetta: `hse.legal_basis` si chiama «Riferimento normativo», quindi per lui la citazione è il valore. Nessuna lista da tenere aggiornata a mano.
+
+Il lettore v1 aveva anche un **ripiego** peggiore: `issue_date` e `document_number` sono gli unici due campi con `fallback: true`, cioè «se nessuna keyword ha funzionato, prendi la prima data / il primo numero della prima pagina». Da lì venivano le date di nascita (`23.01.1982`). Adesso il ripiego salta le righe che citano qualcosa: senza un'etichetta su cui ancorarsi non c'è modo di distinguere, quindi la riga intera è squalificata.
+
+**Quello che resta aperto:** due dei 18 non hanno un marcatore su cui appigliarsi — `Mesi 36 Numero 35 € 50.522,79` e una data di nascita su una riga senza contesto. Allargare la lista per coprirli sarebbe overfitting sui singoli documenti.
+
+Verifiche: gate completo verde (669 test); `tests/extract-reference-context.test.ts` (14 test, righe verbatim dall'export) più 6 test nuovi in `tests/extract-v2-fact-reader.test.ts`. I test dicono anche quello che **deve continuare a leggersi**: `FATTURA n. 114/2026 del 08/09/2026` dà ancora numero e data.
+
 Restano poi 9 documenti revisionati in cui l'estrazione **non è mai partita** (`extraction: null`): tutti e 4 i loro campi sono stati riempiti a mano.
 
 ## 3. Il fingerprint dei template rende il learning impossibile
