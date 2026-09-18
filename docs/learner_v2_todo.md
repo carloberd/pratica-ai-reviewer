@@ -125,8 +125,28 @@ annotazione non deve correre.
 
 Di tutto questo si prende `ruleReliability()` (**7**): il prior Beta(1,1) è principiato,
 sono otto righe, e impedisce che una regola con due conferme sembri più sicura di una con
-cento conferme e un errore. Vale la pena portare anche `support`/`precision`/`reliability`
-dentro `LearnedLabel`: è cablaggio che non decide niente finché il ranking resta spento.
+cento conferme e un errore.
+
+Il cablaggio di `support`/`precision`/`reliability` dentro `LearnedLabel`, invece, **non
+si prende**: nel ramo quei tre campi esistono per alimentare `candidateRank`, e con il
+ranking spento non li leggerebbe nessuno. Sarebbero campi morti, cioè la stessa cosa che
+la PR 4 ha rifiutato con `candidate_score` e la PR 5 rendendo `canRollback` obbligatorio;
+li apre la PR che accende il ranking, che è anche la prima ad avere qualcosa da farci.
+
+Un consumatore vero però `ruleReliability` ce l'ha già, e non è il ranking: è la persona
+che governa le regole a mano. Nella scheda «Apprendimento» una regola con due conferme e
+nessuna smentita dichiara precisione 100%, che è vero e insieme fuorviante. L'affidabilità
+dice 75% e lo rende leggibile. La scheda le mostra tutte e due, perché la precisione resta
+il numero su cui il learner promuove e sospende e toglierla renderebbe illeggibili gli
+stati.
+
+Il peso `similarity * (0.8 + reliability * 0.2)` sulla memoria dei moduli resta invece
+fuori, come in PR 1. Non è il termine che cambia poco a salvarlo: è che *cambia il tipo
+proposto*. Una memoria attiva ha almeno tre conferme e nessuna smentita, quindi la
+reliability sta fra 0,8 e 1 e il peso si muove nel 4% — abbastanza da spostare un
+documento oltre la soglia, e i coefficienti `0,8`/`0,2` non li ha validati nessuno più di
+quanto abbia validato `0,12`/`0,16` del ranking. È la stessa classe di rischio del pezzo
+8, in piccolo, e si riapre con lui.
 
 Quando si prenderà `FAMILY`, **non replicare la scorciatoia `scope`/`scope_level`**: il
 CHECK della `0011` va rifatto ricostruendo la tabella, non aggirato con una colonna ombra
@@ -194,10 +214,43 @@ Sei PR piccole, in quest'ordine, ognuna coi gate verdi prima della successiva.
 | 3 | Fix `documentEntityWords` + parsing difensivo | no | fatta (#37) |
 | 4 | Colonne di provenienza | `0017` | fatta (#38) |
 | 5 | Rollback `REVERT` | no | fatta (#39) |
-| 6 | `ruleReliability` + cablaggio in `LearnedLabel`, ranking spento | no | da fare |
+| 6 | `ruleReliability`, letta dalla scheda «Apprendimento» | no | fatta (#40) |
 
 Le prime due cambiano davvero la capacità del tool di imparare; dalla terza in giù è
 terreno preparato per quando il dataset esisterà.
 
 Rimandate esplicitamente, da riaprire col corpus in mano: ranking pesato (8), `FAMILY`
 (9), high-recall (10), benchmark sul corpus reale (11).
+
+---
+
+## Dove siamo, e cosa resta aperto
+
+La sequenza è chiusa: sei PR su sei. Di `codex/learner-v2-production` è dentro tutto
+quello che fa imparare il tool senza toccare quello che chi annota si trova davanti — la
+firma normalizzata, il valore digitato che diventa un'ancora, il fix di
+`documentEntityWords`, il parsing difensivo, le colonne di provenienza, il rollback,
+`ruleReliability`. Il ramo resta come riferimento; da qui non se ne prende più niente a
+scatola chiusa.
+
+Restano aperti tre pezzi, e la condizione per riaprirli è la stessa per tutti e tre: **un
+corpus annotato su cui misurare il prima e il dopo.** Finché non c'è, cambierebbero cosa
+viene proposto senza che nessuno possa dire se in meglio.
+
+- **Ranking pesato (8)** — `candidateRank` e `moreSpecific` che ordina per punteggio.
+  Si riapre quando i pesi si possono tarare su documenti veri invece che sceglierli. Porta
+  con sé i tre campi in `LearnedLabel` lasciati fuori dalla PR 6, la colonna
+  `candidate_score` lasciata fuori dalla PR 4, e il peso della reliability sulla memoria
+  dei moduli: sono tutti consumatori dello stesso numero, e arrivano insieme a lui.
+- **`FAMILY` (9)** — il livello intermedio fra template e tipo. Chiede 5 conferme al 95%,
+  soglie che oggi nessuno può verificare, e una regola di famiglia sbagliata si propaga su
+  un gruppo intero di tipi. Quando si prenderà: rifare il CHECK della `0011` ricostruendo
+  la tabella, senza la colonna ombra `scope_level`.
+- **High-recall (10)** — non si riapre così com'è. La lettura loose senza due punti
+  rastrella la colonna accanto e precompila valori plausibili e sbagliati, e `highRecall`
+  cablato in `pipeline.ts` brucerebbe `BASELINE`, che è il metro con cui si misurerà tutto
+  il resto. Salvabile a parte il fallback per gli identificativi a forma forte (IBAN,
+  targa, VIN, codice fiscale), dietro un flag legato alla modalità e spento in `BASELINE`.
+
+Fuori sequenza resta il **benchmark sul corpus reale (11)**: l'impalcatura c'è, i numeri
+no, e sono quelli che sbloccano gli altri tre.
