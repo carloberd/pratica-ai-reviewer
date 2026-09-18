@@ -348,6 +348,21 @@ o tolto, il valore non viene più da lì e l'evidenza sparisce; una rielaborazio
 conserva insieme alla correzione. Nel PDF le selezioni del revisore si vedono con un
 riquadro tratteggiato, distinto da quello del motore, e il link sotto il campo porta lì.
 
+**Ripulire una lettura non è riscrivere.** Su una scansione l'OCR legge male — `29 O7 2026`
+per `29 07 2026`, `FRAITA (MAB)` per `FRAITA (MAR)` — e il revisore sistema la parola. Il
+campo si porta dietro la selezione che aveva (`pickOfEvidence`), e il main la tiene: il
+punto del documento è sempre quello, cambia come si legge. L'evidenza allora porta
+`textCorrected`, il suo `text` resta la lettura dell'OCR e il valore buono sta sul campo.
+
+L'eccezione vale **solo** per un'area passata dall'OCR, dove il testo l'ha letto una
+macchina, e solo se il valore è quella lettura sistemata e non un'altra: oltre un quarto di
+caratteri cambiati è un valore diverso (`src/shared/pick-cleanup.ts`). Il testo di una
+selezione, e quello di un'area letta dal text layer, vengono dal documento: lì un valore che
+non coincide carattere per carattere è un valore diverso, e la selezione non ne è più
+l'origine. La posizione si cerca prima col testo letto e, se da lì non escono gli offset,
+col valore sistemato: senza offset non si risale all'etichetta, ed è l'etichetta che serve
+al learner.
+
 ---
 
 ## Export del dataset annotato
@@ -372,7 +387,7 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.6.0",
+    "formatVersion": "1.7.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": { "name": "praticaai-reviewer", "version": "1.1.0" },
     // motori e versioni dell'app al momento dell'export
@@ -452,6 +467,8 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
   `evidence`, `location` le righe toccate e gli offset `[charStart, charEnd)` nel testo
   della pagina come l'ha letto l'elaborazione (righe unite da `\n`); gli offset sono `null`
   quando il testo non si ritrova con certezza, `location` intera quando mancano le righe.
+  `textCorrected: true` dice che `text` è una lettura dell'OCR che il revisore ha sistemato
+  a mano: il valore buono è quello del campo, e chi misura l'OCR ha lì le due versioni.
 - `contentSha256` identifica i byte del file indipendentemente da Drive: è la chiave su
   cui pratica-ai indicizza il feedback.
 - `registry` porta gli stessi due tipi come li chiama pratica-ai: uguali a `id` e
@@ -467,7 +484,7 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
   documento che il classificatore non ha mai visto.
 - `learning` dice in che modalità era il learner e quali regole valevano: due export con la
   stessa `rulesFingerprint` sono stati precompilati dalle stesse regole, ed è quello che un
-  benchmark deve dichiarare accanto ai suoi numeri. Dalla `1.0.0` alla `1.6.0` si aggiungono
+  benchmark deve dichiarare accanto ai suoi numeri. Dalla `1.0.0` alla `1.7.0` si aggiungono
   solo campi, e un valore a `pick.method`: `AREA_TEXT`, l'area letta dal text layer.
 
 ### I nomi dei tipi
