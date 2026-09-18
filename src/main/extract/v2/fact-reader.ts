@@ -11,6 +11,7 @@ import type { AnchorRelation, LearningRuleScope } from '@shared/local-learning'
 import { cardinalityOf } from '@shared/profile-overlay'
 import type { BoundingBox } from '@shared/types'
 import { FIELD_SPECS, findDate, findMoney, fold, OCR_PENALTY } from '../heuristics'
+import { precededByReference, readsReferences } from '../reference-context'
 import type { ExtractedPage, TextLine } from '../types'
 import type { ExtractionRegistryV2 } from './profile-loader'
 import { runFieldValidator } from './validators'
@@ -107,15 +108,22 @@ export function foldWithOrigin(text: string): FoldedLine {
   return { folded, origin }
 }
 
-/** Posizioni dell'etichetta a confini di parola: `[inizio, fine)` nel testo originale. */
-function labelOccurrences(line: FoldedLine, label: string): Array<[number, number]> {
+/** Un'occorrenza dell'etichetta: `[inizio, fine)` nel testo originale, e dove comincia nel folded. */
+interface LabelOccurrence {
+  start: number
+  end: number
+  foldedStart: number
+}
+
+/** Posizioni dell'etichetta a confini di parola. */
+function labelOccurrences(line: FoldedLine, label: string): LabelOccurrence[] {
   const padded = ` ${line.folded} `
   const needle = ` ${label} `
-  const found: Array<[number, number]> = []
+  const found: LabelOccurrence[] = []
   for (let at = padded.indexOf(needle); at !== -1; at = padded.indexOf(needle, at + 1)) {
     const start = line.origin[at]!
     const end = line.origin[at + label.length - 1]! + 1
-    found.push([start, end])
+    found.push({ start, end, foldedStart: at })
   }
   return found
 }
@@ -404,12 +412,16 @@ function readsInLines(
   relation: AnchorRelation | undefined
 ): LabelRead[] {
   const isText = !readsAsIdentifier(fieldId, spec) && ['string', 'object'].includes(spec.type)
+  const citing = readsReferences(
+    [spec.label_it, ...spec.label_aliases_it].map((label) => foldWithOrigin(label).folded)
+  )
   const reads: LabelRead[] = []
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index]!
-    for (const [start, end] of labelOccurrences(folded[index]!, label)) {
+    for (const { start, end, foldedStart } of labelOccurrences(folded[index]!, label)) {
       if (isText && !startsSegment(line.text, start)) continue
+      if (!citing && precededByReference(folded[index]!.folded, foldedStart, label)) continue
 
       const remainder = line.text.slice(end)
       const sameLine =
