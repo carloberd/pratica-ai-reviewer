@@ -215,8 +215,9 @@ function parseNumbers(json: string): LearningActionNumbers | null {
 
 /**
  * L'azione che un cambio di stato rappresenta. I passaggi che non hanno un nome non sono
- * permessi: una regola scartata non torna, e una candidata non si sospende perché non
- * valeva ancora.
+ * permessi: nessun passaggio riapre una regola scartata, e una candidata non si sospende
+ * perché non valeva ancora. Rimetterla in piedi si può solo annullando lo scarto, che non
+ * è un passaggio ma un ritorno indietro: vedi `rollbackRule`.
  */
 const TRANSITIONS: Record<
   LearningRuleStatus,
@@ -227,6 +228,33 @@ const TRANSITIONS: Record<
   SUSPENDED: { ACTIVE: 'RULE_REACTIVATED', REJECTED: 'RULE_REJECTED' },
   REJECTED: {}
 }
+
+/**
+ * ## Cosa si può annullare
+ *
+ * Non ogni riga di cronologia: solo quelle il cui annullamento **regge**. È un criterio
+ * verificabile, e cade da sé su ogni tipo di azione.
+ *
+ * `RULE_PROMOTED` resta fuori. È l'unica azione che il learner prende da solo senza che
+ * nessuno gliel'abbia chiesto — a mano una candidata non si attiva, per scelta — e i
+ * contatori che l'hanno fatta scattare non li tocca nessuno: riportare la regola a
+ * CANDIDATE la lascia sopra la soglia, e la prima revisione che la conferma la ripromuove.
+ * Sarebbe un pulsante che promette una cosa che il learner disfa da solo poche ore dopo.
+ * Chi non è d'accordo con una promozione ha «Sospendi» e «Scarta», che invece tengono —
+ * e che, essendo azioni annullabili, riportano dentro anche quel caso.
+ *
+ * Gli altri tre entrano. Sospensione e scarto a mano sono il clic sbagliato da cui tutto
+ * questo nasce; la riattivazione è a mano per definizione; e la sospensione decisa dal
+ * learner si annulla senza che si riavviti addosso, perché l'azione `REVERT` che la
+ * annulla porta `after_state = 'ACTIVE'` e quindi sposta in avanti la finestra di
+ * `effectsSinceActive`: le smentite che avevano sospeso la regola restano fuori dal
+ * giudizio, esattamente come dopo una riattivazione a mano.
+ */
+const REVERTABLE_KINDS: readonly LearningActionKind[] = [
+  'RULE_SUSPENDED',
+  'RULE_REACTIVATED',
+  'RULE_REJECTED'
+]
 
 /** Le scritture del learner: si ottengono solo dentro `acquire`. */
 export interface LearningWriter {
@@ -284,11 +312,24 @@ export function createLearningDao(db: Db) {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'CANDIDATE', ?, ?, ?)
   `)
   const insertAction = db.prepare(`
-    INSERT INTO learning_actions (id, at, kind, rule_id, before_state, after_state, detail, numbers_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO learning_actions (
+      id, at, kind, rule_id, before_state, after_state, detail, numbers_json, reverts_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   const selectRule = db.prepare('SELECT * FROM learning_rules WHERE id = ?')
   const selectRuleByKey = db.prepare('SELECT * FROM learning_rules WHERE rule_key = ?')
+  const selectLastRevertable = db.prepare(`
+    SELECT * FROM learning_actions
+     WHERE rule_id = ?
+       AND reverted_at IS NULL
+       AND kind IN (${REVERTABLE_KINDS.map(() => '?').join(', ')})
+  ORDER BY at DESC, rowid DESC
+     LIMIT 1
+  `)
+  const updateRuleStatus = db.prepare(
+    'UPDATE learning_rules SET status = ?, updated_at = ? WHERE id = ?'
+  )
+  const markActionReverted = db.prepare('UPDATE learning_actions SET reverted_at = ? WHERE id = ?')
 
   let activeCache: LearningRule[] | null = null
 
@@ -319,7 +360,10 @@ export function createLearningDao(db: Db) {
     `).run(delta, delta, at, at, ruleId)
   }
 
-  function addAction(action: Omit<LearningAction, 'id' | 'revertsId' | 'revertedAt'>) {
+  function addAction(
+    action: Omit<LearningAction, 'id' | 'revertsId' | 'revertedAt'>,
+    revertsId: string | null = null
+  ) {
     const id = randomUUID()
     insertAction.run(
       id,
@@ -329,9 +373,34 @@ export function createLearningDao(db: Db) {
       action.before,
       action.after,
       action.detail,
-      action.numbers ? JSON.stringify(action.numbers) : null
+      action.numbers ? JSON.stringify(action.numbers) : null,
+      revertsId
     )
-    return { ...action, id, revertsId: null, revertedAt: null }
+    return { ...action, id, revertsId, revertedAt: null }
+  }
+
+  /**
+   * L'ultimo cambio di stato di una regola che si può ancora annullare, se c'è.
+   *
+   * Tre condizioni insieme. Dev'essere di un tipo annullabile (`REVERTABLE_KINDS`, che
+   * lascia fuori sia le promozioni del learner sia i `REVERT`: un annullamento non si
+   * annulla, si rifà il cambio di stato). Non dev'essere già stata annullata. E soprattutto
+   * dev'essere ancora **in vigore**: lo stato della regola adesso dev'essere quello che
+   * quell'azione aveva prodotto, altrimenti qualcosa è successo dopo — il learner l'ha
+   * sospesa da sé, o qualcuno l'ha scartata — e non c'è più niente da riportare indietro.
+   *
+   * Questa terza condizione è anche quello che rende l'annullamento ripetibile senza
+   * rompersi: dopo un `REVERT` la regola è tornata allo stato che aveva prima, e l'azione
+   * che glielo aveva dato torna a essere quella in vigore.
+   */
+  function revertableRuleAction(ruleId: string): LearningAction | undefined {
+    const row = selectLastRevertable.get(ruleId, ...REVERTABLE_KINDS) as ActionRow | undefined
+    if (!row) return undefined
+    const action = toAction(row)
+    // `before_state` finisce in un UPDATE dello stato: si legge dal database, quindi si
+    // controlla che sia davvero uno stato prima di fidarsene.
+    if (!action.before || !(action.before in TRANSITIONS)) return undefined
+    return rule(ruleId).status === action.after ? action : undefined
   }
 
   const writer: LearningWriter = {
@@ -442,11 +511,7 @@ export function createLearningDao(db: Db) {
       if (!kind) {
         throw new Error(`Una regola ${current.status} non può diventare ${status}.`)
       }
-      db.prepare('UPDATE learning_rules SET status = ?, updated_at = ? WHERE id = ?').run(
-        status,
-        change.at,
-        ruleId
-      )
+      updateRuleStatus.run(status, change.at, ruleId)
       return addAction({
         at: change.at,
         kind,
@@ -495,6 +560,63 @@ export function createLearningDao(db: Db) {
     ): LearningAction {
       try {
         return db.transaction(() => writer.changeRuleStatus(ruleId, status, change))()
+      } finally {
+        activeCache = null
+      }
+    },
+
+    revertableRuleAction,
+
+    /**
+     * Annulla l'ultimo cambio di stato ancora in vigore su una regola, e ritorna l'azione
+     * `REVERT` che lo racconta.
+     *
+     * ## Si aggiunge, non si cancella
+     *
+     * Come per la mappa dei campi (`revertProfileAction`): l'azione annullata resta dov'è,
+     * marcata con `reverted_at`, e sopra ci va una riga nuova che dice cosa è stato
+     * annullato. Il deposito del learner è append-only perché è la traccia di come si è
+     * arrivati a un dataset: una cronologia che si riscrive non spiega più niente.
+     *
+     * ## Perché non passa dai passaggi permessi
+     *
+     * `TRANSITIONS` dice cosa può *diventare* una regola, e lì dentro REJECTED è un vicolo
+     * cieco. Un annullamento non è un passaggio in avanti: è rimettere lo stato che c'era,
+     * e proprio per riaprire il vicolo cieco esiste. Quindi scrive `status` direttamente,
+     * dopo aver controllato in `revertableRuleAction` che quello stato sia davvero quello
+     * da cui l'azione era partita.
+     *
+     * ## Una transazione sola
+     *
+     * Ripristino, marcatura e riga nuova stanno insieme: una regola tornata attiva senza
+     * la riga che lo dice, o una riga che racconta un ritorno mai avvenuto, sarebbero
+     * peggio del clic sbagliato che questo pulsante esiste per rimediare. La cache delle
+     * regole attive cade comunque, anche se la transazione fallisce.
+     */
+    rollbackRule(ruleId: string, at: string = new Date().toISOString()): LearningAction {
+      try {
+        return db.transaction(() => {
+          const target = revertableRuleAction(ruleId)
+          if (!target?.before) {
+            throw new Error('Nessun cambio di stato annullabile per questa regola.')
+          }
+          const current = rule(ruleId)
+          const previous = target.before as LearningRuleStatus
+          updateRuleStatus.run(previous, at, ruleId)
+          markActionReverted.run(at, target.id)
+          return addAction(
+            {
+              at,
+              kind: 'REVERT',
+              ruleId,
+              before: current.status,
+              after: previous,
+              detail: `Annullata: ${target.detail}`,
+              numbers: { support: ruleSupport(current), precision: rulePrecision(current) }
+            },
+            target.id
+          )
+        })()
       } finally {
         activeCache = null
       }

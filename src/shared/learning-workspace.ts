@@ -25,7 +25,9 @@ export type ManualRuleStatus = 'ACTIVE' | 'SUSPENDED' | 'REJECTED'
 /**
  * Cosa si può fare a mano, per stato. Una candidata non si attiva a mano: vale quando le
  * revisioni lo dicono, e saltarle è proprio quello che il learner esiste per evitare. Si
- * può scartare, però, se è chiaramente sbagliata. Una regola scartata non torna.
+ * può scartare, però, se è chiaramente sbagliata. Nessun passaggio riapre una regola
+ * scartata: per rimetterla in piedi si annulla lo scarto, che è un'altra cosa e lascia
+ * detto in cronologia che è successo.
  */
 export function manualTransitions(status: LearningRuleStatus): ManualRuleStatus[] {
   switch (status) {
@@ -94,6 +96,11 @@ export interface LearningRuleView {
   lastNegativeAt: string | null
   updatedAt: string
   manual: ManualRuleStatus[]
+  /**
+   * C'è un cambio di stato ancora in vigore che si può annullare. Lo decide il deposito,
+   * non la scheda: la scheda mostra il pulsante solo quando è vero.
+   */
+  canRollback: boolean
 }
 
 export interface LearningOverview {
@@ -131,7 +138,11 @@ export function ruleTitle(
   return `${rule.kind} per «${type}»`
 }
 
-export function toRuleView(rule: LearningRule, names: RuleNames): LearningRuleView {
+export function toRuleView(
+  rule: LearningRule,
+  names: RuleNames,
+  canRollback = false
+): LearningRuleView {
   return {
     id: rule.id,
     kind: rule.kind,
@@ -151,7 +162,8 @@ export function toRuleView(rule: LearningRule, names: RuleNames): LearningRuleVi
     lastPositiveAt: rule.lastPositiveAt,
     lastNegativeAt: rule.lastNegativeAt,
     updatedAt: rule.updatedAt,
-    manual: manualTransitions(rule.status)
+    manual: manualTransitions(rule.status),
+    canRollback
   }
 }
 

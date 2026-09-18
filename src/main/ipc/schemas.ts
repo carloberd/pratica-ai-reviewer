@@ -77,6 +77,9 @@ export const learningModeSchema = z.object({
 })
 
 /** Un cambio di stato di una regola deciso da una persona. */
+/** Una regola sola, per le azioni che non portano altro: l'annullamento. */
+export const learningRuleSchema = z.object({ ruleId: z.string().min(1) })
+
 export const learningRuleStatusSchema = z.object({
   ruleId: z.string().min(1),
   status: z.enum(['ACTIVE', 'SUSPENDED', 'REJECTED'])

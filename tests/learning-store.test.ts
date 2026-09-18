@@ -495,3 +495,158 @@ describe('righe che il learner non sa più leggere', () => {
     expect(numbers('{"support": 2, "precision": null}')).toEqual({ support: 2, precision: null })
   })
 })
+
+/**
+ * L'annullamento di un cambio di stato. Le regole nascono qui con `acquire`, perché al
+ * deposito non importa chi ha premuto: quello che cambia fra il learner e una persona è
+ * il *tipo* dell'azione, ed è su quello che si decide cosa si annulla.
+ */
+describe('annullare l’ultimo cambio di stato di una regola', () => {
+  /** Una regola attiva, promossa dal learner: il punto di partenza di quasi tutti i casi. */
+  function attiva() {
+    const { db, learning } = store()
+    const rule = learning.acquire((writer) => {
+      const created = writer.createRule(ANCHOR, AT)
+      writer.changeRuleStatus(created.id, 'ACTIVE', { at: AT, detail: 'attivata: 2 conferme' })
+      return created
+    })!
+    return { db, learning, ruleId: rule.id }
+  }
+
+  const DOPO = '2026-09-18T09:00:00.000Z'
+  const ANCORA_DOPO = '2026-09-18T10:00:00.000Z'
+
+  it('rimette lo stato di prima e aggiunge una riga, senza toglierne nessuna', () => {
+    const { learning, ruleId } = attiva()
+    const scarto = learning.setRuleStatus(ruleId, 'REJECTED', {
+      at: DOPO,
+      detail: 'Etichetta «data» scartata a mano: 2 conferme, 0 smentite.'
+    })
+    expect(learning.getRule(ruleId)?.status).toBe('REJECTED')
+
+    const revert = learning.rollbackRule(ruleId, ANCORA_DOPO)
+
+    // Lo stato torna quello di prima dello scarto, anche se nessun passaggio permesso
+    // riaprirebbe una regola scartata.
+    expect(learning.getRule(ruleId)).toMatchObject({ status: 'ACTIVE', updatedAt: ANCORA_DOPO })
+    expect(revert).toMatchObject({
+      kind: 'REVERT',
+      ruleId,
+      before: 'REJECTED',
+      after: 'ACTIVE',
+      detail: 'Annullata: Etichetta «data» scartata a mano: 2 conferme, 0 smentite.',
+      revertsId: scarto.id,
+      revertedAt: null
+    })
+
+    // La cronologia cresce: l'azione annullata resta dov'è, marcata.
+    const actions = learning.listActions()
+    expect(actions.map((action) => action.kind)).toEqual([
+      'REVERT',
+      'RULE_REJECTED',
+      'RULE_PROMOTED'
+    ])
+    expect(actions.find((action) => action.id === scarto.id)?.revertedAt).toBe(ANCORA_DOPO)
+  })
+
+  it('la regola torna a valere: la cache delle regole attive non se la perde', () => {
+    const { learning, ruleId } = attiva()
+    expect(learning.activeRules().map((rule) => rule.id)).toEqual([ruleId])
+    learning.setRuleStatus(ruleId, 'REJECTED', { at: DOPO, detail: 'scartata' })
+    expect(learning.activeRules()).toEqual([])
+
+    learning.rollbackRule(ruleId, ANCORA_DOPO)
+    expect(learning.activeRules().map((rule) => rule.id)).toEqual([ruleId])
+  })
+
+  it('senza un cambio da annullare non succede niente, e lo dice', () => {
+    const { learning, ruleId } = attiva()
+    // La sola azione della regola è la promozione del learner: fuori da quello che si annulla.
+    expect(learning.revertableRuleAction(ruleId)).toBeUndefined()
+    expect(() => learning.rollbackRule(ruleId, DOPO)).toThrow(/Nessun cambio di stato annullabile/)
+    expect(learning.getRule(ruleId)?.status).toBe('ACTIVE')
+    expect(learning.listActions()).toHaveLength(1)
+  })
+
+  it('una promozione del learner non si annulla: i contatori la rifarebbero subito', () => {
+    const { learning, ruleId } = attiva()
+    expect(learning.listActions()[0]?.kind).toBe('RULE_PROMOTED')
+    expect(learning.revertableRuleAction(ruleId)).toBeUndefined()
+  })
+
+  it('un annullamento non si annulla a sua volta', () => {
+    const { learning, ruleId } = attiva()
+    learning.setRuleStatus(ruleId, 'SUSPENDED', { at: DOPO, detail: 'sospesa a mano' })
+    learning.rollbackRule(ruleId, ANCORA_DOPO)
+
+    // Sotto il REVERT c'è solo la promozione, che non si annulla: la catena si ferma qui.
+    expect(learning.revertableRuleAction(ruleId)).toBeUndefined()
+    expect(() => learning.rollbackRule(ruleId, '2026-09-18T11:00:00.000Z')).toThrow(
+      /Nessun cambio di stato annullabile/
+    )
+    expect(learning.listActions().filter((action) => action.kind === 'REVERT')).toHaveLength(1)
+  })
+
+  it('un cambio di stato arrivato dopo toglie di mezzo quello di prima', () => {
+    const { learning, ruleId } = attiva()
+    learning.setRuleStatus(ruleId, 'SUSPENDED', { at: DOPO, detail: 'sospesa a mano' })
+    // Qualcuno ci ripensa e la scarta: la sospensione non è più quella in vigore.
+    learning.setRuleStatus(ruleId, 'REJECTED', { at: ANCORA_DOPO, detail: 'scartata a mano' })
+
+    // Si annulla lo scarto, non la sospensione: si torna a SUSPENDED, non ad ACTIVE.
+    expect(learning.revertableRuleAction(ruleId)).toMatchObject({ after: 'REJECTED' })
+    expect(learning.rollbackRule(ruleId, '2026-09-18T11:00:00.000Z')).toMatchObject({
+      before: 'REJECTED',
+      after: 'SUSPENDED'
+    })
+    expect(learning.getRule(ruleId)?.status).toBe('SUSPENDED')
+  })
+
+  it('se il learner ha cambiato stato dopo, non c’è più niente da annullare', () => {
+    const { db, learning, ruleId } = attiva()
+    const sospensione = learning.setRuleStatus(ruleId, 'SUSPENDED', {
+      at: DOPO,
+      detail: 'sospesa a mano'
+    })
+    // Lo stato cambia sotto l'azione senza lasciare cronologia: non è una strada che il
+    // learner prende, ma è esattamente la situazione da cui il controllo deve difendere.
+    db.prepare('UPDATE learning_rules SET status = ? WHERE id = ?').run('REJECTED', ruleId)
+
+    expect(learning.revertableRuleAction(ruleId)).toBeUndefined()
+    expect(sospensione.after).toBe('SUSPENDED')
+    expect(() => learning.rollbackRule(ruleId, ANCORA_DOPO)).toThrow(
+      /Nessun cambio di stato annullabile/
+    )
+  })
+
+  it('un’azione con lo stato di partenza illeggibile non si annulla', () => {
+    const { db, learning, ruleId } = attiva()
+    const scarto = learning.setRuleStatus(ruleId, 'REJECTED', { at: DOPO, detail: 'scartata' })
+    db.prepare('UPDATE learning_actions SET before_state = ? WHERE id = ?').run('BOH', scarto.id)
+
+    // Il `before_state` finisce dritto nello stato della regola: se non è uno stato, non si
+    // scrive niente, invece di rimettere in piedi una regola con uno stato inventato.
+    expect(learning.revertableRuleAction(ruleId)).toBeUndefined()
+  })
+
+  it('se la riga nuova non entra, il database resta com’era', () => {
+    const { db, learning, ruleId } = attiva()
+    const scarto = learning.setRuleStatus(ruleId, 'REJECTED', { at: DOPO, detail: 'scartata' })
+    // Fa fallire l'ultimo dei tre passi, quando ripristino e marcatura sono già scritti.
+    db.exec(`
+      CREATE TRIGGER niente_revert BEFORE INSERT ON learning_actions
+      WHEN NEW.kind = 'REVERT'
+      BEGIN SELECT RAISE(ABORT, 'niente REVERT'); END
+    `)
+
+    expect(() => learning.rollbackRule(ruleId, ANCORA_DOPO)).toThrow(/niente REVERT/)
+    expect(learning.getRule(ruleId)?.status).toBe('REJECTED')
+    expect(learning.listActions().find((action) => action.id === scarto.id)?.revertedAt).toBeNull()
+    expect(learning.listActions()).toHaveLength(2)
+
+    // Tolto l'ostacolo l'annullamento riesce, sullo stato che non si era mosso.
+    db.exec('DROP TRIGGER niente_revert')
+    expect(learning.rollbackRule(ruleId, ANCORA_DOPO)).toMatchObject({ after: 'ACTIVE' })
+    expect(learning.getRule(ruleId)?.status).toBe('ACTIVE')
+  })
+})
