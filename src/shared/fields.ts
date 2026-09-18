@@ -122,6 +122,18 @@ export function fieldSemanticType(name: string): SemanticType {
   return isRegistryField(name) ? FIELD_SEMANTIC_TYPES[name] : 'string'
 }
 
+/**
+ * Il campo porta una data.
+ *
+ * Lo dice il tipo semantico del profilo v2 dove c'è; sulle righe scritte dal motore v1 la
+ * colonna è nulla, e allora lo dice il nome — `document.issue_date`, `identity.expiry_date`,
+ * `person.birth_date` finiscono tutti in `_date`, e così i quattro universali del v1.
+ */
+export function isDateField(semanticType: string | null, name: string): boolean {
+  if (semanticType) return semanticType === 'date'
+  return fieldSemanticType(name) === 'date' || /_date$/.test(name)
+}
+
 /** Ordine stabile in UI: prima gli universali, poi gli specifici in ordine alfabetico di etichetta. */
 export function sortFieldNames(names: string[]): string[] {
   const universal = UNIVERSAL_FIELDS.filter((n) => names.includes(n))

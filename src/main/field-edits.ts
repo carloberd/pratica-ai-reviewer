@@ -1,4 +1,5 @@
 import { normalizeNewItem, resolveFieldEdit, resolveItemEdit } from '@shared/field-edits'
+import { isDateField } from '@shared/fields'
 import { locatePick, pickValue } from '@shared/pick-locate'
 import type { DocumentPick } from '@shared/types'
 import type { Repository } from './db/repository'
@@ -21,6 +22,11 @@ function fieldOf(repo: Repository, documentId: string, fieldId: string) {
     throw new ReviewerError('NOT_FOUND', 'Campo non trovato su questo documento.')
   }
   return field
+}
+
+/** Il campo è una data: lo dice il tipo semantico v2, o il nome per le righe del v1. */
+function fieldIsDate(field: { semantic_type: string | null; name: string }): boolean {
+  return isDateField(field.semantic_type, field.name)
 }
 
 function itemOf(repo: Repository, documentId: string, itemId: string) {
@@ -69,9 +75,12 @@ export function updateFieldValue(
   if (field.cardinality === 'many') {
     throw new ReviewerError('INVALID_INPUT', 'Il campo è ripetuto: si modifica riga per riga.')
   }
-  const corrected = resolveFieldEdit(field.value, input.correctedValue)
+  const corrected = resolveFieldEdit(field.value, input.correctedValue, fieldIsDate(field))
   repo.transaction(() => {
-    const evidenceId = recordPick(repo, input.documentId, corrected, input.pick)
+    // La selezione si confronta col testo **scritto**, non con quello normalizzato: quello
+    // che il revisore ha preso dal documento è verbatim, e una data normalizzata non gli
+    // somiglierebbe più.
+    const evidenceId = recordPick(repo, input.documentId, input.correctedValue, input.pick)
     repo.fields.setCorrectedValue(field.id, corrected, evidenceId)
     repo.evidence.pruneReviewer(input.documentId)
   })
@@ -86,10 +95,10 @@ export function addFieldItem(
   if (field.cardinality !== 'many') {
     throw new ReviewerError('INVALID_INPUT', 'Il campo non è ripetuto: non ha righe.')
   }
-  const value = normalizeNewItem(input.value)
+  const value = normalizeNewItem(input.value, fieldIsDate(field))
   if (value === null) throw new ReviewerError('INVALID_INPUT', 'La riga nuova è vuota.')
   repo.transaction(() => {
-    const evidenceId = recordPick(repo, input.documentId, value, input.pick)
+    const evidenceId = recordPick(repo, input.documentId, input.value, input.pick)
     repo.fields.addItem(field.id, value, evidenceId)
   })
 }
@@ -105,6 +114,7 @@ export function updateFieldItem(
   }
 ): void {
   const row = itemOf(repo, input.documentId, input.itemId)
+  const field = fieldOf(repo, input.documentId, row.field_id)
   const corrected = parseItemValue(row.corrected_value_json)
   const edit = resolveItemEdit(
     {
@@ -112,7 +122,8 @@ export function updateFieldItem(
       value: parseItemValue(row.value_json) ?? '',
       ...(corrected !== null ? { correctedValue: corrected } : {})
     },
-    input.correctedValue
+    input.correctedValue,
+    fieldIsDate(field)
   )
 
   repo.transaction(() => {
@@ -121,7 +132,7 @@ export function updateFieldItem(
         repo.fields.setItemCorrectedValue(
           row.id,
           edit.value,
-          recordPick(repo, input.documentId, edit.value, input.pick)
+          recordPick(repo, input.documentId, input.correctedValue, input.pick)
         )
         if (row.removed === 1) repo.fields.setItemRemoved(row.id, false)
         break
