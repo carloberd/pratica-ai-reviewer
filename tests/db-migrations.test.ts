@@ -152,7 +152,17 @@ describe('migrazioni', () => {
     // Correzione rimasta senza la riga proposta: la 0004 la teneva con valore nullo.
     item.run('orfana', 'f', 2, null, '"Trasporto"', 0)
 
-    expect(migrate(db)).toEqual(['0005', '0006', '0007', '0008', '0009', '0010', '0011', '0012'])
+    expect(migrate(db)).toEqual([
+      '0005',
+      '0006',
+      '0007',
+      '0008',
+      '0009',
+      '0010',
+      '0011',
+      '0012',
+      '0013'
+    ])
 
     expect(
       db.prepare('SELECT id, origin, removed FROM field_items ORDER BY item_index').all()
@@ -174,7 +184,7 @@ describe('migrazioni', () => {
       "INSERT INTO documents (id, drive_file_id, filename, mime, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', '2026-01-01')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0006', '0007', '0008', '0009', '0010', '0011', '0012'])
+    expect(migrate(db)).toEqual(['0006', '0007', '0008', '0009', '0010', '0011', '0012', '0013'])
 
     // NULL = da calcolare al primo export, non «documento senza impronta».
     expect(db.prepare('SELECT template_fingerprint FROM documents').get()).toEqual({
@@ -190,7 +200,7 @@ describe('migrazioni', () => {
   it('la 0008 apre le tabelle della mappa, vuote: nessuna decisione presa prima esiste', () => {
     const db = databaseAt('0007')
 
-    expect(migrate(db)).toEqual(['0008', '0009', '0010', '0011', '0012'])
+    expect(migrate(db)).toEqual(['0008', '0009', '0010', '0011', '0012', '0013'])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_overrides').get()).toEqual({ n: 0 })
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_hint_labels').get()).toEqual({ n: 0 })
@@ -214,7 +224,7 @@ describe('migrazioni', () => {
   it('la 0009 apre la tabella delle cardinalità, vuota: ogni campo segue l’ontologia', () => {
     const db = databaseAt('0008')
 
-    expect(migrate(db)).toEqual(['0009', '0010', '0011', '0012'])
+    expect(migrate(db)).toEqual(['0009', '0010', '0011', '0012', '0013'])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_cardinality_overrides').get()).toEqual({
       n: 0
@@ -246,7 +256,7 @@ describe('migrazioni', () => {
         VALUES ('f', 'd', 'document.number', 'Numero documento', '114/2026', '114/2026-bis', 0.85, 'e');
     `)
 
-    expect(migrate(db)).toEqual(['0010', '0011', '0012'])
+    expect(migrate(db)).toEqual(['0010', '0011', '0012', '0013'])
 
     expect(db.prepare('SELECT origin, method, line_start, char_start FROM evidence').get()).toEqual(
       {
@@ -273,7 +283,7 @@ describe('migrazioni', () => {
 
   it('la 0011 apre il deposito del learner vuoto, in modalità LEARNING', () => {
     const db = databaseAt('0010')
-    expect(migrate(db)).toEqual(['0011', '0012'])
+    expect(migrate(db)).toEqual(['0011', '0012', '0013'])
 
     expect(db.prepare('SELECT id, mode FROM learning_state').all()).toEqual([
       { id: 1, mode: 'LEARNING' }
@@ -300,7 +310,7 @@ describe('migrazioni', () => {
 
   it('la 0012 lega evidenze ed eventi alle regole, e conta una prova per documento', () => {
     const db = databaseAt('0011')
-    expect(migrate(db)).toEqual(['0012'])
+    expect(migrate(db)).toEqual(['0012', '0013'])
     const columns = (table: string) =>
       (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map(
         (c) => c.name
@@ -316,13 +326,82 @@ describe('migrazioni', () => {
     db.close()
   })
 
+  it('la 0013 butta le impronte vecchie e chiude le regole che ci erano appese', () => {
+    const db = databaseAt('0012')
+    db.prepare(
+      "INSERT INTO documents (id, drive_file_id, filename, mime, status, synced_at, template_fingerprint) VALUES ('d', 'x', 'f.pdf', 'application/pdf', 'REVIEWED', '2026-01-01', 'aabbccdd11223344')"
+    ).run()
+    db.prepare(
+      "INSERT INTO learning_events (id, at, actor, document_id, template_fingerprint, kind, outcome, learner_version) VALUES ('e', '2026-01-01', 'chi@esempio.it', 'd', 'aabbccdd11223344', 'FIELD_VALUE', 'FILLED', 'v')"
+    ).run()
+    const rule = (id: string, scope: string, status: string, fingerprint: string | null) =>
+      db
+        .prepare(
+          'INSERT INTO learning_rules (id, kind, scope, document_type, template_fingerprint, pattern_json, rule_key, status, created_at, updated_at, learner_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        )
+        .run(
+          id,
+          'EXTRACTION_ANCHOR',
+          scope,
+          'accounting.fattura',
+          fingerprint,
+          '{}',
+          id,
+          status,
+          '2026-01-01',
+          '2026-01-01',
+          'v'
+        )
+    rule('template-candidata', 'TEMPLATE', 'CANDIDATE', 'aabbccdd11223344')
+    rule('template-attiva', 'TEMPLATE', 'ACTIVE', 'aabbccdd11223344')
+    rule('classe', 'CLASS', 'CANDIDATE', null)
+
+    expect(migrate(db)).toEqual(['0013'])
+
+    // Le impronte del vecchio algoritmo spariscono: l'elaborazione e l'export le rifanno.
+    expect(db.prepare('SELECT template_fingerprint FROM documents').get()).toEqual({
+      template_fingerprint: null
+    })
+    // L'evento resta, senza l'impronta: quello che il revisore ha deciso non cambia.
+    expect(
+      db.prepare('SELECT id, outcome, template_fingerprint FROM learning_events').get()
+    ).toEqual({ id: 'e', outcome: 'FILLED', template_fingerprint: null })
+    // Le regole TEMPLATE chiudono, quelle CLASS restano dove sono.
+    expect(db.prepare('SELECT id, status FROM learning_rules ORDER BY id').all()).toEqual([
+      { id: 'classe', status: 'CANDIDATE' },
+      { id: 'template-attiva', status: 'REJECTED' },
+      { id: 'template-candidata', status: 'REJECTED' }
+    ])
+    // Una regola non si cancella in silenzio: l'azione dice da dove arriva e perché.
+    const actions = db
+      .prepare(
+        'SELECT kind, rule_id, before_state, after_state FROM learning_actions ORDER BY rule_id'
+      )
+      .all()
+    expect(actions).toEqual([
+      {
+        kind: 'RULE_REJECTED',
+        rule_id: 'template-attiva',
+        before_state: 'ACTIVE',
+        after_state: 'REJECTED'
+      },
+      {
+        kind: 'RULE_REJECTED',
+        rule_id: 'template-candidata',
+        before_state: 'CANDIDATE',
+        after_state: 'REJECTED'
+      }
+    ])
+    db.close()
+  })
+
   it('la 0007 aggiunge la nota del revisore, vuota sui documenti già chiusi', () => {
     const db = databaseAt('0006')
     db.prepare(
       "INSERT INTO documents (id, drive_file_id, filename, mime, status, reviewed_at, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', 'REVIEWED', '2026-01-02', '2026-01-01')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0007', '0008', '0009', '0010', '0011', '0012'])
+    expect(migrate(db)).toEqual(['0007', '0008', '0009', '0010', '0011', '0012', '0013'])
 
     // Chi ha chiuso un documento prima di questa versione non ha una nota da recuperare:
     // restava solo nel testo della timeline, che non è un formato da rileggere.
@@ -389,7 +468,8 @@ describe('migrazione 0004 su un database esistente', () => {
       '0009',
       '0010',
       '0011',
-      '0012'
+      '0012',
+      '0013'
     ])
 
     const rows = db

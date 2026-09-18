@@ -212,7 +212,7 @@ describe('l’export delle regole', () => {
       learnerVersion: 'local-learner/0.1.0',
       mode: 'LEARNING',
       counts: { events: 2 },
-      templateFingerprintAlgorithm: 'reviewer/pdfjs-first-page-lines/sha256-16'
+      templateFingerprintAlgorithm: 'reviewer/pdfjs-first-page-labels/sha256-16'
     })
     expect(bundle.manifest.policy.minTemplateSupport).toBe(2)
     expect(bundle.rules.map((rule: { ruleKey: string }) => rule.ruleKey)).toEqual([
