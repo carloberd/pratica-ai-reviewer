@@ -39,7 +39,7 @@ const cachePath = mkdtempSync(join(tmpdir(), 'reviewer-tessdata-'))
 const engine = createOcrEngine({ tessdataDir: TESSDATA_DIR, cachePath })
 const ocr: OcrService = {
   recognize: async (pdfPath, pages) =>
-    new Map((await engine.recognizePdfPages(pdfPath, pages)).map((p) => [p.page, p.text])),
+    new Map((await engine.recognizePdfPages(pdfPath, pages)).map((p) => [p.page, p])),
   recognizeImage: (image) => engine.recognizeImage(image),
   dispose: () => engine.dispose()
 }
