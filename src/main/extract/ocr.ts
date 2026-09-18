@@ -1,10 +1,11 @@
 import { Worker } from 'node:worker_threads'
 import { ReviewerError } from '../errors'
+import type { OcrPageText } from './ocr-engine'
 import type { OcrRequest, OcrResponse, OcrWorkerData } from './ocr-worker'
 
 export interface OcrService {
-  /** Testo delle pagine indicate, per numero di pagina. */
-  recognize(pdfPath: string, pages: number[]): Promise<Map<number, string>>
+  /** Testo e righe delle pagine indicate, per numero di pagina. */
+  recognize(pdfPath: string, pages: number[]): Promise<Map<number, OcrPageText>>
   /** Testo di un'immagine già pronta: il ritaglio evidenziato in revisione. */
   recognizeImage(image: Uint8Array): Promise<string>
   dispose(): Promise<void>
@@ -89,7 +90,7 @@ export function createOcrService(options: OcrOptions): OcrService {
         throw new ReviewerError('INTERNAL', 'Risposta OCR inattesa.')
       }
 
-      return new Map(response.pages.map((page) => [page.page, page.text]))
+      return new Map(response.pages.map((page) => [page.page, page]))
     },
 
     async recognizeImage(image) {
