@@ -3,6 +3,7 @@ import {
   anchorRuleInputs,
   candidateLabels,
   deriveAnchor,
+  documentEntityWords,
   learnedLabelsFor
 } from '../src/main/learning-anchors'
 import {
@@ -15,6 +16,7 @@ import {
 import { type PageLine, pageText } from '../src/shared/pick-locate'
 import type { PickLocation } from '../src/shared/types'
 import { testRegistryV2 } from './helpers/registry'
+import { item, listField, reviewDocument, scalarField } from './helpers/review-document'
 
 const registry = testRegistryV2()
 const spec = (fieldId: string) => registry.field(fieldId)!
@@ -168,6 +170,55 @@ describe('regole da un’etichetta', () => {
     ])
   })
 
+  it('unʼetichetta che è un dato del documento non diventa una regola di classe', () => {
+    // Verbatim dallʼexport del 18/09/2026: il learner aveva imparato
+    // `procurement.preventivo | document.issue_date | «massetti»` di scope CLASS.
+    // «Massetti» è il nome del cliente: come ancora di classe sbaglierebbe su ogni altro.
+    const rules = anchorRuleInputs({
+      pattern: { label: 'massetti', relation: 'same-line' },
+      documentType: 'procurement.preventivo',
+      fieldId: 'document.issue_date',
+      templateFingerprint: 'f1',
+      entityWords: new Set(['polesine', 'massetti', 'srls'])
+    })
+    // Di template resta: sullo stesso stampato il nome di chi lo emette è parte del modulo.
+    expect(rules.map((rule) => rule.scope)).toEqual(['TEMPLATE'])
+  })
+
+  it('basta una parola che non è un dato perché lʼetichetta valga per il tipo', () => {
+    const rules = anchorRuleInputs({
+      pattern: { label: 'spett le massetti', relation: 'next-line' },
+      documentType: 'procurement.preventivo',
+      fieldId: 'recipient.name',
+      templateFingerprint: 'f1',
+      entityWords: new Set(['massetti'])
+    })
+    expect(rules.map((rule) => rule.scope)).toEqual(['TEMPLATE', 'CLASS'])
+  })
+
+  it('senza impronta e con unʼetichetta che è un dato non si impara niente', () => {
+    expect(
+      anchorRuleInputs({
+        pattern: { label: 'massetti', relation: 'same-line' },
+        documentType: 'procurement.preventivo',
+        fieldId: 'document.issue_date',
+        templateFingerprint: null,
+        entityWords: new Set(['massetti'])
+      })
+    ).toEqual([])
+  })
+
+  it('senza sapere quali parole sono un dato si impara come prima', () => {
+    expect(
+      anchorRuleInputs({
+        pattern: { label: 'massetti', relation: 'same-line' },
+        documentType: 'procurement.preventivo',
+        fieldId: 'document.issue_date',
+        templateFingerprint: 'f1'
+      }).map((rule) => rule.scope)
+    ).toEqual(['TEMPLATE', 'CLASS'])
+  })
+
   it('senza impronta solo la regola di tipo', () => {
     expect(
       anchorRuleInputs({
@@ -292,5 +343,31 @@ describe('quando una regola vale', () => {
   it('una prova si lega ai byte del documento, o al documento senza hash', () => {
     expect(documentKey({ contentSha256: 'abc', documentId: 'd' })).toBe('abc')
     expect(documentKey({ contentSha256: null, documentId: 'd' })).toBe('document:d')
+  })
+})
+
+describe('le parole che in un documento sono un dato', () => {
+  const document = reviewDocument({
+    fields: [
+      scalarField({ id: 'f-date', name: 'document.issue_date', value: '2026-09-08' }),
+      scalarField({ id: 'f-to', name: 'recipient.name', value: 'POLESINE MASSETTI S.R.L.S.' }),
+      listField([item({ id: 'i0', index: 0, value: 'Posa massetto alleggerito' })], {
+        id: 'f-lines'
+      })
+    ]
+  })
+
+  it('vengono dai valori confermati, righe comprese', () => {
+    const words = documentEntityWords(document, 'f-date')
+    expect(words.has('polesine')).toBe(true)
+    expect(words.has('massetti')).toBe(true)
+    expect(words.has('posa')).toBe(true)
+    // Le parole corte non dicono niente, e il valore del campo dellʼancora resta fuori.
+    expect(words.has('r')).toBe(false)
+  })
+
+  it('il campo dellʼancora resta fuori: la sua etichetta precede il suo valore', () => {
+    expect(documentEntityWords(document, 'f-to').has('polesine')).toBe(false)
+    expect(documentEntityWords(document, 'f-date').has('polesine')).toBe(true)
   })
 })
