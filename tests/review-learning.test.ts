@@ -279,3 +279,128 @@ describe('due esemplari dello stesso modulo insegnano alla stessa regola', () =>
     expect(template[0]!.status).toBe('ACTIVE')
   })
 })
+
+describe('un valore digitato insegna come uno selezionato', () => {
+  const TESTATA = ['RICHIESTA PAGAMENTO', 'Ufficio tesoreria', 'Causale: saldo fattura']
+
+  /** Il revisore compila il campo **senza** selezionare: nessuna evidenza, nessun pick. */
+  function digitato(r: NonNullable<typeof repo>, righe: string[]): string {
+    const id = seedDocument(r, { driveFileId: 'doc-digitato' })
+    const lines = righe.map((text) => ({ text }))
+    r.pages.replaceForDocument(id, [{ page: 1, textSource: 'NATIVE_TEXT', lines }])
+    r.documents.setContentIdentity(id, {
+      contentSha256: 'sha-digitato',
+      templateFingerprint: templateFingerprint(righe),
+      templateSignature: normalizedTemplateSignature(righe)
+    })
+    r.documents.setExtraction(id, {
+      documentType: 'accounting.fattura',
+      typeConfidence: 0.9,
+      confidence: 0.8,
+      confidenceBand: 'MEDIUM',
+      textSource: 'NATIVE_TEXT'
+    })
+    r.fields.replaceForDocument(id, [
+      { name: 'document.issue_date', label: 'Data emissione', value: '', confidence: 0 }
+    ])
+    const field = r.fields.listForDocument(id)[0]!
+    updateFieldValue(r, { documentId: id, fieldId: field.id, correctedValue: '12/09/2026' })
+    return id
+  }
+
+  const anchors = (r: NonNullable<typeof repo>) =>
+    r.learning.listRules({ kind: 'EXTRACTION_ANCHOR' })
+
+  it('ritrova la posizione del valore digitato e impara l etichetta che lo annuncia', () => {
+    const r = createTestRepository()
+    repo = r
+    const id = digitato(r, [...TESTATA, 'Data contabile: 12/09/2026'])
+    expect(r.getReviewDocument(id)!.fields[0]!.correctedEvidenceId).toBeUndefined()
+
+    submitReview(r, {
+      documentId: id,
+      action: 'SAVE',
+      now: NOW,
+      actor: ACTOR,
+      registry: testRegistryV2()
+    })
+
+    const evento = r.learning.listEvents({ documentId: id }).find((e) => e.kind === 'FIELD_VALUE')!
+    expect(evento.outcome).toBe('FILLED')
+    expect(evento.pick).toMatchObject({ method: 'EXACT_VALUE_MATCH', page: 1 })
+    // Una sola posizione ritrovata insegna quello che insegnerebbe una selezione: la stessa
+    // etichetta per il modulo e per il tipo, la più corta che legge solo quel valore.
+    expect(
+      anchors(r)
+        .map((rule) => [rule.scope, rule.fieldId, rule.pattern.label])
+        .sort()
+    ).toEqual([
+      ['CLASS', 'document.issue_date', 'contabile'],
+      ['TEMPLATE', 'document.issue_date', 'contabile']
+    ])
+  })
+
+  it('con lo stesso valore in due punti rinuncia, e non impara un ancora a caso', () => {
+    const r = createTestRepository()
+    repo = r
+    const id = digitato(r, [...TESTATA, 'Data contabile: 12/09/2026', 'Scadenza rata: 12/09/2026'])
+
+    submitReview(r, {
+      documentId: id,
+      action: 'SAVE',
+      now: NOW,
+      actor: ACTOR,
+      registry: testRegistryV2()
+    })
+
+    const evento = r.learning.listEvents({ documentId: id }).find((e) => e.kind === 'FIELD_VALUE')!
+    expect(evento.outcome).toBe('FILLED')
+    expect(evento.pick).toBeNull()
+    expect(anchors(r)).toEqual([])
+  })
+
+  it('dove la selezione c’è già non prova a ritrovare niente: vince il revisore', () => {
+    // La lettura sistemata della 1.5.4: l'OCR legge «1I4/2O26», il revisore sistema la
+    // parola e la selezione sopravvive. Il valore buono sta anche più in basso sul
+    // documento, in un punto che non c'entra: se l'inferenza girasse lo stesso, l'ancora
+    // finirebbe su «Riferimento interno». Gira solo quando il pick manca, e qui non manca.
+    const r = createTestRepository()
+    repo = r
+    const righe = [...TESTATA, 'Numero pratica: 1I4/2O26', 'Riferimento interno 114/2026']
+    const id = seedDocument(r, { driveFileId: 'doc-ocr' })
+    r.pages.replaceForDocument(id, [
+      { page: 1, textSource: 'OCR', lines: righe.map((text) => ({ text })) }
+    ])
+    r.documents.setExtraction(id, {
+      documentType: 'accounting.fattura',
+      typeConfidence: 0.9,
+      confidence: 0.8,
+      confidenceBand: 'MEDIUM',
+      textSource: 'OCR'
+    })
+    r.fields.replaceForDocument(id, [
+      { name: 'document.number', label: 'Numero', value: '', confidence: 0 }
+    ])
+    const field = r.fields.listForDocument(id)[0]!
+    updateFieldValue(r, {
+      documentId: id,
+      fieldId: field.id,
+      correctedValue: '114/2026',
+      pick: { method: 'AREA_OCR', page: 1, text: '1I4/2O26' }
+    })
+
+    submitReview(r, {
+      documentId: id,
+      action: 'SAVE',
+      now: NOW,
+      actor: ACTOR,
+      registry: testRegistryV2()
+    })
+
+    const evento = r.learning.listEvents({ documentId: id }).find((e) => e.kind === 'FIELD_VALUE')!
+    expect(evento.pick).toMatchObject({
+      method: 'AREA_OCR',
+      location: { lineStart: 3, lineEnd: 3 }
+    })
+  })
+})

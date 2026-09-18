@@ -1,3 +1,4 @@
+import { currentFieldValue, currentItemValue } from '@shared/field-edits'
 import {
   DEFAULT_LEARNING_POLICY,
   documentKey,
@@ -22,8 +23,10 @@ import {
 } from '@shared/template-fingerprint'
 import type { ReviewAction, ReviewDocument } from '@shared/types'
 import type { LearningWriter } from './db/dao/learning'
+import type { PageInput } from './db/dao/pages'
 import type { Repository } from './db/repository'
 import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
+import { inferExactValuePick } from './inferred-pick'
 import { anchorRuleInputs, deriveAnchor, documentEntityWords } from './learning-anchors'
 import { templateTypeRuleInput } from './learning-templates'
 
@@ -130,12 +133,24 @@ export function learnFromReview(repo: Repository, input: LearnFromReviewInput): 
   const documentRow = repo.documents.get(input.document.id)
   const templateFingerprint = documentRow?.template_fingerprint ?? null
   const templateSignature = parseNormalizedTemplateSignature(documentRow?.template_signature_json)
+  // Le pagine si leggono solo se c'è davvero un valore da ritrovare: quasi ogni revisione
+  // non ne ha, e non deve pagarne la lettura.
+  let pages: PageInput[] | null = null
   const events = reviewLearningEvents(input.document, {
     at: input.at,
     actor: input.actor,
     templateFingerprint,
     templateSignature,
     replayedAt: input.replayedAt ?? null
+  }).map((event) => {
+    // Il revisore ha digitato invece di selezionare: la posizione si prova a ritrovarla,
+    // e se il valore non è unico nel documento l'evento resta senza, come prima.
+    if (event.pick || event.kind !== 'FIELD_VALUE' || !TEACHES.has(event.outcome)) return event
+    const value = finalFieldValue(input.document, event.fieldId, event.itemIndex)
+    if (!value) return event
+    pages ??= repo.pages.list(input.document.id)
+    const pick = inferExactValuePick(pages, value)
+    return pick ? { ...event, pick } : event
   })
 
   const settled = repo.learning.acquire((writer) => {
@@ -245,6 +260,24 @@ function proofs(
     if (engineRule) result.push([engineRule, confirmed ? 'POSITIVE' : 'NEGATIVE'])
   }
   return result
+}
+
+/**
+ * Il valore con cui il campo è stato chiuso, quello che il revisore ha davanti quando
+ * salva. Serve solo a cercarlo fra le righe: non entra nell'evento, e il deposito del
+ * learner resta senza valori del documento.
+ */
+function finalFieldValue(
+  document: ReviewDocument,
+  fieldId: string | null,
+  itemIndex: number | null
+): string | null {
+  if (!fieldId) return null
+  const field = document.fields.find((entry) => entry.name === fieldId)
+  if (!field) return null
+  const item = itemIndex === null ? null : field.items.find((entry) => entry.index === itemIndex)
+  const value = itemIndex === null ? currentFieldValue(field) : item ? currentItemValue(item) : null
+  return value?.trim() || null
 }
 
 /**
