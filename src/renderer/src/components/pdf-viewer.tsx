@@ -2,6 +2,7 @@ import { type EvidenceTarget, matchSpans, unionRect } from '@shared/evidence-loc
 import type { BoundingBox, DocumentPick, EvidenceItem } from '@shared/types'
 import { TextLayer } from 'pdfjs-dist'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { type AreaChar, areaText } from '../lib/area-text'
 import { cx } from '../lib/cx'
 import { api, errorMessage } from '../lib/ipc'
 import { loadPdf, type PdfDocument } from '../lib/pdf'
@@ -62,6 +63,12 @@ interface Located {
  * da lì che si prende il testo per compilare un campo. Sulle scansioni quel layer è
  * vuoto — non c'è testo, solo pixel — e allora si evidenzia un'area, che viene
  * rasterizzata e passata all'OCR del main.
+ *
+ * L'area vale anche sulle pagine che il testo ce l'hanno, ed è lo strumento che il
+ * revisore usa più spesso perché è più rapido: lì il testo si legge dal text layer, non
+ * dai pixel. Rileggere con l'OCR un testo che c'è già introduce uno scarto da quello su
+ * cui lavora il motore — ed è quello scarto che poi fa perdere la posizione della
+ * selezione, e con essa l'occasione di imparare.
  */
 export default function PdfViewer({
   documentId,
@@ -207,10 +214,39 @@ export default function PdfViewer({
     onCapture(text, pick ?? undefined)
   }
 
-  /** Ritaglia l'area evidenziata e la manda all'OCR del main. */
+  /**
+   * Il testo del text layer dentro l'area evidenziata, `null` se la pagina non ha testo o
+   * se nel riquadro non ne cade nessuno.
+   */
+  function areaFromTextLayer(pageNumber: number, box: BoundingBox): DocumentPick | null {
+    const layer = pages.find((page) => page.page === pageNumber)?.text
+    const pageElement = containerRef.current?.querySelector<HTMLElement>(
+      `[data-page="${pageNumber}"]`
+    )
+    if (!layer || !pageElement) return null
+    const picked = areaText(charsOfLayer(layer, pageElement, box), box)
+    if (!picked) return null
+    return { method: 'AREA_TEXT', page: pageNumber, text: picked.text, bbox: picked.bbox }
+  }
+
+  /**
+   * Legge l'area evidenziata: dal text layer quando la pagina ce l'ha, altrimenti
+   * ritagliando i pixel e mandandoli all'OCR del main.
+   */
   async function captureArea(pageNumber: number, box: BoundingBox) {
+    if (!captureTarget) return
+
+    // Il testo nativo è esatto: niente da ripulire, offset esatti, e nemmeno il giro
+    // dell'OCR. L'OCR resta per le scansioni, che testo da leggere non ne hanno.
+    const fromText = areaFromTextLayer(pageNumber, box)
+    if (fromText) {
+      setCaptureError(null)
+      onCapture(fromText.text, fromText)
+      return
+    }
+
     const pdf = pdfRef.current
-    if (!pdf || !captureTarget) return
+    if (!pdf) return
 
     setReading(true)
     setCaptureError(null)
@@ -279,12 +315,12 @@ export default function PdfViewer({
           disabled={!captureTarget || reading}
           title={
             captureTarget
-              ? 'Evidenzia un’area della pagina: il testo viene letto con OCR.'
+              ? 'Evidenzia un’area della pagina: dove c’è testo si legge quello, sulle scansioni l’OCR.'
               : 'Metti prima il cursore in un campo.'
           }
           onClick={() => setMode('area')}
         >
-          {reading ? 'Leggo l’area…' : 'Evidenzia area (OCR)'}
+          {reading ? 'Leggo l’area…' : 'Evidenzia area'}
         </button>
       </div>
       {captureError && <div className={styles.error}>{captureError}</div>}
@@ -491,6 +527,51 @@ function locateInTextLayer(
       }
     })
   )
+}
+
+/**
+ * I caratteri del text layer con il loro riquadro, in unità di pagina a scala 1.
+ *
+ * Si misurano con un `Range` carattere per carattere: uno span di pdf.js può essere una
+ * riga intera, e un'area evidenziata quasi mai coincide con i suoi bordi. Gli span che il
+ * riquadro non tocca si scartano prima di misurarli — un `getBoundingClientRect` per ogni
+ * carattere della pagina costerebbe troppo per un gesto del mouse.
+ */
+function charsOfLayer(
+  layer: HTMLDivElement,
+  pageElement: HTMLElement,
+  box: BoundingBox
+): AreaChar[] {
+  const origin = pageElement.getBoundingClientRect()
+  const toPage = (rect: DOMRect): BoundingBox => ({
+    x: (rect.left - origin.left) / SCALE,
+    y: (rect.top - origin.top) / SCALE,
+    w: rect.width / SCALE,
+    h: rect.height / SCALE
+  })
+  const touches = (rect: BoundingBox): boolean =>
+    rect.x < box.x + box.w &&
+    rect.x + rect.w > box.x &&
+    rect.y < box.y + box.h &&
+    rect.y + rect.h > box.y
+
+  const chars: AreaChar[] = []
+  const walker = document.createTreeWalker(layer, NodeFilter.SHOW_TEXT)
+  const range = document.createRange()
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const text = node.textContent ?? ''
+    if (text.trim().length === 0) continue
+    range.selectNodeContents(node)
+    if (!touches(toPage(range.getBoundingClientRect()))) continue
+    for (let index = 0; index < text.length; index += 1) {
+      range.setStart(node, index)
+      range.setEnd(node, index + 1)
+      const rect = range.getBoundingClientRect()
+      if (rect.width === 0 && rect.height === 0) continue
+      chars.push({ char: text[index]!, rect: toPage(rect) })
+    }
+  }
+  return chars
 }
 
 function rectBetween(start: { x: number; y: number }, end: { x: number; y: number }): BoundingBox {
