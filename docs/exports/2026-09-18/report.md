@@ -194,7 +194,17 @@ L'export del 18/09 non cambia: la normalizzazione vale da qui in avanti, sui val
 
 Verifiche: gate completo verde (683 test); `tests/shared-date-value.test.ts` (14 test, valori verbatim dall'export), fixture `dataset-export.expected.json` rigenerata.
 
-**I campi `many` non hanno mai `origin` né `evidence`.** Tutti e 19 (`line_items`, `finance.transactions`, `hse.preventive_measures`), compresi i 7 popolati. Sono 34 correzioni, il 12% del totale, non attribuibili a motore o revisore — un buco nella misurazione, oltre che un probabile bug dell'export.
+**I campi `many` non hanno `origin` a livello di campo.**
+
+> **Corretto durante il fix.** Qui l'analisi diceva che i campi `many` non hanno «né `origin` né `evidence`», e che le loro 34 correzioni non sono attribuibili. È sbagliato, e l'errore è istruttivo: `field.origin` esiste solo sui campi `one`, quindi leggerlo su un `many` restituisce `undefined` invece di dare errore, ed è esattamente quello in cui sono cascato. La provenienza c'è, **una per riga**, dentro `items[]`.
+>
+> I numeri veri, sulle 41 righe dei 19 campi ripetuti: **tutte e 41 hanno `origin: "REVIEWER"`, 18 hanno un `pick`, nessuna ha `evidence`.** Che è un risultato più netto, non più debole: *il motore non ha prodotto una sola riga di `line_items` o `finance.transactions` che sia sopravvissuta alla revisione.* Le liste le compila la persona, riga per riga.
+
+### ✅ Risolto — PR #28, `bugfix/list-field-origin-missing`
+
+Il formato passa a **1.5.0**: anche `DatasetListField` ha adesso un `origin`, che vale per la lista intera — `ENGINE`, `REVIEWER`, `MIXED` quando il revisore ha aggiunto righe alle proposte del motore, `null` quando la lista è vuota. La provenienza riga per riga resta in `items[]`, che è più precisa; questo serve a contare i campi ripetuti come si contano i singoli, senza che un `undefined` li faccia sparire da un conteggio.
+
+Verifiche: gate completo verde (692 test); `tests/shared-dataset-list-origin.test.ts` (9 test: le quattro combinazioni di origine, le righe tolte che non contano, una riga proposta e poi corretta, e i campi singoli che non cambiano), fixture rigenerata, README aggiornato.
 
 **Le `line_items` sono estratte come righe di testo grezze**, non strutturate:
 
@@ -202,7 +212,20 @@ Verifiche: gate completo verde (683 test); `tests/shared-date-value.test.ts` (14
 "3 |LGICSL60001674 PZ 5x5000 MQ 26,6250 9,100 9,100 242,29 |22 LASTRA GRECATA..."
 ```
 
-**Evidenza mancante su 271 campi su 360.** Tutti i campi ENGINE ce l'hanno, ma solo 31 dei 229 REVIEWER: quando il valore lo scrive la persona, page e bbox in genere non vengono registrati. Sono proprio i casi da cui il learner dovrebbe imparare le ancore.
+**Poche tracce di dove vengono i valori del revisore.** Rimisurato con attenzione, sui 341 campi singoli:
+
+| | |
+|---|---|
+| valorizzati | 276 |
+| dal motore (`ENGINE`) | 47 — tutti con `evidence` |
+| dal revisore (`REVIEWER`) | 229 — 57 con un `pick`, 31 con l'`evidence` del motore accanto |
+| senza né `evidence` né `pick` | **135** |
+
+Il taglio per tipo di correzione dice di più: dei 31 `CHANGED`, **solo 3 hanno un `pick`**; degli 11 `CLEARED`, nessuno — ma lì è giusto, svuotare non ha una sorgente. Quando il revisore *corregge* un valore del motore, quasi sempre riscrive invece di selezionare, e da una riscrittura il learner non ricava nessuna ancora: gli serve la posizione della selezione per risalire all'etichetta.
+
+Dei 75 `pick` registrati, 61 sono `AREA_OCR` e 14 `TEXT_SELECTION`, e 58 su 75 hanno una `location` utilizzabile. Il meccanismo funziona: è che si usa in un caso su quattro.
+
+Questo non è un bug da correggere in un modulo — è il flusso di revisione. Selezionare costa più che digitare, e finché costa di più il learner resterà a digiuno sui `CHANGED`, che sono proprio i casi da cui imparerebbe di più. Va affrontato in revisione, non nell'export.
 
 **65 slot core/optional restano vuoti** dopo la review (46 di ruolo `core`), e 5 documenti sono stati chiusi senza tipo, due dei quali con i campi comunque compilati.
 
@@ -212,5 +235,5 @@ Verifiche: gate completo verde (683 test); `tests/shared-date-value.test.ts` (14
 2. **Copertura del classificatore** — 27 documenti su 41 senza proposta è il collo di bottiglia più grosso a monte.
 3. **`document.number` e `document.issue_date`** — vincolare la selezione al contesto (etichetta vicina, posizione in testata) invece di prendere il primo match. Due terzi degli errori di valore.
 4. **Normalizzare le date all'inserimento** — senza questo non si può misurare nulla sulle date.
-5. **`origin`/`evidence` sui campi `many`** e registrazione dell'evidenza sui valori del revisore.
+5. **`origin` sui campi `many`** (fatto), e far sì che correggere un valore passi più spesso dalla selezione sul documento: oggi solo 3 `CHANGED` su 31 lasciano una traccia da cui imparare.
 6. **Stop-list sui pattern CLASS** per i token che coincidono con entità del documento.
