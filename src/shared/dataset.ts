@@ -15,7 +15,8 @@ import type {
   PickLocation,
   PickMethod,
   ReviewDocument,
-  TextSource
+  TextSource,
+  TypeMatchReason
 } from './types'
 
 /**
@@ -29,7 +30,7 @@ import type {
  */
 
 export const DATASET_FORMAT = 'praticaai-reviewer/annotated-dataset'
-export const DATASET_FORMAT_VERSION = '1.3.0'
+export const DATASET_FORMAT_VERSION = '1.4.0'
 
 export type EngineVersion = 'v1' | 'v2'
 
@@ -134,6 +135,35 @@ export interface DatasetCorrection {
   pick: DatasetPick | null
 }
 
+/**
+ * Un candidato del classificatore col suo punteggio, in ordine di punteggio.
+ *
+ * Ci sono anche quando il classificatore non ha assegnato: sono la differenza fra «non ha
+ * trovato niente» e «aveva ragione ma sotto soglia», e senza di loro le soglie si tarano
+ * a occhio. Le frasi che li sostengono restano fuori: servono a chi revisiona, non a chi
+ * misura, e sono verbatim del documento.
+ */
+export interface DatasetTypeCandidate {
+  documentType: string
+  /** Lo stesso tipo come lo chiama pratica-ai. */
+  registryId: string | null
+  score: number
+  /** 1 è il primo classificato. */
+  rank: number
+}
+
+/**
+ * Dov'era finito il tipo che il revisore ha poi scelto, fra i candidati del classificatore.
+ *
+ * È la misura della copertura: `rank: 1` con `decision: 'UNKNOWN'` vuol dire che il
+ * classificatore ci aveva preso e si è fermato per una soglia; `rank: null` che il tipo
+ * giusto non era proprio in lista, e abbassare le soglie non lo farebbe comparire.
+ */
+export interface DatasetChosenAmongCandidates {
+  rank: number | null
+  score: number | null
+}
+
 export interface DatasetDocumentType {
   id: string | null
   label: string | null
@@ -146,6 +176,17 @@ export interface DatasetDocumentType {
   proposedConfidence: number | null
   /** Il revisore ha scelto un tipo diverso dalla proposta; `null` se la proposta non è nota. */
   corrected: boolean | null
+  /** Che cosa ha deciso il classificatore, e perché; `null` se non l'ha mai visto. */
+  decision: 'ASSIGN' | 'UNKNOWN' | null
+  reason: TypeMatchReason | null
+  /** Distacco fra primo e secondo candidato, e le due soglie con cui va confrontato. */
+  margin: number | null
+  threshold: number | null
+  minimumMargin: number | null
+  /** I candidati col punteggio, anche quando il classificatore non ha assegnato. */
+  candidates: DatasetTypeCandidate[]
+  /** Dov'era il tipo scelto dal revisore, fra quei candidati. */
+  chosen: DatasetChosenAmongCandidates | null
 }
 
 export interface DatasetDocument {
@@ -254,13 +295,29 @@ function toDatasetField(field: ExtractedField, byId: Map<string, EvidenceItem>):
 }
 
 function toDocumentType(document: ReviewDocument): DatasetDocumentType {
-  const proposed = document.classification?.proposedType ?? null
-  const known = document.classification !== null
+  const classification = document.classification
+  const proposed = classification?.proposedType ?? null
+  const known = classification !== null
   const chosenBy = !document.documentType
     ? null
     : document.typeConfidence === null
       ? 'REVIEWER'
       : 'ENGINE'
+
+  const candidates: DatasetTypeCandidate[] = (classification?.candidates ?? []).map(
+    (candidate, index) => ({
+      documentType: candidate.documentType,
+      registryId: praticaaiTypeIdOrNull(candidate.documentType),
+      score: candidate.score,
+      rank: index + 1
+    })
+  )
+  // Senza un tipo scelto non c'è niente da cercare in lista; con un tipo che non c'è,
+  // `rank: null` dice che non abbassare le soglie non basterebbe a trovarlo.
+  const found = document.documentType
+    ? (candidates.find((candidate) => candidate.documentType === document.documentType) ?? null)
+    : null
+
   return {
     id: document.documentType,
     label: document.documentTypeLabel,
@@ -270,8 +327,17 @@ function toDocumentType(document: ReviewDocument): DatasetDocumentType {
     },
     chosenBy,
     proposed,
-    proposedConfidence: proposed ? (document.classification?.confidence ?? null) : null,
-    corrected: known ? document.documentType !== proposed : null
+    proposedConfidence: proposed ? (classification?.confidence ?? null) : null,
+    corrected: known ? document.documentType !== proposed : null,
+    decision: classification?.decision ?? null,
+    reason: classification?.reason ?? null,
+    margin: classification?.margin ?? null,
+    threshold: classification?.threshold ?? null,
+    minimumMargin: classification?.minimumMargin ?? null,
+    candidates,
+    chosen: document.documentType
+      ? { rank: found?.rank ?? null, score: found?.score ?? null }
+      : null
   }
 }
 

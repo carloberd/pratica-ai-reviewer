@@ -365,7 +365,7 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.3.0",
+    "formatVersion": "1.4.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": { "name": "praticaai-reviewer", "version": "1.1.0" },
     // motori e versioni dell'app al momento dell'export
@@ -388,7 +388,16 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
       "registry": { "id": "accounting.fattura", "proposed": "accounting.fattura" },
       "chosenBy": "ENGINE",           // REVIEWER se scelto a mano
       "proposed": "accounting.fattura", "proposedConfidence": 0.8267,
-      "corrected": false              // il revisore ha scelto un tipo diverso dalla proposta
+      "corrected": false,             // il revisore ha scelto un tipo diverso dalla proposta
+      // che cosa ha deciso il classificatore, e contro quali soglie
+      "decision": "ASSIGN",           // o UNKNOWN
+      "reason": "OK",                 // BELOW_THRESHOLD | LOW_MARGIN | FILENAME_ONLY | HARD_NEGATIVE | NO_SIGNAL
+      "margin": 0.31, "threshold": 0.74, "minimumMargin": 0.08,
+      // i candidati col punteggio, anche quando non ha assegnato
+      "candidates": [{ "documentType": "accounting.fattura", "registryId": "accounting.fattura",
+                       "score": 0.8267, "rank": 1 }],
+      // dov'era il tipo scelto dal revisore, fra quei candidati
+      "chosen": { "rank": 1, "score": 0.8267 }
     },
     "extraction": { "engineVersion": "…", "schemaVersion": "2.0.0", "status": "COMPLETED", "completedAt": "…" },
     "fields": [
@@ -435,9 +444,18 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
   cui pratica-ai indicizza il feedback.
 - `registry` porta gli stessi due tipi come li chiama pratica-ai: uguali a `id` e
   `proposed` tranne per le tre classi con slug diverso (vedi «I nomi dei tipi»).
+- `decision`, `reason`, `margin`, `threshold`, `minimumMargin`, `candidates` e `chosen`
+  dicono che cosa ha deciso il classificatore **anche quando non ha assegnato**, dove
+  `proposed` è `null` e basta. `candidates` sono i tipi col punteggio, in ordine; `chosen`
+  è dove fra quelli è finito il tipo che il revisore ha poi scelto. `chosen.rank: 1` con
+  `decision: "UNKNOWN"` vuol dire che il classificatore ci aveva preso e si è fermato per
+  una soglia; `chosen.rank: null` che il tipo giusto non era in lista, e abbassare le
+  soglie non lo farebbe comparire. Le frasi che sostengono i candidati restano fuori:
+  servono a chi revisiona, e sono verbatim del documento. `null` dappertutto per un
+  documento che il classificatore non ha mai visto.
 - `learning` dice in che modalità era il learner e quali regole valevano: due export con la
   stessa `rulesFingerprint` sono stati precompilati dalle stesse regole, ed è quello che un
-  benchmark deve dichiarare accanto ai suoi numeri. Dalla `1.0.0` alla `1.3.0` si aggiungono
+  benchmark deve dichiarare accanto ai suoi numeri. Dalla `1.0.0` alla `1.4.0` si aggiungono
   solo campi.
 
 ### I nomi dei tipi
