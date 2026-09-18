@@ -834,6 +834,23 @@ candidate vince la più corta che, letta con le regole del motore su quella pagi
 valore in un punto solo, e quel punto è la selezione. Una selezione insegna due regole: una
 per il template (l'impronta del modulo) e una per il tipo.
 
+**Anche un valore digitato** (`src/main/inferred-pick.ts`). Chi compila un campo a mano,
+senza selezionare niente sul documento, non lascia nessuna posizione — e senza posizione non
+c'è etichetta, quindi non c'è regola. Ma durante l'annotazione a mano si digita di continuo,
+ed era il buco più costoso. Adesso il valore salvato si cerca fra le righe della pagina nelle
+forme verbatim in cui poteva starci scritto: una data salvata `2026-09-12` si cerca anche
+come «12/09/2026», un importo `1250.00` anche come «1.250,00», un IBAN anche a gruppi di
+quattro. Sono riscritture della stessa cifra, mai valori nuovi.
+
+Il punto si accetta **solo se una di quelle forme compare una volta sola in tutto il
+documento**, e solo per valori di almeno tre caratteri. «10,00» che è insieme il totale e
+l'imponibile non dice dove il revisore stesse guardando, e allora si rinuncia: un campo senza
+regola è un costo che si vede subito, un'ancora messa sul punto sbagliato precompila male
+tutti i documenti di quel modulo, e lo si scopre dentro il dataset. Nel registro quella
+posizione si distingue dalle altre (`EXACT_VALUE_MATCH`), il valore cercato non entra
+nell'evento, e dove una selezione c'è già — compresa quella sopravvissuta a una lettura
+sistemata — non si prova nemmeno: decide il revisore.
+
 **Quando una regola vale** (`nextRuleStatus`, soglie in `DEFAULT_LEARNING_POLICY`):
 
 | | Si attiva | Si sospende |
@@ -929,9 +946,11 @@ firma normalizzata dichiarati nel manifest: quelle di template valgono solo su c
 allo stesso modo. Nessun valore dei documenti esce, come nel deposito — la firma è fatta di
 soli hash.
 
-**Limiti noti.** Insegnano solo le selezioni su una riga, con la posizione esatta: un'area
+**Limiti noti.** Serve sempre una posizione su una riga sola, con gli offset esatti: un'area
 il cui testo non si ritrova fra le righe della pagina dà le righe toccate ma non gli offset,
-e resta un esempio senza regola. Una prima pagina letta con OCR non ha né impronta né firma,
+e resta un esempio senza regola. Un valore digitato la posizione se la ritrova da sé, ma solo
+quando è inequivocabile: se compare due volte nel documento, o è troppo corto perché comparire
+una volta sola voglia dire qualcosa, quella revisione non insegna niente. Una prima pagina letta con OCR non ha né impronta né firma,
 quindi solo regole di tipo. Una regola attiva che perde prove per uno scarto resta attiva
 finché le prove contro non la sospendono. La soglia di somiglianza fra moduli non è stata
 misurata su documenti reali: troppo bassa fonde stampati diversi, troppo alta riporta allo

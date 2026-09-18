@@ -51,9 +51,21 @@ export type LearningEventKind = 'DOCUMENT_TYPE' | 'FIELD_VALUE'
  */
 export type LearningOutcome = 'CONFIRMED' | 'CHANGED' | 'FILLED' | 'CLEARED' | 'ADDED' | 'REMOVED'
 
+/**
+ * Come si è saputo dove stava un valore.
+ *
+ * I `PickMethod` sono i modi in cui il revisore lo prende dal documento, e sono quelli che
+ * l'interfaccia conosce. `EXACT_VALUE_MATCH` invece è del learner e solo suo: nessuno ha
+ * indicato niente, il punto è stato ritrovato cercando il valore digitato nel testo della
+ * pagina, e solo dove compariva una volta sola (`src/main/inferred-pick.ts`). Sta qui e non
+ * fra i `PickMethod` perché un'inferenza non è una selezione, e chi legge un'evidenza del
+ * revisore non deve poterle confondere.
+ */
+export type LearningPickMethod = PickMethod | 'EXACT_VALUE_MATCH'
+
 /** Da dove il revisore ha preso un valore, senza il testo: basta la posizione. */
 export interface LearningPick {
-  method: PickMethod
+  method: LearningPickMethod
   page: number
   bbox: BoundingBox | null
   location: PickLocation | null
