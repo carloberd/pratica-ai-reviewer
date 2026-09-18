@@ -867,12 +867,23 @@ campo a sé. Nei campi ripetuti correzione e rimozione di una riga proposta torn
 stesso indice, le righe aggiunte a mano restano in coda a quelle del nuovo run, e una riga
 corretta che il nuovo run non trova più diventa del revisore invece di sparire. All'avvio
 col v2 i documenti in coda con la copia in cache che non sono mai passati da questa
-versione dei profili, o che non hanno ancora i candidati di tipo salvati (migrazione
-0005), vengono rielaborati in sottofondo; quelli già revisionati o scartati no.
+versione dei profili, che non hanno ancora i candidati di tipo salvati (migrazione
+0005), o il cui ultimo run è chiuso su un OCR non riuscito, vengono rielaborati in
+sottofondo; quelli già revisionati o scartati no.
 
 **OCR.** Copre le pagine *scansionate*, cioè quelle fatte di immagini: il motore prende
 l'immagine che la pagina già contiene invece di ri-rasterizzarla. Una pagina senza testo
 e senza immagini (per esempio solo grafica vettoriale) non produce testo.
+
+**Quando l'OCR non legge.** Servizio assente (build senza `tessdata`, worker che non
+parte) o richiesta fallita: il testo nativo delle altre pagine resta, ma il documento non
+passa per letto. `textSource` diventa `OCR_FAILED` — nella scheda, nella tabella e nel
+dataset esportato — la revisione lo avvisa, la timeline porta l'evento «OCR non riuscito»
+col motivo, e il run chiude `FAILED_OCR`. È l'unico esito che non conta come passaggio del
+motore: il documento viene ripassato al primo avvio in cui l'OCR funziona, invece di
+restare in coda con zero campi e un run che sembra completo. Una pagina su cui l'OCR ha
+girato senza trovare niente (una pagina bianca) non è un fallimento: non c'è nulla da
+ritentare.
 
 **Accessibilità.** L'area da leggere con OCR si evidenzia trascinando con il mouse; in
 v1 non c'è un equivalente da tastiera. Sui PDF con testo nativo la selezione funziona

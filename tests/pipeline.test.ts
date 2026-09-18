@@ -9,6 +9,7 @@ import { createRepository } from '../src/main/db/repository'
 import type { OcrService } from '../src/main/extract/ocr'
 import { createOcrEngine } from '../src/main/extract/ocr-engine'
 import { extractText } from '../src/main/extract/text'
+import type { ExtractedText } from '../src/main/extract/types'
 import type { ExtractionRegistryV2 } from '../src/main/extract/v2/profile-loader'
 import { updateFieldValue } from '../src/main/field-edits'
 import {
@@ -216,11 +217,32 @@ describe('motore v1 — PDF scansionato', () => {
     const nativeText = await extractText({ filePath: fixture('fattura-nativa.pdf'), mime: PDF })
     expect(nativeText.source).toBe('NATIVE_TEXT')
     expect(nativeText.ocrPages).toEqual([])
+    expect(nativeText.ocrFailedPages).toEqual([])
 
-    // Senza servizio OCR la scansione resta senza testo, ma non fallisce.
+    // Senza servizio OCR la scansione resta senza testo: l'estrazione non fallisce, ma il
+    // documento non può dirsi letto dal text layer.
     const scanned = await extractText({ filePath: fixture('durc-scansionato.pdf'), mime: PDF })
-    expect(scanned.source).toBe('NATIVE_TEXT')
+    expect(scanned.source).toBe('OCR_FAILED')
+    expect(scanned.ocrFailedPages).toEqual([1])
+    expect(scanned.ocrError).toBe('Servizio OCR non disponibile in questo ambiente.')
     expect(scanned.pages[0]?.text).toBe('')
+  })
+
+  it('un OCR che fallisce non passa per testo nativo', async () => {
+    const failing = {
+      recognize: () => Promise.reject(new Error('worker OCR non avviato')),
+      recognizeImage: () => Promise.reject(new Error('worker OCR non avviato')),
+      dispose: () => Promise.resolve()
+    }
+    const scanned = await extractText({
+      filePath: fixture('durc-scansionato.pdf'),
+      mime: PDF,
+      ocr: failing
+    })
+    expect(scanned.source).toBe('OCR_FAILED')
+    expect(scanned.ocrPages).toEqual([])
+    expect(scanned.ocrFailedPages).toEqual([1])
+    expect(scanned.ocrError).toBe('worker OCR non avviato')
   })
 })
 
@@ -510,6 +532,35 @@ describe('motore v2 — PDF scansionato', () => {
   }, 180_000)
 })
 
+describe('motore v2 — pagine scansionate che l’OCR non ha letto', () => {
+  it('non passa per letto: run FAILED_OCR, avviso in scheda e evento', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'durc-scansionato.pdf', PDF)
+
+    const outcome = await processorFor(repo, V2, { withOcr: false })(
+      inputFor(id, 'durc-scansionato.pdf', PDF)
+    )
+
+    expect(outcome.textSource).toBe('OCR_FAILED')
+    expect(repo.documents.get(id)!.text_source).toBe('OCR_FAILED')
+
+    const [run] = repo.extractionRuns.listForDocument(id)
+    expect(run?.status).toBe('FAILED_OCR')
+    expect(JSON.parse(run!.metrics_json!)).toMatchObject({
+      textSource: 'OCR_FAILED',
+      ocrFailedPages: [1]
+    })
+
+    expect(repo.events.listForDocument(id).map((e) => e.title)).toContain('OCR non riuscito')
+    expect(repo.getReviewDocument(id)!.warnings).toContain(
+      'Pagine scansionate che l’OCR non ha letto: i campi sono incompleti. Il documento viene ripassato al prossimo avvio con l’OCR disponibile.'
+    )
+    // Niente impronta: una pagina vuota non è un layout da riconoscere.
+    expect(repo.documents.get(id)!.template_fingerprint).toBeNull()
+    repo.close()
+  })
+})
+
 describe('motore v2 — documento non classificabile', () => {
   it('resta UNKNOWN senza campi, senza evidenze e col motivo nella timeline', async () => {
     const repo = createTestRepository()
@@ -771,28 +822,42 @@ describe('il testo su cui si ritrovano le selezioni', () => {
       pagesOf({
         source: 'OCR',
         ocrPages: [2],
+        ocrFailedPages: [3],
         pages: [
           { page: 1, text: 'riga', lines },
-          { page: 2, text: 'riga', lines }
+          { page: 2, text: 'riga', lines },
+          { page: 3, text: '', lines: [] }
         ]
       }).map((page) => [page.page, page.textSource])
     ).toEqual([
       [1, 'NATIVE_TEXT'],
-      [2, 'OCR']
+      [2, 'OCR'],
+      [3, 'OCR_FAILED']
     ])
     expect(
-      pagesOf({ source: 'DOCX', ocrPages: [], pages: [{ page: 1, text: 'riga', lines }] })[0]
-        ?.textSource
+      pagesOf({
+        source: 'DOCX',
+        ocrPages: [],
+        ocrFailedPages: [],
+        pages: [{ page: 1, text: 'riga', lines }]
+      })[0]?.textSource
     ).toBe('DOCX')
   })
 
   it('una prima pagina letta con OCR resta senza impronta: la ricava l’export', () => {
     const page = { page: 1, text: 'DURC', lines: [{ text: 'DURC' }] }
-    expect(firstPageFingerprint({ source: 'OCR', ocrPages: [1], pages: [page] })).toBeNull()
-    expect(firstPageFingerprint({ source: 'NATIVE_TEXT', ocrPages: [], pages: [page] })).toBe(
-      templateFingerprint(['DURC'])
-    )
-    expect(firstPageFingerprint({ source: 'NATIVE_TEXT', ocrPages: [], pages: [] })).toBeNull()
+    const of = (extra: Partial<ExtractedText>): ExtractedText => ({
+      source: 'NATIVE_TEXT',
+      ocrPages: [],
+      ocrFailedPages: [],
+      pages: [page],
+      ...extra
+    })
+    expect(firstPageFingerprint(of({ source: 'OCR', ocrPages: [1] }))).toBeNull()
+    // Nemmeno una prima pagina che l'OCR non ha letto: non è un layout, è una pagina vuota.
+    expect(firstPageFingerprint(of({ source: 'OCR_FAILED', ocrFailedPages: [1] }))).toBeNull()
+    expect(firstPageFingerprint(of({}))).toBe(templateFingerprint(['DURC']))
+    expect(firstPageFingerprint(of({ pages: [] }))).toBeNull()
   })
 
   it('una selezione resta alla rielaborazione, con la sua posizione', async () => {

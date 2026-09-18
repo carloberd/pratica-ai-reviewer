@@ -26,7 +26,12 @@ export function pagesNeedingOcr(pages: ExtractedPage[]): number[] {
  */
 export async function extractText(options: ExtractOptions): Promise<ExtractedText> {
   if (options.mime === DOCX_MIME) {
-    return { pages: await extractDocxPages(options.filePath), source: 'DOCX', ocrPages: [] }
+    return {
+      pages: await extractDocxPages(options.filePath),
+      source: 'DOCX',
+      ocrPages: [],
+      ocrFailedPages: []
+    }
   }
 
   if (options.mime !== PDF_MIME) {
@@ -36,17 +41,36 @@ export async function extractText(options: ExtractOptions): Promise<ExtractedTex
   const pages = await extractPdfPages(options.filePath)
   const candidates = pagesNeedingOcr(pages)
 
-  if (candidates.length === 0 || !options.ocr) {
-    return { pages, source: 'NATIVE_TEXT', ocrPages: [] }
+  if (candidates.length === 0) {
+    return { pages, source: 'NATIVE_TEXT', ocrPages: [], ocrFailedPages: [] }
+  }
+
+  // Pagine scansionate e nessun OCR: il testo non c'è, e dirlo `NATIVE_TEXT` farebbe
+  // passare per completo un documento da cui non si è letto niente.
+  if (!options.ocr) {
+    return {
+      pages,
+      source: 'OCR_FAILED',
+      ocrPages: [],
+      ocrFailedPages: candidates,
+      ocrError: 'Servizio OCR non disponibile in questo ambiente.'
+    }
   }
 
   let recognized: Map<number, string>
   try {
     recognized = await options.ocr.recognize(options.filePath, candidates)
   } catch (error) {
-    // Un OCR fallito non deve far perdere il testo nativo delle altre pagine.
+    // Un OCR fallito non deve far perdere il testo nativo delle altre pagine, ma non può
+    // nemmeno passare per un documento letto: le pagine scansionate restano da leggere.
     logError('extract.ocr', error)
-    return { pages, source: 'NATIVE_TEXT', ocrPages: [] }
+    return {
+      pages,
+      source: 'OCR_FAILED',
+      ocrPages: [],
+      ocrFailedPages: candidates,
+      ocrError: error instanceof Error ? error.message : String(error)
+    }
   }
 
   const ocrPages: number[] = []
@@ -66,9 +90,14 @@ export async function extractText(options: ExtractOptions): Promise<ExtractedTex
     }
   })
 
+  // Una pagina su cui l'OCR ha girato senza trovare testo (una pagina bianca, o solo
+  // grafica vettoriale) non è un fallimento: non c'è niente da ritentare.
+  const ocrFailedPages = candidates.filter((page) => !recognized.has(page))
+
   return {
     pages: merged,
-    source: ocrPages.length > 0 ? 'OCR' : 'NATIVE_TEXT',
-    ocrPages
+    source: ocrPages.length > 0 ? 'OCR' : ocrFailedPages.length > 0 ? 'OCR_FAILED' : 'NATIVE_TEXT',
+    ocrPages,
+    ocrFailedPages
   }
 }

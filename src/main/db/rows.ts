@@ -148,7 +148,9 @@ export function toBand(value: string | null): ConfidenceBand {
 }
 
 export function toTextSource(value: string | null): TextSource | null {
-  return value === 'NATIVE_TEXT' || value === 'OCR' || value === 'DOCX' ? value : null
+  return value === 'NATIVE_TEXT' || value === 'OCR' || value === 'DOCX' || value === 'OCR_FAILED'
+    ? value
+    : null
 }
 
 export function toEvidenceOrigin(value: string): EvidenceOrigin {
