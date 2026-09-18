@@ -109,6 +109,7 @@ export const api = {
     setMode: (mode: LearningMode) => call(() => window.reviewer.learning.setMode(mode)),
     setRuleStatus: (ruleId: string, status: ManualRuleStatus) =>
       call(() => window.reviewer.learning.setRuleStatus(ruleId, status)),
+    replay: () => call(() => window.reviewer.learning.replay()),
     export: () => call(() => window.reviewer.learning.export())
   },
   history: {

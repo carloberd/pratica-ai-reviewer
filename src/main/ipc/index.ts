@@ -38,6 +38,7 @@ import {
   updateFieldItem,
   updateFieldValue
 } from '../field-edits'
+import { replayReviews } from '../learning-replay'
 import {
   exportLearnedRules,
   type LearningWorkspaceDeps,
@@ -462,6 +463,27 @@ export function registerIpcHandlers(context: IpcContext): void {
       return learningOverview(learning())
     }
   )
+
+  /**
+   * Ripassa per il learner le revisioni già chiuse.
+   *
+   * Il learner è stato acceso a revisione iniziata, e quello che le chiusure di prima
+   * avrebbero insegnato non gliel'ha mai visto nessuno. È idempotente — ogni documento
+   * ritira le sue prove prima di rimetterle — quindi si può rilanciare.
+   */
+  handle('learning:replay', noInput, (): LearningOverview => {
+    const actor = auth.status().email
+    if (!actor) {
+      throw new ReviewerError('AUTH_REQUIRED', 'Nessun account collegato: non si sa chi ripassa.')
+    }
+    const result = replayReviews({
+      repo,
+      actor,
+      registry: context.profiles?.refinement.registry
+    })
+    reprocessAfter(result.changed)
+    return learningOverview(learning())
+  })
 
   /** Il file delle regole apprese, per pratica-ai. */
   handle('learning:export', noInput, async (): Promise<LearningExportResult> => {
