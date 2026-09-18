@@ -1,4 +1,13 @@
 import { readFile } from 'node:fs/promises'
+import {
+  compose,
+  IDENTITY,
+  imageToPage,
+  type Matrix,
+  type PixelBox,
+  pageBox
+} from './page-placement'
+import type { TextLine } from './types'
 
 /**
  * Motore OCR (D2), per i PDF senza text layer.
@@ -9,14 +18,25 @@ import { readFile } from 'node:fs/promises'
  * Il testo esce da tesseract.js (wasm) con i modelli `ita` e `eng` di
  * `resources/tessdata`: niente binario di sistema e niente rete.
  *
+ * Di ogni pagina escono anche le **righe con le coordinate**: tesseract le dà in pixel
+ * dell'immagine, e la matrice con cui la pagina la disegna le porta in unità di pagina
+ * (`page-placement.ts`). Senza coordinate una selezione su una scansione non si ritrova —
+ * `locatePick` non ha righe da toccare — e il learner resta cieco proprio sui documenti su
+ * cui il motore va peggio. Dove la matrice non si ricostruisce la riga resta senza
+ * riquadro: una posizione indovinata insegnerebbe un'etichetta sbagliata.
+ *
  * Il modulo non sa nulla di worker: è il worker a usarlo. Tenerli separati rende
  * l'OCR testabile in-process, senza dover prima impacchettare il main.
  */
+export interface OcrPageText {
+  page: number
+  text: string
+  /** Le righe lette, con le coordinate quando la collocazione dell'immagine si ricostruisce. */
+  lines: TextLine[]
+}
+
 export interface OcrEngine {
-  recognizePdfPages(
-    pdfPath: string,
-    pages: number[]
-  ): Promise<Array<{ page: number; text: string }>>
+  recognizePdfPages(pdfPath: string, pages: number[]): Promise<OcrPageText[]>
   /** Testo di una singola immagine già pronta, es. il ritaglio di una pagina. */
   recognizeImage(image: Uint8Array): Promise<string>
   dispose(): Promise<void>
@@ -99,11 +119,19 @@ export function createOcrEngine(options: OcrEngineOptions): OcrEngine {
     })
   }
 
-  /** PNG delle immagini contenute nelle pagine indicate. */
+  /**
+   * PNG delle immagini contenute nelle pagine indicate, ognuna con la matrice che porta i
+   * suoi pixel in unità di pagina.
+   *
+   * La matrice si segue sulla lista degli operatori: `save`/`restore` sono la pila,
+   * `transform` la moltiplica, e un form XObject apre una parentesi con la sua. Quando
+   * l'immagine viene disegnata, la matrice corrente è quella che manda il quadrato unitario
+   * dove la pagina la mostra.
+   */
   async function pageImages(
     pdfPath: string,
     pages: number[]
-  ): Promise<Array<{ page: number; pngs: Buffer[] }>> {
+  ): Promise<Array<{ page: number; images: Array<{ png: Buffer; matrix: Matrix | null }> }>> {
     const [{ createCanvas, ImageData }, pdfjs] = await Promise.all([
       import('@napi-rs/canvas'),
       import('pdfjs-dist/legacy/build/pdf.mjs')
@@ -116,16 +144,45 @@ export function createOcrEngine(options: OcrEngineOptions): OcrEngine {
       verbosity: 0
     }).promise
 
-    const results: Array<{ page: number; pngs: Buffer[] }> = []
+    const results: Array<{ page: number; images: Array<{ png: Buffer; matrix: Matrix | null }> }> =
+      []
     try {
       for (const pageNumber of pages) {
         const page = await document.getPage(pageNumber)
         const operators = await page.getOperatorList()
-        const pngs: Buffer[] = []
+        const viewport = page.getViewport({ scale: 1 }).transform as Matrix
+        const images: Array<{ png: Buffer; matrix: Matrix | null }> = []
 
+        let ctm: Matrix = IDENTITY
+        const stack: Matrix[] = []
         for (let index = 0; index < operators.fnArray.length; index += 1) {
-          if (operators.fnArray[index] !== pdfjs.OPS.paintImageXObject) continue
-          const name = operators.argsArray[index]?.[0]
+          const operator = operators.fnArray[index]
+          const args = operators.argsArray[index]
+
+          if (operator === pdfjs.OPS.save) {
+            stack.push(ctm)
+            continue
+          }
+          if (operator === pdfjs.OPS.restore) {
+            ctm = stack.pop() ?? IDENTITY
+            continue
+          }
+          if (operator === pdfjs.OPS.transform) {
+            ctm = compose(ctm, args as Matrix)
+            continue
+          }
+          if (operator === pdfjs.OPS.paintFormXObjectBegin) {
+            stack.push(ctm)
+            ctm = compose(ctm, args?.[0] as Matrix)
+            continue
+          }
+          if (operator === pdfjs.OPS.paintFormXObjectEnd) {
+            ctm = stack.pop() ?? IDENTITY
+            continue
+          }
+          if (operator !== pdfjs.OPS.paintImageXObject) continue
+
+          const name = args?.[0]
           if (typeof name !== 'string') continue
 
           const image = await new Promise<PdfImage | null>((resolve) => {
@@ -141,10 +198,13 @@ export function createOcrEngine(options: OcrEngineOptions): OcrEngine {
           canvas
             .getContext('2d')
             .putImageData(new ImageData(toRgba(image), image.width, image.height), 0, 0)
-          pngs.push(canvas.toBuffer('image/png'))
+          images.push({
+            png: canvas.toBuffer('image/png'),
+            matrix: imageToPage(ctm, viewport, image.width, image.height)
+          })
         }
 
-        results.push({ page: pageNumber, pngs })
+        results.push({ page: pageNumber, images })
         page.cleanup()
       }
     } finally {
@@ -157,20 +217,24 @@ export function createOcrEngine(options: OcrEngineOptions): OcrEngine {
   return {
     async recognizePdfPages(pdfPath, pages) {
       if (pages.length === 0) return []
-      const images = await pageImages(pdfPath, pages)
-      const withImages = images.filter((entry) => entry.pngs.length > 0)
+      const scanned = await pageImages(pdfPath, pages)
+      const withImages = scanned.filter((entry) => entry.images.length > 0)
       if (withImages.length === 0) return []
 
       tesseract ??= await startTesseract()
 
-      const results: Array<{ page: number; text: string }> = []
+      const results: OcrPageText[] = []
       for (const entry of withImages) {
         const parts: string[] = []
-        for (const png of entry.pngs) {
-          const { data } = await tesseract.recognize(png)
+        const lines: TextLine[] = []
+        for (const image of entry.images) {
+          // `blocks` porta la struttura — blocchi, paragrafi, righe, parole — con i
+          // riquadri in pixel. Senza, tesseract restituisce solo il testo.
+          const { data } = await tesseract.recognize(image.png, {}, { text: true, blocks: true })
           if (data.text) parts.push(data.text.trim())
+          lines.push(...linesOf(data.blocks, image.matrix))
         }
-        results.push({ page: entry.page, text: parts.join('\n') })
+        results.push({ page: entry.page, text: parts.join('\n'), lines })
       }
       return results
     },
@@ -187,3 +251,31 @@ export function createOcrEngine(options: OcrEngineOptions): OcrEngine {
     }
   }
 }
+
+/**
+ * Le righe lette da tesseract, ripiegate come le righe dell'estrazione: testo su una riga
+ * sola, spazi in uno. Il riquadro c'è quando la collocazione dell'immagine si conosce;
+ * altrimenti la riga resta senza, come prima di questa versione.
+ */
+function linesOf(blocks: TesseractBlocks, matrix: Matrix | null): TextLine[] {
+  const lines: TextLine[] = []
+  for (const block of blocks ?? []) {
+    for (const paragraph of block.paragraphs ?? []) {
+      for (const line of paragraph.lines ?? []) {
+        const text = (line.text ?? '').replace(/\s+/g, ' ').trim()
+        if (text.length === 0) continue
+        const box = matrix && line.bbox ? pageBox(matrix, line.bbox) : null
+        lines.push({ text, ...(box ? { bbox: box } : {}) })
+      }
+    }
+  }
+  return lines
+}
+
+/** Quello che serve qui della struttura di tesseract: righe con testo e riquadro. */
+type TesseractBlocks =
+  | Array<{
+      paragraphs?: Array<{ lines?: Array<{ text?: string; bbox?: PixelBox }> }>
+    }>
+  | null
+  | undefined
