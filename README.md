@@ -288,9 +288,10 @@ La scheda Dati è fatta per controllare in fretta, senza togliere niente al cont
 
 - **Evidenza cliccabile.** Sotto ogni valore proposto c'è la sua origine, pagina e riga.
   Il clic porta il documento a quel punto senza cambiare scheda: col rettangolo salvato
-  si evidenzia la riga; senza coordinate si cerca la riga nel text layer della pagina;
-  su una scansione letta con OCR si arriva alla pagina e la si segnala intera. Nei DOCX,
-  che non hanno pagine, la riga si evidenzia nel testo.
+  si evidenzia la riga; senza coordinate si cerca la riga nel text layer della pagina; se
+  non si trova nemmeno lì si arriva alla pagina e la si segnala intera. Le scansioni le
+  coordinate ce l'hanno anche loro, da quando l'OCR restituisce i riquadri delle righe.
+  Nei DOCX, che non hanno pagine, la riga si evidenzia nel testo.
 - **I campi vuoti in cima.** Quelli dove il motore non ha proposto niente stanno in un
   gruppo a sé, obbligatori prima, col contatore di quanti restano vuoti. Il gruppo
   dipende dalla proposta del motore, non dal valore: un campo compilato a mano non salta
@@ -872,8 +873,9 @@ manifest: quelle di template valgono solo su chi calcola l'impronta allo stesso 
 Nessun valore dei documenti esce, come nel deposito.
 
 **Limiti noti.** Insegnano solo le selezioni su una riga, con la posizione esatta: un'area
-letta con OCR di solito non si ritrova nel testo, e resta un esempio senza regola. Una prima
-pagina letta con OCR non ha impronta, quindi solo regole di tipo. Una regola attiva che
+il cui testo non si ritrova fra le righe della pagina dà le righe toccate ma non gli offset,
+e resta un esempio senza regola. Una prima pagina letta con OCR non ha impronta, quindi solo
+regole di tipo. Una regola attiva che
 perde prove per uno scarto resta attiva finché le prove contro non la sospendono.
 
 ---
@@ -939,6 +941,16 @@ sottofondo; quelli già revisionati o scartati no.
 **OCR.** Copre le pagine *scansionate*, cioè quelle fatte di immagini: il motore prende
 l'immagine che la pagina già contiene invece di ri-rasterizzarla. Una pagina senza testo
 e senza immagini (per esempio solo grafica vettoriale) non produce testo.
+
+Di ogni pagina escono anche le **righe con le coordinate**. Tesseract le dà in pixel
+dell'immagine; la matrice con cui la pagina disegna quell'immagine — ricostruita seguendo
+`save`/`restore`/`transform` sulla lista degli operatori di pdf.js — le porta nelle stesse
+unità di pagina delle righe del text layer (`src/main/extract/page-placement.ts`). Senza
+coordinate una selezione su una scansione non si ritrova: `locatePick` non ha righe da
+toccare e deve ricadere sul testo, che il ritaglio e la pagina non leggono mai uguale. Dove
+la matrice non si ricostruisce la riga resta senza riquadro: una posizione indovinata
+insegnerebbe un'etichetta sbagliata. Le scansioni elaborate prima di questa versione
+prendono le coordinate alla prossima rielaborazione.
 
 **Quando l'OCR non legge.** Servizio assente (build senza `tessdata`, worker che non
 parte) o richiesta fallita: il testo nativo delle altre pagine resta, ma il documento non

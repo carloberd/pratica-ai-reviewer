@@ -384,17 +384,17 @@ L'ordine è questo: il punto 1 toglie la maggior parte delle occasioni di sbagli
 | 5b | Date del revisore non normalizzate | ✅ PR #27 |
 | 6 | Ancore CLASS costruite su nomi propri | ✅ PR #29 |
 
-## Resta aperto: la selezione presa con l'OCR
+## Risolto: la selezione presa con l'OCR
 
-Segnalato dal revisore il 18/09 e verificato sul codice e sull'export (poscritto qui sopra). Non è il flusso di revisione: sono tre difetti distinti, in fila sullo stesso gesto.
+Segnalato dal revisore il 18/09 e verificato sul codice e sull'export (poscritto qui sopra). Non era il flusso di revisione: erano tre difetti distinti, in fila sullo stesso gesto, corretti in tre PR nell'ordine in cui erano stati messi.
 
 | # | Problema | Dove | Esito |
 |---|---|---|---|
 | A | L'area disegnata su una pagina che ha il testo viene comunque ri-letta a OCR: 7 selezioni su 50 perdono ogni posizione, 13 su 50 perdono gli offset | `pdf-viewer.tsx:211` | ✅ PR #32 |
 | B | Ripulire una parola letta male cancella la selezione: il valore corretto non coincide più col testo selezionato | `field-edits.ts:54`, `evidence.ts:100`, `field-editor.tsx:71` | ✅ PR #33 |
-| C | Le righe di una pagina letta a OCR non hanno coordinate: 10 selezioni su 11 restano senza posizione e nessuna regola nasce da una scansione | `extract/text.ts:84`, `ocr-worker.ts` | ⏳ da fare (3) |
+| C | Le righe di una pagina letta a OCR non hanno coordinate: 10 selezioni su 11 restano senza posizione e nessuna regola nasce da una scansione | `extract/text.ts:84`, `ocr-worker.ts` | ✅ PR #34 |
 
-In ordine: **(1)** risolvere l'area sul text layer, **(2)** conservare la selezione a chi ripulisce un OCR, **(3)** far restituire all'OCR le coordinate delle parole.
+L'ordine era questo, ed è stato rispettato: **(1)** l'area legge il text layer, che toglie la maggior parte delle occasioni di sbagliare; **(2)** ripulire un OCR non cancella più la selezione, che salva quelle che restano; **(3)** l'OCR restituisce le coordinate delle righe, che riapre l'apprendimento sulle scansioni.
 
 ### ✅ Risolto — PR #32, `bugfix/area-pick-reads-text-layer`
 
@@ -421,3 +421,15 @@ Quello che si salva è **l'etichetta**: l'evidenza porta adesso `textCorrected` 
 **Quello che resta aperto:** sulle scansioni gli offset spesso non ci saranno comunque, perché le righe della pagina non hanno coordinate e il testo del ritaglio non coincide con quello della pagina. È il punto C, e questa correzione da sola non lo copre: senza il C la selezione si conserva, ma resta muta per il learner.
 
 Verifiche: gate completo verde (725 test); `tests/shared-pick-cleanup.test.ts` (9 test, valori verbatim dall'export: `29 O7 2026`, `FRAITA (MAB)`) e 3 test nuovi in `tests/field-edits.test.ts` — la lettura sistemata che tiene la selezione, il valore diverso che la perde lo stesso, il testo selezionato che non ha eccezioni — più il test della 0015, fixture rigenerata, README aggiornato. Non provato nell'app: serve una scansione, un'area letta male e una parola sistemata a mano.
+
+### ✅ Risolto — PR #34, `bugfix/ocr-returns-word-boxes`
+
+Le righe di una pagina letta con l'OCR hanno adesso le **coordinate**. `tesseract.js` le restituisce già — il motore chiedeva solo il testo e buttava via la struttura — in pixel dell'immagine; la matrice con cui la pagina disegna quell'immagine le porta nelle stesse unità di pagina delle righe del text layer.
+
+La matrice si ricostruisce seguendo la lista degli operatori di pdf.js: `save`/`restore` sono la pila, `transform` la moltiplica, un form XObject apre una parentesi con la sua, e quando l'immagine viene disegnata la matrice corrente è quella che manda il quadrato unitario dove la pagina la mostra (`src/main/extract/page-placement.ts`). Si mappano tutti e quattro gli angoli, non due: una scansione girata ha gli assi scambiati, e due soli angoli darebbero un rettangolo al contrario. Dove la matrice non si ricostruisce la riga resta senza riquadro, com'era prima: **nessuna posizione è meglio di una indovinata**.
+
+Con le righe dotate di riquadro `locatePick` torna a lavorare per sovrapposizione anche sulle scansioni: il riquadro disegnato tocca delle righe, e quelle righe sono una posizione — anche quando il testo del ritaglio e quello della pagina non coincidono, che è la norma, perché sono due letture diverse della stessa area. È quello che toglieva la posizione a 10 selezioni su 11 delle scansioni dell'export.
+
+**Quello che resta aperto:** gli offset dentro la riga restano legati a un riscontro esatto del testo, quindi su una scansione di solito non ci saranno, e `deriveAnchor` senza offset non impara. Il riquadro da solo dà la riga, non la colonna. Il passo dopo — se servirà — è confrontare le parole del ritaglio con quelle della riga, che le coordinate adesso permettono. E vale da qui in avanti: le scansioni già a database prendono le coordinate alla prossima rielaborazione.
+
+Verifiche: gate completo verde (734 test); `tests/extract-page-placement.test.ts` (7 test sulla matrice: pagina intera, mezza pagina, scansione girata, riquadro schiacciato, composizione) e `tests/extract-ocr-lines.test.ts` (2 test sull'OCR vero di `durc-scansionato.pdf`: ogni riga dentro la pagina e nell'ordine giusto, e una selezione ad area che si ritrova per sovrapposizione con un testo che non c'entra). Non provato nell'app: serve rielaborare una scansione e disegnarci sopra un'area.
