@@ -77,6 +77,31 @@ Conseguenza: le 9 regole `EXTRACTION_ANCHOR|TEMPLATE` e le 8 `TEMPLATE_TYPE` **n
 
 Va normalizzato il fingerprint prima di guardare i volumi: tenere solo le etichette ricorrenti (intestazioni, label di campo), mascherando numeri, date e nomi propri.
 
+> **Corretto durante il fix.** La diagnosi qui sopra era imprecisa su un punto: il mascheramento c'era già — `templateLine` riduceva le lettere a `A` e le cifre a `9`. Non bastava, perché quello che resta dopo la maschera — *quante* parole ha la riga e *quanti* gruppi di cifre — è ancora il dato, e l'hash copriva ogni riga della pagina. Due visure della stessa CCIAA divergono su tre righe su otto:
+>
+> ```
+> A A A.A.A.A.              contro  A.A. A A                 (ragione sociale)
+> A A A A (A) A A A 9 A 9   contro  A A A A (A) A A 9/A A 9  (indirizzo)
+> A A A' A A' A A           contro  A A A' A A' A            (forma giuridica)
+> ```
+>
+> La conclusione — impronta di documento e non di modulo, scope TEMPLATE inutilizzabile — resta valida.
+
+### ✅ Risolto — PR #24, `bugfix/template-fingerprint-over-specific`
+
+Nuovo algoritmo `reviewer/pdfjs-first-page-labels/sha256-16` in `src/shared/template-fingerprint.ts`:
+
+- si guardano le prime 20 righe non vuote (la testata; il corpo cambia a ogni documento e resta fuori);
+- di ogni riga si tiene l'**etichetta**, cioè quello che precede i due punti, la tabulazione o lo spazio di colonna: `Cliente: Beta Immobiliare S.p.A.` → `cliente`, `Indirizzo Sede legale····ROVIGO (RO) VIA...` → `indirizzo sede legale`. Senza separatore si tiene la riga intera, sempre senza le parole con cifre: `FATTURA n. 114/2026 del 08/09/2026` → `fattura del`;
+- le righe si ordinano e si deduplicano: una riga di dati che scivola in mezzo alla testata non cambia più l'impronta;
+- sotto le 3 righe di etichette l'impronta resta `null`, come già per le scansioni senza OCR.
+
+**Limite noto, dichiarato nel codice e nei test:** un nome proprio su una riga tutta sua, senza etichetta davanti — la ragione sociale in testa a una visura — resta dentro. Due visure della stessa camera di commercio ma di aziende diverse hanno ancora impronte diverse. Due estrazioni della *stessa* azienda, che è il caso che si ripete davvero in archivio, adesso coincidono. Il resto è materia dello scope CLASS.
+
+Migrazione `0013_template_fingerprint_labels.sql`: le impronte vecchie non sono confrontabili con le nuove, quindi `documents.template_fingerprint` e `learning_events.template_fingerprint` si azzerano (l'elaborazione e l'export XLSX le ricalcolano dalla copia in cache), e le regole di scope TEMPLATE — appese a impronte che nessun documento avrà più — chiudono `REJECTED` con la loro riga in `learning_actions`.
+
+Verifiche: `pnpm typecheck && pnpm lint && pnpm test` (644 test) e `pnpm build` verdi; 18 test in `tests/shared-template-fingerprint.test.ts` e il test della 0013 in `tests/db-migrations.test.ts`. Non provato nell'app: serve un riscaricamento dei documenti per vedere le impronte nuove in `learning-view`.
+
 C'è anche un caso di overfitting già visibile in una regola CLASS:
 
 ```
