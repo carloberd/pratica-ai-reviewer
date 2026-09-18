@@ -10,6 +10,43 @@ token Google cifrato nel portachiavi di sistema. Nessun dato esce dalla macchina
 
 ---
 
+## Perché esiste, e dove va a finire
+
+L'obiettivo è **un tool di revisione che impari da solo**: ogni correzione del revisore
+deve lasciare qualcosa al motore, così che il documento dopo arrivi già più giusto di
+quello prima. Non è un annotatore con sopra qualche euristica — è l'apprendimento la
+ragione del progetto, e il resto (Drive, OCR, la scheda di revisione) è l'impalcatura
+che serve a raccoglierlo. Quello che il learner impara sta in [Apprendimento
+locale](#apprendimento-locale).
+
+Il percorso è in tre tempi, e conviene tenerli distinti perché chiedono cose diverse al
+codice.
+
+**Adesso: costruire il dataset.** L'app è in mano a un collega che sta annotando un
+corpus ampio di documenti reali — tipo assegnato a mano, campi estratti verificati uno
+per uno. Il prodotto di questa fase non è l'app: è il **dataset annotato corretto**, che
+esce da [«Esporta il dataset»](#export-del-dataset-annotato). Ne segue una priorità
+concreta: fra una funzione che fa imparare di più e una che rende l'annotazione più
+veloce e meno ambigua, in questa fase vince la seconda, e **nessuna delle due vale una
+riga di dato sbagliata nell'export**. Un valore annotato male è peggio di un campo
+lasciato vuoto: il vuoto si vede, l'errore no, e va a finire nel training.
+
+**Poi: misurare l'apprendimento su quel corpus.** Finché il dataset non c'è, ogni
+misura del learner gira su fixture scritte a mano e prova solo che il codice fa quello
+che il test dice. Le tre modalità del learner (`LEARNING`, `FROZEN`, `BASELINE`)
+esistono apposta per il confronto pre/post su documenti mai visti: valgono quando ci
+sono i documenti veri da passarci.
+
+**Alla fine: portare il tool dentro pratica-ai**, e lì usare un LLM dove l'euristica
+non arriva — sui documenti senza un modulo che si ripete, o per proporre l'ancora che il
+learner da solo non ricava. L'innesto è già previsto e non è una riscrittura: vedi [Fuori
+ambito, e dove si innesterebbe](#fuori-ambito-e-dove-si-innesterebbe). Due conseguenze
+sul codice di oggi: quello che il learner impara va tenuto in una forma **esportabile e
+leggibile fuori da qui** (regole, non pesi), e il confine fra «cosa ho imparato» e «come
+lo applico» va tenuto netto, perché è lì che un LLM si infila.
+
+---
+
 ## Requisiti
 
 - Node 22 e pnpm 10+ (`corepack enable` se pnpm non c'è).
