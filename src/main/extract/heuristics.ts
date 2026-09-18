@@ -1,3 +1,4 @@
+import { DATE_DMY, DATE_ISO, findDate } from '@shared/date-value'
 import { fieldSemanticType, type RegistryFieldName } from '@shared/fields'
 import type { BoundingBox } from '@shared/types'
 import { mentionsReference, precededByReference } from './reference-context'
@@ -32,6 +33,8 @@ export interface FieldCandidate {
   }
 }
 
+export { findDate } from '@shared/date-value'
+
 /** Minuscole, senza accenti, senza punteggiatura: solo per cercare le keyword. */
 export function fold(text: string): string {
   return text
@@ -46,50 +49,6 @@ export function fold(text: string): string {
 // ---------------------------------------------------------------------------
 // Date
 // ---------------------------------------------------------------------------
-
-const DATE_DMY = /\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4}|\d{2})\b/
-const DATE_ISO = /\b(\d{4})-(\d{2})-(\d{2})\b/
-
-function isRealDate(year: number, month: number, day: number): boolean {
-  if (month < 1 || month > 12 || day < 1 || day > 31) return false
-  const date = new Date(Date.UTC(year, month - 1, day))
-  return (
-    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
-  )
-}
-
-function pad(value: number, size = 2): string {
-  return String(value).padStart(size, '0')
-}
-
-/** Prima data della riga, normalizzata a `yyyy-mm-dd`. */
-export function findDate(line: string): { raw: string; value: string } | null {
-  const iso = DATE_ISO.exec(line)
-  if (iso) {
-    const [raw, y, m, d] = iso
-    const year = Number(y)
-    const month = Number(m)
-    const day = Number(d)
-    if (isRealDate(year, month, day)) {
-      return { raw, value: `${pad(year, 4)}-${pad(month)}-${pad(day)}` }
-    }
-  }
-
-  const dmy = DATE_DMY.exec(line)
-  if (dmy) {
-    const [raw, d, m, y] = dmy
-    const day = Number(d)
-    const month = Number(m)
-    let year = Number(y)
-    // Anno a due cifre: il pivot a 69 è quello di POSIX, «26» è il 2026.
-    if (y && y.length === 2) year = year <= 69 ? 2000 + year : 1900 + year
-    if (isRealDate(year, month, day)) {
-      return { raw, value: `${pad(year, 4)}-${pad(month)}-${pad(day)}` }
-    }
-  }
-
-  return null
-}
 
 // ---------------------------------------------------------------------------
 // Importi
