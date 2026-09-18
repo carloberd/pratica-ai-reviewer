@@ -13,7 +13,8 @@
       "!release",
       "!node_modules",
       "!resources/registry",
-      "!tests/fixtures"
+      "!tests/fixtures",
+      "!docs/exports"
     ]
   },
   "formatter": {
