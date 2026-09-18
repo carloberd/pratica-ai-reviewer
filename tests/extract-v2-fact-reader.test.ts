@@ -530,6 +530,28 @@ describe('esito complessivo', () => {
     })
   })
 
+  it('un campo del profilo che l’ontologia non descrive resta nel run, vuoto', () => {
+    const registry = registryOf(
+      { 'document.issue_date': { type: 'date', labels: ['data'] } },
+      { required_fields: ['document.issue_date', 'ghost.field'] }
+    )
+    const { result, fact } = extract(registry, [page(['Data: 12/09/2026'])])
+
+    expect(fact('ghost.field')).toMatchObject({
+      role: 'required',
+      value: null,
+      confidence: 0,
+      evidence: [],
+      reviewStatus: 'MISSING',
+      // Non cercato, non «assente dal documento»: la differenza sta qui.
+      validationErrors: ['UNKNOWN_FIELD']
+    })
+    expect(result.missingRequired).toEqual(['ghost.field'])
+    expect(result.conflicts).toEqual(['UNKNOWN_FIELD:ghost.field'])
+    // Un obbligatorio mai cercato non può lasciare la copertura piena.
+    expect(result.coverage).toBe(0.5)
+  })
+
   it('usa le keyword v1 dei campi legacy mappati: «Data di emissione» non è negli hint v2', () => {
     const registry = testRegistryV2()
     expect(registry.hints('document.issue_date').map((h) => h.toLowerCase())).not.toContain(
