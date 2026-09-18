@@ -97,6 +97,31 @@ export function findDate(line: string): { raw: string; value: string } | null {
 const MONEY =
   /(€\s*)?(\d{1,3}(?:[.\s]\d{3})+(?:,\d{1,2})?|\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+,\d{1,2}|\d+\.\d{1,2}|\d+)(\s*(?:€|eur|euro))?/gi
 
+/** Le stesse due forme di `findDate`, globali: qui servono tutte le date, non la prima. */
+const DATE_DMY_ALL = new RegExp(DATE_DMY.source, 'g')
+const DATE_ISO_ALL = new RegExp(DATE_ISO.source, 'g')
+
+/**
+ * Gli intervalli `[inizio, fine)` che una data vera occupa nella riga.
+ *
+ * Le cifre di una data non sono un importo: in «Totale al 31.12.2025 di 1.234,56» il
+ * pattern degli importi aggancia «31.12», che ha la parte decimale e passerebbe la
+ * guardia sul numero nudo, e l'importo vero non verrebbe mai letto. Solo le date che
+ * esistono coprono le loro cifre: «31.02.2026» non è una data, e «45.13» resta un
+ * numero come un altro.
+ */
+function dateSpans(line: string): Array<[number, number]> {
+  const spans: Array<[number, number]> = []
+  for (const pattern of [DATE_ISO_ALL, DATE_DMY_ALL]) {
+    pattern.lastIndex = 0
+    for (let match = pattern.exec(line); match !== null; match = pattern.exec(line)) {
+      if (findDate(match[0]) === null) continue
+      spans.push([match.index, match.index + match[0].length])
+    }
+  }
+  return spans
+}
+
 /**
  * Da `€ 12.840,50`, `12.840,50 EUR` o `1.234,56` a `12840.50`.
  *
@@ -133,13 +158,18 @@ export function parseMoney(raw: string): string | null {
  * Primo importo della riga.
  *
  * Un numero nudo non basta: «2026» è un anno, non un totale. Serve un simbolo di
- * valuta, una parte decimale o il raggruppamento delle migliaia.
+ * valuta, una parte decimale o il raggruppamento delle migliaia. E le cifre di una data
+ * non contano: sono l'unico numero della riga che imita un importo senza essere un
+ * candidato.
  */
 export function findMoney(line: string): { raw: string; value: string } | null {
+  const dates = dateSpans(line)
   MONEY.lastIndex = 0
   for (let match = MONEY.exec(line); match !== null; match = MONEY.exec(line)) {
     const [raw, prefix, number, suffix] = match
     if (!number) continue
+    const start = match.index + (prefix?.length ?? 0)
+    if (dates.some(([from, to]) => start < to && from < start + number.length)) continue
     const hasCurrency = Boolean(prefix || suffix)
     const hasDecimals = /[.,]\d{1,2}$/.test(number)
     const hasGrouping = /\d[.\s,]\d{3}/.test(number)

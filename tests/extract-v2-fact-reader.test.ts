@@ -228,6 +228,11 @@ describe('normalizzazione dei valori', () => {
     expect(readMoney(' 2026', 40)).toBeNull()
   })
 
+  it('una data prima dell’importo non prende il suo posto', () => {
+    expect(readMoney(' al 31.12.2025 di 1.234,56', 40)).toBe('1234.56')
+    expect(readMoney(' del 08/09/2026', 40)).toBeNull()
+  })
+
   it('interi senza separatori delle migliaia, e niente decimali', () => {
     expect(readInteger(' 1.250 colli', 40)).toBe('1250')
     expect(readInteger(': 12', 40)).toBe('12')
