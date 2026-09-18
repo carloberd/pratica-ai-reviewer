@@ -9,6 +9,7 @@ import { createRepository } from '../src/main/db/repository'
 import type { OcrService } from '../src/main/extract/ocr'
 import { createOcrEngine } from '../src/main/extract/ocr-engine'
 import { extractText } from '../src/main/extract/text'
+import type { ExtractionRegistryV2 } from '../src/main/extract/v2/profile-loader'
 import { updateFieldValue } from '../src/main/field-edits'
 import {
   createDocumentProcessor,
@@ -397,6 +398,47 @@ describe('motore v2 — PDF con testo nativo', () => {
         runnerUp: null
       }
     })
+    repo.close()
+  })
+})
+
+describe('motore v2 — un campo del profilo che l’ontologia non descrive', () => {
+  /** Lo stesso registry, col profilo della fattura che chiede un campo inesistente. */
+  function registryWithGhostField(): ExtractionRegistryV2 {
+    const base = testRegistryV2()
+    const withGhost = (documentType: string) => {
+      const profile = base.profile(documentType)
+      if (!profile || documentType !== 'accounting.fattura') return profile
+      return { ...profile, required_fields: [...profile.required_fields, 'ghost.field'] }
+    }
+    return { ...base, profile: withGhost, baseProfile: withGhost }
+  }
+
+  it('resta nel run, vuoto e fra gli obbligatori mancanti', async () => {
+    const repo = createTestRepository()
+    const id = seed(repo, 'fattura-nativa.pdf', PDF)
+    const process = createDocumentProcessor({
+      repo,
+      registry,
+      engines: V2,
+      classifierConfigV2: testClassifierConfigV2(),
+      extractionRegistryV2: registryWithGhostField(),
+      legacyFieldMap: testLegacyFieldMap()
+    })
+
+    await process(inputFor(id, 'fattura-nativa.pdf', PDF))
+
+    const ghost = repo.fields.listForDocument(id).find((field) => field.name === 'ghost.field')
+    expect(ghost).toMatchObject({ value: null, review_status: 'MISSING', role: 'required' })
+
+    const [run] = repo.extractionRuns.listForDocument(id)
+    expect(JSON.parse(run!.missing_required_json!)).toEqual(['ghost.field'])
+    expect(JSON.parse(run!.conflicts_json!)).toEqual(['UNKNOWN_FIELD:ghost.field'])
+    // Prima il campo spariva dal run: copertura 1,0 su un obbligatorio mai cercato.
+    expect(JSON.parse(run!.metrics_json!)).toMatchObject({ coverage: 0.5, totalFields: 16 })
+    expect(repo.getReviewDocument(id)!.warnings).toContain(
+      'Campo obbligatorio senza evidenza: ghost.field.'
+    )
     repo.close()
   })
 })
