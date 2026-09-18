@@ -45,12 +45,38 @@ export interface ClassExtractionProfile {
   field_cardinality?: Record<string, Cardinality>
 }
 
+/**
+ * ## Come il motore ha letto il valore
+ *
+ * Le due letture che l'estrazione sa fare oggi: il valore subito dopo l'etichetta sulla
+ * stessa riga, oppure in testa alla riga successiva quando quella dell'etichetta finisce
+ * lì. Non c'è altro, e il tipo non promette altro: un vocabolario che elenca modi di
+ * leggere che nessuno produce diventa documentazione falsa il giorno dopo. Chi accenderà
+ * una lettura nuova allargherà questo tipo insieme al codice che la fa.
+ */
+export type ExtractionStrategy = 'LABEL_STRICT' | 'NEXT_LINE'
+
+/**
+ * ## L'ambito della regola appresa che ha letto il valore
+ *
+ * Le stesse due parole di `LearningRuleScope`, riscritte qui perché il contratto
+ * dell'estrazione sta sotto a quello del learner e importarlo girerebbe in tondo. Che le
+ * due liste restino la stessa lista non è affidato alla buona volontà: il lettore dei fatti
+ * assegna un `LearningRuleScope` a questo campo, quindi il giorno in cui una delle due
+ * cresce senza l'altra è `tsc` ad accorgersene.
+ */
+export type ExtractionRuleScope = 'TEMPLATE' | 'CLASS'
+
 export interface ExtractionEvidenceV2 {
   page: number
   text: string
   bbox?: { x: number; y: number; w: number; h: number }
   /** La regola appresa che ha trovato l'etichetta; assente per le etichette del registry. */
   ruleId?: string
+  /** Con quale delle due letture il valore è stato preso. */
+  strategy?: ExtractionStrategy
+  /** L'ambito della regola in `ruleId`; assente quando l'etichetta è del registry. */
+  ruleScope?: ExtractionRuleScope
 }
 
 export interface FieldCandidateV2 {

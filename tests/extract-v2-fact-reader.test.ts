@@ -633,3 +633,60 @@ describe('esito complessivo', () => {
     expect(values['document.number']).toBeNull()
   })
 })
+
+/**
+ * La provenienza non cambia niente di quello che viene proposto: è quello che resta scritto
+ * accanto alla proposta per poterla spiegare dopo. Serve alla misura della fase 2, dove un
+ * numero deludente va smontato per capire quale parte l'ha prodotto.
+ */
+describe('la provenienza della lettura', () => {
+  const learned = (fieldId: string, label: string, scope: 'TEMPLATE' | 'CLASS') => ({
+    ruleId: `rule-${label}`,
+    fieldId,
+    label,
+    relation: 'same-line' as const,
+    scope
+  })
+
+  it('dice con quale delle due letture il valore è stato preso', () => {
+    const registry = registryOf({
+      'issuer.name': { type: 'string', labels: ['emittente'] },
+      'recipient.name': { type: 'string', labels: ['destinatario'] }
+    })
+    const { fact } = extract(registry, [
+      page(['Emittente: Alfa S.r.l.', 'Destinatario:', 'Beta Costruzioni S.p.A.'])
+    ])
+    expect(fact('issuer.name').evidence[0]).toMatchObject({ strategy: 'LABEL_STRICT' })
+    expect(fact('recipient.name').evidence[0]).toMatchObject({ strategy: 'NEXT_LINE' })
+  })
+
+  it('un’etichetta del registry non ha un ambito da dichiarare', () => {
+    const registry = registryOf({ 'issuer.name': { type: 'string', labels: ['emittente'] } })
+    const { fact } = extract(registry, [page(['Emittente: Alfa S.r.l.'])])
+    // Dietro non c'è nessuna regola appresa: scriverci `CLASS` farebbe sembrare imparato
+    // quello che il registry sapeva già, e la misura conterebbe un merito che non c'è.
+    expect(fact('issuer.name').evidence[0]?.ruleScope).toBeUndefined()
+  })
+
+  it('un’etichetta imparata porta l’ambito con cui la regola valeva', () => {
+    const registry = registryOf({ 'money.total': { type: 'money', labels: [] } })
+    const scopeOf = (scope: 'TEMPLATE' | 'CLASS') =>
+      extractFactsV2({
+        documentType: 'test.tipo',
+        pages: [page(['Saldo EUR 900,00'])],
+        registry,
+        learnedLabels: [learned('money.total', 'saldo', scope)]
+      }).facts[0]?.evidence[0]
+    expect(scopeOf('TEMPLATE')).toMatchObject({ ruleId: 'rule-saldo', ruleScope: 'TEMPLATE' })
+    expect(scopeOf('CLASS')).toMatchObject({ ruleId: 'rule-saldo', ruleScope: 'CLASS' })
+  })
+
+  it('su un campo ripetuto ogni riga porta la sua', () => {
+    const registry = registryOf({ line_items: { type: 'string', labels: ['voce'], many: true } })
+    const { fact } = extract(registry, [page(['Voce: Fornitura', 'Voce:', 'Posa in opera'])])
+    expect(fact('line_items').evidence.map((e) => e.strategy)).toEqual([
+      'LABEL_STRICT',
+      'NEXT_LINE'
+    ])
+  })
+})
