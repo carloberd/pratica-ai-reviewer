@@ -1,3 +1,4 @@
+import { findTextualDate } from '@shared/date-value'
 import type {
   ClassExtractionProfile,
   ExtractedFactV2,
@@ -175,22 +176,6 @@ function labelsFor(
 
 type ReadMode = 'same-line' | 'next-line'
 
-const MONTHS = [
-  'gennaio',
-  'febbraio',
-  'marzo',
-  'aprile',
-  'maggio',
-  'giugno',
-  'luglio',
-  'agosto',
-  'settembre',
-  'ottobre',
-  'novembre',
-  'dicembre'
-]
-const TEXT_DATE = new RegExp(`\\b(\\d{1,2})\\s+(${MONTHS.join('|')})\\s+(\\d{4})\\b`, 'i')
-
 /** Primo match che comincia entro `window` caratteri. */
 function within(text: string, raw: string | undefined, window: number): boolean {
   if (!raw) return false
@@ -203,17 +188,8 @@ export function readDate(text: string, window: number): string | null {
   const numeric = findDate(text)
   if (numeric && within(text, numeric.raw, window)) return numeric.value
 
-  const textual = TEXT_DATE.exec(text)
-  if (textual && textual.index <= window) {
-    const day = Number(textual[1])
-    const month = MONTHS.indexOf((textual[2] ?? '').toLowerCase()) + 1
-    const year = Number(textual[3])
-    const date = new Date(Date.UTC(year, month - 1, day))
-    if (date.getUTCMonth() === month - 1 && date.getUTCDate() === day) {
-      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    }
-  }
-  return null
+  const textual = findTextualDate(text)
+  return textual && textual.index <= window ? textual.value : null
 }
 
 export function readMoney(text: string, window: number): string | null {

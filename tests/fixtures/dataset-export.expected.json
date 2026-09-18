@@ -479,7 +479,7 @@
           "label": "Data emissione",
           "role": "core",
           "cardinality": "one",
-          "value": "12/09/2026",
+          "value": "2026-09-12",
           "origin": "REVIEWER",
           "evidence": null,
           "pick": {
@@ -607,7 +607,7 @@
           "item": null,
           "kind": "FILLED",
           "before": null,
-          "after": "12/09/2026",
+          "after": "2026-09-12",
           "pick": {
             "method": "TEXT_SELECTION",
             "page": 1,
