@@ -39,7 +39,7 @@ cambiano cosa viene proposto.
 | 2 | `inferExactValuePick` (valore digitato → ancora) | +96 | **Prendere** — è il pezzo giusto per questa fase |
 | 3 | Fix `documentEntityWords` (id vs `name`) | +3 | **Prendere** — è un bug fix nascosto nel diff |
 | 4 | Parsing JSON difensivo (`parseObject`, `parseNumbers`, `parseLines`) | ~40 | **Prendere** — indurimento, zero comportamento |
-| 5 | Colonne di provenienza (`strategy`, `candidate_score`, `rule_scope`) | ~30 | **Prendere** — attrezzatura per misurare dopo |
+| 5 | Colonne di provenienza (`strategy`, `rule_scope`) | ~30 | **Prendere** — attrezzatura per misurare dopo |
 | 6 | Rollback atomico + azione `REVERT` | ~120 | **Prendere** — governo, non estrazione |
 | 7 | `ruleReliability()` bayesiana | +8 | **Prendere solo la funzione**, non i pesi |
 | 8 | Ranking online pesato (`candidateRank`) | ~60 | **Rimandare** — pesi inventati |
@@ -83,11 +83,19 @@ regole che funzionano solo su un cliente.
 **4.** Parsing difensivo su `pattern_json`, `numbers_json` e `lines_json`: un JSON corrotto
 disabilita la singola regola invece di far cadere la lettura.
 
-**5. Le colonne di provenienza valgono più adesso che quando le hanno scritte.** Tre
-colonne nullable, nessun cambio di comportamento, e sono l'unica cosa che renderà
-analizzabile la misura della fase 2: senza `rule_scope` e `candidate_score`, quando il
-pre/post sul corpus reale darà un numero deludente non si saprà *quale* parte l'ha
-prodotto.
+**5. Le colonne di provenienza valgono più adesso che quando le hanno scritte.** Colonne
+nullable, nessun cambio di comportamento, e sono l'unica cosa che renderà analizzabile la
+misura della fase 2: senza `rule_scope` e `extraction_strategy`, quando il pre/post sul
+corpus reale darà un numero deludente non si saprà *quale* parte l'ha prodotto. Si pagano
+adesso perché non sono recuperabili dopo: le evidenze già scritte restano a NULL per sempre,
+e il corpus si sta riempiendo.
+
+Delle tre del ramo se ne prendono due. `candidate_score` è il punteggio del ranking pesato,
+che è il pezzo **8**, rimandato: oggi fra due letture decide un confronto a cascata
+(livello dell'etichetta, lunghezza, stessa riga, validatori, ordine nel documento), non un
+numero. L'unico valore che ci si potrebbe scrivere subito è la confidence, che ha già la sua
+colonna — e una colonna che ne ripete un'altra non è provenienza, è rumore. La apre la PR
+che accende il ranking, che è anche la prima ad avere qualcosa da scriverci.
 
 **6. Il rollback** perché oggi «scarta» è irreversibile: un clic sbagliato perde una regola
 per sempre, senza rete. È append-only e non tocca l'estrazione. Cambia però una promessa
@@ -175,7 +183,7 @@ Sei PR piccole, in quest'ordine, ognuna coi gate verdi prima della successiva.
 | 1 | Firma normalizzata + campo nel manifest di export | `0016` | fatta (#35) |
 | 2 | `inferExactValuePick` | no | fatta (#36) |
 | 3 | Fix `documentEntityWords` + parsing difensivo | no | fatta (#37) |
-| 4 | Colonne di provenienza | sì | da fare |
+| 4 | Colonne di provenienza | `0017` | fatta (#38) |
 | 5 | Rollback `REVERT` | no | da fare |
 | 6 | `ruleReliability` + cablaggio in `LearnedLabel`, ranking spento | no | da fare |
 
