@@ -165,7 +165,7 @@ describe('precompilazione', () => {
         'currency'
       ],
       pages: fattura,
-      fromOcr: false
+      ocrPages: []
     })
 
     const byName = new Map(candidates.map((candidate) => [candidate.name, candidate]))
@@ -188,7 +188,7 @@ describe('precompilazione', () => {
     const candidates = prefillFields({
       fields: ['taxable_amount', 'total_amount'],
       pages: fattura,
-      fromOcr: false
+      ocrPages: []
     })
     const byName = new Map(candidates.map((c) => [c.name, c]))
     expect(byName.get('taxable_amount')?.evidence.text).toContain('Totale imponibile')
@@ -199,7 +199,7 @@ describe('precompilazione', () => {
     const candidates = prefillFields({
       fields: ['policy_number', 'premium_amount'],
       pages: fattura,
-      fromOcr: false
+      ocrPages: []
     })
     expect(candidates).toEqual([])
   })
@@ -208,21 +208,37 @@ describe('precompilazione', () => {
     const withContext = prefillFields({
       fields: ['issue_date'],
       pages: fattura,
-      fromOcr: false
+      ocrPages: []
     })
     expect(withContext[0]?.confidence).toBe(CONFIDENCE_WITH_CONTEXT)
 
     const regexOnly = prefillFields({
       fields: ['issue_date'],
       pages: [page(['Documento emesso in data odierna', '08/09/2026'])],
-      fromOcr: false
+      ocrPages: []
     })
     expect(regexOnly[0]?.confidence).toBe(CONFIDENCE_REGEX_ONLY)
   })
 
   it('toglie 0,10 di confidence quando il testo viene da OCR', () => {
-    const candidates = prefillFields({ fields: ['issue_date'], pages: fattura, fromOcr: true })
+    const candidates = prefillFields({ fields: ['issue_date'], pages: fattura, ocrPages: [1] })
     expect(candidates[0]?.confidence).toBe(0.75)
+  })
+
+  it('la penalità OCR è della pagina, non del documento', () => {
+    const pages = [
+      page(['FATTURA n. 114/2026 del 08/09/2026']),
+      page(['Allegato scansionato', 'Totale documento EUR 86.420,00'], 2)
+    ]
+    const candidates = prefillFields({
+      fields: ['issue_date', 'total_amount'],
+      pages,
+      ocrPages: [2]
+    })
+    const byName = new Map(candidates.map((c) => [c.name, c]))
+    // La prima pagina viene dal text layer: nessuna penalità.
+    expect(byName.get('issue_date')?.confidence).toBe(CONFIDENCE_WITH_CONTEXT)
+    expect(byName.get('total_amount')?.confidence).toBe(0.75)
   })
 
   it('porta con sé il bbox quando il text layer lo espone', () => {
@@ -235,7 +251,7 @@ describe('precompilazione', () => {
           lines: [{ text: 'del 08/09/2026', bbox: { x: 56, y: 111, w: 188, h: 11 } }]
         }
       ],
-      fromOcr: false
+      ocrPages: []
     })
     expect(candidates[0]?.evidence.bbox).toEqual({ x: 56, y: 111, w: 188, h: 11 })
   })
@@ -244,7 +260,7 @@ describe('precompilazione', () => {
     const candidates = prefillFields({
       fields: ['document_number', 'protocol_number'],
       pages: [page(['Fattura n. 114 - Prot. n. 2026/554321'])],
-      fromOcr: false
+      ocrPages: []
     })
     const byName = new Map(candidates.map((c) => [c.name, c]))
     expect(byName.get('document_number')?.value).toBe('114')
@@ -255,7 +271,7 @@ describe('precompilazione', () => {
     const candidates = prefillFields({
       fields: ['document_number'],
       pages: [page(['COMUNICAZIONE', 'Prot. n. 2026/554321 del 08/09/2026'])],
-      fromOcr: false
+      ocrPages: []
     })
     expect(candidates).toEqual([])
   })
@@ -264,7 +280,7 @@ describe('precompilazione', () => {
     const candidates = prefillFields({
       fields: ['total_amount'],
       pages: [page(['Totale da pagare al 31.12.2025: EUR 1.234,56'])],
-      fromOcr: false
+      ocrPages: []
     })
     expect(candidates[0]?.value).toBe('1234.56')
   })
@@ -273,7 +289,7 @@ describe('precompilazione', () => {
     const candidates = prefillFields({
       fields: ['total_amount'],
       pages: [page(['Descrizione lavori']), page(['Totale documento EUR 86.420,00'], 2)],
-      fromOcr: false
+      ocrPages: []
     })
     expect(candidates[0]?.evidence.page).toBe(2)
   })
