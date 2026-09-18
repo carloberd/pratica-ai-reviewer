@@ -189,13 +189,18 @@ const CODICE_FISCALE = /\b[A-Za-z]{6}\d{2}[A-Za-z]\d{2}[A-Za-z]\d{3}[A-Za-z]\b/
 const PARTITA_IVA = /\b\d{11}\b/
 /**
  * Il `\b` in testa evita che la `n` dentro «Contratto» apra un falso numero, e la
- * forma abbreviata richiede il punto (`n.`) per lo stesso motivo. Il primo pattern
- * copre «Prot. n. 2026/554321», dove sia «prot.» sia «n.» precedono il valore.
+ * forma abbreviata richiede il punto (`n.`) per lo stesso motivo. Il pattern del
+ * protocollo copre «Prot. n. 2026/554321», dove sia «prot.» sia «n.» precedono il
+ * valore.
  */
-const NUMERO_PATTERNS = [
-  /\b(?:protocollo|prot\.)\s*(?:n(?:umero)?\.?|nr\.?)?\s*[:°]?\s*([A-Za-z0-9][A-Za-z0-9/_-]{0,30})/gi,
-  /\b(?:numero|nr\.?|n\.)\s*[:°]?\s*([A-Za-z0-9][A-Za-z0-9/_-]{0,30})/gi
-]
+const PROTOCOLLO =
+  /\b(?:protocollo|prot\.)\s*(?:n(?:umero)?\.?|nr\.?)?\s*[:°]?\s*([A-Za-z0-9][A-Za-z0-9/_-]{0,30})/gi
+const NUMERO = /\b(?:numero|nr\.?|n\.)\s*[:°]?\s*([A-Za-z0-9][A-Za-z0-9/_-]{0,30})/gi
+/** «Prot. n. » subito prima di un numero: quel numero è il protocollo, e solo quello. */
+const ANNUNCIO_PROTOCOLLO = /\b(?:protocollo|prot\.?)\s*(?:n(?:umero)?\.?|nr\.?)?\s*[:°]?\s*$/i
+
+/** Quale dei due numeri si sta cercando: si leggono con pattern diversi. */
+export type NumberKind = 'document' | 'protocol'
 
 /** Codice fiscale (16 caratteri) o partita IVA (11 cifre). */
 export function findTaxCode(
@@ -212,16 +217,25 @@ export function findTaxCode(
   return null
 }
 
-/** Numero di documento o di protocollo: «prot. n. 1234/2026», «fattura n. 114». */
-export function findNumber(line: string): { raw: string; value: string } | null {
-  for (const pattern of NUMERO_PATTERNS) {
-    pattern.lastIndex = 0
-    for (let match = pattern.exec(line); match !== null; match = pattern.exec(line)) {
-      const captured = match[1]
-      // Un numero deve contenere almeno una cifra e non deve essere una data.
-      if (!captured || !/\d/.test(captured) || findDate(captured)) continue
-      return { raw: match[0], value: captured.replace(/[.,;:]+$/, '') }
-    }
+/**
+ * Numero di documento o di protocollo: «fattura n. 114», «prot. n. 1234/2026».
+ *
+ * I due non si leggono con lo stesso pattern, perché una riga può portarli entrambi:
+ * «Fattura n. 114 - Prot. n. 2026/554321» dà 114 al numero documento e 2026/554321 al
+ * protocollo. Il protocollo si legge solo dove «prot.»/«protocollo» lo annuncia — è
+ * l'unica cosa che lo distingue da un numero qualsiasi — e il numero documento salta i
+ * numeri annunciati così: un protocollo non è il numero del documento, e un campo
+ * vuoto costa meno di un campo sbagliato.
+ */
+export function findNumber(line: string, kind: NumberKind): { raw: string; value: string } | null {
+  const pattern = kind === 'protocol' ? PROTOCOLLO : NUMERO
+  pattern.lastIndex = 0
+  for (let match = pattern.exec(line); match !== null; match = pattern.exec(line)) {
+    const captured = match[1]
+    // Un numero deve contenere almeno una cifra e non deve essere una data.
+    if (!captured || !/\d/.test(captured) || findDate(captured)) continue
+    if (kind === 'document' && ANNUNCIO_PROTOCOLLO.test(line.slice(0, match.index))) continue
+    return { raw: match[0], value: captured.replace(/[.,;:]+$/, '') }
   }
   return null
 }
@@ -442,9 +456,8 @@ function extractValue(
   if (semantic === 'money') return findMoney(line)?.value ?? null
 
   if (name === 'tax_code') return findTaxCode(line, keyword !== null)?.value ?? null
-  if (name === 'document_number' || name === 'protocol_number') {
-    return findNumber(line)?.value ?? null
-  }
+  if (name === 'document_number') return findNumber(line, 'document')?.value ?? null
+  if (name === 'protocol_number') return findNumber(line, 'protocol')?.value ?? null
   if (keyword === null) return null
   return findLabeledValue(line, keyword)
 }

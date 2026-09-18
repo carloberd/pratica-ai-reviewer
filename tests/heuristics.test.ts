@@ -105,14 +105,30 @@ describe('identificativi', () => {
   })
 
   it('legge numero di documento e di protocollo', () => {
-    expect(findNumber('FATTURA n. 114/2026 del 08/09/2026')?.value).toBe('114/2026')
-    expect(findNumber('Prot. n. 2026/554321')?.value).toBe('2026/554321')
-    expect(findNumber('Documento n. CC-2026-018')?.value).toBe('CC-2026-018')
+    expect(findNumber('FATTURA n. 114/2026 del 08/09/2026', 'document')?.value).toBe('114/2026')
+    expect(findNumber('Prot. n. 2026/554321', 'protocol')?.value).toBe('2026/554321')
+    expect(findNumber('Documento n. CC-2026-018', 'document')?.value).toBe('CC-2026-018')
+    expect(findNumber('Protocollo: 554321', 'protocol')?.value).toBe('554321')
+  })
+
+  it('sulla stessa riga tiene separati i due numeri', () => {
+    const line = 'Fattura n. 114 - Prot. n. 2026/554321'
+    expect(findNumber(line, 'document')?.value).toBe('114')
+    expect(findNumber(line, 'protocol')?.value).toBe('2026/554321')
+  })
+
+  it('un protocollo non è il numero del documento', () => {
+    expect(findNumber('Prot. n. 2026/554321', 'document')).toBeNull()
+    expect(findNumber('Protocollo n. 554321', 'document')).toBeNull()
+  })
+
+  it('il protocollo si legge solo dove è annunciato come tale', () => {
+    expect(findNumber('Fattura n. 114/2026', 'protocol')).toBeNull()
   })
 
   it('non apre un numero sulla n di una parola qualsiasi', () => {
-    expect(findNumber('Contratto di consulenza')).toBeNull()
-    expect(findNumber('Nessun numero qui')).toBeNull()
+    expect(findNumber('Contratto di consulenza', 'document')).toBeNull()
+    expect(findNumber('Nessun numero qui', 'document')).toBeNull()
   })
 
   it('legge il valore che segue la propria etichetta, non i primi due punti', () => {
@@ -222,6 +238,26 @@ describe('precompilazione', () => {
       fromOcr: false
     })
     expect(candidates[0]?.evidence.bbox).toEqual({ x: 56, y: 111, w: 188, h: 11 })
+  })
+
+  it('il protocollo della riga non finisce nel numero documento', () => {
+    const candidates = prefillFields({
+      fields: ['document_number', 'protocol_number'],
+      pages: [page(['Fattura n. 114 - Prot. n. 2026/554321'])],
+      fromOcr: false
+    })
+    const byName = new Map(candidates.map((c) => [c.name, c]))
+    expect(byName.get('document_number')?.value).toBe('114')
+    expect(byName.get('protocol_number')?.value).toBe('2026/554321')
+  })
+
+  it('un documento col solo protocollo lascia vuoto il numero documento', () => {
+    const candidates = prefillFields({
+      fields: ['document_number'],
+      pages: [page(['COMUNICAZIONE', 'Prot. n. 2026/554321 del 08/09/2026'])],
+      fromOcr: false
+    })
+    expect(candidates).toEqual([])
   })
 
   it('una data nella riga del totale non diventa il totale', () => {
