@@ -148,7 +148,7 @@ function toRule(row: RuleRow): LearningRule {
     documentType: row.document_type,
     fieldId: row.field_id,
     templateFingerprint: row.template_fingerprint,
-    pattern: JSON.parse(row.pattern_json) as Record<string, unknown>,
+    pattern: parseObject(row.pattern_json),
     ruleKey: row.rule_key,
     status: row.status as LearningRuleStatus,
     positiveCount: row.positive_count,
@@ -161,6 +161,23 @@ function toRule(row: RuleRow): LearningRule {
   }
 }
 
+/**
+ * Il pattern salvato, o nessun pattern: un `pattern_json` illeggibile spegne la singola
+ * regola invece di far cadere la lettura di tutto il deposito. Senza `label` né `relation`
+ * l'ancora non trova più niente, e la regola resta lì da guardare in cronologia — che è
+ * l'esito giusto per una riga che il learner non sa più leggere.
+ */
+function parseObject(json: string): Record<string, unknown> {
+  try {
+    const value: unknown = JSON.parse(json)
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {}
+  } catch {
+    return {}
+  }
+}
+
 function toAction(row: ActionRow): LearningAction {
   return {
     id: row.id,
@@ -170,9 +187,29 @@ function toAction(row: ActionRow): LearningAction {
     before: row.before_state,
     after: row.after_state,
     detail: row.detail,
-    numbers: row.numbers_json ? (JSON.parse(row.numbers_json) as LearningActionNumbers) : null,
+    numbers: row.numbers_json ? parseNumbers(row.numbers_json) : null,
     revertsId: row.reverts_id,
     revertedAt: row.reverted_at
+  }
+}
+
+/**
+ * I numeri di un'azione, o nessuno: la cronologia è un racconto, e una riga che ha perso
+ * il supporto e la precisione si legge lo stesso senza. Si controlla anche la forma, non
+ * solo che il JSON stia in piedi, perché `support` finisce in una frase e un `undefined`
+ * di lì passerebbe fino a schermo.
+ */
+function parseNumbers(json: string): LearningActionNumbers | null {
+  try {
+    const value: unknown = JSON.parse(json)
+    if (typeof value !== 'object' || value === null) return null
+    const numbers = value as Partial<LearningActionNumbers>
+    return typeof numbers.support === 'number' &&
+      (numbers.precision === null || typeof numbers.precision === 'number')
+      ? { support: numbers.support, precision: numbers.precision }
+      : null
+  } catch {
+    return null
   }
 }
 
