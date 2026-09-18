@@ -868,8 +868,11 @@ sospesa è una decisione di una persona.
 **Nell'estrazione** le etichette delle regole attive del tipo — di tipo, o del template del
 documento — passano davanti a quelle del registry, quelle di template davanti a quelle di
 tipo; i validatori restano l'ultima parola. L'evidenza del valore dice quale regola l'ha
-trovata (`evidence.rule_id`), e il run registra in `metrics_json.learning` modalità, regole
-disponibili e regole usate. Quando una regola si attiva o si sospende, i documenti in coda
+trovata (`evidence.rule_id`), con che ambito valeva (`rule_scope`) e come il valore è stato
+letto (`extraction_strategy`: dopo l'etichetta sulla stessa riga, o sulla riga successiva);
+il run registra in `metrics_json.learning` modalità, regole disponibili e regole usate. La
+provenienza non si vede in revisione e non decide niente: serve al confronto pre/post, per
+sapere quale parte ha prodotto un numero invece del solo totale. Quando una regola si attiva o si sospende, i documenti in coda
 del suo tipo si rielaborano in sottofondo, come dopo una correzione della mappa.
 
 **Cos'è «lo stesso modulo»** (`src/shared/template-fingerprint.ts`). L'impronta della `0013`

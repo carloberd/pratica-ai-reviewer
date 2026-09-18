@@ -137,6 +137,8 @@ interface LabelSource {
   ruleId?: string
   /** Assente per il registry: stessa riga, e se non c'è niente la riga successiva. */
   relation?: AnchorRelation
+  /** L'ambito della regola in `ruleId`, che l'evidenza si porta dietro come provenienza. */
+  scope?: LearningRuleScope
 }
 
 const TIER: Record<LearningRuleScope, number> = { CLASS: 1, TEMPLATE: 2 }
@@ -165,7 +167,13 @@ function labelsFor(
     const label = fold(rule.label)
     const tier = TIER[rule.scope]
     if (label.length === 0 || (byLabel.get(label)?.tier ?? -1) >= tier) continue
-    byLabel.set(label, { label, tier, ruleId: rule.ruleId, relation: rule.relation })
+    byLabel.set(label, {
+      label,
+      tier,
+      ruleId: rule.ruleId,
+      relation: rule.relation,
+      scope: rule.scope
+    })
   }
   return [...byLabel.values()].sort((a, b) => b.tier - a.tier || b.label.length - a.label.length)
 }
@@ -496,7 +504,11 @@ function candidatesForField(
             page: page.page,
             text: sameLine ? line.text : `${line.text}\n${valueLine.text}`,
             ...(bbox ? { bbox } : {}),
-            ...(source.ruleId ? { ruleId: source.ruleId } : {})
+            ...(source.ruleId ? { ruleId: source.ruleId } : {}),
+            // Come si è letto e con che ambito: l'evidenza è l'unico posto dove questo
+            // resta scritto, e serve a spiegare i numeri della misura, non a decidere.
+            strategy: sameLine ? 'LABEL_STRICT' : 'NEXT_LINE',
+            ...(source.scope ? { ruleScope: source.scope } : {})
           },
           position: { page: page.page, line: read.valueLine }
         }

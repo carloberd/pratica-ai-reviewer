@@ -301,6 +301,47 @@ describe('il motore impara dove il revisore prende la data', () => {
     })
   })
 
+  it('l’evidenza dice come il motore è arrivato al valore; la selezione del revisore no', async () => {
+    const flow = setup()
+    for (const month of ['settembre', 'ottobre'] as const) {
+      await flow.open(month)
+      flow.pickDate(month)
+      flow.save(month)
+    }
+
+    await flow.open('novembre')
+    const filled = flow.date('novembre')
+    const document = flow.repo.getReviewDocument(flow.idOf('novembre'))!
+    // La data la trova la regola di modulo, leggendo subito dopo l'etichetta sulla sua riga.
+    expect(document.evidence.find((e) => e.id === filled.evidenceId)).toMatchObject({
+      origin: 'ENGINE',
+      ruleId: flow.rule('TEMPLATE').id,
+      strategy: 'LABEL_STRICT',
+      ruleScope: 'TEMPLATE'
+    })
+
+    // Gli altri campi li legge il registry: come, sta scritto; l'ambito no, perché dietro
+    // non c'è nessuna regola appresa di cui riportarlo.
+    const fromRegistry = document.evidence.filter((e) => e.origin === 'ENGINE' && !e.ruleId)
+    expect(fromRegistry.length).toBeGreaterThan(0)
+    for (const item of fromRegistry) {
+      expect(item.strategy).toBeDefined()
+      expect(item.ruleScope).toBeUndefined()
+    }
+
+    // Settembre è il documento su cui il revisore ha selezionato la data a mano: quella
+    // selezione è un fatto, non una lettura del motore. Una strategia scritta lì
+    // gonfierebbe il conto di quello che il motore sa fare da sé.
+    const september = flow.repo.getReviewDocument(flow.idOf('settembre'))!
+    const picked = september.evidence.find(
+      (e) =>
+        e.id === september.fields.find((f) => f.name === 'document.issue_date')!.correctedEvidenceId
+    )!
+    expect(picked.origin).toBe('REVIEWER')
+    expect(picked.strategy).toBeUndefined()
+    expect(picked.ruleScope).toBeUndefined()
+  })
+
   it('selezionare la stessa data che la regola ha letto non la smentisce: cambia solo la forma', async () => {
     const flow = setup()
     for (const month of ['settembre', 'ottobre'] as const) {

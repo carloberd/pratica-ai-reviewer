@@ -8,7 +8,13 @@
  * (drive, correzioni con before/after) sono marcate con `// v1 reviewer`.
  */
 
-import type { Cardinality, FieldReviewStatus, FieldRole } from './extraction-v2'
+import type {
+  Cardinality,
+  ExtractionRuleScope,
+  ExtractionStrategy,
+  FieldReviewStatus,
+  FieldRole
+} from './extraction-v2'
 
 /**
  * v1 reviewer: quello che il revisore sceglie davvero. `SAVE` chiude il documento come
@@ -76,6 +82,15 @@ export interface EvidenceItem {
   textCorrected?: boolean
   /** v3 reviewer: la regola appresa che ha trovato l'etichetta; assente per il registry. */
   ruleId?: string
+  /**
+   * v5 reviewer: come il motore ci è arrivato. `strategy` dice con quale lettura, `ruleScope`
+   * con che ambito valeva la regola di `ruleId`. Non si mostrano a chi revisiona — la
+   * provenienza serve a chi misurerà l'apprendimento, non a chi annota — e mancano sempre
+   * sulle selezioni del revisore, che non sono letture del motore, e sulle evidenze scritte
+   * prima della migrazione 0017.
+   */
+  strategy?: ExtractionStrategy
+  ruleScope?: ExtractionRuleScope
 }
 
 /** v3 reviewer: chi ha trovato il testo di un'evidenza. */

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import type { ExtractionRuleScope, ExtractionStrategy } from '@shared/extraction-v2'
 import type { BoundingBox, PickLocation, PickMethod } from '@shared/types'
 import type { Db } from '../index'
 import type { EvidenceRow } from '../rows'
@@ -13,6 +14,10 @@ export interface EvidenceInput {
   confidence: number
   /** La regola appresa che ha trovato l'etichetta, se il valore viene da lì. */
   ruleId?: string | null
+  /** Come il motore ha letto il valore (migrazione 0017). */
+  strategy?: ExtractionStrategy | null
+  /** L'ambito con cui valeva la regola di `ruleId`; nullo per le etichette del registry. */
+  ruleScope?: ExtractionRuleScope | null
 }
 
 /** La selezione del revisore: il punto del documento da cui ha preso un valore. */
@@ -36,8 +41,9 @@ const REVIEWER_CONFIDENCE = 1
 export function createEvidenceDao(db: Db) {
   const insert = db.prepare(`
     INSERT INTO evidence (id, document_id, page, text, bbox_json, confidence, origin, method,
-                          line_start, line_end, char_start, char_end, rule_id, text_corrected)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          line_start, line_end, char_start, char_end, rule_id, text_corrected,
+                          extraction_strategy, rule_scope)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   return {
@@ -70,7 +76,9 @@ export function createEvidenceDao(db: Db) {
           null,
           null,
           item.ruleId ?? null,
-          0
+          0,
+          item.strategy ?? null,
+          item.ruleScope ?? null
         )
         ids.push(id)
       }
@@ -94,7 +102,11 @@ export function createEvidenceDao(db: Db) {
         input.location?.charStart ?? null,
         input.location?.charEnd ?? null,
         null,
-        input.textCorrected ? 1 : 0
+        input.textCorrected ? 1 : 0,
+        // Una selezione non è una lettura del motore: non c'è nessuna strategia da
+        // registrare, e scriverne una qui falserebbe il conto della misura.
+        null,
+        null
       )
       return id
     },
