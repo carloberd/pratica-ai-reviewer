@@ -1,3 +1,4 @@
+import { normalizeDateValue } from './date-value'
 import type { ExtractedField, FieldItem } from './types'
 
 /**
@@ -45,14 +46,39 @@ function orNull(value: string | undefined): string | null {
 // ---------------------------------------------------------------------------
 
 /**
+ * Quello che il revisore ha scritto, nella forma in cui si salva.
+ *
+ * Per i campi data è `yyyy-mm-dd`, come la scrive il motore: il revisore ricopia la
+ * stringa dal documento — «16/12/2025», «31.05.2024», «31 Maggio 2022» — e due formati
+ * diversi per la stessa data rendono il dataset inutilizzabile per misurare l'estrazione.
+ * Quello che il revisore ha selezionato resta verbatim nella sua evidenza, quindi la
+ * forma originale non si perde.
+ *
+ * Quello che non è **tutta** una data resta com'è: «03/05/2021 (8 ore), 04/05/2021
+ * (8 ore)» si salva intero, perché normalizzarlo vorrebbe dire buttarne via metà.
+ */
+export function normalizeFieldValue(value: string, isDate: boolean): string {
+  const trimmed = value.trim()
+  if (!isDate) return trimmed
+  return normalizeDateValue(trimmed) ?? trimmed
+}
+
+/**
  * La correzione da salvare quando il revisore scrive `next` in un campo che il motore
  * aveva precompilato con `proposed`. `null` = nessuna correzione (annullata, o uguale
  * alla proposta); la stringa vuota = il revisore ha svuotato una proposta sbagliata.
+ *
+ * Il confronto con la proposta si fa **dopo** la normalizzazione: se il motore aveva letto
+ * `2025-12-16` e il revisore ricopia `16/12/2025`, sono d'accordo, e non è una correzione.
  */
-export function resolveFieldEdit(proposed: string | null, next: string | null): string | null {
+export function resolveFieldEdit(
+  proposed: string | null,
+  next: string | null,
+  isDate = false
+): string | null {
   if (next === null) return null
-  const trimmed = next.trim()
-  return trimmed === (proposed ?? '').trim() ? null : trimmed
+  const normalized = normalizeFieldValue(next, isDate)
+  return normalized === (proposed ?? '').trim() ? null : normalized
 }
 
 /** Il valore del campo come lo vede il revisore: `null` se vuoto. */
@@ -81,9 +107,10 @@ export type ItemEdit =
  */
 export function resolveItemEdit(
   item: Pick<FieldItem, 'origin' | 'value' | 'correctedValue'>,
-  next: string | null
+  next: string | null,
+  isDate = false
 ): ItemEdit {
-  const trimmed = next?.trim() ?? null
+  const trimmed = next === null ? null : normalizeFieldValue(next, isDate)
   if (item.origin === 'MANUAL') {
     if (!trimmed) return { type: 'delete' }
     return trimmed === item.correctedValue ? { type: 'none' } : { type: 'correct', value: trimmed }
@@ -94,8 +121,8 @@ export function resolveItemEdit(
 }
 
 /** Il testo di una riga nuova, o `null` se non c'è niente da aggiungere. */
-export function normalizeNewItem(value: string): string | null {
-  const trimmed = value.trim()
+export function normalizeNewItem(value: string, isDate = false): string | null {
+  const trimmed = normalizeFieldValue(value, isDate)
   return trimmed === '' ? null : trimmed
 }
 

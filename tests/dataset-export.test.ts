@@ -259,6 +259,7 @@ describe('export del dataset annotato', () => {
       corrected: true
     })
     // «Data: 12/09/2026» è la quarta riga; il valore comincia dopo «Data: ».
+    // Il valore si salva in forma canonica, la selezione resta verbatim com'è sul documento.
     const pick = {
       method: 'TEXT_SELECTION',
       page: 1,
@@ -268,7 +269,7 @@ describe('export del dataset annotato', () => {
     }
     expect(
       memoDoc.fields.find((f: { name: string }) => f.name === 'document.issue_date')
-    ).toMatchObject({ value: '12/09/2026', origin: 'REVIEWER', pick })
+    ).toMatchObject({ value: '2026-09-12', origin: 'REVIEWER', pick })
     expect(memoDoc.corrections).toEqual([
       expect.objectContaining({ field: 'document.issue_date', kind: 'FILLED', pick })
     ])
