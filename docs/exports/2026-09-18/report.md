@@ -33,6 +33,26 @@ I 2 errori veri sono confusioni semantiche fra tipi adiacenti:
 
 La confidence separa male: 0,805 sugli errori contro 0,875 sui successi. Non c'è una soglia utilizzabile per l'auto-accettazione con questi numeri.
 
+### ✅ Risolto in parte — PR #25, `bugfix/classifier-coverage-blind-export`
+
+Prima di toccare le soglie serviva sapere *perché* quei 27 documenti non avevano una proposta, e l'export non lo diceva. Il classificatore v2 calcola una lista ordinata di candidati col punteggio e un `reason` (`NO_SIGNAL`, `BELOW_THRESHOLD`, `LOW_MARGIN`, `FILENAME_ONLY`, `HARD_NEGATIVE`) — la scheda di revisione li mostra già — ma il dataset esportato li buttava via: con `decision: UNKNOWN` restava `proposed: null` e nient'altro. Da un export così non si distingue «non ha trovato niente» da «aveva ragione ma si è fermato tre centesimi sotto soglia», e sono due problemi diversi con due rimedi diversi.
+
+Il formato passa a **1.4.0**. `documentType` porta adesso, anche quando il classificatore non assegna:
+
+```jsonc
+"decision": "UNKNOWN",
+"reason": "BELOW_THRESHOLD",
+"margin": 0.19, "threshold": 0.74, "minimumMargin": 0.08,
+"candidates": [{ "documentType": "…", "registryId": "…", "score": 0.71, "rank": 1 }],
+"chosen": { "rank": 1, "score": 0.71 }
+```
+
+`chosen` è la misura che mancava: dov'era finito, fra i candidati, il tipo che il revisore ha poi scelto. `rank: 1` con `decision: UNKNOWN` vuol dire che il classificatore ci aveva preso e l'ha trattenuto per una soglia — quello si recupera tarando. `rank: null` vuol dire che il tipo giusto non era in lista, e abbassare le soglie non lo farebbe comparire: lì servono frasi nuove in `classifier_signals_v2.json`. Le frasi che sostengono i candidati restano fuori dall'export: sono verbatim del documento, e servono a chi revisiona, non a chi misura.
+
+**Quello che resta aperto:** la taratura vera e propria. Questo export è stato prodotto dalla 1.3.0 e non porta i `reason`, quindi la ripartizione dei 27 fra «senza segnali» e «sotto soglia» non è ricostruibile a posteriori. Serve un export nuovo dagli stessi documenti — con la 1.4.0 la domanda ha una risposta in una riga di query.
+
+Verifiche: gate completo verde (649 test); 5 test in `tests/shared-dataset-classification.test.ts` sui cinque casi (sotto soglia col tipo in testa, senza segnali, tipo fuori lista, documento senza tipo, classificatore mai passato), fixture `dataset-export.expected.json` rigenerata, README aggiornato.
+
 ## 2. L'estrazione sbaglia per omissione, non per errore
 
 Delle 281 correzioni: **198 FILLED (70%)** — il motore non aveva prodotto nulla — contro 31 CHANGED (11%) e 11 CLEARED (4%).
