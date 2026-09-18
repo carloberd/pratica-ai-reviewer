@@ -70,6 +70,23 @@ describe('importi', () => {
     expect(findMoney('importo 150 EUR')?.value).toBe('150.00')
   })
 
+  it.each([
+    ['Totale al 31.12.2025 di 1.234,56', '1234.56'],
+    ['Totale documento del 08/09/2026: EUR 86.420,00', '86420.00'],
+    ['Imponibile 2026-09-08 70.836,07', '70836.07']
+  ])('non legge le cifre di una data come importo: %s', (input, expected) => {
+    expect(findMoney(input)?.value).toBe(expected)
+  })
+
+  it('una riga con la sola data non ha importi', () => {
+    expect(findMoney('Data di emissione 31.12.2025')).toBeNull()
+    expect(findMoney('Scadenza 30/09/26')).toBeNull()
+  })
+
+  it('una data che non esiste resta un numero come un altro', () => {
+    expect(findMoney('quota 31.02 del lotto')?.value).toBe('31.02')
+  })
+
   it('normalizza a due decimali con il punto', () => {
     expect(parseMoney('7,5')).toBe('7.50')
     expect(parseMoney('1.000')).toBe('1000.00')
@@ -205,6 +222,15 @@ describe('precompilazione', () => {
       fromOcr: false
     })
     expect(candidates[0]?.evidence.bbox).toEqual({ x: 56, y: 111, w: 188, h: 11 })
+  })
+
+  it('una data nella riga del totale non diventa il totale', () => {
+    const candidates = prefillFields({
+      fields: ['total_amount'],
+      pages: [page(['Totale da pagare al 31.12.2025: EUR 1.234,56'])],
+      fromOcr: false
+    })
+    expect(candidates[0]?.value).toBe('1234.56')
   })
 
   it('cerca anche oltre la prima pagina', () => {
