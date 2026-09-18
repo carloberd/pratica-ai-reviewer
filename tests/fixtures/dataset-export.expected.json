@@ -1,7 +1,7 @@
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.4.0",
+    "formatVersion": "1.5.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": {
       "name": "praticaai-reviewer",
@@ -310,6 +310,7 @@
             "Smaltimento macerie in discarica - EUR 850,00",
             "Tinteggiatura pareti e soffitti - EUR 1.450,00"
           ],
+          "origin": "MIXED",
           "items": [
             {
               "value": "Demolizione tramezzi - EUR 3.200,00",
