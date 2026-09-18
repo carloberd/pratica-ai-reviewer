@@ -264,6 +264,18 @@ export default function DocumentReviewShell() {
     })
 
   /**
+   * Annulla l'ultimo cambio di stato di una regola. Come per un cambio a mano si rilegge
+   * tutto: il ripristino può rimettere in gioco una regola, e la coda si rielabora.
+   */
+  const rollbackRule = (ruleId: string) =>
+    run('learning-rule-rollback', async () => {
+      const overview = await api.learning.rollbackRule(ruleId)
+      setLearning(overview)
+      setMessage(overview.actions[0]?.detail ?? null)
+      await refresh()
+    })
+
+  /**
    * Ripassa per il learner le revisioni già chiuse. È idempotente: ogni documento ritira
    * le sue prove prima di rimetterle, quindi rilanciarlo non conta due volte.
    */
@@ -582,6 +594,7 @@ export default function DocumentReviewShell() {
             onSetMode={setLearningMode}
             onSetRuleStatus={setRuleStatus}
             onReplay={replayLearning}
+            onRollbackRule={rollbackRule}
             onExport={exportLearning}
           />
         )}

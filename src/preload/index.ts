@@ -128,6 +128,8 @@ export const reviewerApi = {
     setRuleStatus: (ruleId: string, status: ManualRuleStatus) =>
       invoke<IpcResultOf<LearningOverview>>('learning:set-rule-status', { ruleId, status }),
     replay: () => invoke<IpcResultOf<LearningOverview>>('learning:replay'),
+    rollbackRule: (ruleId: string) =>
+      invoke<IpcResultOf<LearningOverview>>('learning:rollback-rule', { ruleId }),
     export: () => invoke<IpcResultOf<LearningExportResult>>('learning:export')
   },
   history: {
