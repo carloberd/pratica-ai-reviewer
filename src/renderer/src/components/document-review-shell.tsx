@@ -263,6 +263,23 @@ export default function DocumentReviewShell() {
       await refresh()
     })
 
+  /**
+   * Ripassa per il learner le revisioni già chiuse. È idempotente: ogni documento ritira
+   * le sue prove prima di rimetterle, quindi rilanciarlo non conta due volte.
+   */
+  const replayLearning = () =>
+    run('learning-replay', async () => {
+      const before = learning?.counts.events ?? 0
+      const overview = await api.learning.replay()
+      setLearning(overview)
+      const added = overview.counts.events - before
+      setMessage(
+        added > 0
+          ? `Revisioni ripassate: ${added.toLocaleString('it-IT')} decisioni in più registrate.`
+          : 'Revisioni ripassate: non c’era niente di nuovo da registrare.'
+      )
+    })
+
   const exportLearning = () =>
     run('learning-export', async () => {
       const result = await api.learning.export()
@@ -561,8 +578,10 @@ export default function DocumentReviewShell() {
             loading={!loaded}
             busy={busy}
             exporting={pending === 'learning-export'}
+            replaying={pending === 'learning-replay'}
             onSetMode={setLearningMode}
             onSetRuleStatus={setRuleStatus}
+            onReplay={replayLearning}
             onExport={exportLearning}
           />
         )}

@@ -25,6 +25,8 @@ export interface ReviewLearningContext {
   at: string
   actor: string
   templateFingerprint: string | null
+  /** La data del replay, quando la revisione si ripassa invece di chiuderla adesso. */
+  replayedAt?: string | null
 }
 
 function pickOf(evidence: EvidenceItem | undefined): LearningPick | null {
@@ -165,6 +167,7 @@ export function reviewLearningEvents(
   return decisions.map((entry) => ({
     at: context.at,
     actor: context.actor,
+    replayedAt: context.replayedAt ?? null,
     documentId: document.id,
     contentSha256: document.contentSha256,
     templateFingerprint: context.templateFingerprint,

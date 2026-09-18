@@ -75,6 +75,16 @@ export interface LearningEventInput {
   /** La regola appresa che aveva proposto il valore del motore, se ce n'era una. */
   engineRuleId: string | null
   pick: LearningPick | null
+  /**
+   * Quando l'evento è stato scritto, se non sul momento: `null` per una revisione
+   * registrata mentre la si chiudeva, la data del replay per una ripassata dopo.
+   *
+   * `at` resta sempre il momento in cui il revisore ha deciso. Su un evento ripassato
+   * `actor` è l'account che ha lanciato il replay, non chi aveva chiuso quella revisione:
+   * chi ha chiuso non è mai stato salvato sul documento, e il registro non deve dire una
+   * cosa che non sa.
+   */
+  replayedAt: string | null
 }
 
 /**
