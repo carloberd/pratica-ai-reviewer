@@ -1,7 +1,8 @@
 import { normalizeNewItem, resolveFieldEdit, resolveItemEdit } from '@shared/field-edits'
 import { isDateField } from '@shared/fields'
+import { keepsPick } from '@shared/pick-cleanup'
 import { locatePick, pickValue } from '@shared/pick-locate'
-import type { DocumentPick } from '@shared/types'
+import type { DocumentPick, PickLocation } from '@shared/types'
 import type { Repository } from './db/repository'
 import { parseItemValue } from './db/rows'
 import { ReviewerError } from './errors'
@@ -13,7 +14,9 @@ import { ReviewerError } from './errors'
  *
  * Un valore preso dal documento arriva con la sua selezione (`pick`), che diventa
  * un'evidenza del revisore collegata alla correzione. Senza `pick` il valore è scritto a
- * mano, e una selezione precedente smette di valere.
+ * mano, e una selezione precedente smette di valere. Quando il revisore sistema a mano il
+ * testo di un valore già preso dal documento, il renderer rimanda indietro la selezione
+ * che quel valore aveva: vedi `recordPick`.
  */
 
 function fieldOf(repo: Repository, documentId: string, fieldId: string) {
@@ -41,9 +44,15 @@ function itemOf(repo: Repository, documentId: string, itemId: string) {
  * Registra la selezione dietro un valore e ne ritorna l'id, o `null` se il valore non
  * viene da una selezione.
  *
- * La selezione vale solo se è proprio il valore salvato: il renderer ripiega gli spazi del
- * testo selezionato e lo manda insieme, quindi uno scarto vuol dire che il valore è stato
+ * La selezione vale se è proprio il valore salvato: il renderer ripiega gli spazi del testo
+ * selezionato e lo manda insieme, quindi uno scarto vuol dire che il valore è stato
  * cambiato dopo, e la selezione non ne è più l'origine. Un valore vuoto non ha origine.
+ *
+ * L'eccezione è la **ripulitura di una lettura sbagliata**: su un'area passata dall'OCR il
+ * testo l'ha letto una macchina, e il revisore che sistema la parola non sta cambiando
+ * valore, sta correggendo la lettura. Lì il punto del documento resta l'origine, e
+ * l'evidenza porta `textCorrected`: `text` è quello che l'OCR ha letto, il valore buono sta
+ * sul campo.
  */
 function recordPick(
   repo: Repository,
@@ -51,14 +60,40 @@ function recordPick(
   value: string | null,
   pick: DocumentPick | undefined
 ): string | null {
-  if (!pick || !value || pickValue(pick.text) !== value) return null
+  if (!pick || !value) return null
+  const read = pickValue(pick.text)
+  const textCorrected = read !== value
+  if (textCorrected && !keepsPick(pick, read, value)) return null
   return repo.evidence.addReviewer(documentId, {
     page: pick.page,
     text: pick.text,
     bbox: pick.bbox ?? null,
     method: pick.method,
-    location: locatePick(repo.pages.lines(documentId, pick.page), pick)
+    textCorrected,
+    location: locateCorrected(repo, documentId, pick, textCorrected ? value : null)
   })
+}
+
+/**
+ * Dove cade la selezione fra le righe salvate.
+ *
+ * Di una lettura sistemata si prova prima il testo letto — è quello che sta nelle righe
+ * della pagina, lette dallo stesso OCR — e, se da lì non escono gli offset, il valore
+ * buono: gli offset sono quello che serve a `deriveAnchor` per risalire all'etichetta, e
+ * senza di loro non si impara niente. Nessuna delle due prove indovina: `locatePick` chiede
+ * un riscontro esatto, e le righe toccate restano quelle del riquadro disegnato.
+ */
+function locateCorrected(
+  repo: Repository,
+  documentId: string,
+  pick: DocumentPick,
+  corrected: string | null
+): PickLocation | null {
+  const lines = repo.pages.lines(documentId, pick.page)
+  const read = locatePick(lines, pick)
+  if (!corrected || read?.charStart != null) return read
+  const fixed = locatePick(lines, { ...pick, text: corrected })
+  return fixed?.charStart != null ? fixed : read
 }
 
 /** Correzione di un campo singolo. `null` la annulla, la stringa vuota svuota la proposta. */

@@ -1,6 +1,7 @@
 import { type EvidenceTarget, targetOfEvidence } from '@shared/evidence-locate'
 import { confirmedItems, sortedItems } from '@shared/field-edits'
-import type { EvidenceItem, ExtractedField, FieldItem } from '@shared/types'
+import { pickOfEvidence } from '@shared/pick-cleanup'
+import type { DocumentPick, EvidenceItem, ExtractedField, FieldItem } from '@shared/types'
 import { useEffect, useState } from 'react'
 import { cx } from '../lib/cx'
 import styles from './document-review.module.css'
@@ -17,8 +18,12 @@ interface Props {
   activeRow: RowTarget | null
   shownEvidenceId: string | null
   onActivate: (row: RowTarget) => void
-  /** `null` torna alla proposta; il main decide se svuotare toglie o cancella la riga. */
-  onItemCommit: (itemId: string, value: string | null) => void
+  /**
+   * `null` torna alla proposta; il main decide se svuotare toglie o cancella la riga.
+   * `pick` è la selezione che la riga aveva già: sistemare a mano una lettura dell'OCR non
+   * deve cancellarla.
+   */
+  onItemCommit: (itemId: string, value: string | null, pick?: DocumentPick) => void
   onItemRemove: (itemId: string, removed: boolean) => void
   onItemAdd: (value: string) => void
   onFocusEvidence: (target: EvidenceTarget) => void
@@ -87,7 +92,17 @@ export default function RepeatedFieldEditor({
                   active={activeRow?.kind === 'item' && activeRow.itemId === item.id}
                   evidenceShown={Boolean(evidence && evidence.id === shownEvidenceId)}
                   onActivate={() => onActivate({ kind: 'item', itemId: item.id })}
-                  onCommit={(value) => onItemCommit(item.id, value)}
+                  onCommit={(value) =>
+                    onItemCommit(
+                      item.id,
+                      value,
+                      pickOfEvidence(
+                        item.correctedEvidenceId
+                          ? evidenceById.get(item.correctedEvidenceId)
+                          : undefined
+                      )
+                    )
+                  }
                   onRemove={(removed) => onItemRemove(item.id, removed)}
                   onFocusEvidence={onFocusEvidence}
                 />

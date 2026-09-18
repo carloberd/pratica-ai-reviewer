@@ -391,7 +391,7 @@ Segnalato dal revisore il 18/09 e verificato sul codice e sull'export (poscritto
 | # | Problema | Dove | Esito |
 |---|---|---|---|
 | A | L'area disegnata su una pagina che ha il testo viene comunque ri-letta a OCR: 7 selezioni su 50 perdono ogni posizione, 13 su 50 perdono gli offset | `pdf-viewer.tsx:211` | ✅ PR #32 |
-| B | Ripulire una parola letta male cancella la selezione: il valore corretto non coincide più col testo selezionato | `field-edits.ts:54`, `evidence.ts:100`, `field-editor.tsx:71` | ⏳ da fare (2) |
+| B | Ripulire una parola letta male cancella la selezione: il valore corretto non coincide più col testo selezionato | `field-edits.ts:54`, `evidence.ts:100`, `field-editor.tsx:71` | ✅ PR #33 |
 | C | Le righe di una pagina letta a OCR non hanno coordinate: 10 selezioni su 11 restano senza posizione e nessuna regola nasce da una scansione | `extract/text.ts:84`, `ocr-worker.ts` | ⏳ da fare (3) |
 
 In ordine: **(1)** risolvere l'area sul text layer, **(2)** conservare la selezione a chi ripulisce un OCR, **(3)** far restituire all'OCR le coordinate delle parole.
@@ -409,3 +409,15 @@ Il modo si chiama `AREA_TEXT`, accanto a `TEXT_SELECTION` e `AREA_OCR`: stesso g
 **Quello che resta aperto:** niente di questo punto, ma vale solo da qui in avanti. Le selezioni già registrate come `AREA_OCR` restano quelle che sono; per rivedere i numeri serve un export nuovo.
 
 Verifiche: gate completo verde (712 test); 6 test in `tests/renderer/area-text.test.ts` (il numero dentro lo span di riga, il carattere sul bordo, l'area su due righe, gli spazi ai bordi, il riquadro vuoto), fixture `dataset-export.expected.json` rigenerata, README aggiornato. Non provato nell'app: serve aprire un PDF e disegnare un'area per vedere il testo arrivare nel campo.
+
+### ✅ Risolto — PR #33, `bugfix/ocr-cleanup-keeps-the-pick`
+
+I tre punti del §A vanno toccati insieme, ed è quello che questa PR fa: il campo rimanda indietro la selezione che il valore aveva già (`pickOfEvidence`, dalla scheda di revisione), e il main la tiene invece di rifiutarla perché il testo non coincide più. `pruneReviewer` non ha più niente da cancellare, perché la correzione continua a citarla.
+
+**L'eccezione è stretta, e dichiarata.** Vale solo per un'area passata dall'OCR — lì il testo l'ha letto una macchina, e chi sistema la parola non sta cambiando valore — e solo se il valore è quella lettura sistemata: oltre **un quarto** di caratteri cambiati non è più la stessa lettura, è un altro valore (`src/shared/pick-cleanup.ts`, distanza di edit su testo ripiegato). Il testo di una selezione, e quello di un'area letta dal text layer (PR #32), vengono dal documento: lì il controllo carattere per carattere resta tale e quale, ed è giusto che resti — `114/2026` corretto in `114/2026-bis` è un valore diverso, non una lettura sistemata.
+
+Quello che si salva è **l'etichetta**: l'evidenza porta adesso `textCorrected` (migrazione `0015`), il suo `text` resta verbatim la lettura dell'OCR — è quello che c'è su quel punto del documento — e il valore buono sta sul campo. La posizione si cerca prima col testo letto e, se da lì non escono gli offset, col valore sistemato: senza `charStart` `deriveAnchor` non risale a niente, e i due tentativi non indovinano nulla, perché `locatePick` chiede un riscontro esatto. In revisione l'evidenza lo dice: «· lettura sistemata». Il formato del dataset va a **1.7.0**.
+
+**Quello che resta aperto:** sulle scansioni gli offset spesso non ci saranno comunque, perché le righe della pagina non hanno coordinate e il testo del ritaglio non coincide con quello della pagina. È il punto C, e questa correzione da sola non lo copre: senza il C la selezione si conserva, ma resta muta per il learner.
+
+Verifiche: gate completo verde (725 test); `tests/shared-pick-cleanup.test.ts` (9 test, valori verbatim dall'export: `29 O7 2026`, `FRAITA (MAB)`) e 3 test nuovi in `tests/field-edits.test.ts` — la lettura sistemata che tiene la selezione, il valore diverso che la perde lo stesso, il testo selezionato che non ha eccezioni — più il test della 0015, fixture rigenerata, README aggiornato. Non provato nell'app: serve una scansione, un'area letta male e una parola sistemata a mano.

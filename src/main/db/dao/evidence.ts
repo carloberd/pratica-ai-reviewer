@@ -23,6 +23,11 @@ export interface ReviewerEvidenceInput {
   bbox?: BoundingBox | null
   method: PickMethod
   location: PickLocation | null
+  /**
+   * Il revisore ha sistemato a mano il testo letto: `text` resta la lettura dell'OCR, il
+   * valore è quello del campo. Il punto del documento è lo stesso, cambia come si legge.
+   */
+  textCorrected?: boolean
 }
 
 /** Una selezione è un fatto, non una stima: la confidence non ha niente da dire. */
@@ -31,8 +36,8 @@ const REVIEWER_CONFIDENCE = 1
 export function createEvidenceDao(db: Db) {
   const insert = db.prepare(`
     INSERT INTO evidence (id, document_id, page, text, bbox_json, confidence, origin, method,
-                          line_start, line_end, char_start, char_end, rule_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          line_start, line_end, char_start, char_end, rule_id, text_corrected)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   return {
@@ -64,7 +69,8 @@ export function createEvidenceDao(db: Db) {
           null,
           null,
           null,
-          item.ruleId ?? null
+          item.ruleId ?? null,
+          0
         )
         ids.push(id)
       }
@@ -87,7 +93,8 @@ export function createEvidenceDao(db: Db) {
         input.location?.lineEnd ?? null,
         input.location?.charStart ?? null,
         input.location?.charEnd ?? null,
-        null
+        null,
+        input.textCorrected ? 1 : 0
       )
       return id
     },
