@@ -842,6 +842,12 @@ decimale e passerebbe la guardia sul numero nudo, e l'importo vero non verrebbe 
 letto. Vale per entrambi i motori, perché il v2 legge gli importi con lo stesso lettore.
 Solo le date che esistono coprono le loro cifre: «31.02» resta un numero come un altro.
 
+**Numero documento e protocollo non sono lo stesso numero.** Una riga può portarli
+entrambi («Fattura n. 114 - Prot. n. 2026/554321»), quindi i due si leggono con pattern
+diversi: il protocollo solo dove «prot.»/«protocollo» lo annuncia, il numero documento
+saltando i numeri annunciati così. Un documento che ha solo il protocollo lascia vuoto il
+numero documento, perché un campo vuoto costa meno di un campo sbagliato.
+
 **Divergenza dal registry.** `package_count` e `consumption` sono dichiarati `number`
 negli schemi ma qui sono trattati come stringhe: in pratica portano un'unità di misura
 («12 colli», «540 kWh») che una normalizzazione numerica butterebbe via.
