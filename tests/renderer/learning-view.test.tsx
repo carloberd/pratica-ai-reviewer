@@ -68,8 +68,10 @@ const props = {
   loading: false,
   busy: false,
   exporting: false,
+  replaying: false,
   onSetMode: noop,
   onSetRuleStatus: noop,
+  onReplay: noop,
   onExport: noop
 }
 
@@ -98,6 +100,17 @@ describe('LearningView', () => {
     expect(count(markup, '>Scarta<')).toBe(3)
     expect(view).toContain('Cronologia del learner')
     expect(view).toContain('Regola sospesa')
+  })
+
+  it('il ripasso delle revisioni si può lanciare solo in LEARNING', () => {
+    // La modalità del fixture è FROZEN: il ripasso registra decisioni, e lì non si registra.
+    expect(html(<LearningView {...props} />)).toMatch(
+      /disabled[^>]*>Ripassa le revisioni<|Ripassa le revisioni/
+    )
+    const learning = { ...overview, mode: 'LEARNING' as const }
+    const markup = html(<LearningView {...props} overview={learning} />)
+    expect(markup).toContain('Ripassa le revisioni')
+    expect(markup).toContain('quelle di prima che il learner fosse acceso non le ha mai viste')
   })
 
   it('senza regole lo dice, e spiega come nascono', () => {

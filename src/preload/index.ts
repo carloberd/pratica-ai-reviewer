@@ -127,6 +127,7 @@ export const reviewerApi = {
       invoke<IpcResultOf<LearningOverview>>('learning:set-mode', { mode }),
     setRuleStatus: (ruleId: string, status: ManualRuleStatus) =>
       invoke<IpcResultOf<LearningOverview>>('learning:set-rule-status', { ruleId, status }),
+    replay: () => invoke<IpcResultOf<LearningOverview>>('learning:replay'),
     export: () => invoke<IpcResultOf<LearningExportResult>>('learning:export')
   },
   history: {

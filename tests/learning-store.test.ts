@@ -35,6 +35,7 @@ function event(
     contentSha256: 'a'.repeat(64),
     templateFingerprint: '4f0e2912bff50e67',
     textSource: 'NATIVE_TEXT',
+    replayedAt: null,
     kind: 'FIELD_VALUE',
     outcome: 'FILLED',
     documentType: 'payments_treasury.richiesta_pagamento',

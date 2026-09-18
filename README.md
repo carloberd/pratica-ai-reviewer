@@ -826,6 +826,21 @@ dopo l'ultima attivazione: altrimenti la prima revisione dopo una riattivazione 
 risospenderebbe per le smentite di prima. È anche una precisione mobile: una regola buona
 per mesi che comincia a sbagliare si sospende sugli errori recenti, non sulla sua storia.
 
+**«Ripassa le revisioni»** ripassa per il learner le revisioni **già chiuse**. Serve quando
+il learner è stato acceso a revisione iniziata: quello che le chiusure di prima avrebbero
+insegnato non gliel'ha mai visto nessuno, ma valori, correzioni e selezioni stanno a
+database, e da lì si ricava esattamente quello che si sarebbe registrato al momento.
+
+È **idempotente** — ogni documento ritira le sue prove prima di rimetterle — quindi si può
+rilanciare senza gonfiare i contatori. Sugli eventi ripassati `at` resta il momento in cui
+il revisore aveva chiuso, e `replayedAt` dice quando l'evento è stato scritto; `actor` è
+l'account che ha lanciato il ripasso, perché chi aveva chiuso davvero non è mai stato
+salvato sul documento. Un evento registrato sul momento ha `replayedAt: null`.
+
+Vale solo in **LEARNING**: il ripasso è una registrazione come le altre. E va lanciato dopo
+un cambio dell'algoritmo dell'impronta, non prima: con un'impronta che cambia a ogni
+documento non farebbe che moltiplicare regole a supporto 1.
+
 **«Esporta le regole»** scrive un JSON con regole, decisioni registrate e cronologia
 (`praticaai-reviewer/learned-rules`), coi nomi dei campi e dei tipi anche nella forma di
 pratica-ai dove esiste la corrispondenza, e con l'algoritmo dell'impronta dichiarato nel

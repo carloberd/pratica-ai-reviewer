@@ -184,7 +184,7 @@ export interface LearningExportResult {
 // ---------------------------------------------------------------------------
 
 export const LEARNING_BUNDLE_FORMAT = 'praticaai-reviewer/learned-rules'
-export const LEARNING_BUNDLE_VERSION = '1.1.0'
+export const LEARNING_BUNDLE_VERSION = '1.2.0'
 
 export interface LearningBundleManifest {
   format: typeof LEARNING_BUNDLE_FORMAT
