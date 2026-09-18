@@ -43,6 +43,7 @@ import {
   exportLearnedRules,
   type LearningWorkspaceDeps,
   learningOverview,
+  rollbackRuleByHand,
   setRuleStatusByHand
 } from '../learning-workspace'
 import { cachePathFor } from '../paths'
@@ -67,6 +68,7 @@ import {
   driveLocationSchema,
   fetchDriveFileSchema,
   learningModeSchema,
+  learningRuleSchema,
   learningRuleStatusSchema,
   mapEditSchema,
   mapRevertSchema,
@@ -463,6 +465,17 @@ export function registerIpcHandlers(context: IpcContext): void {
       return learningOverview(learning())
     }
   )
+
+  /**
+   * Annulla l'ultimo cambio di stato ancora in vigore su una regola, e rielabora la coda
+   * che ne dipende: una regola che torna a valere, o che smette, cambia la precompilazione
+   * dei documenti in attesa esattamente come un cambio di stato a mano.
+   */
+  handle('learning:rollback-rule', learningRuleSchema, ({ ruleId }): LearningOverview => {
+    const { change } = rollbackRuleByHand(learning(), ruleId)
+    reprocessAfter(change)
+    return learningOverview(learning())
+  })
 
   /**
    * Ripassa per il learner le revisioni già chiuse.

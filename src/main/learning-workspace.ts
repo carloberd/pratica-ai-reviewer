@@ -15,7 +15,8 @@ import {
 import {
   DEFAULT_LEARNING_POLICY,
   LEARNER_VERSION,
-  type LearningAction
+  type LearningAction,
+  type LearningRule
 } from '@shared/local-learning'
 import {
   NORMALIZED_TEMPLATE_SIGNATURE_ALGORITHM,
@@ -42,7 +43,13 @@ export function learningOverview(deps: LearningWorkspaceDeps): LearningOverview 
   return {
     mode: learning.mode(),
     counts: learning.counts(),
-    rules: sortRuleViews(learning.listRules().map((rule) => toRuleView(rule, deps.names))),
+    rules: sortRuleViews(
+      learning
+        .listRules()
+        .map((rule) =>
+          toRuleView(rule, deps.names, learning.revertableRuleAction(rule.id) !== undefined)
+        )
+    ),
     actions: learning.listActions()
   }
 }
@@ -70,14 +77,56 @@ export function setRuleStatusByHand(
     detail: describeRule(rule, status, true)
   })
 
-  const applies = rule.status === 'ACTIVE' || status === 'ACTIVE'
+  return { action, change: rulesChange(rule, rule.status, status) }
+}
+
+/**
+ * Annulla l'ultimo cambio di stato ancora in vigore su una regola, e dice cosa rielaborare.
+ *
+ * Il pulsante «Annulla ultima modifica» esiste perché oggi, in fase di annotazione, chi usa
+ * il tool è una persona sola e sotto un clic sbagliato non c'è niente: uno scarto per errore
+ * porta via anche le prove che avevano costruito la regola, che sono la cosa cara — vengono
+ * da revisioni vere, e rifarle vuol dire riaprire i documenti.
+ *
+ * Il ripristino cambia quello che la coda si vedrà applicare addosso, esattamente come un
+ * cambio di stato a mano: `change` lo dice al chiamante, che rielabora. Lo stato di partenza
+ * si legge prima e quello di arrivo dopo, perché quale dei due sia ACTIVE lo sa solo il
+ * deposito.
+ */
+export function rollbackRuleByHand(
+  deps: LearningWorkspaceDeps,
+  ruleId: string,
+  at: string = new Date().toISOString()
+): { action: LearningAction; change: RulesChange } {
+  const { learning } = deps.repo
+  const before = learning.getRule(ruleId)
+  if (!before) throw new ReviewerError('NOT_FOUND', 'Regola non trovata.')
+  if (!learning.revertableRuleAction(ruleId)) {
+    throw new ReviewerError(
+      'INVALID_INPUT',
+      'Nessun cambio di stato annullabile per questa regola.'
+    )
+  }
+  const action = learning.rollbackRule(ruleId, at)
+  const after = learning.getRule(ruleId)
+  if (!after) throw new ReviewerError('NOT_FOUND', 'Regola non trovata.')
+  return { action, change: rulesChange(after, before.status, after.status) }
+}
+
+/**
+ * Cosa rielaborare quando una regola passa da uno stato all'altro: niente, se non stava
+ * valendo prima e non vale dopo; la coda del modulo per la memoria dei moduli, quella del
+ * tipo per le etichette.
+ */
+function rulesChange(rule: LearningRule, before: string, after: string): RulesChange {
   const change: RulesChange = { documentTypes: [], templateFingerprints: [] }
-  if (applies && rule.kind === 'TEMPLATE_TYPE' && rule.templateFingerprint) {
+  if (before !== 'ACTIVE' && after !== 'ACTIVE') return change
+  if (rule.kind === 'TEMPLATE_TYPE' && rule.templateFingerprint) {
     change.templateFingerprints.push(rule.templateFingerprint)
-  } else if (applies) {
+  } else {
     change.documentTypes.push(rule.documentType)
   }
-  return { action, change }
+  return change
 }
 
 /**

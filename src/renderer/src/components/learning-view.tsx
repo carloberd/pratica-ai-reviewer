@@ -25,7 +25,8 @@ import { TableSkeleton } from './loading-skeleton'
  * In cima la modalità, perché decide tutto il resto: se le revisioni insegnano e se le
  * regole valgono. Sotto le regole, prima quelle che stanno cambiando la precompilazione, e
  * per ognuna i numeri che l'hanno fatta valere. Una regola si sospende, si riattiva o si
- * scarta da qui, e ogni decisione resta in cronologia accanto a quelle del learner.
+ * scarta da qui, e ogni decisione resta in cronologia accanto a quelle del learner —
+ * compresa quella di annullarne una.
  */
 
 interface Props {
@@ -37,6 +38,7 @@ interface Props {
   onSetMode: (mode: LearningMode) => void
   onSetRuleStatus: (ruleId: string, status: ManualRuleStatus) => void
   onReplay: () => void
+  onRollbackRule: (ruleId: string) => void
   onExport: () => void
 }
 
@@ -62,7 +64,8 @@ const ACTION_HINTS: Record<ManualRuleStatus, string> = {
     'La regola smette di valere sui documenti elaborati da adesso. Il learner non la riattiva da solo.',
   ACTIVE:
     'La regola torna a valere. Si giudica di nuovo solo sulle revisioni che arrivano da adesso.',
-  REJECTED: 'La regola non vale più e non torna: resta in cronologia.'
+  REJECTED:
+    'La regola non vale più. Resta in cronologia, e finché il learner non la tocca lo scarto si può annullare.'
 }
 
 export default function LearningView({
@@ -74,6 +77,7 @@ export default function LearningView({
   onSetMode,
   onSetRuleStatus,
   onReplay,
+  onRollbackRule,
   onExport
 }: Props) {
   const [filter, setFilter] = useState<Filter>('all')
@@ -187,7 +191,13 @@ export default function LearningView({
         ) : (
           <ol className={styles.historyList}>
             {rules.map((rule) => (
-              <RuleRow key={rule.id} rule={rule} busy={busy} onSetStatus={onSetRuleStatus} />
+              <RuleRow
+                key={rule.id}
+                rule={rule}
+                busy={busy}
+                onSetStatus={onSetRuleStatus}
+                onRollback={onRollbackRule}
+              />
             ))}
           </ol>
         )}
@@ -228,13 +238,16 @@ export default function LearningView({
 function RuleRow({
   rule,
   busy,
-  onSetStatus
+  onSetStatus,
+  onRollback
 }: {
   rule: LearningRuleView
   busy: boolean
   onSetStatus: (ruleId: string, status: ManualRuleStatus) => void
+  onRollback: (ruleId: string) => void
 }) {
-  // Scartare non si annulla: chiede un secondo clic.
+  // Scartare porta via anche le prove: chiede un secondo clic lo stesso, perché annullare
+  // è comunque un giro in più e la cronologia si porta dietro tutti e due i clic.
   const [confirming, setConfirming] = useState(false)
   const numbers = [
     rule.positiveCount === 1 ? '1 conferma' : `${rule.positiveCount} conferme`,
@@ -272,6 +285,17 @@ function RuleRow({
         </div>
       </div>
       <div className={styles.learningRuleActions}>
+        {rule.canRollback ? (
+          <button
+            type="button"
+            className={cx(styles.button, styles.buttonSmall)}
+            disabled={busy}
+            title="Rimette lo stato che la regola aveva prima dell’ultima modifica. Restano in cronologia sia quella modifica sia l’annullamento."
+            onClick={() => onRollback(rule.id)}
+          >
+            Annulla ultima modifica
+          </button>
+        ) : null}
         {rule.manual.map((status) =>
           status === 'REJECTED' && !confirming ? (
             <button
