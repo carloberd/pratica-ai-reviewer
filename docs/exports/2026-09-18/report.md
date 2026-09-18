@@ -250,11 +250,49 @@ Verifiche: gate completo verde (692 test); `tests/shared-dataset-list-origin.tes
 | dal revisore (`REVIEWER`) | 229 — 57 con un `pick`, 31 con l'`evidence` del motore accanto |
 | senza né `evidence` né `pick` | **135** |
 
-Il taglio per tipo di correzione dice di più: dei 31 `CHANGED`, **solo 3 hanno un `pick`**; degli 11 `CLEARED`, nessuno — ma lì è giusto, svuotare non ha una sorgente. Quando il revisore *corregge* un valore del motore, quasi sempre riscrive invece di selezionare, e da una riscrittura il learner non ricava nessuna ancora: gli serve la posizione della selezione per risalire all'etichetta.
+> **Corretto.** Qui l'analisi diceva che «dei 31 `CHANGED` solo 3 hanno un `pick`», e ne concludeva che il revisore riscrive invece di selezionare. **È falso, e la conclusione era rovesciata.** L'ha contestata il revisore stesso, dicendo che seleziona sempre. Ha ragione.
+>
+> La registrazione della selezione è arrivata con `b44c877`, il **17/09/2026 alle 18:20**. I 30 documenti chiusi prima non hanno una selezione *per costruzione*: l'app non poteva registrarla. Quei «3 su 31» mettevano insieme due popolazioni incompatibili — erano **3 su 3**. È lo stesso errore di poco sopra sui campi ripetuti: leggere un'assenza come un comportamento.
 
-Dei 75 `pick` registrati, 61 sono `AREA_OCR` e 14 `TEXT_SELECTION`, e 58 su 75 hanno una `location` utilizzabile. Il meccanismo funziona: è che si usa in un caso su quattro.
+Contando solo le revisioni fatte quando la funzione esisteva (11 documenti, 99 correzioni), il quadro si ribalta:
 
-Questo non è un bug da correggere in un modulo — è il flusso di revisione. Selezionare costa più che digitare, e finché costa di più il learner resterà a digiuno sui `CHANGED`, che sono proprio i casi da cui imparerebbe di più. Va affrontato in revisione, non nell'export.
+| | correzioni | con selezione |
+|---|---|---|
+| `CHANGED` | 3 | **3 — il 100%** |
+| `ADDED` | 21 | 18 (86%) |
+| `FILLED` | 73 | 54 (74%) |
+| `CLEARED` | 2 | 0 — giusto così, svuotare non ha una sorgente |
+| **totale** | **99** | **75 (76%)** |
+
+E il taglio che conta davvero è per sorgente del documento:
+
+| sorgente | correzioni | con selezione |
+|---|---|---|
+| `NATIVE_TEXT` (8 documenti) | 72 | **64 (89%)** |
+| `OCR` (3 documenti) | 27 | 11 (41%) |
+
+Su un PDF con testo nativo il revisore seleziona quasi sempre. Il buco è tutto sulle **scansioni**, e un permesso di soggiorno ha chiuso con 0 selezioni su 10 correzioni.
+
+Dei 75 `pick` registrati, 61 sono `AREA_OCR` e 14 `TEXT_SELECTION`; 58 su 75 hanno una `location` utilizzabile.
+
+### Il problema vero, che l'errore stava nascondendo
+
+`recordPick` tiene la selezione solo se il valore salvato coincide **carattere per carattere** col testo selezionato:
+
+```ts
+if (!pick || !value || pickValue(pick.text) !== value) return null
+```
+
+Su una scansione l'OCR legge male, il revisore sistema il testo — e **correggendolo perde la selezione**. I valori rimasti senza `pick` lo confermano: sono OCR ripulito a mano.
+
+```
+identity.expiry_date       '29 07 2026'
+person.birth_date          '10 11 1994'
+identity.issuing_authority 'REPUBBLICA ITALIANA MINISTERO DEL...'
+person.birth_place         'FRAITA (MAR)'
+```
+
+Il controllo ha senso per un valore **diverso** — lì la selezione non ne è più l'origine — ma non per un valore **ripulito**: il punto del documento da cui viene è sempre quello, ed è proprio quello che serve al learner per ricavare l'etichetta. Le scansioni sono i documenti su cui il motore lavora peggio, quindi è lì che l'apprendimento servirebbe di più, ed è lì che si perde.
 
 **65 slot core/optional restano vuoti** dopo la review (46 di ruolo `core`), e 5 documenti sono stati chiusi senza tipo, due dei quali con i campi comunque compilati.
 
@@ -264,7 +302,7 @@ Questo non è un bug da correggere in un modulo — è il flusso di revisione. S
 2. **Copertura del classificatore** — 27 documenti su 41 senza proposta è il collo di bottiglia più grosso a monte.
 3. **`document.number` e `document.issue_date`** — vincolare la selezione al contesto (etichetta vicina, posizione in testata) invece di prendere il primo match. Due terzi degli errori di valore.
 4. **Normalizzare le date all'inserimento** — senza questo non si può misurare nulla sulle date.
-5. **`origin` sui campi `many`** (fatto), e far sì che correggere un valore passi più spesso dalla selezione sul documento: oggi solo 3 `CHANGED` su 31 lasciano una traccia da cui imparare.
+5. **`origin` sui campi `many`** (fatto), e non far perdere la selezione a chi ripulisce un OCR letto male: sulle scansioni si registra il 41% delle selezioni contro l'89% dei PDF con testo nativo.
 6. **Stop-list sui pattern CLASS** per i token che coincidono con entità del documento (fatto).
 7. **Ripassare le revisioni già chiuse** perché il learner veda anche quelle di prima che fosse acceso (fatto, dopo il punto 1).
 
@@ -282,4 +320,4 @@ Questo non è un bug da correggere in un modulo — è il flusso di revisione. S
 | 5b | Date del revisore non normalizzate | ✅ PR #27 |
 | 6 | Ancore CLASS costruite su nomi propri | ✅ PR #29 |
 
-Resta aperto, e non è codice: **3 correzioni `CHANGED` su 31 lasciano una selezione**. Finché correggere costa meno che selezionare, il learner resta a digiuno proprio sui casi da cui imparerebbe di più.
+Resta aperto: **su una scansione, sistemare a mano un OCR letto male fa perdere la selezione.** `recordPick` la tiene solo se il valore coincide carattere per carattere col testo selezionato, e sui documenti OCR il revisore deve quasi sempre ripulire quello che l'OCR ha letto. Risultato: 89% di selezioni registrate sui PDF con testo nativo, 41% sulle scansioni. Non è il flusso di revisione, è un controllo troppo stretto.
