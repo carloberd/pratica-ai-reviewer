@@ -63,7 +63,8 @@ export async function assignDocumentType(input: {
  * Un documento ancora in coda che non è mai passato da questa versione del motore v2
  * con questi profili: tipicamente, estratto dal v1 prima dell'aggiornamento. Oppure
  * elaborato prima che la classificazione venisse salvata: senza, la scheda tipo non ha
- * candidati da proporre.
+ * candidati da proporre. Oppure passato su un testo incompleto, perché l'OCR non aveva
+ * letto le pagine scansionate: quel run è `FAILED_OCR` e non conta come passaggio.
  *
  * I documenti già revisionati o scartati non si toccano: il loro tipo e i loro campi
  * sono il dato consegnato, e una riclassificazione potrebbe cambiarli.
