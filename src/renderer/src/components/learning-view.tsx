@@ -249,10 +249,16 @@ function RuleRow({
   // Scartare porta via anche le prove: chiede un secondo clic lo stesso, perché annullare
   // è comunque un giro in più e la cronologia si porta dietro tutti e due i clic.
   const [confirming, setConfirming] = useState(false)
+  // L'affidabilità sta sempre, anche dove la precisione manca per mancanza di prove: lì
+  // vale 50%, ed è la risposta giusta — «non lo sappiamo» — mentre una riga senza nessuna
+  // percentuale lascerebbe credere che il numero non esista. Le due percentuali divergono
+  // proprio dove serve guardarle: una regola nuova al 100% di precisione è dichiarata al
+  // 75%, e chi legge vede che dietro quel 100% ci sono due prove.
   const numbers = [
     rule.positiveCount === 1 ? '1 conferma' : `${rule.positiveCount} conferme`,
     rule.negativeCount === 1 ? '1 smentita' : `${rule.negativeCount} smentite`,
-    rule.precision === null ? null : `precisione ${pct(rule.precision)}`
+    rule.precision === null ? null : `precisione ${pct(rule.precision)}`,
+    `affidabilità ${pct(rule.reliability)}`
   ].filter((part) => part !== null)
   const lastProof = [rule.lastPositiveAt, rule.lastNegativeAt]
     .filter((at): at is string => at !== null)
@@ -279,7 +285,10 @@ function RuleRow({
                 : 'etichetta del tipo'}
           </span>
         </div>
-        <div className={styles.muted}>
+        <div
+          className={styles.muted}
+          title="La precisione è quante volte la regola ci ha preso, ed è quella su cui il learner la attiva o la sospende. L’affidabilità corregge quel numero per quante prove ci sono sotto: con poche prove resta vicina al 50%, e si avvicina alla precisione man mano che le revisioni si accumulano."
+        >
           {rule.documentTypeLabel ?? rule.documentType} · {numbers.join(' · ')}
           {lastProof ? ` · ultima prova ${formatDateTime(lastProof)}` : ''}
         </div>

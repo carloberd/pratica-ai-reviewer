@@ -914,7 +914,12 @@ quello che il motore ha imparato e lo governa:
 - i contatori: decisioni registrate, regole attive, sospese, candidate;
 - le regole, prima quelle che stanno cambiando la precompilazione, ognuna con la frase che
   dice cosa ha imparato («Data emissione» sta dopo «data» sul modulo …), i suoi numeri e
-  l'ultima prova. Da qui una regola si **sospende**, si **riattiva** o si **scarta** —
+  l'ultima prova. I numeri sono due percentuali, non una: la **precisione**, quante volte
+  la regola ci ha preso — ed è quella su cui il learner la attiva o la sospende — e
+  l'**affidabilità**, la stessa cosa corretta per quante prove ci sono sotto. Due conferme
+  senza smentite fanno precisione 100% e affidabilità 75%: vero tutti e due, ma il secondo
+  dice che dietro quel 100% ci sono due documenti. Serve a chi decide a mano, e non pesa
+  niente nell'estrazione. Da qui una regola si **sospende**, si **riattiva** o si **scarta** —
   scartare chiede un secondo clic, e **si può annullare**: nessun passaggio riapre una
   regola scartata, ma «Annulla ultima modifica» rimette lo stato che c'era prima, e in
   cronologia restano tutte e due le decisioni. Il learner promuove e sospende da sé, ma non
