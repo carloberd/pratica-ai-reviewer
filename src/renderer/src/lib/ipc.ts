@@ -110,6 +110,7 @@ export const api = {
     setRuleStatus: (ruleId: string, status: ManualRuleStatus) =>
       call(() => window.reviewer.learning.setRuleStatus(ruleId, status)),
     replay: () => call(() => window.reviewer.learning.replay()),
+    rollbackRule: (ruleId: string) => call(() => window.reviewer.learning.rollbackRule(ruleId)),
     export: () => call(() => window.reviewer.learning.export())
   },
   history: {

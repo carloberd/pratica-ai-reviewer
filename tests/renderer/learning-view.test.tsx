@@ -23,6 +23,7 @@ const rule = (overrides: Partial<LearningRuleView>): LearningRuleView => ({
   lastNegativeAt: null,
   updatedAt: '2026-09-17T10:00:00.000Z',
   manual: ['SUSPENDED', 'REJECTED'],
+  canRollback: false,
   ...overrides
 })
 
@@ -72,6 +73,7 @@ const props = {
   onSetMode: noop,
   onSetRuleStatus: noop,
   onReplay: noop,
+  onRollbackRule: noop,
   onExport: noop
 }
 
@@ -100,6 +102,24 @@ describe('LearningView', () => {
     expect(count(markup, '>Scarta<')).toBe(3)
     expect(view).toContain('Cronologia del learner')
     expect(view).toContain('Regola sospesa')
+  })
+
+  it('«Annulla ultima modifica» solo sulle regole che hanno qualcosa da annullare', () => {
+    // Nel fixture nessuna regola è annullabile: il pulsante non c'è proprio, e non è un
+    // pulsante spento — un'azione impossibile non si mostra.
+    expect(html(<LearningView {...props} />)).not.toContain('Annulla ultima modifica')
+
+    const scartata = rule({
+      id: 'r-scartata',
+      status: 'REJECTED',
+      manual: [],
+      canRollback: true
+    })
+    const markup = html(
+      <LearningView {...props} overview={{ ...overview, rules: [rule({}), scartata] }} />
+    )
+    expect(count(markup, '>Annulla ultima modifica<')).toBe(1)
+    expect(markup).toContain('Rimette lo stato che la regola aveva prima dell’ultima modifica.')
   })
 
   it('il ripasso delle revisioni si può lanciare solo in LEARNING', () => {

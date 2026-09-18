@@ -8,6 +8,7 @@ import {
   learningOverview,
   learningSnapshot,
   registryFieldResolver,
+  rollbackRuleByHand,
   setRuleStatusByHand
 } from '../src/main/learning-workspace'
 import {
@@ -155,6 +156,51 @@ describe('la scheda «Apprendimento»', () => {
     expect(() => setRuleStatusByHand(deps, 'nessuna', 'SUSPENDED', AT)).toThrow(
       'Regola non trovata'
     )
+  })
+
+  it('annullare uno scarto: la regola torna, e la coda si rielabora come per un cambio', () => {
+    const { deps, ids, r } = setup()
+    setRuleStatusByHand(deps, ids.template, 'REJECTED', AT)
+    expect(learningOverview(deps).rules.find((rule) => rule.id === ids.template)).toMatchObject({
+      status: 'REJECTED',
+      // Una regola scartata non ha più passaggi davanti: l'unica via di ritorno è annullare.
+      manual: [],
+      canRollback: true
+    })
+
+    const rollback = rollbackRuleByHand(deps, ids.template, '2026-09-18T09:00:00.000Z')
+    expect(rollback.action).toMatchObject({
+      kind: 'REVERT',
+      after: 'ACTIVE',
+      detail:
+        'Annullata: Etichetta «data» per document.issue_date scartata a mano: 2 conferme, 0 smentite.'
+    })
+    // La regola ricomincia a valere: i documenti in coda di quel tipo vanno rifatti.
+    expect(rollback.change).toEqual({ documentTypes: [TYPE], templateFingerprints: [] })
+    expect(r.learning.activeRules().map((rule) => rule.id)).toEqual([ids.template])
+  })
+
+  it('annullare lo scarto di una candidata non rimette in gioco niente', () => {
+    const { deps, ids } = setup()
+    setRuleStatusByHand(deps, ids.klass, 'REJECTED', AT)
+    const rollback = rollbackRuleByHand(deps, ids.klass, '2026-09-18T09:00:00.000Z')
+    expect(rollback.action.after).toBe('CANDIDATE')
+    expect(rollback.change).toEqual({ documentTypes: [], templateFingerprints: [] })
+  })
+
+  it('la scheda non offre l’annullamento dove non c’è niente da annullare', () => {
+    const { deps, ids } = setup()
+    // La regola di template è stata attivata dal learner, e quello non si annulla; la
+    // memoria l'ha sospesa il learner, e quello sì.
+    expect(learningOverview(deps).rules.map((rule) => [rule.id, rule.canRollback])).toEqual([
+      [ids.template, false],
+      [ids.memory, true],
+      [ids.klass, false]
+    ])
+    expect(() => rollbackRuleByHand(deps, ids.template, AT)).toThrow(
+      'Nessun cambio di stato annullabile per questa regola.'
+    )
+    expect(() => rollbackRuleByHand(deps, 'nessuna', AT)).toThrow('Regola non trovata')
   })
 })
 
