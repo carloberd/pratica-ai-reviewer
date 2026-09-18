@@ -251,7 +251,12 @@ identificativi, testo). Fra due campi che leggono la stessa riga vince l'etichet
 specifica; a parità, o con due valori diversi per la stessa etichetta, il campo va in
 `CONFLICT`. I campi ripetuti (righe, rate, garanzie) finiscono in `field_items`, un
 elemento per riga. Ogni esecuzione lascia un rigo in `extraction_runs` con motore,
-versione dei profili, obbligatori mancanti, conflitti e metriche.
+versione dei profili, obbligatori mancanti, conflitti e metriche. Un campo che il profilo
+chiede e l'ontologia non descrive non si può cercare — non si sa con che etichette né con
+che lettore — ma resta nel run: campo vuoto con `UNKNOWN_FIELD` fra gli errori di
+validazione, `UNKNOWN_FIELD:<id>` fra i conflitti, e fra gli obbligatori mancanti se il
+profilo lo dichiara tale. Altrimenti la copertura del run direbbe 1,0 su un obbligatorio
+mai cercato.
 
 **Precompilazione v1.** I campi dichiarati dallo schema del tipo, i 4 universali se il
 tipo manca, con le euristiche di `src/main/extract/heuristics.ts`. Il testo, per
