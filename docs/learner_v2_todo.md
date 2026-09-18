@@ -102,6 +102,15 @@ per sempre, senza rete. È append-only e non tocca l'estrazione. Cambia però un
 scritta («una regola scartata non torna») — README e testo del pulsante vanno aggiornati
 insieme, cosa che il ramo fa già.
 
+Nessuna migrazione: la `0011` aveva già aperto `reverts_id` e `reverted_at`, e `REVERT` era
+già fra i tipi di azione. Il confine di cosa si annulla è però più stretto di quello del
+ramo, che annulla qualunque cambio di stato ancora in vigore: **le promozioni del learner
+restano fuori**. I contatori che le hanno fatte scattare non li tocca nessuno, quindi
+riportare la regola a CANDIDATE la lascia sopra la soglia e la prima revisione che la
+conferma la ripromuove — un annullamento che il learner disfa da solo non è un
+annullamento. Chi non è d'accordo con una promozione la sospende o la scarta, e quelle sono
+annullabili.
+
 ---
 
 ## Rimandare a quando c'è il corpus
@@ -184,7 +193,7 @@ Sei PR piccole, in quest'ordine, ognuna coi gate verdi prima della successiva.
 | 2 | `inferExactValuePick` | no | fatta (#36) |
 | 3 | Fix `documentEntityWords` + parsing difensivo | no | fatta (#37) |
 | 4 | Colonne di provenienza | `0017` | fatta (#38) |
-| 5 | Rollback `REVERT` | no | da fare |
+| 5 | Rollback `REVERT` | no | fatta (#39) |
 | 6 | `ruleReliability` + cablaggio in `LearnedLabel`, ranking spento | no | da fare |
 
 Le prime due cambiano davvero la capacità del tool di imparare; dalla terza in giù è
