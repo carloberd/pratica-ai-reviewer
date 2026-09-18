@@ -1,4 +1,9 @@
-import type { FieldReviewStatus, FieldRole } from '@shared/extraction-v2'
+import type {
+  ExtractionRuleScope,
+  ExtractionStrategy,
+  FieldReviewStatus,
+  FieldRole
+} from '@shared/extraction-v2'
 import { fieldSemanticType } from '@shared/fields'
 import type {
   BoundingBox,
@@ -118,6 +123,10 @@ export interface EvidenceRow {
   rule_id: string | null
   /** Il testo letto è stato sistemato a mano dal revisore (migrazione 0015). */
   text_corrected: number
+  /** `LABEL_STRICT` | `NEXT_LINE`: come il motore ha letto il valore (migrazione 0017). */
+  extraction_strategy: string | null
+  /** `TEMPLATE` | `CLASS`: l'ambito della regola in `rule_id` (migrazione 0017). */
+  rule_scope: string | null
 }
 
 export interface EventRow {
@@ -170,6 +179,19 @@ function toPickMethod(value: string | null): PickMethod | undefined {
     : undefined
 }
 
+/**
+ * La provenienza letta dal database non si fida della colonna: non ha un CHECK, e sulle
+ * evidenze di prima della 0017 è vuota. Una parola che il codice non conosce vale come
+ * assente — meglio non sapere come è stato letto un valore che dichiararlo a caso.
+ */
+function toExtractionStrategy(value: string | null): ExtractionStrategy | undefined {
+  return value === 'LABEL_STRICT' || value === 'NEXT_LINE' ? value : undefined
+}
+
+function toExtractionRuleScope(value: string | null): ExtractionRuleScope | undefined {
+  return value === 'TEMPLATE' || value === 'CLASS' ? value : undefined
+}
+
 /** La posizione salvata: le righe ci sono sempre quando c'è una posizione, gli offset no. */
 export function toPickLocation(
   row: Pick<EvidenceRow, 'line_start' | 'line_end' | 'char_start' | 'char_end'>
@@ -187,6 +209,8 @@ export function toEvidenceItem(row: EvidenceRow, label: string): EvidenceItem {
   const bbox = parseBbox(row.bbox_json)
   const method = toPickMethod(row.method)
   const location = toPickLocation(row)
+  const strategy = toExtractionStrategy(row.extraction_strategy)
+  const ruleScope = toExtractionRuleScope(row.rule_scope)
   return {
     id: row.id,
     label,
@@ -198,7 +222,9 @@ export function toEvidenceItem(row: EvidenceRow, label: string): EvidenceItem {
     ...(method ? { method } : {}),
     ...(location ? { location } : {}),
     ...(row.text_corrected === 1 ? { textCorrected: true as const } : {}),
-    ...(row.rule_id ? { ruleId: row.rule_id } : {})
+    ...(row.rule_id ? { ruleId: row.rule_id } : {}),
+    ...(strategy ? { strategy } : {}),
+    ...(ruleScope ? { ruleScope } : {})
   }
 }
 

@@ -442,7 +442,9 @@ function prepareV2(input: {
       text: item.text,
       bbox: item.bbox ?? null,
       confidence,
-      ruleId: item.ruleId ?? null
+      ruleId: item.ruleId ?? null,
+      strategy: item.strategy ?? null,
+      ruleScope: item.ruleScope ?? null
     })
     return id
   }

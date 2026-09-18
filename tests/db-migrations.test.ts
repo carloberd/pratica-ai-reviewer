@@ -164,7 +164,8 @@ describe('migrazioni', () => {
       '0013',
       '0014',
       '0015',
-      '0016'
+      '0016',
+      '0017'
     ])
 
     expect(
@@ -198,7 +199,8 @@ describe('migrazioni', () => {
       '0013',
       '0014',
       '0015',
-      '0016'
+      '0016',
+      '0017'
     ])
 
     // NULL = da calcolare al primo export, non «documento senza impronta».
@@ -224,7 +226,8 @@ describe('migrazioni', () => {
       '0013',
       '0014',
       '0015',
-      '0016'
+      '0016',
+      '0017'
     ])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_overrides').get()).toEqual({ n: 0 })
@@ -249,7 +252,17 @@ describe('migrazioni', () => {
   it('la 0009 apre la tabella delle cardinalità, vuota: ogni campo segue l’ontologia', () => {
     const db = databaseAt('0008')
 
-    expect(migrate(db)).toEqual(['0009', '0010', '0011', '0012', '0013', '0014', '0015', '0016'])
+    expect(migrate(db)).toEqual([
+      '0009',
+      '0010',
+      '0011',
+      '0012',
+      '0013',
+      '0014',
+      '0015',
+      '0016',
+      '0017'
+    ])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_cardinality_overrides').get()).toEqual({
       n: 0
@@ -281,7 +294,7 @@ describe('migrazioni', () => {
         VALUES ('f', 'd', 'document.number', 'Numero documento', '114/2026', '114/2026-bis', 0.85, 'e');
     `)
 
-    expect(migrate(db)).toEqual(['0010', '0011', '0012', '0013', '0014', '0015', '0016'])
+    expect(migrate(db)).toEqual(['0010', '0011', '0012', '0013', '0014', '0015', '0016', '0017'])
 
     expect(db.prepare('SELECT origin, method, line_start, char_start FROM evidence').get()).toEqual(
       {
@@ -308,7 +321,7 @@ describe('migrazioni', () => {
 
   it('la 0011 apre il deposito del learner vuoto, in modalità LEARNING', () => {
     const db = databaseAt('0010')
-    expect(migrate(db)).toEqual(['0011', '0012', '0013', '0014', '0015', '0016'])
+    expect(migrate(db)).toEqual(['0011', '0012', '0013', '0014', '0015', '0016', '0017'])
 
     expect(db.prepare('SELECT id, mode FROM learning_state').all()).toEqual([
       { id: 1, mode: 'LEARNING' }
@@ -335,7 +348,7 @@ describe('migrazioni', () => {
 
   it('la 0012 lega evidenze ed eventi alle regole, e conta una prova per documento', () => {
     const db = databaseAt('0011')
-    expect(migrate(db)).toEqual(['0012', '0013', '0014', '0015', '0016'])
+    expect(migrate(db)).toEqual(['0012', '0013', '0014', '0015', '0016', '0017'])
     const columns = (table: string) =>
       (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map(
         (c) => c.name
@@ -381,7 +394,7 @@ describe('migrazioni', () => {
     rule('template-attiva', 'TEMPLATE', 'ACTIVE', 'aabbccdd11223344')
     rule('classe', 'CLASS', 'CANDIDATE', null)
 
-    expect(migrate(db)).toEqual(['0013', '0014', '0015', '0016'])
+    expect(migrate(db)).toEqual(['0013', '0014', '0015', '0016', '0017'])
 
     // Le impronte del vecchio algoritmo spariscono: l'elaborazione e l'export le rifanno.
     expect(db.prepare('SELECT template_fingerprint FROM documents').get()).toEqual({
@@ -426,7 +439,7 @@ describe('migrazioni', () => {
       "INSERT INTO learning_events (id, at, actor, document_id, kind, outcome, learner_version) VALUES ('e', '2026-09-15', 'chi@esempio.it', 'd', 'FIELD_VALUE', 'FILLED', 'v')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0014', '0015', '0016'])
+    expect(migrate(db)).toEqual(['0014', '0015', '0016', '0017'])
 
     // Gli eventi di prima sono stati registrati sul momento: non hanno una data di ripasso.
     expect(db.prepare('SELECT at, replayed_at FROM learning_events').get()).toEqual({
@@ -445,7 +458,7 @@ describe('migrazioni', () => {
       "INSERT INTO evidence (id, document_id, page, text, confidence, origin, method) VALUES ('e', 'd', 1, '29 O7 2026', 1, 'REVIEWER', 'AREA_OCR')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0015', '0016'])
+    expect(migrate(db)).toEqual(['0015', '0016', '0017'])
 
     // Una selezione registrata prima di questa versione era per forza il valore salvato:
     // il testo non era stato sistemato, o la selezione non sarebbe qui.
@@ -466,7 +479,7 @@ describe('migrazioni', () => {
        VALUES ('e', '2026-01-01', 'chi', 'd', 'DOCUMENT_TYPE', 'CONFIRMED', 'local-learner/0.1.0', 'abc123')`
     ).run()
 
-    expect(migrate(db)).toEqual(['0016'])
+    expect(migrate(db)).toEqual(['0016', '0017'])
 
     // L'impronta esatta non si tocca: le regole scritte prima continuano a valere per
     // confronto esatto, e la firma manca semplicemente su quello che c'era già.
@@ -476,6 +489,70 @@ describe('migrazioni', () => {
     expect(db.prepare('SELECT template_signature_json FROM learning_events').get()).toEqual({
       template_signature_json: null
     })
+    db.close()
+  })
+
+  it('la 0017 apre le colonne della provenienza, vuote sulle evidenze già lette', () => {
+    const db = databaseAt('0016')
+    db.prepare(
+      "INSERT INTO documents (id, drive_file_id, filename, mime, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', '2026-01-01')"
+    ).run()
+    db.prepare(
+      `INSERT INTO learning_rules (id, kind, scope, document_type, pattern_json, rule_key, status, created_at, updated_at, learner_version)
+       VALUES ('regola-1', 'EXTRACTION_ANCHOR', 'CLASS', 'accounting.fattura', '{}', 'k', 'ACTIVE', '2026-01-01', '2026-01-01', 'local-learner/0.1.0')`
+    ).run()
+    db.prepare(
+      "INSERT INTO evidence (id, document_id, page, text, confidence, origin, rule_id) VALUES ('motore', 'd', 1, 'Data: 12/09/2026', 0.85, 'ENGINE', 'regola-1')"
+    ).run()
+    db.prepare(
+      "INSERT INTO evidence (id, document_id, page, text, confidence, origin, method) VALUES ('revisore', 'd', 1, '12/09/2026', 1, 'REVIEWER', 'TEXT_SELECTION')"
+    ).run()
+
+    expect(migrate(db)).toEqual(['0017'])
+
+    // Come sia stato letto un valore prima di qui non è ricostruibile: la colonna resta
+    // vuota, e vuota vuol dire «non registrato», non «letto in nessun modo».
+    expect(
+      db
+        .prepare('SELECT id, rule_id, extraction_strategy, rule_scope FROM evidence ORDER BY id')
+        .all()
+    ).toEqual([
+      { id: 'motore', rule_id: 'regola-1', extraction_strategy: null, rule_scope: null },
+      { id: 'revisore', rule_id: null, extraction_strategy: null, rule_scope: null }
+    ])
+
+    // Nullable davvero: un'evidenza si scrive ancora senza dire da dove viene, come fa il
+    // motore v1 e come farà chiunque legga in un modo che non ha ancora un nome.
+    const columns = db.prepare('PRAGMA table_info(evidence)').all() as Array<{
+      name: string
+      type: string
+      notnull: number
+      dflt_value: string | null
+    }>
+    expect(
+      columns
+        .filter((c) => ['extraction_strategy', 'rule_scope'].includes(c.name))
+        .map((c) => [c.name, c.type, c.notnull, c.dflt_value])
+    ).toEqual([
+      ['extraction_strategy', 'TEXT', 0, null],
+      ['rule_scope', 'TEXT', 0, null]
+    ])
+    expect(() =>
+      db
+        .prepare(
+          "INSERT INTO evidence (id, document_id, page, text, confidence, origin) VALUES ('senza', 'd', 1, 'x', 0.5, 'ENGINE')"
+        )
+        .run()
+    ).not.toThrow()
+
+    // Nessun CHECK: il vocabolario cresce col codice che lo produce, e una migrazione in
+    // meno da scrivere il giorno in cui succede.
+    db.prepare(
+      "UPDATE evidence SET extraction_strategy = 'LABEL_STRICT', rule_scope = 'TEMPLATE' WHERE id = 'motore'"
+    ).run()
+    expect(
+      db.prepare("SELECT extraction_strategy, rule_scope FROM evidence WHERE id = 'motore'").get()
+    ).toEqual({ extraction_strategy: 'LABEL_STRICT', rule_scope: 'TEMPLATE' })
     db.close()
   })
 
@@ -495,7 +572,8 @@ describe('migrazioni', () => {
       '0013',
       '0014',
       '0015',
-      '0016'
+      '0016',
+      '0017'
     ])
 
     // Chi ha chiuso un documento prima di questa versione non ha una nota da recuperare:
@@ -567,7 +645,8 @@ describe('migrazione 0004 su un database esistente', () => {
       '0013',
       '0014',
       '0015',
-      '0016'
+      '0016',
+      '0017'
     ])
 
     const rows = db
