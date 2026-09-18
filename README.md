@@ -836,6 +836,12 @@ compare **solo** nel nome del file vale 0,70 e resta sotto la soglia di 0,75: è
 il nome di un file è un indizio e non una prova. Se sui documenti veri risultasse troppo
 severo, abbassare `TYPE_MATCH_THRESHOLD` a 0,70 è la prima cosa da provare.
 
+**Cosa non è un importo.** Le cifre di una data sono fuori dai candidati: in «Totale al
+31.12.2025 di 1.234,56» il lettore degli importi aggancerebbe «31.12», che ha la parte
+decimale e passerebbe la guardia sul numero nudo, e l'importo vero non verrebbe mai
+letto. Vale per entrambi i motori, perché il v2 legge gli importi con lo stesso lettore.
+Solo le date che esistono coprono le loro cifre: «31.02» resta un numero come un altro.
+
 **Divergenza dal registry.** `package_count` e `consumption` sono dichiarati `number`
 negli schemi ma qui sono trattati come stringhe: in pratica portano un'unità di misura
 («12 colli», «540 kWh») che una normalizzazione numerica butterebbe via.
