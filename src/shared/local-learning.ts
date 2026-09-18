@@ -230,6 +230,39 @@ export function rulePrecision(
 }
 
 /**
+ * Quanto ci si può fidare di una regola, tenendo conto di **quante** prove ha.
+ *
+ * La precisione grezza risponde male alla domanda che si fa chi governa le regole a mano.
+ * Due conferme e nessuna smentita danno 100%; cento conferme e una smentita danno 99%. La
+ * prima sembra la più sicura delle due, e non lo è affatto: con due prove non si sa quasi
+ * niente, e la terza revisione può portare la precisione a 67%. La precisione dice quanto
+ * spesso la regola ci ha preso, non quanto è solido quel numero.
+ *
+ * Qui il conteggio si legge come una Beta(1,1) aggiornata dalle prove — cioè si parte
+ * dall'ignoranza, «potrebbe essere giusta come sbagliata», e le revisioni la spostano.
+ * Concretamente è una conferma e una smentita immaginarie aggiunte ai contatori veri: le
+ * due conferme diventano `3/4`, le cento con un errore `101/103`. Poche prove restano
+ * vicino al 50% e si arrampicano solo accumulando revisioni; tante prove sono ormai dove
+ * le mette la precisione. Senza nessuna prova vale esattamente `1/2`, che è il modo giusto
+ * di dire «non lo sappiamo» — e per questo, a differenza di {@link rulePrecision}, non
+ * restituisce mai `null`.
+ *
+ * ## Dove non entra
+ *
+ * Non entra in {@link nextRuleStatus}: le soglie di promozione e di sospensione sono
+ * tarate sulla precisione, e sostituirle con questo numero cambierebbe *quando* le regole
+ * cominciano a valere — cioè il comportamento dell'apprendimento, che qui non è in
+ * discussione. E non pesa niente in estrazione né in classificazione: quello è il ranking
+ * online, rimandato a quando ci sarà un corpus per tararlo. Per adesso questo numero è
+ * informazione per una persona che decide se fidarsi di una regola, e nient'altro.
+ */
+export function ruleReliability(
+  rule: Pick<LearningRule, 'positiveCount' | 'negativeCount'>
+): number {
+  return (rule.positiveCount + 1) / (rule.positiveCount + rule.negativeCount + 2)
+}
+
+/**
  * Quando una regola comincia o smette di valere. Soglie iniziali della specifica, da
  * calibrare sui documenti veri.
  */

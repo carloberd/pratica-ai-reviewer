@@ -11,7 +11,9 @@ import {
   DEFAULT_LEARNING_POLICY,
   documentKey,
   type LearningRule,
-  nextRuleStatus
+  nextRuleStatus,
+  rulePrecision,
+  ruleReliability
 } from '../src/shared/local-learning'
 import { type PageLine, pageText } from '../src/shared/pick-locate'
 import { normalizedTemplateSignature } from '../src/shared/template-fingerprint'
@@ -406,6 +408,75 @@ describe('quando una regola vale', () => {
   it('una prova si lega ai byte del documento, o al documento senza hash', () => {
     expect(documentKey({ contentSha256: 'abc', documentId: 'd' })).toBe('abc')
     expect(documentKey({ contentSha256: null, documentId: 'd' })).toBe('document:d')
+  })
+})
+
+describe('quanto ci si può fidare di una regola', () => {
+  const counts = (positiveCount: number, negativeCount = 0) => ({ positiveCount, negativeCount })
+
+  it('due conferme non valgono cento conferme con un errore, anche se la precisione dice il contrario', () => {
+    const nuova = counts(2)
+    const collaudata = counts(100, 1)
+    // È il caso che motiva la funzione: la precisione mette la regola nuova davanti.
+    expect(rulePrecision(nuova)).toBe(1)
+    expect(rulePrecision(collaudata)).toBeGreaterThan(0.99)
+    expect(rulePrecision(nuova)!).toBeGreaterThan(rulePrecision(collaudata)!)
+    // L'affidabilità rimette l'ordine giusto, e dice quanto vale davvero quel 100%.
+    expect(ruleReliability(nuova)).toBeCloseTo(3 / 4, 10)
+    expect(ruleReliability(collaudata)).toBeCloseTo(101 / 103, 10)
+    expect(ruleReliability(collaudata)).toBeGreaterThan(ruleReliability(nuova))
+  })
+
+  it('senza prove vale 1/2, e non è mai né 0 né 1', () => {
+    expect(ruleReliability(counts(0))).toBe(0.5)
+    expect(rulePrecision(counts(0))).toBeNull()
+    // Il prior non si consuma mai del tutto: nessuna storia rende una regola certa.
+    expect(ruleReliability(counts(1000))).toBeLessThan(1)
+    expect(ruleReliability(counts(0, 1000))).toBeGreaterThan(0)
+    // Una regola solo smentita sta sotto la metà, una solo confermata sopra.
+    expect(ruleReliability(counts(0, 3))).toBeCloseTo(1 / 5, 10)
+    expect(ruleReliability(counts(3))).toBeCloseTo(4 / 5, 10)
+  })
+
+  it('cresce con le conferme e cala con le smentite', () => {
+    const conferme = [0, 1, 2, 5, 20, 100].map((positive) => ruleReliability(counts(positive, 2)))
+    for (let i = 1; i < conferme.length; i += 1) {
+      expect(conferme[i]!).toBeGreaterThan(conferme[i - 1]!)
+    }
+    const smentite = [0, 1, 2, 5, 20, 100].map((negative) => ruleReliability(counts(5, negative)))
+    for (let i = 1; i < smentite.length; i += 1) {
+      expect(smentite[i]!).toBeLessThan(smentite[i - 1]!)
+    }
+    // Con tante prove tende alla precisione: la correzione conta sempre meno.
+    expect(ruleReliability(counts(900, 100))).toBeCloseTo(0.9, 2)
+  })
+
+  it('non entra nelle soglie: promozioni e sospensioni restano dove stavano', () => {
+    // Una regola di tipo con tre conferme si attiva: precisione 100% ≥ 90%. La sua
+    // affidabilità è 80%, cioè sotto la soglia — se fosse lei a decidere, resterebbe
+    // candidata.
+    const tipo = { status: 'CANDIDATE', scope: 'CLASS', ...counts(3) } as const
+    expect(ruleReliability(tipo)).toBeLessThan(DEFAULT_LEARNING_POLICY.minClassPrecision)
+    expect(nextRuleStatus(tipo, [])).toBe('ACTIVE')
+
+    // Stessa cosa sul template, dove la soglia è il 100% pieno: nessuna affidabilità lo
+    // raggiunge mai, quindi con lei al posto della precisione non si attiverebbe niente.
+    const template = { status: 'CANDIDATE', scope: 'TEMPLATE', ...counts(2) } as const
+    expect(ruleReliability(template)).toBeLessThan(DEFAULT_LEARNING_POLICY.minTemplatePrecision)
+    expect(nextRuleStatus(template, [])).toBe('ACTIVE')
+
+    // E non potrebbe nemmeno promuovere qualcosa che la precisione ferma: sopra il 50%
+    // l'affidabilità sta sempre sotto la precisione, perché il prior tira verso la metà.
+    for (const [positive, negative] of [
+      [2, 0],
+      [3, 0],
+      [9, 1],
+      [50, 3],
+      [100, 1]
+    ]) {
+      const rule = counts(positive!, negative!)
+      expect(ruleReliability(rule)).toBeLessThan(rulePrecision(rule)!)
+    }
   })
 })
 

@@ -108,7 +108,9 @@ describe('la scheda «Apprendimento»', () => {
       fieldLabel: 'Data emissione',
       label: 'data',
       support: 2,
-      precision: 1
+      precision: 1,
+      // Due conferme e nessuna smentita: precisione 100%, ma l'affidabilità dice 75%.
+      reliability: 0.75
     })
     expect(overview.actions.map((action) => action.kind)).toEqual([
       'RULE_SUSPENDED',
@@ -311,6 +313,17 @@ describe('il modulo condiviso della scheda', () => {
     expect(ruleTitle({ ...base, kind: 'EXTRACTION_ANCHOR', scope: 'TEMPLATE' }, unnamed)).toBe(
       '«document.issue_date» sta sotto «data» sul modulo f1'
     )
+  })
+
+  it('l’affidabilità arriva alla scheda anche dove la precisione non c’è', () => {
+    const { deps, ids } = setup()
+    const rules = learningOverview(deps).rules
+    const byId = (id: string) => rules.find((rule) => rule.id === id)!
+    // La memoria del modulo è stata attivata e sospesa a mano, senza nessuna prova: la
+    // precisione non è calcolabile, l'affidabilità è il prior e vale mezzo.
+    expect(byId(ids.memory)).toMatchObject({ precision: null, reliability: 0.5 })
+    // E non cambia niente di quello che il learner ha deciso: gli stati restano quelli.
+    expect(rules.map((rule) => rule.status)).toEqual(['ACTIVE', 'SUSPENDED', 'CANDIDATE'])
   })
 
   it('le regole in ordine: attive, sospese, candidate, scartate; poi supporto', () => {
