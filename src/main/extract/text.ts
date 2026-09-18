@@ -2,6 +2,7 @@ import { DOCX_MIME, PDF_MIME } from '../drive/client'
 import { logError, ReviewerError } from '../errors'
 import { extractDocxPages } from './docx'
 import type { OcrService } from './ocr'
+import type { OcrPageText } from './ocr-engine'
 import { extractPdfPages } from './pdf'
 import { type ExtractedPage, type ExtractedText, MIN_CHARS_PER_PAGE } from './types'
 
@@ -57,7 +58,7 @@ export async function extractText(options: ExtractOptions): Promise<ExtractedTex
     }
   }
 
-  let recognized: Map<number, string>
+  let recognized: Map<number, OcrPageText>
   try {
     recognized = await options.ocr.recognize(options.filePath, candidates)
   } catch (error) {
@@ -75,18 +76,17 @@ export async function extractText(options: ExtractOptions): Promise<ExtractedTex
 
   const ocrPages: number[] = []
   const merged = pages.map((page) => {
-    const text = recognized.get(page.page)?.trim()
-    if (!text || text.length < page.text.trim().length) return page
+    const read = recognized.get(page.page)
+    const text = read?.text.trim()
+    if (!read || !text || text.length < page.text.trim().length) return page
     ocrPages.push(page.page)
     return {
       page: page.page,
       text,
-      // L'OCR non restituisce coordinate utilizzabili per le evidenze: righe senza bbox.
-      lines: text
-        .split(/\r?\n/)
-        .map((line) => line.replace(/\s+/g, ' ').trim())
-        .filter((line) => line.length > 0)
-        .map((line) => ({ text: line }))
+      // Le righe dell'OCR portano le coordinate quando la collocazione dell'immagine sulla
+      // pagina si ricostruisce: senza, una selezione su una scansione non si ritrova. Se
+      // non ne è uscita nessuna resta il testo, spezzato a capo come prima.
+      lines: read.lines.length > 0 ? read.lines : splitLines(text)
     }
   })
 
@@ -100,4 +100,13 @@ export async function extractText(options: ExtractOptions): Promise<ExtractedTex
     ocrPages,
     ocrFailedPages
   }
+}
+
+/** Il testo di una pagina spezzato in righe, senza coordinate: l'ultimo ripiego. */
+function splitLines(text: string): Array<{ text: string }> {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter((line) => line.length > 0)
+    .map((line) => ({ text: line }))
 }

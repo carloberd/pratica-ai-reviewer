@@ -1,5 +1,5 @@
 import { parentPort, workerData } from 'node:worker_threads'
-import { createOcrEngine } from './ocr-engine'
+import { createOcrEngine, type OcrPageText } from './ocr-engine'
 
 /**
  * Worker OCR (D2).
@@ -20,7 +20,8 @@ export type OcrRequest =
   | { id: number; kind: 'image'; image: Uint8Array }
 
 export type OcrResponse =
-  | { id: number; ok: true; kind: 'pages'; pages: Array<{ page: number; text: string }> }
+  /** Le pagine lette, col testo e le righe: le righe portano le coordinate quando ci sono. */
+  | { id: number; ok: true; kind: 'pages'; pages: OcrPageText[] }
   | { id: number; ok: true; kind: 'image'; text: string }
   | { id: number; ok: false; message: string }
 
