@@ -1,0 +1,11 @@
+-- Il testo di una selezione letto male, e sistemato a mano dal revisore.
+--
+-- Fino alla 0014 una selezione valeva solo se il valore salvato era carattere per
+-- carattere il testo selezionato. Su una scansione l'OCR legge male, il revisore
+-- corregge la parola — e correggendola perdeva la selezione: per l'app era
+-- indistinguibile da «l'ho riscritto a mano». Sono proprio i documenti su cui il motore
+-- lavora peggio, quindi quelli su cui l'apprendimento servirebbe di più.
+--
+-- Adesso la selezione resta, e questa colonna dice che `text` è la lettura dell'OCR e
+-- non il valore: il punto del documento è quello, cambia come si legge.
+ALTER TABLE evidence ADD COLUMN text_corrected INTEGER NOT NULL DEFAULT 0;

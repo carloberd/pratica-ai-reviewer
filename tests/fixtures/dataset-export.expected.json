@@ -1,7 +1,7 @@
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.6.0",
+    "formatVersion": "1.7.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": {
       "name": "praticaai-reviewer",
@@ -498,7 +498,8 @@
               "lineEnd": 3,
               "charStart": 99,
               "charEnd": 109
-            }
+            },
+            "textCorrected": false
           }
         },
         {
@@ -624,7 +625,8 @@
               "lineEnd": 3,
               "charStart": 99,
               "charEnd": 109
-            }
+            },
+            "textCorrected": false
           }
         }
       ]

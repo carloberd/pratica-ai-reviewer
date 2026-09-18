@@ -111,6 +111,8 @@ export interface EvidenceRow {
   char_end: number | null
   /** La regola appresa che ha letto il valore (migrazione 0012). */
   rule_id: string | null
+  /** Il testo letto è stato sistemato a mano dal revisore (migrazione 0015). */
+  text_corrected: number
 }
 
 export interface EventRow {
@@ -190,6 +192,7 @@ export function toEvidenceItem(row: EvidenceRow, label: string): EvidenceItem {
     origin: toEvidenceOrigin(row.origin),
     ...(method ? { method } : {}),
     ...(location ? { location } : {}),
+    ...(row.text_corrected === 1 ? { textCorrected: true as const } : {}),
     ...(row.rule_id ? { ruleId: row.rule_id } : {})
   }
 }

@@ -69,6 +69,11 @@ export interface EvidenceItem {
   method?: PickMethod
   /** v3 reviewer: dove cade fra le righe salvate dall'elaborazione, quando si ritrova. */
   location?: PickLocation
+  /**
+   * v4 reviewer: `text` è una lettura dell'OCR che il revisore ha sistemato, e il valore
+   * del campo è la versione buona. Il punto del documento resta questo.
+   */
+  textCorrected?: boolean
   /** v3 reviewer: la regola appresa che ha trovato l'etichetta; assente per il registry. */
   ruleId?: string
 }
