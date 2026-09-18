@@ -5,6 +5,7 @@ import type {
   LearningOutcome,
   LearningPick
 } from './local-learning'
+import type { NormalizedTemplateSignature } from './template-fingerprint'
 import type { EvidenceItem, ExtractedField, FieldItem, ReviewDocument } from './types'
 
 /**
@@ -25,6 +26,8 @@ export interface ReviewLearningContext {
   at: string
   actor: string
   templateFingerprint: string | null
+  /** La firma della testata, per le regole di modulo; assente prima della 0016. */
+  templateSignature?: NormalizedTemplateSignature | null
   /** La data del replay, quando la revisione si ripassa invece di chiuderla adesso. */
   replayedAt?: string | null
 }
@@ -171,6 +174,7 @@ export function reviewLearningEvents(
     documentId: document.id,
     contentSha256: document.contentSha256,
     templateFingerprint: context.templateFingerprint,
+    templateSignature: context.templateSignature ?? null,
     textSource: document.textSource,
     documentType: document.documentType,
     ...entry

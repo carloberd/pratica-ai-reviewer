@@ -181,7 +181,11 @@ describe('il motore impara dove il revisore prende la data', () => {
         ['CLASS', 'CANDIDATE', 1]
       ])
     )
-    expect(flow.rule('TEMPLATE').pattern).toEqual({ label: 'data', relation: 'same-line' })
+    expect(flow.rule('TEMPLATE').pattern).toMatchObject({ label: 'data', relation: 'same-line' })
+    // La regola di template si porta dietro la testata da cui viene: è quella che la farà
+    // ritrovare su un altro esemplare dello stesso stampato.
+    expect(flow.rule('TEMPLATE').pattern.templateSignature).toBeDefined()
+    expect(flow.rule('CLASS').pattern).toEqual({ label: 'data', relation: 'same-line' })
 
     // Novembre è già in coda, ancora senza data: nessuna regola vale.
     await flow.open('novembre')

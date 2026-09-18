@@ -14,6 +14,7 @@ import {
   nextRuleStatus
 } from '../src/shared/local-learning'
 import { type PageLine, pageText } from '../src/shared/pick-locate'
+import { normalizedTemplateSignature } from '../src/shared/template-fingerprint'
 import type { PickLocation } from '../src/shared/types'
 import { testRegistryV2 } from './helpers/registry'
 import { item, listField, reviewDocument, scalarField } from './helpers/review-document'
@@ -273,6 +274,49 @@ describe('regole da un’etichetta', () => {
       'class'
     ])
     expect(learnedLabelsFor(rules, 't', null).map((label) => label.ruleId)).toEqual(['class'])
+  })
+
+  it('una regola di template vale su un altro esemplare dello stesso stampato', () => {
+    const testata = [
+      'FATTURA IMMEDIATA',
+      'Cliente: Alfa S.r.l.',
+      'Partita IVA: 01234567890',
+      'Data documento: 08/09/2026'
+    ]
+    const firma = normalizedTemplateSignature(testata)!
+    const firmaSimile = normalizedTemplateSignature([...testata, 'Copia per archivio'])!
+    const altroModulo = normalizedTemplateSignature([
+      'VISURA CAMERALE',
+      'Numero REA: RO-123456',
+      'Forma giuridica: societa a responsabilita limitata'
+    ])!
+
+    const rule: LearningRule = {
+      id: 'template',
+      kind: 'EXTRACTION_ANCHOR',
+      scope: 'TEMPLATE',
+      documentType: 't',
+      fieldId: 'f',
+      templateFingerprint: 'f1',
+      pattern: { label: 'data documento', relation: 'same-line', templateSignature: firma },
+      ruleKey: 'k',
+      status: 'ACTIVE',
+      positiveCount: 2,
+      negativeCount: 0,
+      lastPositiveAt: null,
+      lastNegativeAt: null,
+      createdAt: '',
+      updatedAt: '',
+      learnerVersion: ''
+    }
+
+    // Senza la firma questa regola sarebbe valsa solo sul documento da cui è stata imparata.
+    expect(learnedLabelsFor([rule], 't', 'f-diversa', firmaSimile)).toHaveLength(1)
+    // L'impronta identica basta da sola, anche senza firma sul documento.
+    expect(learnedLabelsFor([rule], 't', 'f1', null)).toHaveLength(1)
+    // Un altro stampato no, e nemmeno un altro tipo sullo stesso stampato.
+    expect(learnedLabelsFor([rule], 't', 'f-diversa', altroModulo)).toEqual([])
+    expect(learnedLabelsFor([rule], 'u', 'f-diversa', firmaSimile)).toEqual([])
   })
 })
 
