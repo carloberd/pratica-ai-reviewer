@@ -9,6 +9,7 @@ import {
   type LearningRule,
   type LearningRuleStatus,
   rulePrecision,
+  ruleReliability,
   ruleSupport
 } from './local-learning'
 import { praticaaiTypeId, praticaaiTypeIdOrNull } from './registry-alignment'
@@ -90,6 +91,14 @@ export interface LearningRuleView {
   title: string
   support: number
   precision: number | null
+  /**
+   * La precisione corretta per quante prove ci sono sotto. Sta accanto alla precisione e
+   * non al posto suo: la precisione è il numero su cui il learner promuove e sospende, e
+   * toglierla dalla scheda renderebbe illeggibile perché una regola è nello stato in cui
+   * è. Questa dice l'altra metà — quanto pesa quella precisione — e a chi decide a mano se
+   * fidarsi serve sapere che il 100% di due conferme non è il 100% di cento.
+   */
+  reliability: number
   positiveCount: number
   negativeCount: number
   lastPositiveAt: string | null
@@ -157,6 +166,7 @@ export function toRuleView(
     title: ruleTitle(rule, names),
     support: ruleSupport(rule),
     precision: rulePrecision(rule),
+    reliability: ruleReliability(rule),
     positiveCount: rule.positiveCount,
     negativeCount: rule.negativeCount,
     lastPositiveAt: rule.lastPositiveAt,
