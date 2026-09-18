@@ -209,6 +209,25 @@ describe('regole da un’etichetta', () => {
     ).toEqual([])
   })
 
+  it('unʼetichetta che ripete una parola del proprio valore vale per il tipo', () => {
+    // «Comune: Comune di Rovigo» è una riga che i moduli italiani scrivono davvero, e
+    // «comune» è unʼetichetta buona: vale su ogni preventivo del tipo, non su un cliente
+    // solo. La perdeva chi passava lʼid ontologico, perché il campo dellʼancora non veniva
+    // riconosciuto e il suo stesso valore entrava fra le parole-dato.
+    const document = reviewDocument({
+      fields: [scalarField({ id: 'f-site', name: 'site.municipality', value: 'Comune di Rovigo' })]
+    })
+    expect(
+      anchorRuleInputs({
+        pattern: { label: 'comune', relation: 'same-line' },
+        documentType: 'procurement.preventivo',
+        fieldId: 'site.municipality',
+        templateFingerprint: 'f1',
+        entityWords: documentEntityWords(document, 'site.municipality')
+      }).map((rule) => rule.scope)
+    ).toEqual(['TEMPLATE', 'CLASS'])
+  })
+
   it('senza sapere quali parole sono un dato si impara come prima', () => {
     expect(
       anchorRuleInputs({
@@ -413,5 +432,16 @@ describe('le parole che in un documento sono un dato', () => {
   it('il campo dellʼancora resta fuori: la sua etichetta precede il suo valore', () => {
     expect(documentEntityWords(document, 'f-to').has('polesine')).toBe(false)
     expect(documentEntityWords(document, 'f-date').has('polesine')).toBe(true)
+  })
+
+  it('resta fuori anche chiamandolo col suo nome ontologico, come fanno gli eventi', () => {
+    // `reviewLearningEvents` costruisce ogni decisione con `fieldId: field.name`, e la
+    // revisione non passa di qui altro che da lì: lʼid di riga è la forma che questa
+    // funzione non vede mai in produzione.
+    const words = documentEntityWords(document, 'recipient.name')
+    expect(words.has('polesine')).toBe(false)
+    expect(words.has('massetti')).toBe(false)
+    // Gli altri campi continuano a contare come prima.
+    expect(words.has('posa')).toBe(true)
   })
 })

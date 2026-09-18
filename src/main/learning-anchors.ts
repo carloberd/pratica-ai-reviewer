@@ -119,12 +119,20 @@ export function deriveAnchor(input: {
  *
  * Il campo dell'ancora resta fuori dall'insieme: la sua etichetta precede il suo valore,
  * quindi non ne fa parte, e toglierlo protegge le etichette buone che somigliano al valore
- * che annunciano — «Spett.le» davanti a una ragione sociale.
+ * che annunciano — «Comune» davanti a «Comune di Rovigo».
+ *
+ * ## Quale dei due id
+ *
+ * Un campo ne ha due: `id`, la riga su cui sta in questo documento, e `name`, il nome
+ * ontologico del registry. Gli eventi del learner portano sempre il secondo — li costruisce
+ * `reviewLearningEvents` con `fieldId: field.name` — quindi qui si accettano entrambi.
+ * Confrontare solo l'`id` lasciava l'esclusione senza effetto su ogni revisione vera: il
+ * valore dell'ancora rientrava fra le parole-dato e affossava la propria regola di classe.
  */
 export function documentEntityWords(document: ReviewDocument, exceptFieldId: string): Set<string> {
   const words = new Set<string>()
   for (const field of document.fields) {
-    if (field.id === exceptFieldId) continue
+    if (field.id === exceptFieldId || field.name === exceptFieldId) continue
     const values = [currentFieldValue(field), ...field.items.map(currentItemValue)]
     for (const value of values) {
       if (!value) continue
