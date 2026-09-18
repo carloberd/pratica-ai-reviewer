@@ -289,7 +289,7 @@ function prepareV1(
   const candidates = prefillFields({
     fields: ordered,
     pages: extracted.pages,
-    fromOcr: extracted.source === 'OCR'
+    ocrPages: extracted.ocrPages
   })
   const byName = new Map(candidates.map((candidate) => [candidate.name, candidate]))
 
@@ -406,7 +406,7 @@ function prepareV2(input: {
     documentType,
     pages: extracted.pages,
     registry,
-    fromOcr: extracted.source === 'OCR',
+    ocrPages: extracted.ocrPages,
     learnedLabels: input.learning.labels
   })
 
