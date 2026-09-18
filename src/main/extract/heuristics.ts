@@ -1,5 +1,6 @@
 import { fieldSemanticType, type RegistryFieldName } from '@shared/fields'
 import type { BoundingBox } from '@shared/types'
+import { mentionsReference, precededByReference } from './reference-context'
 import type { ExtractedPage, TextLine } from './types'
 
 /**
@@ -445,6 +446,22 @@ function containsKeyword(foldedLine: string, keyword: string): boolean {
   return ` ${foldedLine} `.includes(` ${keyword} `)
 }
 
+/**
+ * La keyword compare sulla riga fuori da una citazione.
+ *
+ * Le keyword di `issue_date` e `document_number` finiscono per essere «del» e «n», che
+ * dentro «ai sensi del D.Lgs. 9 aprile 2008, n. 81» leggono la norma invece del documento.
+ * Basta un'occorrenza buona: la stessa riga può citare e poi dire la sua.
+ */
+function keywordOutsideReference(foldedLine: string, keyword: string): boolean {
+  const padded = ` ${foldedLine} `
+  const needle = ` ${keyword} `
+  for (let at = padded.indexOf(needle); at !== -1; at = padded.indexOf(needle, at + 1)) {
+    if (!precededByReference(foldedLine, at, keyword)) return true
+  }
+  return false
+}
+
 function extractValue(
   name: RegistryFieldName,
   line: string,
@@ -499,7 +516,7 @@ export function prefillFields(input: {
     outer: for (const keyword of keywords) {
       for (const page of foldedPages) {
         for (const { line, folded } of page.lines) {
-          if (!containsKeyword(folded, keyword)) continue
+          if (!keywordOutsideReference(folded, keyword)) continue
           const value = extractValue(name, line.text, keyword)
           if (!value) continue
           found = {
@@ -516,7 +533,10 @@ export function prefillFields(input: {
     if (!found && spec.fallback) {
       const firstPage = foldedPages[0]
       if (firstPage) {
-        for (const { line } of firstPage.lines) {
+        for (const { line, folded } of firstPage.lines) {
+          // Senza keyword non c'è niente su cui ancorarsi: se la riga cita qualcosa, il
+          // primo numero o la prima data che ci trovi sono di quella citazione.
+          if (mentionsReference(folded)) continue
           const value = extractValue(name, line.text, null)
           if (!value) continue
           found = {
