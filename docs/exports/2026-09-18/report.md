@@ -296,13 +296,77 @@ Il controllo ha senso per un valore **diverso** — lì la selezione non ne è p
 
 **65 slot core/optional restano vuoti** dopo la review (46 di ruolo `core`), e 5 documenti sono stati chiusi senza tipo, due dei quali con i campi comunque compilati.
 
+## Poscritto — la selezione con l'OCR, ricontrollata il 18/09
+
+Il revisore ha segnalato due dubbi mentre usava l'app, prima di leggere questo report:
+
+> «seleziono spesso con OCR che è più veloce però secondo me lui non lo riconosce […] perché non lo tiene selezionato come fa con il testo»
+>
+> «se ritocco quello che scrive perché riconosce male la parola secondo me fa sparire la selezione e non impara»
+>
+> «confermo se correggo fa sparire la selezione; se non correggo mi sembra la mantenga»
+
+Sono due osservazioni diverse, e stanno in piedi tutt'e due. La seconda è il problema qui sopra visto dall'altro lato. La prima è un secondo problema, che questa analisi non aveva visto.
+
+### A. Ripulire un OCR letto male cancella la selezione — confermato
+
+Il percorso è in tre punti, e nessuno dei tre lascia scampo:
+
+- `src/main/field-edits.ts:54` — `recordPick` tiene la selezione solo se `pickValue(pick.text) === value`;
+- `src/main/db/dao/evidence.ts:100` — `pruneReviewer` cancella l'evidenza che nessuna correzione cita più;
+- `src/renderer/src/components/field-editor.tsx:71` — il campo di testo non rimanda mai indietro la selezione: chiama `onCommit(draft)` e basta.
+
+Per l'app, ripulire una parola letta male è indistinguibile da «l'ho riscritto a mano». E anche se il renderer rimandasse la selezione (terzo punto), il main la rifiuterebbe lo stesso (primo punto), perché il testo non è più quello: servono tutt'e due le correzioni, una sola non basta.
+
+Il comportamento è scritto come voluto in `tests/field-edits.test.ts:299` («riscritto a mano, il valore perde la selezione e l'evidenza sparisce») e nel test che segue. Non è una regressione: è una regola pensata per un caso e applicata a due.
+
+Anche «se non correggo mi sembra la mantenga» è esatto: la selezione salvata diventa un riquadro tratteggiato permanente (`pdfHighlightPicked`), identico per `AREA_OCR` e `TEXT_SELECTION`.
+
+### B. Sulle scansioni la selezione non ha quasi mai una posizione
+
+Qui sta il «non impara», e vale **anche quando il revisore non corregge niente**.
+
+L'OCR di pagina restituisce solo testo: le righe salvate per le scansioni non hanno coordinate (`src/main/extract/text.ts:84`). Senza coordinate `locatePick` non può usare il riquadro disegnato e deve ritrovare il testo del ritaglio dentro il testo della pagina — ma il ritaglio viene riletto a scala 3 (`OCR_SCALE`) e la pagina no. Due letture della stessa area, e quasi mai coincidono.
+
+Sui soli 11 documenti chiusi dopo `b44c877`:
+
+| | pick | con offset | solo righe | senza posizione |
+|---|---|---|---|---|
+| scansioni (3 doc) | 11 | **1** | 0 | **10** |
+| testo nativo (8 doc) | 64 | 49 | 8 | 7 |
+
+La colonna che conta è la prima: `deriveAnchor` scarta tutto quello che non ha `charStart` (`src/main/learning-anchors.ts:73`), quindi le 58 `location` registrate diventano **50 selezioni da cui si può imparare, e una sola viene da una scansione**. Le 24 regole apprese lo confermano: vengono da visure, DURC, preventivi e fatture — **nessuna** dai quattro tipi scansionati (attestato di formazione, carta d'identità, permesso di soggiorno, PSC).
+
+Sulle scansioni, inoltre, 16 valori su 27 non hanno **nessun** pick, contro 6 su 70 sul testo nativo. Dall'export non si distingue «scritto a mano» da «selezionato e poi ripulito» — quell'assenza da sola non prova niente (è l'errore corretto in §5) — ma il meccanismo del punto A, confermato dal revisore, la spiega per intero.
+
+### C. Anche sul testo nativo, l'area OCR conserva meno della selezione testo
+
+Delle 61 selezioni ad area, **50 sono state fatte su pagine che il testo ce l'hanno**: `captureArea` rasterizza e manda a tesseract in ogni caso, anche quando sotto il riquadro c'è un text layer perfettamente leggibile (`src/renderer/src/components/pdf-viewer.tsx:211`).
+
+| sul testo nativo | pick | con offset | solo righe | senza posizione |
+|---|---|---|---|---|
+| `AREA_OCR` | 50 | 37 (74%) | 6 | **7** |
+| `TEXT_SELECTION` | 14 | 12 (86%) | 2 | 0 |
+
+Lo strumento più veloce è anche quello che conserva meno: ri-leggere i pixel introduce uno scarto dal testo su cui il motore lavorerà, e quello scarto è esattamente ciò che `locatePick` non riesce più a ricucire. È il «non lo riconosce» della segnalazione, misurato.
+
+Un caso resta senza spiegazione: sulla `Visura Camerale - Rakosiova-1.pdf` 5 selezioni su 6 perdono **ogni** posizione, su una pagina con testo nativo ed estratta lo stesso giorno. Perché `locatePick` esca senza nemmeno le righe, il riquadro disegnato non deve toccare nessuna riga con `bbox`: o quelle righe non hanno coordinate, o i due sistemi di coordinate non coincidono su quel PDF. Per dirlo serve il file.
+
+### Le tre cose da fare
+
+1. **Area su pagina con text layer: leggere il testo, non i pixel.** Risolve il problema alla radice per 50 selezioni su 61: testo esatto (niente da ripulire, quindi niente selezione da perdere), offset esatti, e per giunta senza il giro dell'OCR. È anche la più economica: il riquadro e il text layer sono già entrambi nel renderer.
+2. **Ripulire un OCR non deve cancellare la selezione.** Tenere pagina e riquadro come provenienza anche quando il revisore sistema il testo, registrando che il testo letto è stato corretto; il controllo carattere per carattere resta per un valore *diverso*, dove la selezione davvero non ne è più l'origine. Tocca i tre punti del §A insieme, e va con i test di riproduzione scritti per questo controllo.
+3. **OCR con le coordinate delle parole.** `tesseract.js` le restituisce; oggi `ocr-worker` tiene solo il testo. Con le righe di pagina dotate di `bbox`, `locatePick` torna a lavorare per sovrapposizione anche sulle scansioni, e il learner smette di essere cieco proprio sui documenti su cui il motore va peggio.
+
+L'ordine è questo: il punto 1 toglie la maggior parte delle occasioni di sbagliare, il 2 salva quelle che restano, il 3 riapre l'apprendimento sulle scansioni.
+
 ## Dove intervenire, in ordine
 
 1. **Fingerprint del template** — normalizzare prima di hashare. Senza questo l'intero ramo TEMPLATE del learner è codice morto.
 2. **Copertura del classificatore** — 27 documenti su 41 senza proposta è il collo di bottiglia più grosso a monte.
 3. **`document.number` e `document.issue_date`** — vincolare la selezione al contesto (etichetta vicina, posizione in testata) invece di prendere il primo match. Due terzi degli errori di valore.
 4. **Normalizzare le date all'inserimento** — senza questo non si può misurare nulla sulle date.
-5. **`origin` sui campi `many`** (fatto), e non far perdere la selezione a chi ripulisce un OCR letto male: sulle scansioni si registra il 41% delle selezioni contro l'89% dei PDF con testo nativo.
+5. **`origin` sui campi `many`** (fatto), e non far perdere la selezione a chi ripulisce un OCR letto male: sulle scansioni si registra il 41% delle selezioni contro l'89% dei PDF con testo nativo. Le tre correzioni che servono sono nel poscritto qui sopra.
 6. **Stop-list sui pattern CLASS** per i token che coincidono con entità del documento (fatto).
 7. **Ripassare le revisioni già chiuse** perché il learner veda anche quelle di prima che fosse acceso (fatto, dopo il punto 1).
 
@@ -320,4 +384,28 @@ Il controllo ha senso per un valore **diverso** — lì la selezione non ne è p
 | 5b | Date del revisore non normalizzate | ✅ PR #27 |
 | 6 | Ancore CLASS costruite su nomi propri | ✅ PR #29 |
 
-Resta aperto: **su una scansione, sistemare a mano un OCR letto male fa perdere la selezione.** `recordPick` la tiene solo se il valore coincide carattere per carattere col testo selezionato, e sui documenti OCR il revisore deve quasi sempre ripulire quello che l'OCR ha letto. Risultato: 89% di selezioni registrate sui PDF con testo nativo, 41% sulle scansioni. Non è il flusso di revisione, è un controllo troppo stretto.
+## Resta aperto: la selezione presa con l'OCR
+
+Segnalato dal revisore il 18/09 e verificato sul codice e sull'export (poscritto qui sopra). Non è il flusso di revisione: sono tre difetti distinti, in fila sullo stesso gesto.
+
+| # | Problema | Dove | Esito |
+|---|---|---|---|
+| A | L'area disegnata su una pagina che ha il testo viene comunque ri-letta a OCR: 7 selezioni su 50 perdono ogni posizione, 13 su 50 perdono gli offset | `pdf-viewer.tsx:211` | ✅ PR #32 |
+| B | Ripulire una parola letta male cancella la selezione: il valore corretto non coincide più col testo selezionato | `field-edits.ts:54`, `evidence.ts:100`, `field-editor.tsx:71` | ⏳ da fare (2) |
+| C | Le righe di una pagina letta a OCR non hanno coordinate: 10 selezioni su 11 restano senza posizione e nessuna regola nasce da una scansione | `extract/text.ts:84`, `ocr-worker.ts` | ⏳ da fare (3) |
+
+In ordine: **(1)** risolvere l'area sul text layer, **(2)** conservare la selezione a chi ripulisce un OCR, **(3)** far restituire all'OCR le coordinate delle parole.
+
+### ✅ Risolto — PR #32, `bugfix/area-pick-reads-text-layer`
+
+L'area evidenziata su una pagina che il testo ce l'ha si legge adesso **dal text layer**, e l'OCR resta dov'è l'unico modo di leggere: le scansioni. Il gesto del revisore non cambia — è lo stesso riquadro, ed è il più rapido — cambia da dove arriva il testo.
+
+Il riquadro non si ferma ai bordi di uno span, e uno span di pdf.js può essere una riga intera: `FATTURA n. 114/2026 del 08/09/2026` è un solo span, e prenderlo tutto porterebbe nel campo la riga al posto del numero. Quindi si decide **carattere per carattere** (`src/renderer/src/lib/area-text.ts`), misurandoli con un `Range`: dentro c'è chi ha il centro dentro il riquadro. Un carattere a metà sul bordo sta di là — mezzo carattere non è un carattere — e le righe si ricostruiscono dal salto verticale fra un carattere e il precedente. Gli span che il riquadro non tocca si scartano prima di misurarli: un `getBoundingClientRect` per ogni carattere della pagina costerebbe troppo per un gesto del mouse.
+
+Il modo si chiama `AREA_TEXT`, accanto a `TEXT_SELECTION` e `AREA_OCR`: stesso gesto dell'area, testo esatto invece di una rilettura dei pixel. Tenerlo distinto serve a misurare, la prossima volta, quante selezioni ad area sono passate dal text layer. Il formato del dataset va a **1.6.0** — un valore in più a `pick.method`, nient'altro.
+
+È il punto che vale per le 50 selezioni ad area fatte su pagine col testo — quelle che oggi perdono ogni posizione (7) o i soli offset (13). Il testo che arriva al main è adesso quello delle righe che l'elaborazione ha salvato, perché le une e le altre vengono dallo stesso text content di pdf.js: `locatePick` le ritrova, tranne dove il valore compare più volte e il riquadro non basta a distinguerlo — lì restano le righe senza offset, come è giusto. E non c'è più un OCR da ripulire, quindi su queste pagine non si passa nemmeno dal punto B.
+
+**Quello che resta aperto:** niente di questo punto, ma vale solo da qui in avanti. Le selezioni già registrate come `AREA_OCR` restano quelle che sono; per rivedere i numeri serve un export nuovo.
+
+Verifiche: gate completo verde (712 test); 6 test in `tests/renderer/area-text.test.ts` (il numero dentro lo span di riga, il carattere sul bordo, l'area su due righe, gli spazi ai bordi, il riquadro vuoto), fixture `dataset-export.expected.json` rigenerata, README aggiornato. Non provato nell'app: serve aprire un PDF e disegnare un'area per vedere il testo arrivare nel campo.

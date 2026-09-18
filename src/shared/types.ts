@@ -76,8 +76,16 @@ export interface EvidenceItem {
 /** v3 reviewer: chi ha trovato il testo di un'evidenza. */
 export type EvidenceOrigin = 'ENGINE' | 'REVIEWER'
 
-/** v3 reviewer: selezione nel text layer, oppure area della pagina letta con OCR. */
-export type PickMethod = 'TEXT_SELECTION' | 'AREA_OCR'
+/**
+ * v3 reviewer: come il revisore ha preso un valore dal documento.
+ *
+ * - `TEXT_SELECTION`: testo selezionato col mouse nel text layer.
+ * - `AREA_OCR`: area disegnata su una pagina senza testo, riletta con l'OCR.
+ * - `AREA_TEXT` (v4): area disegnata su una pagina che il testo ce l'ha, letta dal text
+ *   layer. È lo stesso gesto di `AREA_OCR` — il più rapido, e quello che il revisore usa
+ *   di più — ma il testo è quello esatto del documento invece di una rilettura dei pixel.
+ */
+export type PickMethod = 'TEXT_SELECTION' | 'AREA_OCR' | 'AREA_TEXT'
 
 /**
  * v3 reviewer: un valore preso dal documento, come lo manda il renderer. È il segnale da

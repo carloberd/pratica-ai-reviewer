@@ -103,7 +103,7 @@ export interface EvidenceRow {
   confidence: number
   /** `ENGINE` | `REVIEWER` (migrazione 0010). */
   origin: string
-  /** `TEXT_SELECTION` | `AREA_OCR`, solo per le evidenze del revisore. */
+  /** `TEXT_SELECTION` | `AREA_OCR` | `AREA_TEXT`, solo per le evidenze del revisore. */
   method: string | null
   line_start: number | null
   line_end: number | null
@@ -158,7 +158,9 @@ export function toEvidenceOrigin(value: string): EvidenceOrigin {
 }
 
 function toPickMethod(value: string | null): PickMethod | undefined {
-  return value === 'TEXT_SELECTION' || value === 'AREA_OCR' ? value : undefined
+  return value === 'TEXT_SELECTION' || value === 'AREA_OCR' || value === 'AREA_TEXT'
+    ? value
+    : undefined
 }
 
 /** La posizione salvata: le righe ci sono sempre quando c'è una posizione, gli offset no. */
