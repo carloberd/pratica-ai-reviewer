@@ -14,6 +14,7 @@ import {
   type LearningEventKind,
   type LearningMode,
   type LearningOutcome,
+  type LearningPickMethod,
   type LearningRule,
   type LearningRuleInput,
   type LearningRuleKind,
@@ -23,7 +24,6 @@ import {
   ruleSupport
 } from '@shared/local-learning'
 import { parseNormalizedTemplateSignature } from '@shared/template-fingerprint'
-import type { PickMethod } from '@shared/types'
 import type { Db } from '../index'
 import { parseBbox, toPickLocation } from '../rows'
 
@@ -131,7 +131,7 @@ function toEvent(row: EventRow): LearningEvent {
       row.pick_method === null || row.pick_page === null
         ? null
         : {
-            method: row.pick_method as PickMethod,
+            method: row.pick_method as LearningPickMethod,
             page: row.pick_page,
             bbox: parseBbox(row.pick_bbox_json) ?? null,
             location: location ?? null

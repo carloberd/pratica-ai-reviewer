@@ -173,7 +173,7 @@ Sei PR piccole, in quest'ordine, ognuna coi gate verdi prima della successiva.
 | PR | Contenuto | Migrazione | Stato |
 |---|---|---|---|
 | 1 | Firma normalizzata + campo nel manifest di export | `0016` | da fare |
-| 2 | `inferExactValuePick` | no | da fare |
+| 2 | `inferExactValuePick` | no | fatta (#36) |
 | 3 | Fix `documentEntityWords` + parsing difensivo | no | da fare |
 | 4 | Colonne di provenienza | sì | da fare |
 | 5 | Rollback `REVERT` | no | da fare |
