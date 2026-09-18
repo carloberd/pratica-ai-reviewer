@@ -319,16 +319,23 @@ provenienza (sorgente del testo, evidenza, confidence): la forma
 
 **Compilare dal documento.** Il campo su cui sta il cursore resta attivo anche dopo
 aver perso il fuoco, perché selezionare sul documento glielo fa perdere per forza: quello
-che si seleziona sulla pagina ci finisce dentro come correzione. Sui PDF con testo nativo
-basta la selezione, sulle scansioni — dove non c'è testo da selezionare — si evidenzia
-un'area, che viene rasterizzata a scala 3 e letta dallo stesso worker tesseract della
-precompilazione. Il PDF in cache non viene mai toccato: resta identico byte per byte a
-quello su Drive.
+che si seleziona sulla pagina ci finisce dentro come correzione. Si può selezionare il
+testo, oppure evidenziare un'area — il gesto più rapido, e quello che in revisione si usa
+di più.
+
+Un'area su una pagina che il testo ce l'ha si legge **dal text layer**, carattere per
+carattere: dentro c'è chi ha il centro dentro il riquadro, così il valore è quello esatto
+del documento anche quando pdf.js tiene una riga intera in un solo span. Solo dove testo
+non ce n'è — le scansioni — il riquadro viene rasterizzato a scala 3 e letto dallo stesso
+worker tesseract della precompilazione. Rileggere con l'OCR un testo che c'è già
+introdurrebbe uno scarto da quello su cui lavora il motore, e sarebbe poi quello scarto a
+far perdere la posizione della selezione. Il PDF in cache non viene mai toccato: resta
+identico byte per byte a quello su Drive.
 
 **Da dove viene un valore selezionato.** Insieme al valore il renderer manda il punto da
-cui è stato preso: pagina, riquadro in coordinate di pagina e modo (`TEXT_SELECTION` o
-`AREA_OCR`; nei DOCX solo la pagina). Il main ne fa un'evidenza del revisore collegata
-alla correzione (`corrected_evidence_id`, accanto all'`evidence_id` della proposta del
+cui è stato preso: pagina, riquadro in coordinate di pagina e modo (`TEXT_SELECTION`,
+`AREA_TEXT` o `AREA_OCR`; nei DOCX solo la pagina). Il main ne fa un'evidenza del revisore
+collegata alla correzione (`corrected_evidence_id`, accanto all'`evidence_id` della proposta del
 motore) e la ritrova fra le righe che l'elaborazione ha salvato in `document_pages`: righe
 toccate e offset nel testo della pagina, cioè le righe unite da `\n`
 (`src/shared/pick-locate.ts`). Sono le righe del motore di estrazione e non quelle del
@@ -365,7 +372,7 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.5.0",
+    "formatVersion": "1.6.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": { "name": "praticaai-reviewer", "version": "1.1.0" },
     // motori e versioni dell'app al momento dell'export
@@ -460,8 +467,8 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
   documento che il classificatore non ha mai visto.
 - `learning` dice in che modalità era il learner e quali regole valevano: due export con la
   stessa `rulesFingerprint` sono stati precompilati dalle stesse regole, ed è quello che un
-  benchmark deve dichiarare accanto ai suoi numeri. Dalla `1.0.0` alla `1.5.0` si aggiungono
-  solo campi.
+  benchmark deve dichiarare accanto ai suoi numeri. Dalla `1.0.0` alla `1.6.0` si aggiungono
+  solo campi, e un valore a `pick.method`: `AREA_TEXT`, l'area letta dal text layer.
 
 ### I nomi dei tipi
 
