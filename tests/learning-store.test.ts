@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import type { LearningWriter } from '../src/main/db/dao/learning'
+import { type Db, openDatabase } from '../src/main/db'
+import { createLearningDao, type LearningWriter } from '../src/main/db/dao/learning'
 import {
   type LearningEventInput,
   type LearningMode,
@@ -10,10 +11,13 @@ import {
 import { createTestRepository, seedDocument } from './helpers/db'
 
 let repo: ReturnType<typeof createTestRepository> | null = null
+let raw: Db | null = null
 
 afterEach(() => {
   repo?.close()
   repo = null
+  raw?.close()
+  raw = null
 })
 
 function setup() {
@@ -410,5 +414,84 @@ describe('regole', () => {
     expect(learning.listRules({ documentType: 'accounting.fattura', status: 'ACTIVE' })).toEqual([])
     expect(learning.listRules({ status: 'CANDIDATE' })).toHaveLength(2)
     expect(learning.getRule('nessuna')).toBeUndefined()
+  })
+})
+
+/**
+ * Il deposito con la porta di servizio aperta sulle colonne: serve a metterci dentro un
+ * JSON che il learner non scriverebbe mai, e che solo un file danneggiato o una versione
+ * che non c'è ancora possono lasciare lì.
+ */
+function store() {
+  const db = openDatabase({ file: ':memory:' })
+  raw = db
+  return { db, learning: createLearningDao(db) }
+}
+
+describe('righe che il learner non sa più leggere', () => {
+  it('una regola col pattern illeggibile si legge senza pattern, e lʼelenco regge', () => {
+    const { db, learning } = store()
+    const rule = learning.acquire((writer) => writer.createRule(ANCHOR, AT))!
+    const other = learning.acquire((writer) =>
+      writer.createRule({ ...ANCHOR, scope: 'CLASS', ruleKey: 'class-key' }, AT)
+    )!
+    db.prepare('UPDATE learning_rules SET pattern_json = ? WHERE id = ?').run(
+      '{"label": "dat',
+      rule.id
+    )
+
+    // Il punto è questo: una riga rotta non si porta dietro le altre. L'elenco va dalla
+    // più recente, quindi la regola corrotta è la seconda.
+    expect(learning.listRules().map((entry) => entry.pattern)).toEqual([
+      { label: 'data', relation: 'same-line', reader: 'date' },
+      {}
+    ])
+    expect(learning.getRule(other.id)?.pattern).toMatchObject({ label: 'data' })
+  })
+
+  it('un pattern che non è un oggetto vale quanto uno illeggibile', () => {
+    const { db, learning } = store()
+    const rule = learning.acquire((writer) => writer.createRule(ANCHOR, AT))!
+    db.prepare('UPDATE learning_rules SET pattern_json = ? WHERE id = ?').run(
+      '["data", "same-line"]',
+      rule.id
+    )
+    expect(learning.getRule(rule.id)?.pattern).toEqual({})
+  })
+
+  it('unʼazione coi numeri malformati resta in cronologia, senza numeri', () => {
+    const { db, learning } = store()
+    const promoted = learning.acquire((writer) => {
+      const rule = writer.createRule(ANCHOR, AT)
+      return writer.changeRuleStatus(rule.id, 'ACTIVE', { at: AT, detail: 'promossa' })
+    })!
+    db.prepare('UPDATE learning_actions SET numbers_json = ? WHERE id = ?').run(
+      '{"support": 2,',
+      promoted.id
+    )
+
+    expect(learning.listActions().find((action) => action.id === promoted.id)).toMatchObject({
+      kind: 'RULE_PROMOTED',
+      detail: 'promossa',
+      numbers: null
+    })
+  })
+
+  it('i numeri della forma sbagliata non arrivano alla frase che li racconta', () => {
+    const { db, learning } = store()
+    const promoted = learning.acquire((writer) => {
+      const rule = writer.createRule(ANCHOR, AT)
+      return writer.changeRuleStatus(rule.id, 'ACTIVE', { at: AT, detail: 'promossa' })
+    })!
+    const numbers = (json: string) => {
+      db.prepare('UPDATE learning_actions SET numbers_json = ? WHERE id = ?').run(json, promoted.id)
+      return learning.listActions().find((action) => action.id === promoted.id)?.numbers
+    }
+
+    expect(numbers('{"precision": 1}')).toBeNull()
+    expect(numbers('{"support": "due", "precision": null}')).toBeNull()
+    expect(numbers('3')).toBeNull()
+    // La forma giusta passa, precisione ancora ignota compresa.
+    expect(numbers('{"support": 2, "precision": null}')).toEqual({ support: 2, precision: null })
   })
 })
