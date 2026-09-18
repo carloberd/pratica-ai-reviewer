@@ -156,6 +156,19 @@ procurement.preventivo | document.issue_date | label 'massetti' same-line
 
 "massetti" è il nome del cliente, non un'etichetta di documento. Come ancora di classe si applicherà a tutti i preventivi, sbagliando su ogni cliente diverso. Servirebbe una stop-list che escluda dai pattern CLASS i token che coincidono con entità estratte dal documento stesso.
 
+### ✅ Risolto — PR #29, `bugfix/class-anchors-overfit-on-entities`
+
+La stop-list non è una lista: si ricava dal documento stesso. Quando una selezione insegna un'ancora, `documentEntityWords` raccoglie le parole dei valori confermati di **tutti gli altri campi** — righe dei campi ripetuti comprese — e un'etichetta fatta solo di quelle parole **non diventa una regola di classe**.
+
+- Di **template** resta: sullo stesso stampato il nome di chi lo emette è parte del modulo, non del dato. È proprio quello che lo scope TEMPLATE serve a catturare.
+- Senza impronta e con un'etichetta che è un dato non si impara niente: quella regola varrebbe per un documento solo.
+- Basta **una** parola che non sia un dato perché l'etichetta valga per il tipo: `spett le massetti` passa, `massetti` no.
+- Il campo dell'ancora resta fuori dall'insieme: la sua etichetta precede il suo valore, quindi non ne fa parte, e toglierlo protegge le etichette buone che somigliano al valore che annunciano — «Spett.le» davanti a una ragione sociale è esattamente questo caso, ed è una delle due sole regole a support 2 dell'export.
+
+Niente elenco di nomi propri da tenere aggiornato: quello che è un dato lo dice il documento.
+
+Verifiche: gate completo verde (698 test); 6 test nuovi in `tests/learning-anchors.test.ts`, di cui uno riproduce verbatim la regola `massetti` dell'export.
+
 ## 4. Il learner ha visto un ottavo dei dati
 
 I 122 eventi coprono **11 documenti distinti**, tutti in una sola sessione di oggi (07:49–09:02), un solo attore. Il dataset ha 281 correzioni su 41 documenti: il learner ne ha osservate 122, e le correzioni fatte prima che il logging fosse attivo sono perse per l'apprendimento.
@@ -236,4 +249,4 @@ Questo non è un bug da correggere in un modulo — è il flusso di revisione. S
 3. **`document.number` e `document.issue_date`** — vincolare la selezione al contesto (etichetta vicina, posizione in testata) invece di prendere il primo match. Due terzi degli errori di valore.
 4. **Normalizzare le date all'inserimento** — senza questo non si può misurare nulla sulle date.
 5. **`origin` sui campi `many`** (fatto), e far sì che correggere un valore passi più spesso dalla selezione sul documento: oggi solo 3 `CHANGED` su 31 lasciano una traccia da cui imparare.
-6. **Stop-list sui pattern CLASS** per i token che coincidono con entità del documento.
+6. **Stop-list sui pattern CLASS** per i token che coincidono con entità del documento (fatto).
