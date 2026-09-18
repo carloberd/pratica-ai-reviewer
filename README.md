@@ -838,7 +838,7 @@ per il template (l'impronta del modulo) e una per il tipo.
 
 | | Si attiva | Si sospende |
 |---|---|---|
-| Template | 2 documenti che la confermano, nessuna smentita | 2 smentite di fila, o precisione sotto il 70% con almeno 5 prove |
+| Template | 2 documenti dello stesso modulo, nessuna smentita | 2 smentite di fila, o precisione sotto il 70% con almeno 5 prove |
 | Tipo | 3 documenti, precisione ≥ 90% | come sopra |
 
 Una regola si mette alla prova sui documenti che ha precompilato: valore confermato, prova a
@@ -855,17 +855,36 @@ trovata (`evidence.rule_id`), e il run registra in `metrics_json.learning` modal
 disponibili e regole usate. Quando una regola si attiva o si sospende, i documenti in coda
 del suo tipo si rielaborano in sottofondo, come dopo una correzione della mappa.
 
+**Cos'è «lo stesso modulo»** (`src/shared/template-fingerprint.ts`). L'impronta della `0013`
+è una chiave: due documenti la condividono o no. Misurato sull'export del 18/09/2026, quasi
+sempre no — ogni impronta valeva per un documento solo, perché basta una riga che va a capo
+diversamente o un campo compilato dove l'altro esemplare lo lascia vuoto. Con
+`minTemplateSupport` a 2 e `minTemplateTypeSupport` a 3, questo vuol dire che **nessuna
+regola di scope template poteva attivarsi**: lo scope più preciso restava candidato per
+sempre.
+
+Dalla `0016` accanto all'impronta c'è una **firma normalizzata**: non solo la chiave, ma
+l'insieme delle ancore da cui è ricavata, ognuna hashata a parte. Due testate si confrontano
+allora per quante ne hanno in comune (Jaccard) invece che per uguaglianza, e sopra
+`minTemplateSimilarity` (`0,68`) sono lo stesso modulo: le loro revisioni si sommano sulla
+stessa regola. Come l'impronta, la firma non porta fuori né testo né valori — la ragione
+sociale e l'indirizzo restano fuori apposta, perché sono il soggetto e non il modulo.
+L'impronta esatta resta dov'era: le regole scritte prima della firma continuano a valere per
+confronto esatto. La soglia è scelta a occhio sui pochi documenti disponibili e **va ritarata
+sul corpus reale**.
+
 **Memoria dei moduli** (`src/main/learning-templates.ts`). Ogni revisione salvata con un
-tipo conta per il suo modulo, cioè per l'impronta del layout: a favore di quel tipo, contro
-ogni altro tipo con cui lo stesso modulo era stato chiuso. Tre revisioni concordi e nessun
-conflitto attivano la memoria; un solo conflitto la sospende. È più prudente di
-un'etichetta perché un tipo sbagliato cambia tutti i campi che si cercano. Nel classificatore
-v2 la memoria è un segnale a sé («già revisionato con questo tipo») che vale esattamente la
-soglia di assegnazione: da sola basta a proporre il tipo, ma non passa sopra un hard negative,
-non vince un margine troppo stretto e resta fuori dal bonus di corroborazione. Quando una
-memoria si attiva o si sospende si rielaborano i documenti in coda con quell'impronta,
-qualunque tipo abbiano. Le frasi del classificatore invece non si imparano: vedi il documento
-di analisi.
+tipo conta per il suo modulo: a favore di quel tipo, contro ogni altro tipo con cui lo stesso
+modulo era stato chiuso. Tre revisioni concordi e nessun conflitto attivano la memoria; un
+solo conflitto la sospende. È più prudente di un'etichetta perché un tipo sbagliato cambia
+tutti i campi che si cercano. Nel classificatore v2 la memoria è un segnale a sé («già
+revisionato con questo tipo») che vale esattamente la soglia di assegnazione: da sola basta a
+proporre il tipo, ma non passa sopra un hard negative, non vince un margine troppo stretto e
+resta fuori dal bonus di corroborazione. Un modulo **riconosciuto per somiglianza** vale in
+proporzione alla somiglianza, quindi resta sotto la soglia e da solo non assegna niente: la
+testata somiglia, ma non è la stessa. Quando una memoria si attiva o si sospende si
+rielaborano i documenti in coda con quell'impronta, qualunque tipo abbiano. Le frasi del
+classificatore invece non si imparano: vedi il documento di analisi.
 
 **La scheda «Apprendimento»** (voce di menu in alto, con la modalità sempre accanto) mostra
 quello che il motore ha imparato e lo governa:
@@ -905,15 +924,18 @@ documento non farebbe che moltiplicare regole a supporto 1.
 
 **«Esporta le regole»** scrive un JSON con regole, decisioni registrate e cronologia
 (`praticaai-reviewer/learned-rules`), coi nomi dei campi e dei tipi anche nella forma di
-pratica-ai dove esiste la corrispondenza, e con l'algoritmo dell'impronta dichiarato nel
-manifest: quelle di template valgono solo su chi calcola l'impronta allo stesso modo.
-Nessun valore dei documenti esce, come nel deposito.
+pratica-ai dove esiste la corrispondenza, e con gli algoritmi dell'impronta esatta e della
+firma normalizzata dichiarati nel manifest: quelle di template valgono solo su chi le calcola
+allo stesso modo. Nessun valore dei documenti esce, come nel deposito — la firma è fatta di
+soli hash.
 
 **Limiti noti.** Insegnano solo le selezioni su una riga, con la posizione esatta: un'area
 il cui testo non si ritrova fra le righe della pagina dà le righe toccate ma non gli offset,
-e resta un esempio senza regola. Una prima pagina letta con OCR non ha impronta, quindi solo
-regole di tipo. Una regola attiva che
-perde prove per uno scarto resta attiva finché le prove contro non la sospendono.
+e resta un esempio senza regola. Una prima pagina letta con OCR non ha né impronta né firma,
+quindi solo regole di tipo. Una regola attiva che perde prove per uno scarto resta attiva
+finché le prove contro non la sospendono. La soglia di somiglianza fra moduli non è stata
+misurata su documenti reali: troppo bassa fonde stampati diversi, troppo alta riporta allo
+scope template che non si attivava mai.
 
 ---
 

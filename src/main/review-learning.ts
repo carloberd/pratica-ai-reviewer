@@ -8,11 +8,18 @@ import {
   type LearningEvent,
   type LearningPolicy,
   type LearningRule,
+  type LearningRuleInput,
   nextRuleStatus,
   rulePrecision,
   ruleSupport
 } from '@shared/local-learning'
 import { describeLearnedReview, reviewLearningEvents } from '@shared/review-learning'
+import {
+  isNormalizedTemplateSignature,
+  type NormalizedTemplateSignature,
+  parseNormalizedTemplateSignature,
+  templateSignatureSimilarity
+} from '@shared/template-fingerprint'
 import type { ReviewAction, ReviewDocument } from '@shared/types'
 import type { LearningWriter } from './db/dao/learning'
 import type { Repository } from './db/repository'
@@ -120,11 +127,14 @@ export function learnFromReview(repo: Repository, input: LearnFromReviewInput): 
     }
   }
 
-  const templateFingerprint = repo.documents.get(input.document.id)?.template_fingerprint ?? null
+  const documentRow = repo.documents.get(input.document.id)
+  const templateFingerprint = documentRow?.template_fingerprint ?? null
+  const templateSignature = parseNormalizedTemplateSignature(documentRow?.template_signature_json)
   const events = reviewLearningEvents(input.document, {
     at: input.at,
     actor: input.actor,
     templateFingerprint,
+    templateSignature,
     replayedAt: input.replayedAt ?? null
   })
 
@@ -158,16 +168,25 @@ function proofs(
   if (event.kind === 'DOCUMENT_TYPE' && event.templateFingerprint) {
     // Il modulo chiuso con questo tipo: a favore di questo tipo, contro tutti gli altri che
     // lo stesso modulo aveva avuto. Un tipo tolto smentisce tutti.
-    for (const rule of repo.learning.listRules({
-      kind: 'TEMPLATE_TYPE',
-      templateFingerprint: event.templateFingerprint
-    })) {
+    const sameModule = repo.learning
+      .listRules({ kind: 'TEMPLATE_TYPE' })
+      .filter((rule) => sameTemplate(rule, event.templateFingerprint, event.templateSignature))
+    for (const rule of sameModule) {
       if (rule.documentType !== event.documentType) result.push([rule, 'NEGATIVE'])
     }
     if (event.documentType) {
-      const input = templateTypeRuleInput(event.documentType, event.templateFingerprint)
+      const ruleInput = templateTypeRuleInput(
+        event.documentType,
+        event.templateFingerprint,
+        event.templateSignature
+      )
+      // La memoria di questo modulo può già esistere sotto un'altra impronta: è lo stesso
+      // stampato riconosciuto per somiglianza, e le due revisioni devono contare insieme.
+      const existing = sameModule.find((rule) => rule.documentType === event.documentType)
       result.push([
-        writer.findRule(input.ruleKey) ?? writer.createRule(input, event.at),
+        (existing ? writer.findRule(existing.ruleKey) : undefined) ??
+          writer.findRule(ruleInput.ruleKey) ??
+          writer.createRule(ruleInput, event.at),
         'POSITIVE'
       ])
     }
@@ -197,9 +216,21 @@ function proofs(
         documentType: event.documentType,
         fieldId: event.fieldId,
         templateFingerprint: event.templateFingerprint,
+        templateSignature: event.templateSignature,
         entityWords: documentEntityWords(input.document, event.fieldId)
       })) {
-        const existing = writer.findRule(rule.ruleKey) ?? writer.createRule(rule, input.at)
+        // Come sopra: una regola di template già imparata su un esemplare somigliante è la
+        // stessa regola, e va ritrovata prima di crearne una nuova a supporto 1.
+        const compatible =
+          rule.scope === 'TEMPLATE'
+            ? repo.learning
+                .listRules({ kind: 'EXTRACTION_ANCHOR', documentType: event.documentType })
+                .find((candidate) => compatibleAnchor(candidate, rule))
+            : undefined
+        const existing =
+          (compatible ? writer.findRule(compatible.ruleKey) : undefined) ??
+          writer.findRule(rule.ruleKey) ??
+          writer.createRule(rule, input.at)
         taught.push(existing)
         result.push([existing, 'POSITIVE'])
       }
@@ -214,6 +245,40 @@ function proofs(
     if (engineRule) result.push([engineRule, confirmed ? 'POSITIVE' : 'NEGATIVE'])
   }
   return result
+}
+
+/**
+ * Lo stesso modulo del documento che si sta registrando: impronta identica — che tiene
+ * buone le regole scritte prima della firma — oppure testate abbastanza somiglianti.
+ */
+function sameTemplate(
+  rule: LearningRule,
+  templateFingerprint: string | null,
+  templateSignature: NormalizedTemplateSignature | null | undefined
+): boolean {
+  if (templateFingerprint !== null && rule.templateFingerprint === templateFingerprint) return true
+  const stored = rule.pattern.templateSignature
+  return (
+    isNormalizedTemplateSignature(stored) &&
+    templateSignatureSimilarity(stored, templateSignature) >=
+      DEFAULT_LEARNING_POLICY.minTemplateSimilarity
+  )
+}
+
+/** La stessa regola d'etichetta su un esemplare somigliante dello stesso modulo. */
+function compatibleAnchor(candidate: LearningRule, proposed: LearningRuleInput): boolean {
+  if (
+    candidate.scope !== 'TEMPLATE' ||
+    candidate.kind !== 'EXTRACTION_ANCHOR' ||
+    candidate.fieldId !== proposed.fieldId ||
+    !isAnchorPattern(candidate.pattern) ||
+    !isAnchorPattern(proposed.pattern) ||
+    candidate.pattern.label !== proposed.pattern.label ||
+    candidate.pattern.relation !== proposed.pattern.relation
+  ) {
+    return false
+  }
+  return sameTemplate(candidate, proposed.templateFingerprint, proposed.pattern.templateSignature)
 }
 
 function ruleById(writer: LearningWriter, repo: Repository, id: string): LearningRule | undefined {

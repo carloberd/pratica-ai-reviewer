@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import type { NormalizedTemplateSignature } from '@shared/template-fingerprint'
 import type {
   ConfidenceBand,
   DocumentFilters,
@@ -84,11 +85,22 @@ export function createDocumentsDao(db: Db) {
      */
     setContentIdentity(
       id: string,
-      identity: { contentSha256: string; templateFingerprint: string | null }
+      identity: {
+        contentSha256: string
+        templateFingerprint: string | null
+        templateSignature?: NormalizedTemplateSignature | null
+      }
     ): void {
       db.prepare(
-        'UPDATE documents SET content_sha256 = ?, template_fingerprint = ? WHERE id = ?'
-      ).run(identity.contentSha256, identity.templateFingerprint, id)
+        `UPDATE documents
+            SET content_sha256 = ?, template_fingerprint = ?, template_signature_json = ?
+          WHERE id = ?`
+      ).run(
+        identity.contentSha256,
+        identity.templateFingerprint,
+        identity.templateSignature ? JSON.stringify(identity.templateSignature) : null,
+        id
+      )
     },
 
     setCachedPath(id: string, cachedPath: string | null): void {

@@ -35,6 +35,11 @@ export interface DocumentRow {
   reviewed_at: string | null
   /** Impronta del layout della prima pagina (migrazione 0006); NULL = non ancora calcolata. */
   template_fingerprint: string | null
+  /**
+   * Firma normalizzata della testata (migrazione 0016), confrontabile per somiglianza.
+   * NULL sui documenti elaborati prima, e su quelli la cui prima pagina non ha ancore.
+   */
+  template_signature_json: string | null
   /** Nota facoltativa lasciata dal revisore chiudendo il documento (migrazione 0007). */
   review_note: string | null
   /** Sha-256 del file elaborato (migrazione 0010); NULL = elaborato prima. */

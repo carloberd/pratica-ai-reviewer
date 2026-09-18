@@ -163,7 +163,8 @@ describe('migrazioni', () => {
       '0012',
       '0013',
       '0014',
-      '0015'
+      '0015',
+      '0016'
     ])
 
     expect(
@@ -196,7 +197,8 @@ describe('migrazioni', () => {
       '0012',
       '0013',
       '0014',
-      '0015'
+      '0015',
+      '0016'
     ])
 
     // NULL = da calcolare al primo export, non «documento senza impronta».
@@ -213,7 +215,17 @@ describe('migrazioni', () => {
   it('la 0008 apre le tabelle della mappa, vuote: nessuna decisione presa prima esiste', () => {
     const db = databaseAt('0007')
 
-    expect(migrate(db)).toEqual(['0008', '0009', '0010', '0011', '0012', '0013', '0014', '0015'])
+    expect(migrate(db)).toEqual([
+      '0008',
+      '0009',
+      '0010',
+      '0011',
+      '0012',
+      '0013',
+      '0014',
+      '0015',
+      '0016'
+    ])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_overrides').get()).toEqual({ n: 0 })
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_hint_labels').get()).toEqual({ n: 0 })
@@ -237,7 +249,7 @@ describe('migrazioni', () => {
   it('la 0009 apre la tabella delle cardinalità, vuota: ogni campo segue l’ontologia', () => {
     const db = databaseAt('0008')
 
-    expect(migrate(db)).toEqual(['0009', '0010', '0011', '0012', '0013', '0014', '0015'])
+    expect(migrate(db)).toEqual(['0009', '0010', '0011', '0012', '0013', '0014', '0015', '0016'])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_cardinality_overrides').get()).toEqual({
       n: 0
@@ -269,7 +281,7 @@ describe('migrazioni', () => {
         VALUES ('f', 'd', 'document.number', 'Numero documento', '114/2026', '114/2026-bis', 0.85, 'e');
     `)
 
-    expect(migrate(db)).toEqual(['0010', '0011', '0012', '0013', '0014', '0015'])
+    expect(migrate(db)).toEqual(['0010', '0011', '0012', '0013', '0014', '0015', '0016'])
 
     expect(db.prepare('SELECT origin, method, line_start, char_start FROM evidence').get()).toEqual(
       {
@@ -296,7 +308,7 @@ describe('migrazioni', () => {
 
   it('la 0011 apre il deposito del learner vuoto, in modalità LEARNING', () => {
     const db = databaseAt('0010')
-    expect(migrate(db)).toEqual(['0011', '0012', '0013', '0014', '0015'])
+    expect(migrate(db)).toEqual(['0011', '0012', '0013', '0014', '0015', '0016'])
 
     expect(db.prepare('SELECT id, mode FROM learning_state').all()).toEqual([
       { id: 1, mode: 'LEARNING' }
@@ -323,7 +335,7 @@ describe('migrazioni', () => {
 
   it('la 0012 lega evidenze ed eventi alle regole, e conta una prova per documento', () => {
     const db = databaseAt('0011')
-    expect(migrate(db)).toEqual(['0012', '0013', '0014', '0015'])
+    expect(migrate(db)).toEqual(['0012', '0013', '0014', '0015', '0016'])
     const columns = (table: string) =>
       (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map(
         (c) => c.name
@@ -369,7 +381,7 @@ describe('migrazioni', () => {
     rule('template-attiva', 'TEMPLATE', 'ACTIVE', 'aabbccdd11223344')
     rule('classe', 'CLASS', 'CANDIDATE', null)
 
-    expect(migrate(db)).toEqual(['0013', '0014', '0015'])
+    expect(migrate(db)).toEqual(['0013', '0014', '0015', '0016'])
 
     // Le impronte del vecchio algoritmo spariscono: l'elaborazione e l'export le rifanno.
     expect(db.prepare('SELECT template_fingerprint FROM documents').get()).toEqual({
@@ -414,7 +426,7 @@ describe('migrazioni', () => {
       "INSERT INTO learning_events (id, at, actor, document_id, kind, outcome, learner_version) VALUES ('e', '2026-09-15', 'chi@esempio.it', 'd', 'FIELD_VALUE', 'FILLED', 'v')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0014', '0015'])
+    expect(migrate(db)).toEqual(['0014', '0015', '0016'])
 
     // Gli eventi di prima sono stati registrati sul momento: non hanno una data di ripasso.
     expect(db.prepare('SELECT at, replayed_at FROM learning_events').get()).toEqual({
@@ -433,13 +445,36 @@ describe('migrazioni', () => {
       "INSERT INTO evidence (id, document_id, page, text, confidence, origin, method) VALUES ('e', 'd', 1, '29 O7 2026', 1, 'REVIEWER', 'AREA_OCR')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0015'])
+    expect(migrate(db)).toEqual(['0015', '0016'])
 
     // Una selezione registrata prima di questa versione era per forza il valore salvato:
     // il testo non era stato sistemato, o la selezione non sarebbe qui.
     expect(db.prepare('SELECT text, text_corrected FROM evidence').get()).toEqual({
       text: '29 O7 2026',
       text_corrected: 0
+    })
+    db.close()
+  })
+
+  it('la 0016 apre la firma del modulo, vuota su documenti ed eventi di prima', () => {
+    const db = databaseAt('0015')
+    db.prepare(
+      "INSERT INTO documents (id, drive_file_id, filename, mime, synced_at, template_fingerprint) VALUES ('d', 'x', 'f.pdf', 'application/pdf', '2026-01-01', 'abc123')"
+    ).run()
+    db.prepare(
+      `INSERT INTO learning_events (id, at, actor, document_id, kind, outcome, learner_version, template_fingerprint)
+       VALUES ('e', '2026-01-01', 'chi', 'd', 'DOCUMENT_TYPE', 'CONFIRMED', 'local-learner/0.1.0', 'abc123')`
+    ).run()
+
+    expect(migrate(db)).toEqual(['0016'])
+
+    // L'impronta esatta non si tocca: le regole scritte prima continuano a valere per
+    // confronto esatto, e la firma manca semplicemente su quello che c'era già.
+    expect(
+      db.prepare('SELECT template_fingerprint, template_signature_json FROM documents').get()
+    ).toEqual({ template_fingerprint: 'abc123', template_signature_json: null })
+    expect(db.prepare('SELECT template_signature_json FROM learning_events').get()).toEqual({
+      template_signature_json: null
     })
     db.close()
   })
@@ -459,7 +494,8 @@ describe('migrazioni', () => {
       '0012',
       '0013',
       '0014',
-      '0015'
+      '0015',
+      '0016'
     ])
 
     // Chi ha chiuso un documento prima di questa versione non ha una nota da recuperare:
@@ -530,7 +566,8 @@ describe('migrazione 0004 su un database esistente', () => {
       '0012',
       '0013',
       '0014',
-      '0015'
+      '0015',
+      '0016'
     ])
 
     const rows = db
