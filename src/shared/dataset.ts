@@ -30,7 +30,7 @@ import type {
  */
 
 export const DATASET_FORMAT = 'praticaai-reviewer/annotated-dataset'
-export const DATASET_FORMAT_VERSION = '1.4.0'
+export const DATASET_FORMAT_VERSION = '1.5.0'
 
 export type EngineVersion = 'v1' | 'v2'
 
@@ -88,6 +88,15 @@ export interface DatasetPick {
 /** `ENGINE` = proposto dal motore e confermato; `REVIEWER` = scritto dal revisore. */
 export type DatasetValueOrigin = 'ENGINE' | 'REVIEWER'
 
+/**
+ * Da chi viene una lista: da tutte e due, se il revisore ha aggiunto righe alle proposte.
+ *
+ * Un campo ripetuto non ha un'origine sola come un campo singolo, ma non averne nessuna
+ * era peggio: `origin` mancava solo sui campi `many`, e chi contava le origini leggendo
+ * `field.origin` si trovava `undefined` invece di un errore, e li perdeva in silenzio.
+ */
+export type DatasetListOrigin = DatasetValueOrigin | 'MIXED'
+
 export interface DatasetScalarField {
   name: string
   label: string
@@ -115,6 +124,12 @@ export interface DatasetListField {
   cardinality: 'many'
   /** I valori confermati, in ordine. */
   value: string[]
+  /**
+   * Da chi vengono le righe nel loro insieme: `MIXED` se il revisore ne ha aggiunte alle
+   * proposte del motore, `null` se la lista è vuota. La provenienza riga per riga sta in
+   * `items`, che è più preciso; questo serve a contare i campi come si contano i singoli.
+   */
+  origin: DatasetListOrigin | null
   /** Gli stessi valori con provenienza ed evidenza. */
   items: DatasetListItem[]
 }
@@ -257,6 +272,13 @@ export function itemOrigin(item: FieldItem): DatasetValueOrigin {
     : 'REVIEWER'
 }
 
+/** Da chi vengono le righe di un campo ripetuto; `null` se la lista è vuota. */
+export function listOrigin(items: Array<{ origin: DatasetValueOrigin }>): DatasetListOrigin | null {
+  if (items.length === 0) return null
+  const origins = new Set(items.map((item) => item.origin))
+  return origins.size === 1 ? [...origins][0]! : 'MIXED'
+}
+
 /** Quello che il motore aveva proposto per un campo singolo, `null` se non ha proposto niente. */
 export function proposedFieldValue(field: Pick<ExtractedField, 'value'>): string | null {
   return field.value.trim() === '' ? null : field.value
@@ -281,7 +303,13 @@ function toDatasetField(field: ExtractedField, byId: Map<string, EvidenceItem>):
       evidence: evidenceOf(byId, item.evidenceId),
       pick: pickOf(byId, item.correctedEvidenceId)
     }))
-    return { ...common, cardinality: 'many', value: items.map((item) => item.value), items }
+    return {
+      ...common,
+      cardinality: 'many',
+      value: items.map((item) => item.value),
+      origin: listOrigin(items),
+      items
+    }
   }
 
   return {

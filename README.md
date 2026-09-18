@@ -365,7 +365,7 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.4.0",
+    "formatVersion": "1.5.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": { "name": "praticaai-reviewer", "version": "1.1.0" },
     // motori e versioni dell'app al momento dell'export
@@ -414,6 +414,7 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
                   "location": { "lineStart": 1, "lineEnd": 1, "charStart": 47, "charEnd": 57 } } },
       { "name": "line_items", "label": "Righe documento", "role": "core", "cardinality": "many",
         "value": ["Demolizione tramezzi - EUR 3.200,00", "…"],
+        "origin": "MIXED",            // ENGINE | REVIEWER | MIXED, null se la lista è vuota
         "items": [{ "value": "Demolizione tramezzi - EUR 3.200,00", "origin": "ENGINE", "evidence": { … }, "pick": null }] }
     ],
     "corrections": [
@@ -432,7 +433,11 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
 - `value` è il valore confermato: la correzione del revisore dove c'è, altrimenti la
   proposta del motore, `null` se il campo è vuoto. `origin` dice da chi viene. I campi
   ripetuti hanno in `value` la lista dei valori e in `items` gli stessi con provenienza
-  ed evidenza; le righe tolte non ci sono.
+  ed evidenza; le righe tolte non ci sono. Anche loro hanno `origin`, che vale per la lista
+  intera: `MIXED` quando il revisore ha aggiunto righe alle proposte del motore, `null`
+  quando la lista è vuota. Serve a contarli come si contano i campi singoli — prima
+  `origin` mancava solo qui, e chi leggeva `field.origin` per contare le origini si trovava
+  `undefined` invece di un errore.
 - `evidence` è la riga da cui il motore aveva letto la proposta, con `bbox` in unità di
   pagina pdf.js a scala 1 (origine in alto a sinistra) o `null` senza coordinate.
 - `pick` è il punto da cui il revisore ha preso il valore, sui campi e sulle correzioni:
@@ -455,7 +460,7 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
   documento che il classificatore non ha mai visto.
 - `learning` dice in che modalità era il learner e quali regole valevano: due export con la
   stessa `rulesFingerprint` sono stati precompilati dalle stesse regole, ed è quello che un
-  benchmark deve dichiarare accanto ai suoi numeri. Dalla `1.0.0` alla `1.4.0` si aggiungono
+  benchmark deve dichiarare accanto ai suoi numeri. Dalla `1.0.0` alla `1.5.0` si aggiungono
   solo campi.
 
 ### I nomi dei tipi
