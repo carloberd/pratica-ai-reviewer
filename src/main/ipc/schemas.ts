@@ -37,7 +37,7 @@ const coordinate = z.number().min(0)
  * largo del valore perché è quello selezionato prima di ripiegarne gli spazi.
  */
 export const documentPickSchema = z.object({
-  method: z.enum(['TEXT_SELECTION', 'AREA_OCR']),
+  method: z.enum(['TEXT_SELECTION', 'AREA_OCR', 'AREA_TEXT']),
   page: z.number().int().min(1),
   text: z.string().min(1).max(4000),
   bbox: z.object({ x: coordinate, y: coordinate, w: coordinate, h: coordinate }).optional()
