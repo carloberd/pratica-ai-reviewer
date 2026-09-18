@@ -178,6 +178,22 @@ Il revisore ricopia la stringa dal documento, il motore emette ISO. Così com'è
 
 Un valore è proprio sbagliato: `identity.expiry_date = 'COMUNE DI ROVIGO'`.
 
+#### ✅ Risolto — PR #27, `bugfix/reviewer-dates-not-normalized`
+
+Le date si normalizzano adesso **all'inserimento**: quello che il revisore scrive in un campo data si salva `yyyy-mm-dd`, come già fa il motore.
+
+- Nuovo `src/shared/date-value.ts`, con l'unico parser di date del progetto: numerico (`16/12/2025`, `31.05.2024`, `05-07-2022`), a spazi (`29 07 2026`), testuale (`31 Maggio 2022`), ISO, e anno a due cifre col pivot POSIX. I due lettori — `heuristics.findDate` e `fact-reader.readDate` — adesso delegano qui invece di avere ciascuno il suo, così non possono divergere.
+- Il confronto con la proposta del motore si fa **dopo** la normalizzazione. Se il motore aveva letto `2025-12-16` e il revisore ricopia `16/12/2025`, sono d'accordo, e non è più una correzione: falsi `CHANGED` in meno nel dataset.
+- Quale campo è una data lo dice il tipo semantico del profilo v2; sulle righe scritte dal v1, dove la colonna è nulla, lo dice il nome (`_date`).
+- **Quello che il revisore ha selezionato resta verbatim** nella sua evidenza: la selezione si confronta col testo scritto, non con quello normalizzato, o normalizzando si sarebbe persa. Nel dataset si vede `value: "2026-09-12"` accanto a `pick.text: "12/09/2026"`.
+- Vale anche per le righe dei campi ripetuti — `payment.due_date` è `many` su alcuni tipi.
+
+**Deliberatamente non normalizzato:** quello che non è *tutta* una data resta come scritto. `03/05/2021 (8 ore), 04/05/2021 (8 ore)` su `hse.training_date` si salva intero, perché normalizzarlo vorrebbe dire buttarne via metà. Vale anche per `identity.expiry_date = 'COMUNE DI ROVIGO'`: resta lì, sbagliato ma visibile, invece di sparire in silenzio. Segnalarlo in revisione è un lavoro a parte.
+
+L'export del 18/09 non cambia: la normalizzazione vale da qui in avanti, sui valori scritti dopo questa versione.
+
+Verifiche: gate completo verde (683 test); `tests/shared-date-value.test.ts` (14 test, valori verbatim dall'export), fixture `dataset-export.expected.json` rigenerata.
+
 **I campi `many` non hanno mai `origin` né `evidence`.** Tutti e 19 (`line_items`, `finance.transactions`, `hse.preventive_measures`), compresi i 7 popolati. Sono 34 correzioni, il 12% del totale, non attribuibili a motore o revisore — un buco nella misurazione, oltre che un probabile bug dell'export.
 
 **Le `line_items` sono estratte come righe di testo grezze**, non strutturate:
