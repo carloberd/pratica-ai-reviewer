@@ -312,6 +312,52 @@ describe('normalizzazione dei valori', () => {
   })
 })
 
+describe('etichette dentro una citazione', () => {
+  // Le righe sono verbatim dall'export del 18/09/2026: due terzi degli errori di valore
+  // del motore stavano su `document.number` e `document.issue_date`, e avevano questa forma.
+  const numero = () => registryOf({ 'document.number': { type: 'string', labels: ['n'] } })
+  const data = () => registryOf({ 'document.issue_date': { type: 'date', labels: ['del'] } })
+
+  it('non legge il numero della norma citata', () => {
+    const { fact } = extract(numero(), [
+      page(['garanzia RC Auto (art. 17 del Decreto Legislativo n. 68 del 6/5/2011).'])
+    ])
+    expect(fact('document.number').value).toBeNull()
+  })
+
+  it('non legge il civico di un indirizzo', () => {
+    const { fact } = extract(numero(), [page(['Via G. Carducci, N. 1551 CEREGNANO (RO)'])])
+    expect(fact('document.number').value).toBeNull()
+  })
+
+  it('non legge la data dellʼatto a cui il documento rimanda', () => {
+    const { fact } = extract(data(), [page(['pratica con atto del 06/03/2017'])])
+    expect(fact('document.issue_date').value).toBeNull()
+  })
+
+  it('quello che è del documento continua a leggersi', () => {
+    const { fact } = extract(numero(), [page(['FATTURA n. 114/2026 del 08/09/2026'])])
+    expect(fact('document.number').value).toBe('114/2026')
+  })
+
+  it('la riga buona vince anche se il documento ne cita unʼaltra prima', () => {
+    const { fact } = extract(data(), [
+      page(['(ai sensi del D.Lgs. 9 aprile 2008, n. 81)', 'Emesso del 16/12/2025'])
+    ])
+    expect(fact('document.issue_date').value).toBe('2025-12-16')
+  })
+
+  it('un campo che cita di mestiere legge la citazione: è il suo valore', () => {
+    const registry = registryOf({
+      'hse.legal_basis': { type: 'string', labels: ['riferimento normativo'] }
+    })
+    const { fact } = extract(registry, [
+      page(['Riferimento normativo: D.Lgs. 9 aprile 2008, n. 81'])
+    ])
+    expect(fact('hse.legal_basis').value).not.toBeNull()
+  })
+})
+
 describe('candidati concorrenti', () => {
   it('l’etichetta più lunga vince: l’imponibile non finisce nel totale', () => {
     const registry = registryOf({
