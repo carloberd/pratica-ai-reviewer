@@ -30,7 +30,7 @@ import type {
  */
 
 export const DATASET_FORMAT = 'praticaai-reviewer/annotated-dataset'
-export const DATASET_FORMAT_VERSION = '1.5.0'
+export const DATASET_FORMAT_VERSION = '1.6.0'
 
 export type EngineVersion = 'v1' | 'v2'
 
@@ -77,6 +77,11 @@ export interface DatasetEvidence {
  * certezza.
  */
 export interface DatasetPick {
+  /**
+   * `TEXT_SELECTION` testo selezionato, `AREA_OCR` area riletta con l'OCR su una scansione,
+   * `AREA_TEXT` (dalla 1.6.0) area disegnata su una pagina che il testo ce l'ha, letta dal
+   * text layer: stesso gesto dell'area, ma il testo è quello esatto del documento.
+   */
   method: PickMethod
   page: number
   /** Verbatim: quello che il revisore ha selezionato, o che l'OCR ha letto nell'area. */
