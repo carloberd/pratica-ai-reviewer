@@ -207,7 +207,7 @@ describe('motore v1 — PDF scansionato', () => {
     expect(issueDate.confidence).toBeCloseTo(0.75, 4)
 
     expect(document.warnings).toContain(
-      'Testo ricavato da OCR: la confidence dei campi è ridotta di 0,10.'
+      'Pagine lette con OCR: la confidence dei campi che vengono da quelle pagine è ridotta di 0,10.'
     )
     expect(repo.events.listForDocument(id).map((e) => e.title)).toContain('OCR eseguito')
     repo.close()
@@ -514,7 +514,7 @@ describe('motore v2 — PDF scansionato', () => {
 
     const document = repo.getReviewDocument(id)!
     expect(document.warnings).toEqual([
-      'Testo ricavato da OCR: la confidence dei campi è ridotta di 0,10.',
+      'Pagine lette con OCR: la confidence dei campi che vengono da quelle pagine è ridotta di 0,10.',
       'Campi obbligatori senza evidenza: Impresa/società, CF/P.IVA impresa, Data scadenza, Stato/esito.'
     ])
     expect(repo.events.listForDocument(id).map((e) => e.title)).toEqual([

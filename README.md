@@ -271,7 +271,10 @@ da riempire a mano.
 **Confidence.** v2: 0,85 col valore sulla riga dell'etichetta, 0,80 sulla riga
 successiva, meno 0,18 per ogni validatore fallito; sotto 0,85 il campo è `NEEDS_REVIEW`,
 sopra `AUTO_ACCEPTED`. v1: 0,85 con una keyword di contesto, 0,70 col solo pattern. In
-entrambi meno 0,10 se il testo viene da OCR. La confidence del documento è la media dei campi valorizzati; le
+entrambi meno 0,10 per i campi che vengono da una pagina letta con OCR — la penalità è
+della pagina, non del documento: un allegato scansionato in fondo a un PDF non declassa i
+campi letti dal text layer delle altre pagine, che altrimenti scenderebbero sotto la soglia
+di accettazione automatica. La confidence del documento è la media dei campi valorizzati; le
 bande sono HIGH ≥ 0,90, MEDIUM ≥ 0,75, LOW sotto. Sono euristiche dichiarate, da
 calibrare sui documenti veri.
 

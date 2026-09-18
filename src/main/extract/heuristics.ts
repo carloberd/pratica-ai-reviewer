@@ -467,13 +467,19 @@ function extractValue(
  *
  * Le keyword di un campo sono provate dalla più lunga alla più corta: «totale
  * imponibile» deve vincere su «totale», altrimenti l'imponibile finirebbe nel totale.
+ *
+ * La penalità dell'OCR è per pagina, non per documento: un allegato scansionato in fondo
+ * a un PDF non rende meno affidabile quello che si legge dal text layer delle altre
+ * pagine.
  */
 export function prefillFields(input: {
   fields: RegistryFieldName[]
   pages: ExtractedPage[]
-  fromOcr: boolean
+  /** Pagine il cui testo viene da OCR: solo i loro campi pagano la penalità. */
+  ocrPages: number[]
 }): FieldCandidate[] {
-  const penalty = input.fromOcr ? OCR_PENALTY : 0
+  const fromOcr = new Set(input.ocrPages)
+  const penaltyOn = (page: number) => (fromOcr.has(page) ? OCR_PENALTY : 0)
   const candidates: FieldCandidate[] = []
 
   const foldedPages = input.pages.map((page) => ({
@@ -499,7 +505,7 @@ export function prefillFields(input: {
           found = {
             name,
             value,
-            confidence: round(CONFIDENCE_WITH_CONTEXT - penalty),
+            confidence: round(CONFIDENCE_WITH_CONTEXT - penaltyOn(page.page)),
             evidence: evidenceOf(page.page, line)
           }
           break outer
@@ -516,7 +522,7 @@ export function prefillFields(input: {
           found = {
             name,
             value,
-            confidence: round(CONFIDENCE_REGEX_ONLY - penalty),
+            confidence: round(CONFIDENCE_REGEX_ONLY - penaltyOn(firstPage.page)),
             evidence: evidenceOf(firstPage.page, line)
           }
           break
