@@ -29,8 +29,13 @@ export type ConfidenceBand = 'HIGH' | 'MEDIUM' | 'LOW'
  */
 export type QueueStatus = 'NEEDS_REVIEW' | 'REVIEWED' | 'DISCARDED'
 
-/** v1 reviewer: da dove viene il testo su cui si è fatta la precompilazione. */
-export type TextSource = 'NATIVE_TEXT' | 'OCR' | 'DOCX'
+/**
+ * v1 reviewer: da dove viene il testo su cui si è fatta la precompilazione.
+ *
+ * `OCR_FAILED`: il documento ha pagine scansionate che l'OCR non ha letto. Quelle pagine
+ * restano vuote, quindi i campi sono incompleti e il documento va ripassato.
+ */
+export type TextSource = 'NATIVE_TEXT' | 'OCR' | 'DOCX' | 'OCR_FAILED'
 
 /** v1 reviewer: tipo semantico del campo, dal closed set dei 40 campi del registry. */
 export type SemanticType = 'date' | 'money' | 'string'

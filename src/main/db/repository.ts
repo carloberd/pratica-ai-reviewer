@@ -58,6 +58,11 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
     if (row.text_source === 'OCR') {
       warnings.push('Testo ricavato da OCR: la confidence dei campi è ridotta di 0,10.')
     }
+    if (row.text_source === 'OCR_FAILED') {
+      warnings.push(
+        'Pagine scansionate che l’OCR non ha letto: i campi sono incompleti. Il documento viene ripassato al prossimo avvio con l’OCR disponibile.'
+      )
+    }
     if (missingRequired.length > 0) {
       const labels = missingRequired.map((field) => field.label).join(', ')
       warnings.push(

@@ -193,6 +193,14 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
         )
       }
 
+      if (extracted.ocrFailedPages.length > 0) {
+        repo.events.add(
+          input.documentId,
+          'OCR non riuscito',
+          `${pagesLabel(extracted.ocrFailedPages)} senza text layer che l’OCR non ha letto: i campi sono incompleti e il documento va ripassato.${extracted.ocrError ? ` Motivo: ${extracted.ocrError}` : ''}`
+        )
+      }
+
       if (manualType) {
         repo.events.add(
           input.documentId,
@@ -225,12 +233,25 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
 // Il testo come l'ha letto l'elaborazione
 // ---------------------------------------------------------------------------
 
+/** «una pagina» / «3 pagine»: gli eventi parlano al revisore, non in numeri di pagina. */
+function pagesLabel(pages: number[]): string {
+  return pages.length === 1 ? 'Una pagina' : `${pages.length} pagine`
+}
+
 /** Le pagine da salvare, ognuna con la sorgente del suo testo. */
 export function pagesOf(extracted: ExtractedText): PageInput[] {
   const ocr = new Set(extracted.ocrPages)
+  const failed = new Set(extracted.ocrFailedPages)
   return extracted.pages.map((page) => ({
     page: page.page,
-    textSource: extracted.source === 'DOCX' ? 'DOCX' : ocr.has(page.page) ? 'OCR' : 'NATIVE_TEXT',
+    textSource:
+      extracted.source === 'DOCX'
+        ? 'DOCX'
+        : ocr.has(page.page)
+          ? 'OCR'
+          : failed.has(page.page)
+            ? 'OCR_FAILED'
+            : 'NATIVE_TEXT',
     lines: page.lines
   }))
 }
@@ -239,11 +260,14 @@ export function pagesOf(extracted: ExtractedText): PageInput[] {
  * L'impronta del layout della prima pagina, dalle stesse righe che l'export legge quando
  * la calcola da sé. Una prima pagina letta con OCR ha righe diverse da quelle del text
  * layer che l'export rilegge senza OCR: resta `null`, e ci pensa l'export come per i
- * documenti elaborati prima.
+ * documenti elaborati prima. Anche una prima pagina che l'OCR non ha letto resta senza
+ * impronta: non è un layout, è una pagina vuota, e tutte le scansioni non lette
+ * finirebbero sotto la stessa impronta.
  */
 export function firstPageFingerprint(extracted: ExtractedText): string | null {
   const first = extracted.pages[0]
   if (!first || extracted.ocrPages.includes(first.page)) return null
+  if (extracted.ocrFailedPages.includes(first.page)) return null
   return templateFingerprint(firstPageLines(first))
 }
 
@@ -323,6 +347,10 @@ function prepareV2(input: {
   learning: { mode: LearningMode; labels: LearnedLabel[]; templateRuleIds: string[] }
 }): PreparedExtraction {
   const { registry, documentType, extracted } = input
+  // Pagine scansionate che l'OCR non ha letto: qualunque sia l'esito dell'estrazione, il
+  // testo era incompleto. Il run lo dichiara, così `needsV2Extraction` lo ripassa invece
+  // di prenderlo per un documento già visto da questa versione del motore.
+  const ocrFailed = extracted.ocrFailedPages.length > 0
   const run = (
     status: ExtractionRunInput['status'],
     extra: Partial<ExtractionRunInput> & { metrics?: Record<string, unknown> } = {}
@@ -332,11 +360,12 @@ function prepareV2(input: {
     documentType: documentType ?? '',
     startedAt: input.startedAt,
     completedAt: new Date().toISOString(),
-    status,
+    status: ocrFailed ? 'FAILED_OCR' : status,
     missingRequired: extra.missingRequired ?? [],
     conflicts: extra.conflicts ?? [],
     metrics: {
       textSource: extracted.source,
+      ...(ocrFailed ? { ocrFailedPages: extracted.ocrFailedPages } : {}),
       classifier:
         input.classification.engine === 'v2'
           ? {

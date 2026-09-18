@@ -22,6 +22,14 @@ export interface ExtractedText {
   source: TextSource
   /** Pagine il cui testo è arrivato da OCR invece che dal text layer. */
   ocrPages: number[]
+  /**
+   * Pagine senza text layer che l'OCR non ha letto: servizio assente o richiesta
+   * fallita. Restano vuote, e il documento va ripassato quando l'OCR torna. Una pagina
+   * che l'OCR ha letto trovandoci nulla non è qui: lì non c'è niente da ritentare.
+   */
+  ocrFailedPages: number[]
+  /** Perché l'OCR non ha letto quelle pagine, quando c'è un motivo da riportare. */
+  ocrError?: string
 }
 
 /** Sotto questa soglia una pagina PDF è considerata senza text layer utile. */

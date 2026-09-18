@@ -2,7 +2,16 @@ import { randomUUID } from 'node:crypto'
 import type { Db } from '../index'
 import type { ExtractionRunRow } from '../rows'
 
-export type ExtractionRunStatus = 'COMPLETED' | 'SKIPPED_UNKNOWN_TYPE' | 'SKIPPED_NO_PROFILE'
+/**
+ * `FAILED_OCR` è l'unico esito che non conta come passaggio del motore: il testo era
+ * incompleto perché l'OCR non ha letto delle pagine scansionate, e il documento va
+ * ripassato appena l'OCR torna disponibile. Gli `SKIPPED_` invece sono esiti stabili.
+ */
+export type ExtractionRunStatus =
+  | 'COMPLETED'
+  | 'SKIPPED_UNKNOWN_TYPE'
+  | 'SKIPPED_NO_PROFILE'
+  | 'FAILED_OCR'
 
 export interface ExtractionRunInput {
   engineVersion: string
@@ -57,12 +66,18 @@ export function createExtractionRunsDao(db: Db) {
         .all(documentId) as ExtractionRunRow[]
     },
 
-    /** Il documento è già passato da questa versione del motore con questi profili. */
+    /**
+     * Il documento è già passato da questa versione del motore con questi profili. Un run
+     * chiuso con `FAILED_OCR` non vale: quel passaggio ha letto un testo incompleto.
+     */
     hasRun(documentId: string, engineVersion: string, schemaVersion: string): boolean {
       return (
         db
           .prepare(
-            'SELECT 1 FROM extraction_runs WHERE document_id = ? AND engine_version = ? AND schema_version = ? LIMIT 1'
+            `SELECT 1 FROM extraction_runs
+             WHERE document_id = ? AND engine_version = ? AND schema_version = ?
+               AND status <> 'FAILED_OCR'
+             LIMIT 1`
           )
           .get(documentId, engineVersion, schemaVersion) !== undefined
       )
