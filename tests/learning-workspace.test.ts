@@ -52,6 +52,7 @@ const event = (documentId: string, sha: string): LearningEventInput => ({
   contentSha256: sha.repeat(64),
   templateFingerprint: 'f1',
   textSource: 'NATIVE_TEXT',
+  replayedAt: null,
   kind: 'FIELD_VALUE',
   outcome: 'FILLED',
   documentType: TYPE,
@@ -206,7 +207,7 @@ describe('l’export delle regole', () => {
     const bundle = JSON.parse(written)
     expect(bundle.manifest).toMatchObject({
       format: 'praticaai-reviewer/learned-rules',
-      formatVersion: '1.1.0',
+      formatVersion: '1.2.0',
       exportedAt: AT,
       app: { name: 'praticaai-reviewer', version: '1.5.0' },
       learnerVersion: 'local-learner/0.1.0',

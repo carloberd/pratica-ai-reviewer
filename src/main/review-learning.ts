@@ -54,6 +54,11 @@ export interface LearnFromReviewInput {
   /** Senza registry v2 non si ricavano etichette: gli eventi si registrano lo stesso. */
   registry?: ExtractionRegistryV2 | undefined
   policy?: LearningPolicy
+  /**
+   * La revisione si ripassa invece di chiuderla adesso: `at` resta il momento in cui il
+   * revisore aveva deciso, e questa è la data in cui l'evento viene scritto.
+   */
+  replayedAt?: string | null
 }
 
 /** Cosa rielaborare dopo che una regola ha cominciato o smesso di valere. */
@@ -67,11 +72,13 @@ export interface RulesChange {
 export interface LearnedReview {
   /** La frase per la timeline, `null` quando non c'è niente da dire. */
   note: string | null
+  /** Quante decisioni sono finite nel registro: 0 fuori da LEARNING, o se non ce n'erano. */
+  events: number
   changed: RulesChange
 }
 
 const NO_CHANGE: RulesChange = { documentTypes: [], templateFingerprints: [] }
-const NOTHING: LearnedReview = { note: null, changed: NO_CHANGE }
+const NOTHING: LearnedReview = { note: null, events: 0, changed: NO_CHANGE }
 
 /** Le correzioni che danno un valore: da lì si impara dove stava. */
 const TEACHES = new Set(['CHANGED', 'FILLED', 'ADDED'])
@@ -93,16 +100,22 @@ export function learnFromReview(repo: Repository, input: LearnFromReviewInput): 
     if (!settled || settled.touched === 0) return NOTHING
     return {
       note: `Apprendimento: tolte le prove di questo documento da ${plural(settled.touched, 'regola', 'regole')}.${describeActions(settled.actions)}`,
+      events: 0,
       changed: settled.changed
     }
   }
 
   if (mode !== 'LEARNING') {
-    return { note: `${LEARNING_MODE_LABELS[mode]}: revisione non registrata.`, changed: NO_CHANGE }
+    return {
+      note: `${LEARNING_MODE_LABELS[mode]}: revisione non registrata.`,
+      events: 0,
+      changed: NO_CHANGE
+    }
   }
   if (!input.actor) {
     return {
       note: 'Apprendimento: revisione non registrata, nessun account collegato.',
+      events: 0,
       changed: NO_CHANGE
     }
   }
@@ -111,7 +124,8 @@ export function learnFromReview(repo: Repository, input: LearnFromReviewInput): 
   const events = reviewLearningEvents(input.document, {
     at: input.at,
     actor: input.actor,
-    templateFingerprint
+    templateFingerprint,
+    replayedAt: input.replayedAt ?? null
   })
 
   const settled = repo.learning.acquire((writer) => {
@@ -126,6 +140,7 @@ export function learnFromReview(repo: Repository, input: LearnFromReviewInput): 
 
   return {
     note: `${describeLearnedReview(events)}${describeActions(settled?.actions ?? [])}`,
+    events: events.length,
     changed: settled?.changed ?? NO_CHANGE
   }
 }

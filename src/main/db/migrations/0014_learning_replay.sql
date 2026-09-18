@@ -1,0 +1,15 @@
+-- Quando un evento è stato registrato, se non è stato registrato sul momento.
+--
+-- Il learner è stato acceso dopo che la revisione era già cominciata: sull'export del
+-- 18/09/2026 aveva 122 eventi su 11 documenti, contro 281 correzioni su 41. Le revisioni
+-- chiuse prima ci sono ancora — valori, correzioni e selezioni stanno a database — ma non
+-- gliele aveva viste nessuno.
+--
+-- Il replay le ripassa. `at` resta il momento in cui il revisore ha deciso, che è quello
+-- che conta per la cronologia; `replayed_at` dice quando l'evento è stato scritto, e NULL
+-- vuol dire «registrato sul momento», come tutti quelli di prima.
+--
+-- Serve perché `actor` su un evento ripassato è l'account che ha lanciato il replay, non
+-- necessariamente chi aveva chiuso quella revisione: chi ha chiuso non è mai stato
+-- salvato sul documento. Senza questa colonna il registro direbbe una cosa che non sa.
+ALTER TABLE learning_events ADD COLUMN replayed_at TEXT;

@@ -33,8 +33,10 @@ interface Props {
   loading: boolean
   busy: boolean
   exporting: boolean
+  replaying: boolean
   onSetMode: (mode: LearningMode) => void
   onSetRuleStatus: (ruleId: string, status: ManualRuleStatus) => void
+  onReplay: () => void
   onExport: () => void
 }
 
@@ -68,8 +70,10 @@ export default function LearningView({
   loading,
   busy,
   exporting,
+  replaying,
   onSetMode,
   onSetRuleStatus,
+  onReplay,
   onExport
 }: Props) {
   const [filter, setFilter] = useState<Filter>('all')
@@ -99,6 +103,19 @@ export default function LearningView({
             </div>
           </div>
           <span className={styles.spacer} />
+          <button
+            type="button"
+            className={styles.button}
+            disabled={busy || mode !== 'LEARNING'}
+            title={
+              mode === 'LEARNING'
+                ? 'Ripassa le revisioni già chiuse: quelle di prima che il learner fosse acceso non le ha mai viste. Si può rilanciare, non conta due volte.'
+                : 'Il ripasso registra decisioni: serve la modalità LEARNING.'
+            }
+            onClick={onReplay}
+          >
+            {replaying ? 'Ripasso…' : 'Ripassa le revisioni'}
+          </button>
           <button
             type="button"
             className={styles.button}

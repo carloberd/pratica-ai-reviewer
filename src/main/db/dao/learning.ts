@@ -64,6 +64,7 @@ interface EventRow {
   pick_char_start: number | null
   pick_char_end: number | null
   learner_version: string
+  replayed_at: string | null
 }
 
 interface RuleRow {
@@ -122,6 +123,7 @@ function toEvent(row: EventRow): LearningEvent {
     itemIndex: row.item_index,
     engineConfidence: row.engine_confidence,
     engineRuleId: row.engine_rule_id,
+    replayedAt: row.replayed_at,
     pick:
       row.pick_method === null || row.pick_page === null
         ? null
@@ -225,12 +227,12 @@ export function createLearningDao(db: Db) {
       id, at, actor, document_id, content_sha256, template_fingerprint, text_source, kind, outcome,
       document_type, predicted_type, predicted_confidence, field_id, item_index, engine_confidence,
       engine_rule_id, pick_method, pick_page, pick_bbox_json, pick_line_start, pick_line_end,
-      pick_char_start, pick_char_end, learner_version
+      pick_char_start, pick_char_end, learner_version, replayed_at
     ) VALUES (
       @id, @at, @actor, @documentId, @contentSha256, @templateFingerprint, @textSource, @kind, @outcome,
       @documentType, @predictedType, @predictedConfidence, @fieldId, @itemIndex, @engineConfidence,
       @engineRuleId, @pickMethod, @pickPage, @pickBboxJson, @pickLineStart, @pickLineEnd,
-      @pickCharStart, @pickCharEnd, @learnerVersion
+      @pickCharStart, @pickCharEnd, @learnerVersion, @replayedAt
     )
   `)
   const insertRule = db.prepare(`
