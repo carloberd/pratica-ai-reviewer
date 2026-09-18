@@ -1,6 +1,24 @@
 import { describe, expect, it } from 'vitest'
 import { templateMemoryFor, templateTypeRuleInput } from '../src/main/learning-templates'
 import { type LearningRule, nextRuleStatus } from '../src/shared/local-learning'
+import { normalizedTemplateSignature } from '../src/shared/template-fingerprint'
+
+/** Due esemplari dello stesso stampato: una riga in più sul secondo, testata uguale. */
+const TESTATA = [
+  'FATTURA IMMEDIATA',
+  'Cliente: Alfa S.r.l.',
+  'Indirizzo Sede legale   ROVIGO (RO)',
+  'Partita IVA: 01234567890',
+  'Data documento: 08/09/2026'
+]
+const firma = normalizedTemplateSignature(TESTATA)!
+const firmaSimile = normalizedTemplateSignature([...TESTATA, 'Copia per archivio'])!
+const firmaAltroModulo = normalizedTemplateSignature([
+  'VISURA CAMERALE',
+  'Numero REA: RO-123456',
+  'Forma giuridica: societa a responsabilita limitata',
+  'Data iscrizione: 01/02/2020'
+])!
 
 const memoryRule = (overrides: Partial<LearningRule>): LearningRule => ({
   ...templateTypeRuleInput('accounting.fattura', 'f1'),
@@ -37,9 +55,39 @@ describe('memoria dei moduli', () => {
       memoryRule({ id: 'etichetta', kind: 'EXTRACTION_ANCHOR' })
     ]
     expect(templateMemoryFor(rules, 'f1')).toEqual([
-      { ruleId: 'attiva', documentType: 'accounting.fattura', templateFingerprint: 'f1' }
+      {
+        ruleId: 'attiva',
+        documentType: 'accounting.fattura',
+        templateFingerprint: 'f1',
+        similarity: 1
+      }
     ])
     expect(templateMemoryFor(rules, null)).toEqual([])
+  })
+
+  it('vale su un esemplare che l’impronta esatta separava, e pesa meno di uno identico', () => {
+    const rules = [
+      memoryRule({ id: 'attiva', ...templateTypeRuleInput('accounting.fattura', 'f1', firma) })
+    ]
+
+    // È il caso per cui la firma esiste: stesso stampato, impronta diversa. Prima di qui
+    // questa memoria non valeva, e con supporto 1 per impronta non si attivava mai.
+    const [simile] = templateMemoryFor(rules, 'f-diversa', firmaSimile)
+    expect(simile?.ruleId).toBe('attiva')
+    expect(simile?.similarity).toBeGreaterThanOrEqual(0.68)
+    expect(simile?.similarity).toBeLessThan(1)
+
+    // Lo stesso esemplare da cui la regola viene resta esatto, e vale pieno.
+    expect(templateMemoryFor(rules, 'f1', firma)[0]?.similarity).toBe(1)
+
+    // Un altro stampato non è lo stesso modulo, per quanto la soglia sia permissiva.
+    expect(templateMemoryFor(rules, 'f-diversa', firmaAltroModulo)).toEqual([])
+  })
+
+  it('una regola senza firma vale ancora, ma solo per impronta identica', () => {
+    const rules = [memoryRule({ id: 'vecchia' })]
+    expect(templateMemoryFor(rules, 'f1', firma)).toHaveLength(1)
+    expect(templateMemoryFor(rules, 'f-diversa', firmaSimile)).toEqual([])
   })
 
   it('si attiva con tre revisioni concordi e nessun conflitto, mai prima', () => {

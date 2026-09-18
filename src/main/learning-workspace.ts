@@ -17,7 +17,10 @@ import {
   LEARNER_VERSION,
   type LearningAction
 } from '@shared/local-learning'
-import { TEMPLATE_FINGERPRINT_ALGORITHM } from '@shared/template-fingerprint'
+import {
+  NORMALIZED_TEMPLATE_SIGNATURE_ALGORITHM,
+  TEMPLATE_FINGERPRINT_ALGORITHM
+} from '@shared/template-fingerprint'
 import type { Repository } from './db/repository'
 import { ReviewerError } from './errors'
 import { describeRule, type RulesChange } from './review-learning'
@@ -132,7 +135,8 @@ export async function exportLearnedRules(
       mode: learning.mode(),
       policy: DEFAULT_LEARNING_POLICY,
       counts: learning.counts(),
-      templateFingerprintAlgorithm: TEMPLATE_FINGERPRINT_ALGORITHM
+      templateFingerprintAlgorithm: TEMPLATE_FINGERPRINT_ALGORITHM,
+      normalizedTemplateSignatureAlgorithm: NORMALIZED_TEMPLATE_SIGNATURE_ALGORITHM
     },
     rules,
     events,

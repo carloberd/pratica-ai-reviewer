@@ -18,6 +18,12 @@ export type MatchEvidenceSource =
 export interface TemplateMemoryV2 {
   documentType: string
   templateFingerprint: string
+  /**
+   * Quanto la testata di questo documento somiglia a quella su cui la memoria è stata
+   * imparata: 1 lo stesso modulo esatto, meno un modulo riconosciuto per somiglianza.
+   * Assente sulle memorie lette senza firma, che valgono come esatte.
+   */
+  similarity?: number
 }
 
 export interface MatchEvidenceV2 {
@@ -180,11 +186,18 @@ export function matchDocumentTypeV2(input: {
 
   for (const memory of input.templateMemory ?? []) {
     const c = getCandidate(map, memory.documentType)
+    // Una memoria esatta vale la soglia di assegnazione: da sola basta a proporre il tipo.
+    // Una riconosciuta per somiglianza vale in proporzione, quindi resta sotto la soglia e
+    // da sola non assegna: il modulo somiglia, ma non è lo stesso, e un tipo sbagliato
+    // cambia tutti i campi che si cercano.
+    const similarity = memory.similarity ?? 1
     addEvidence(
       c,
       'template-memory',
-      `modulo ${memory.templateFingerprint}`,
-      d.auto_assign_threshold
+      similarity === 1
+        ? `modulo ${memory.templateFingerprint}`
+        : `modulo simile a ${memory.templateFingerprint}`,
+      d.auto_assign_threshold * similarity
     )
   }
 

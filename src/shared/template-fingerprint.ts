@@ -148,3 +148,210 @@ export function templateFingerprint(lines: string[]): string | null {
     .digest('hex')
     .slice(0, TEMPLATE_FINGERPRINT_LENGTH)
 }
+
+// ---------------------------------------------------------------------------
+// Firma normalizzata: lo stesso modulo, confrontabile per somiglianza
+// ---------------------------------------------------------------------------
+
+/**
+ * ## Perché l'impronta esatta non basta
+ *
+ * L'impronta qui sopra è una chiave: due documenti la condividono o no. Misurato
+ * sull'export del 18/09/2026, quasi sempre no — **ogni impronta corrispondeva a un solo
+ * documento**. La 0013 ha ridotto il problema tenendo le sole etichette della testata, ma
+ * non lo toglie: basta una riga che va a capo diversamente, un'intestazione in più su una
+ * copia, un campo compilato dove l'altro modulo lo lascia vuoto, e l'insieme delle
+ * etichette cambia — quindi cambia l'hash, quindi è un altro modulo.
+ *
+ * La conseguenza non è cosmetica. `minTemplateSupport` è 2 e `minTemplateTypeSupport` è 3:
+ * se un'impronta vale per un documento solo, **nessuna regola di scope `TEMPLATE` può
+ * arrivare ad attivarsi**, né per le etichette né per la memoria dei moduli. Lo scope più
+ * preciso che il learner ha resta candidato per sempre, e il learner impara solo per tipo.
+ *
+ * ## Cosa fa la firma
+ *
+ * Invece di una chiave sola, tiene anche **l'insieme** delle ancore da cui la chiave è
+ * ricavata. Due testate possono allora essere confrontate per quante ancore hanno in
+ * comune (Jaccard) invece che per uguaglianza: una riga in più fa scendere la somiglianza,
+ * non la azzera. Sopra {@link DEFAULT_TEMPLATE_SIMILARITY_THRESHOLD} i due documenti sono
+ * lo stesso modulo, e le loro revisioni si sommano sulla stessa regola.
+ *
+ * Le ancore sono hashate una per una, quindi la firma si può confrontare ed esportare
+ * senza portarsi dietro intestazioni, nomi o valori — la stessa disciplina dell'impronta.
+ *
+ * ## Cosa non fa
+ *
+ * Non sostituisce l'impronta esatta, le sta accanto: le regole scritte prima della firma
+ * hanno solo l'impronta, e continuano a valere per confronto esatto. E non è una misura
+ * di rischio — la somiglianza dice quanto due testate si assomigliano, non quanto è grave
+ * sbagliare. Chi la usa per proporre un tipo pesa il segnale di conseguenza.
+ */
+export const NORMALIZED_TEMPLATE_SIGNATURE_ALGORITHM =
+  'reviewer/normalized-template-anchors/sha256-16-v1'
+
+/**
+ * Quante ancore in comune servono perché due testate siano lo stesso modulo.
+ *
+ * `0,68` su Jaccard vuol dire che due testate da dieci ancore possono divergerne due per
+ * parte e restare lo stesso modulo. È scelto a occhio sui pochi documenti disponibili e
+ * **va ritarato sul corpus reale**: troppo basso fonde moduli diversi e insegna regole che
+ * non valgono, troppo alto riporta al problema che questa firma esiste per risolvere.
+ */
+export const DEFAULT_TEMPLATE_SIMILARITY_THRESHOLD = 0.68
+
+export interface NormalizedTemplateSignature {
+  algorithm: typeof NORMALIZED_TEMPLATE_SIGNATURE_ALGORITHM
+  fingerprint: string
+  /** Hash ordinati delle ancore: confrontabili, ma senza testo del documento nell'export. */
+  features: string[]
+}
+
+/** Forme giuridiche: stanno nella ragione sociale, che è un dato, non il modulo. */
+const LEGAL_FORM =
+  /\b(?:s\.?\s*r\.?\s*l\.?|s\.?\s*p\.?\s*a\.?|s\.?\s*n\.?\s*c\.?|s\.?\s*a\.?\s*s\.?)\b/i
+/** Una riga che comincia con un odonimo è un indirizzo: cambia col soggetto, non col modulo. */
+const ADDRESS_LINE = /^(?:via|viale|piazza|corso|largo|strada|loc\.?|localita)\b/i
+/** Etichetta e valore su una riga sola, separati da due punti, uguale o trattino spaziato. */
+const LABEL_SPLIT = /^(.{2,64}?)(?::|=|\s[-–—]\s)/
+
+/**
+ * Un'ancora della testata, o `null` se quella riga non ne porta una.
+ *
+ * Tre casi, in quest'ordine. Una riga «etichetta: valore» dà l'etichetta e butta il valore,
+ * che è il dato. Una riga senza etichetta ma con una ragione sociale o un indirizzo non dà
+ * niente: è il soggetto del documento, e due documenti dello stesso modulo per soggetti
+ * diversi devono restare lo stesso modulo. Tutto il resto dà il testo con gli identificativi,
+ * le date e i numeri sostituiti da segnaposto e poi tolti, troncato a dieci parole.
+ */
+export function normalizedTemplateFeature(line: string): string | null {
+  const compact = line.replace(/\s+/g, ' ').trim()
+  if (!compact || ADDRESS_LINE.test(compact)) return null
+
+  const split = LABEL_SPLIT.exec(compact)
+  if (split?.[1]) {
+    const label = foldTemplateText(split[1])
+    return usefulLabel(label) ? `label:${label}` : null
+  }
+
+  if (LEGAL_FORM.test(compact)) return null
+
+  const withoutValues = compact
+    .replace(/\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]){11,30}\b/gi, ' <id> ')
+    .replace(/\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b/gi, ' <id> ')
+    .replace(/\b\d{1,2}[/.-]\d{1,2}[/.-](?:\d{2}|\d{4})\b/g, ' <date> ')
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, ' <date> ')
+    .replace(/\b\d[\d.\s]*(?:,\d{1,2})?\b/g, ' <n> ')
+    .replace(/\b(?=[A-Z0-9/_-]{8,}\b)(?=[A-Z0-9/_-]*\d)[A-Z0-9][A-Z0-9/_-]{7,}\b/gi, ' <id> ')
+
+  const text = foldTemplateText(withoutValues)
+    .split(' ')
+    .filter((token) => token !== 'n' && token !== 'id' && token !== 'date')
+    .slice(0, 10)
+    .join(' ')
+  return usefulLabel(text) ? `text:${text}` : null
+}
+
+function foldTemplateText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** Un'ancora di sole cifre e punteggiatura non dice niente su che modulo sia. */
+function usefulLabel(text: string): boolean {
+  return text.replace(/[^a-z]/g, '').length >= 3
+}
+
+/**
+ * La firma della testata, o `null` quando non ci sono ancore da cui ricavarla — le stesse
+ * condizioni di {@link templateFingerprint}, e per la stessa ragione.
+ *
+ * `fingerprint` qui è l'hash dell'insieme: due documenti con le stesse ancore lo
+ * condividono, e allora vale come chiave esatta. Chi non lo condivide si confronta con
+ * {@link templateSignatureSimilarity}.
+ */
+export function normalizedTemplateSignature(lines: string[]): NormalizedTemplateSignature | null {
+  const header = lines
+    .map((line) => line.trim())
+    .filter((line) => line !== '')
+    .slice(0, TEMPLATE_HEADER_LINES)
+  const raw = header.map(normalizedTemplateFeature).filter((item): item is string => item !== null)
+  const features = [
+    ...new Set(
+      raw.map((feature) =>
+        createHash('sha256')
+          .update(feature, 'utf8')
+          .digest('hex')
+          .slice(0, TEMPLATE_FINGERPRINT_LENGTH)
+      )
+    )
+  ].sort()
+  if (features.length === 0) return null
+  return {
+    algorithm: NORMALIZED_TEMPLATE_SIGNATURE_ALGORITHM,
+    fingerprint: createHash('sha256')
+      .update(features.join('\n'), 'utf8')
+      .digest('hex')
+      .slice(0, TEMPLATE_FINGERPRINT_LENGTH),
+    features
+  }
+}
+
+/**
+ * Jaccard sulle ancore: 1 lo stesso insieme, 0 nessuna ancora in comune.
+ *
+ * Due firme di algoritmi diversi non si confrontano e danno 0: cambiare le regole qui sopra
+ * cambia il nome dell'algoritmo, e le firme vecchie smettono di somigliare a quelle nuove
+ * invece di somigliarsi per caso.
+ */
+export function templateSignatureSimilarity(
+  left: Pick<NormalizedTemplateSignature, 'algorithm' | 'features'> | null | undefined,
+  right: Pick<NormalizedTemplateSignature, 'algorithm' | 'features'> | null | undefined
+): number {
+  if (!left || !right || left.algorithm !== right.algorithm) return 0
+  const a = new Set(left.features)
+  const b = new Set(right.features)
+  if (a.size === 0 || b.size === 0) return 0
+  let intersection = 0
+  for (const feature of a) if (b.has(feature)) intersection += 1
+  return intersection / (a.size + b.size - intersection)
+}
+
+export function isNormalizedTemplateSignature(
+  value: unknown
+): value is NormalizedTemplateSignature {
+  if (typeof value !== 'object' || value === null) return false
+  const candidate = value as Partial<NormalizedTemplateSignature>
+  return (
+    candidate.algorithm === NORMALIZED_TEMPLATE_SIGNATURE_ALGORITHM &&
+    typeof candidate.fingerprint === 'string' &&
+    /^[0-9a-f]{16}$/.test(candidate.fingerprint) &&
+    Array.isArray(candidate.features) &&
+    candidate.features.length > 0 &&
+    candidate.features.length <= 512 &&
+    candidate.features.every(
+      (feature) => typeof feature === 'string' && /^[0-9a-f]{16}$/.test(feature)
+    )
+  )
+}
+
+/**
+ * La firma letta dal database. Un JSON corrotto o scritto da un algoritmo che non c'è più
+ * disattiva il confronto per somiglianza — la regola resta, e vale per impronta esatta —
+ * invece di far cadere l'elaborazione.
+ */
+export function parseNormalizedTemplateSignature(
+  json: string | null | undefined
+): NormalizedTemplateSignature | null {
+  if (!json) return null
+  try {
+    const parsed: unknown = JSON.parse(json)
+    return isNormalizedTemplateSignature(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
