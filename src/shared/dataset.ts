@@ -30,7 +30,7 @@ import type {
  */
 
 export const DATASET_FORMAT = 'praticaai-reviewer/annotated-dataset'
-export const DATASET_FORMAT_VERSION = '1.6.0'
+export const DATASET_FORMAT_VERSION = '1.7.0'
 
 export type EngineVersion = 'v1' | 'v2'
 
@@ -88,6 +88,12 @@ export interface DatasetPick {
   text: string
   bbox: BoundingBox | null
   location: PickLocation | null
+  /**
+   * Dalla 1.7.0: `text` è una lettura dell'OCR che il revisore ha sistemato a mano, e il
+   * valore buono è quello del campo. La selezione resta l'origine — il punto del documento
+   * è quello — ma il suo testo non è il valore, e chi misura l'OCR deve saperlo.
+   */
+  textCorrected: boolean
 }
 
 /** `ENGINE` = proposto dal motore e confermato; `REVIEWER` = scritto dal revisore. */
@@ -265,7 +271,8 @@ function pickOf(
     page: evidence.page,
     text: evidence.text,
     bbox: evidence.bbox ?? null,
-    location: evidence.location ?? null
+    location: evidence.location ?? null,
+    textCorrected: evidence.textCorrected === true
   }
 }
 

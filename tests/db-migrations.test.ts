@@ -162,7 +162,8 @@ describe('migrazioni', () => {
       '0011',
       '0012',
       '0013',
-      '0014'
+      '0014',
+      '0015'
     ])
 
     expect(
@@ -194,7 +195,8 @@ describe('migrazioni', () => {
       '0011',
       '0012',
       '0013',
-      '0014'
+      '0014',
+      '0015'
     ])
 
     // NULL = da calcolare al primo export, non «documento senza impronta».
@@ -211,7 +213,7 @@ describe('migrazioni', () => {
   it('la 0008 apre le tabelle della mappa, vuote: nessuna decisione presa prima esiste', () => {
     const db = databaseAt('0007')
 
-    expect(migrate(db)).toEqual(['0008', '0009', '0010', '0011', '0012', '0013', '0014'])
+    expect(migrate(db)).toEqual(['0008', '0009', '0010', '0011', '0012', '0013', '0014', '0015'])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_overrides').get()).toEqual({ n: 0 })
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_hint_labels').get()).toEqual({ n: 0 })
@@ -235,7 +237,7 @@ describe('migrazioni', () => {
   it('la 0009 apre la tabella delle cardinalità, vuota: ogni campo segue l’ontologia', () => {
     const db = databaseAt('0008')
 
-    expect(migrate(db)).toEqual(['0009', '0010', '0011', '0012', '0013', '0014'])
+    expect(migrate(db)).toEqual(['0009', '0010', '0011', '0012', '0013', '0014', '0015'])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_cardinality_overrides').get()).toEqual({
       n: 0
@@ -267,7 +269,7 @@ describe('migrazioni', () => {
         VALUES ('f', 'd', 'document.number', 'Numero documento', '114/2026', '114/2026-bis', 0.85, 'e');
     `)
 
-    expect(migrate(db)).toEqual(['0010', '0011', '0012', '0013', '0014'])
+    expect(migrate(db)).toEqual(['0010', '0011', '0012', '0013', '0014', '0015'])
 
     expect(db.prepare('SELECT origin, method, line_start, char_start FROM evidence').get()).toEqual(
       {
@@ -294,7 +296,7 @@ describe('migrazioni', () => {
 
   it('la 0011 apre il deposito del learner vuoto, in modalità LEARNING', () => {
     const db = databaseAt('0010')
-    expect(migrate(db)).toEqual(['0011', '0012', '0013', '0014'])
+    expect(migrate(db)).toEqual(['0011', '0012', '0013', '0014', '0015'])
 
     expect(db.prepare('SELECT id, mode FROM learning_state').all()).toEqual([
       { id: 1, mode: 'LEARNING' }
@@ -321,7 +323,7 @@ describe('migrazioni', () => {
 
   it('la 0012 lega evidenze ed eventi alle regole, e conta una prova per documento', () => {
     const db = databaseAt('0011')
-    expect(migrate(db)).toEqual(['0012', '0013', '0014'])
+    expect(migrate(db)).toEqual(['0012', '0013', '0014', '0015'])
     const columns = (table: string) =>
       (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map(
         (c) => c.name
@@ -367,7 +369,7 @@ describe('migrazioni', () => {
     rule('template-attiva', 'TEMPLATE', 'ACTIVE', 'aabbccdd11223344')
     rule('classe', 'CLASS', 'CANDIDATE', null)
 
-    expect(migrate(db)).toEqual(['0013', '0014'])
+    expect(migrate(db)).toEqual(['0013', '0014', '0015'])
 
     // Le impronte del vecchio algoritmo spariscono: l'elaborazione e l'export le rifanno.
     expect(db.prepare('SELECT template_fingerprint FROM documents').get()).toEqual({
@@ -412,12 +414,32 @@ describe('migrazioni', () => {
       "INSERT INTO learning_events (id, at, actor, document_id, kind, outcome, learner_version) VALUES ('e', '2026-09-15', 'chi@esempio.it', 'd', 'FIELD_VALUE', 'FILLED', 'v')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0014'])
+    expect(migrate(db)).toEqual(['0014', '0015'])
 
     // Gli eventi di prima sono stati registrati sul momento: non hanno una data di ripasso.
     expect(db.prepare('SELECT at, replayed_at FROM learning_events').get()).toEqual({
       at: '2026-09-15',
       replayed_at: null
+    })
+    db.close()
+  })
+
+  it('la 0015 apre la colonna della lettura sistemata, spenta sulle selezioni di prima', () => {
+    const db = databaseAt('0014')
+    db.prepare(
+      "INSERT INTO documents (id, drive_file_id, filename, mime, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', '2026-01-01')"
+    ).run()
+    db.prepare(
+      "INSERT INTO evidence (id, document_id, page, text, confidence, origin, method) VALUES ('e', 'd', 1, '29 O7 2026', 1, 'REVIEWER', 'AREA_OCR')"
+    ).run()
+
+    expect(migrate(db)).toEqual(['0015'])
+
+    // Una selezione registrata prima di questa versione era per forza il valore salvato:
+    // il testo non era stato sistemato, o la selezione non sarebbe qui.
+    expect(db.prepare('SELECT text, text_corrected FROM evidence').get()).toEqual({
+      text: '29 O7 2026',
+      text_corrected: 0
     })
     db.close()
   })
@@ -428,7 +450,17 @@ describe('migrazioni', () => {
       "INSERT INTO documents (id, drive_file_id, filename, mime, status, reviewed_at, synced_at) VALUES ('d', 'x', 'f.pdf', 'application/pdf', 'REVIEWED', '2026-01-02', '2026-01-01')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0007', '0008', '0009', '0010', '0011', '0012', '0013', '0014'])
+    expect(migrate(db)).toEqual([
+      '0007',
+      '0008',
+      '0009',
+      '0010',
+      '0011',
+      '0012',
+      '0013',
+      '0014',
+      '0015'
+    ])
 
     // Chi ha chiuso un documento prima di questa versione non ha una nota da recuperare:
     // restava solo nel testo della timeline, che non è un formato da rileggere.
@@ -497,7 +529,8 @@ describe('migrazione 0004 su un database esistente', () => {
       '0011',
       '0012',
       '0013',
-      '0014'
+      '0014',
+      '0015'
     ])
 
     const rows = db

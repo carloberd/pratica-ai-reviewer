@@ -311,6 +311,87 @@ describe('valori presi dal documento', () => {
     expect(r.evidence.listForDocument(id).filter((row) => row.origin === 'REVIEWER')).toEqual([])
   })
 
+  it('ripulire una lettura dell’OCR non cancella la selezione', () => {
+    // Il caso segnalato dal revisore il 18/09: sulla scansione l'OCR legge «29 O7 2026»,
+    // lui sistema la parola, e fino alla 1.5.3 sistemandola perdeva il punto del documento.
+    const { r, id } = withPages()
+    const fieldId = number(r, id).id
+    const area = {
+      method: 'AREA_OCR' as const,
+      page: 1,
+      text: 'FATTURA n. 1I4/2O26',
+      bbox: { x: 56, y: 111, w: 120, h: 12 }
+    }
+    updateFieldValue(r, {
+      documentId: id,
+      fieldId,
+      correctedValue: 'FATTURA n. 1I4/2O26',
+      pick: area
+    })
+    updateFieldValue(r, {
+      documentId: id,
+      fieldId,
+      correctedValue: 'FATTURA n. 114/2026',
+      pick: area
+    })
+
+    const field = number(r, id)
+    expect(field.correctedValue).toBe('FATTURA n. 114/2026')
+    expect(evidenceOf(r, id, field.correctedEvidenceId)).toMatchObject({
+      method: 'AREA_OCR',
+      // Il testo resta quello che l'OCR ha letto: è quello che c'è su quel punto del
+      // documento, e il valore buono sta sul campo.
+      text: 'FATTURA n. 1I4/2O26',
+      textCorrected: true,
+      // La lettura sbagliata non si ritrova fra le righe salvate, il valore sistemato sì.
+      location: { lineStart: 0, lineEnd: 0, charStart: 0, charEnd: 19 }
+    })
+    expect(evidenceOf(r, id, field.correctedEvidenceId)?.label).toContain('lettura sistemata')
+  })
+
+  it('un valore che con quella lettura non c’entra perde la selezione lo stesso', () => {
+    const { r, id } = withPages()
+    const fieldId = number(r, id).id
+    const area = {
+      method: 'AREA_OCR' as const,
+      page: 1,
+      text: 'Fornitura materiali edili',
+      bbox: { x: 56, y: 271, w: 140, h: 12 }
+    }
+    updateFieldValue(r, {
+      documentId: id,
+      fieldId,
+      correctedValue: 'Fornitura materiali edili',
+      pick: area
+    })
+    updateFieldValue(r, { documentId: id, fieldId, correctedValue: '114/2026-bis', pick: area })
+
+    expect(number(r, id).correctedEvidenceId).toBeUndefined()
+    expect(r.evidence.listForDocument(id).filter((row) => row.origin === 'REVIEWER')).toEqual([])
+  })
+
+  it('il testo selezionato è quello del documento: sistemarlo è un valore diverso', () => {
+    // Su una selezione di testo, e su un'area letta dal text layer, il testo non è una
+    // lettura: se il valore non coincide, la selezione non ne è più l'origine.
+    const { r, id } = withPages()
+    const fieldId = number(r, id).id
+    updateFieldValue(r, {
+      documentId: id,
+      fieldId,
+      correctedValue: '114/2026',
+      pick: selection('114/2026')
+    })
+    updateFieldValue(r, {
+      documentId: id,
+      fieldId,
+      correctedValue: '115/2026',
+      pick: selection('114/2026')
+    })
+
+    expect(number(r, id).correctedEvidenceId).toBeUndefined()
+    expect(r.evidence.listForDocument(id).filter((row) => row.origin === 'REVIEWER')).toEqual([])
+  })
+
   it('una selezione che non è il valore salvato non vale come origine', () => {
     const { r, id } = withPages()
     updateFieldValue(r, {

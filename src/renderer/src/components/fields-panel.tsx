@@ -1,6 +1,7 @@
 import type { EvidenceTarget } from '@shared/evidence-locate'
+import { pickOfEvidence } from '@shared/pick-cleanup'
 import { groupFieldsForReview } from '@shared/review-workspace'
-import type { EvidenceItem, ExtractedField } from '@shared/types'
+import type { DocumentPick, EvidenceItem, ExtractedField } from '@shared/types'
 import { useMemo } from 'react'
 import { cx } from '../lib/cx'
 import styles from './document-review.module.css'
@@ -15,8 +16,12 @@ export type ActiveTarget =
 
 export interface FieldHandlers {
   onActivate: (target: ActiveTarget) => void
-  onFieldCommit: (fieldId: string, value: string | null) => void
-  onItemCommit: (itemId: string, value: string | null) => void
+  /**
+   * `pick` è la selezione che il valore aveva già, quando il revisore ne sistema il testo a
+   * mano: senza, ripulire una lettura sbagliata dell'OCR la farebbe sparire.
+   */
+  onFieldCommit: (fieldId: string, value: string | null, pick?: DocumentPick) => void
+  onItemCommit: (itemId: string, value: string | null, pick?: DocumentPick) => void
   onItemRemove: (itemId: string, removed: boolean) => void
   onItemAdd: (fieldId: string, value: string) => void
   onFocusEvidence: (target: EvidenceTarget) => void
@@ -82,6 +87,11 @@ export default function FieldsPanel({
     // La selezione del revisore, se il valore viene da lì; altrimenti la lettura del motore.
     const evidenceId = field.correctedEvidenceId ?? field.evidenceId
     const fieldEvidence = evidenceId ? evidenceById.get(evidenceId) : undefined
+    // Quello che il revisore scrive a mano se lo porta dietro: sistemare una parola letta
+    // male dall'OCR non deve cancellare il punto del documento da cui viene.
+    const picked = pickOfEvidence(
+      field.correctedEvidenceId ? evidenceById.get(field.correctedEvidenceId) : undefined
+    )
     return (
       <FieldEditor
         key={field.id}
@@ -91,7 +101,7 @@ export default function FieldsPanel({
         active={active?.kind === 'field' && active.fieldId === field.id}
         evidenceShown={Boolean(fieldEvidence && fieldEvidence.id === shownEvidenceId)}
         onActivate={() => handlers.onActivate({ kind: 'field', fieldId: field.id })}
-        onCommit={(value) => handlers.onFieldCommit(field.id, value)}
+        onCommit={(value) => handlers.onFieldCommit(field.id, value, picked)}
         onFocusEvidence={handlers.onFocusEvidence}
       />
     )

@@ -194,9 +194,15 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
         fields: fieldRows.map((field) =>
           toExtractedField(field, isRequired(field, required), itemsByField.get(field.id))
         ),
-        evidence: evidence
-          .listForDocument(id)
-          .map((item) => toEvidenceItem(item, labelByEvidence.get(item.id) ?? 'Evidenza')),
+        evidence: evidence.listForDocument(id).map((item) => {
+          const text = labelByEvidence.get(item.id) ?? 'Evidenza'
+          // Una lettura sistemata a mano lo dice: il testo dell'evidenza è quello che
+          // l'OCR ha letto, non il valore che sta nel campo.
+          return toEvidenceItem(
+            item,
+            item.text_corrected === 1 ? `${text} · lettura sistemata` : text
+          )
+        }),
         timeline: events.listForDocument(id).map(toTimelineItem),
         classification: parseClassification(row.classification_json, typeLabel),
         reviewedAt: row.reviewed_at,
