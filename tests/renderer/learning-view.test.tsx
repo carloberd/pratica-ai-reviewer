@@ -17,6 +17,7 @@ const rule = (overrides: Partial<LearningRuleView>): LearningRuleView => ({
   title: '«Data emissione» sta dopo «data» sul modulo f1',
   support: 3,
   precision: 1,
+  reliability: 0.8,
   positiveCount: 3,
   negativeCount: 0,
   lastPositiveAt: '2026-09-17T10:00:00.000Z',
@@ -42,6 +43,7 @@ const overview: LearningOverview = {
       label: null,
       negativeCount: 1,
       precision: 0.75,
+      reliability: 2 / 3,
       manual: ['ACTIVE', 'REJECTED']
     }),
     rule({ id: 'r-class', scope: 'CLASS', status: 'CANDIDATE', manual: ['REJECTED'] })
@@ -93,7 +95,9 @@ describe('LearningView', () => {
     expect(view).toContain(
       '«Data emissione» sta dopo «data» sul modulo f1 attiva etichetta del modulo'
     )
-    expect(view).toContain('Richiesta di pagamento · 3 conferme · 0 smentite · precisione 100%')
+    expect(view).toContain(
+      'Richiesta di pagamento · 3 conferme · 0 smentite · precisione 100% · affidabilità 80%'
+    )
     expect(view).toContain('Il modulo f1 è «Richiesta di pagamento» sospesa tipo del modulo')
     expect(markup).toContain('data-rule="r-class" data-status="CANDIDATE"')
     // Attiva: sospendi e scarta; sospesa: riattiva e scarta; candidata: solo scarta.
@@ -102,6 +106,22 @@ describe('LearningView', () => {
     expect(count(markup, '>Scarta<')).toBe(3)
     expect(view).toContain('Cronologia del learner')
     expect(view).toContain('Regola sospesa')
+  })
+
+  it('l’affidabilità si vede anche su una regola senza prove, dove la precisione non c’è', () => {
+    // La precisione sparisce dalla riga, l'affidabilità no: il 50% è il modo di dire che
+    // di quella regola non si sa ancora niente.
+    const senzaProve = rule({
+      id: 'r-nuova',
+      positiveCount: 0,
+      negativeCount: 0,
+      support: 0,
+      precision: null,
+      reliability: 0.5
+    })
+    const view = text(<LearningView {...props} overview={{ ...overview, rules: [senzaProve] }} />)
+    expect(view).toContain('0 conferme · 0 smentite · affidabilità 50%')
+    expect(view).not.toContain('precisione')
   })
 
   it('«Annulla ultima modifica» solo sulle regole che hanno qualcosa da annullare', () => {
