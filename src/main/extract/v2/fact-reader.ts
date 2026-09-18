@@ -65,8 +65,11 @@ export interface ExtractFactsInput {
   documentType: string
   pages: ExtractedPage[]
   registry: ExtractionRegistryV2
-  /** Testo da OCR: la confidence scende di 0,10 come nella v1. */
-  fromOcr?: boolean
+  /**
+   * Pagine il cui testo viene da OCR: la confidence dei loro campi scende di 0,10 come
+   * nella v1. Un allegato scansionato non declassa i campi letti dal text layer.
+   */
+  ocrPages?: number[]
   /** Le etichette delle regole apprese che valgono per questo documento. */
   learnedLabels?: LearnedLabel[]
 }
@@ -464,13 +467,13 @@ function candidatesForField(
   spec: FieldOntologyEntry,
   labels: LabelSource[],
   pages: ExtractedPage[],
-  fromOcr: boolean
+  fromOcr: Set<number>
 ): Candidate[] {
-  const penalty = fromOcr ? OCR_PENALTY : 0
   // Per ogni riga del valore resta solo il candidato con l'etichetta più specifica.
   const best = new Map<string, Candidate>()
 
   for (const page of pages) {
+    const penalty = fromOcr.has(page.page) ? OCR_PENALTY : 0
     const lines = pageLines(page)
     const folded = lines.map((line) => foldWithOrigin(line.text))
 
@@ -583,6 +586,7 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
   const cardinality = (fieldId: string, spec: FieldOntologyEntry) =>
     cardinalityOf(profile, fieldId, spec.default_cardinality)
 
+  const ocrPages = new Set(input.ocrPages ?? [])
   const conflicts: string[] = []
   const specs = new Map<string, FieldOntologyEntry>()
   const candidates = new Map<string, Candidate[]>()
@@ -603,7 +607,7 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
         spec,
         labelsFor(fieldId, spec, input.registry, input.learnedLabels ?? []),
         input.pages,
-        input.fromOcr ?? false
+        ocrPages
       )
     )
   }

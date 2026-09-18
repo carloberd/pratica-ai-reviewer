@@ -56,7 +56,9 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
       warnings.push('Tipo da assegnare a mano: nessun alias del registry supera la soglia.')
     }
     if (row.text_source === 'OCR') {
-      warnings.push('Testo ricavato da OCR: la confidence dei campi è ridotta di 0,10.')
+      warnings.push(
+        'Pagine lette con OCR: la confidence dei campi che vengono da quelle pagine è ridotta di 0,10.'
+      )
     }
     if (row.text_source === 'OCR_FAILED') {
       warnings.push(

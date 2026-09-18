@@ -83,8 +83,8 @@ function page(lines: string[], number = 1): ExtractedPage {
   return { page: number, text: lines.join('\n'), lines: lines.map((text) => ({ text })) }
 }
 
-function extract(registry: ExtractionRegistryV2, pages: ExtractedPage[], fromOcr = false) {
-  const result = extractFactsV2({ documentType: 'test.tipo', pages, registry, fromOcr })
+function extract(registry: ExtractionRegistryV2, pages: ExtractedPage[], ocrPages: number[] = []) {
+  const result = extractFactsV2({ documentType: 'test.tipo', pages, registry, ocrPages })
   const fact = (id: string) => result.facts.find((f) => f.fieldId === id)!
   return { result, fact }
 }
@@ -289,8 +289,26 @@ describe('normalizzazione dei valori', () => {
 
   it('da OCR la confidence scende di 0,10 e il valore va rivisto', () => {
     const registry = registryOf({ 'issuer.name': { type: 'string', labels: ['emittente'] } })
-    const { fact } = extract(registry, [page(['Emittente: INPS'])], true)
+    const { fact } = extract(registry, [page(['Emittente: INPS'])], [1])
     expect(fact('issuer.name')).toMatchObject({ confidence: 0.75, reviewStatus: 'NEEDS_REVIEW' })
+  })
+
+  it('la penalità è della pagina da OCR, non delle altre', () => {
+    const registry = registryOf({
+      'issuer.name': { type: 'string', labels: ['emittente'] },
+      'money.total': { type: 'money', labels: ['totale documento'] }
+    })
+    const { fact } = extract(
+      registry,
+      [page(['Emittente: Alfa S.r.l.']), page(['Totale documento EUR 86.420,00'], 2)],
+      [2]
+    )
+    // Un allegato scansionato in fondo non declassa i campi letti dal text layer.
+    expect(fact('issuer.name')).toMatchObject({
+      confidence: CONFIDENCE_SAME_LINE,
+      reviewStatus: 'AUTO_ACCEPTED'
+    })
+    expect(fact('money.total')).toMatchObject({ confidence: 0.75, reviewStatus: 'NEEDS_REVIEW' })
   })
 })
 
