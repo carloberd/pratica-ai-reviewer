@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_TEMPLATE_SIMILARITY_THRESHOLD } from '../src/shared/local-learning'
 import {
-  DEFAULT_TEMPLATE_SIMILARITY_THRESHOLD,
   NORMALIZED_TEMPLATE_SIGNATURE_ALGORITHM,
   normalizedTemplateFeature,
   normalizedTemplateSignature,

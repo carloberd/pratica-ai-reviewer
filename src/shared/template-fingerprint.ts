@@ -173,8 +173,9 @@ export function templateFingerprint(lines: string[]): string | null {
  * Invece di una chiave sola, tiene anche **l'insieme** delle ancore da cui la chiave è
  * ricavata. Due testate possono allora essere confrontate per quante ancore hanno in
  * comune (Jaccard) invece che per uguaglianza: una riga in più fa scendere la somiglianza,
- * non la azzera. Sopra {@link DEFAULT_TEMPLATE_SIMILARITY_THRESHOLD} i due documenti sono
- * lo stesso modulo, e le loro revisioni si sommano sulla stessa regola.
+ * non la azzera. Sopra la soglia del learner (`DEFAULT_TEMPLATE_SIMILARITY_THRESHOLD`, in
+ * `local-learning.ts`) i due documenti sono lo stesso modulo, e le loro revisioni si
+ * sommano sulla stessa regola.
  *
  * Le ancore sono hashate una per una, quindi la firma si può confrontare ed esportare
  * senza portarsi dietro intestazioni, nomi o valori — la stessa disciplina dell'impronta.
@@ -188,16 +189,6 @@ export function templateFingerprint(lines: string[]): string | null {
  */
 export const NORMALIZED_TEMPLATE_SIGNATURE_ALGORITHM =
   'reviewer/normalized-template-anchors/sha256-16-v1'
-
-/**
- * Quante ancore in comune servono perché due testate siano lo stesso modulo.
- *
- * `0,68` su Jaccard vuol dire che due testate da dieci ancore possono divergerne due per
- * parte e restare lo stesso modulo. È scelto a occhio sui pochi documenti disponibili e
- * **va ritarato sul corpus reale**: troppo basso fonde moduli diversi e insegna regole che
- * non valgono, troppo alto riporta al problema che questa firma esiste per risolvere.
- */
-export const DEFAULT_TEMPLATE_SIMILARITY_THRESHOLD = 0.68
 
 export interface NormalizedTemplateSignature {
   algorithm: typeof NORMALIZED_TEMPLATE_SIGNATURE_ALGORITHM
