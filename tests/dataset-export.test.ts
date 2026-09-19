@@ -125,7 +125,7 @@ describe('export del dataset annotato', () => {
         correctedValue: value
       })
     edit('document.number', '27/2026/B') // CHANGED
-    edit('issuer.tax_id', '09876543210') // FILLED
+    edit('issuer.vat_number', '09876543210') // FILLED
     edit('money.currency', '') // CLEARED
     edit('recipient.name', 'Gamma Immobiliare S.r.l.') // uguale alla proposta: nessuna correzione
 
@@ -202,8 +202,8 @@ describe('export del dataset annotato', () => {
         pick: null
       },
       {
-        field: 'issuer.tax_id',
-        label: 'CF/P.IVA emittente',
+        field: 'issuer.vat_number',
+        label: 'Partita IVA emittente',
         item: null,
         kind: 'FILLED',
         before: null,

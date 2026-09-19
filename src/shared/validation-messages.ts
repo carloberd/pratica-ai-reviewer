@@ -10,6 +10,9 @@ const MESSAGES: Record<string, string> = {
   INVALID_TAX_ID_FORMAT: 'Non ha la forma di una partita IVA né di un codice fiscale.',
   INVALID_TAX_ID_CHECKSUM:
     'Il carattere di controllo non torna: un carattere letto o scritto male?',
+  INVALID_VAT_FORMAT: 'Non ha la forma di una partita IVA: 11 cifre.',
+  INVALID_VAT_CHECKSUM:
+    'La cifra di controllo della partita IVA non torna: una cifra letta o scritta male?',
   INVALID_CF_FORMAT: 'Non ha la forma di un codice fiscale.',
   INVALID_CF_CHECKSUM:
     'Il carattere di controllo del codice fiscale non torna: un carattere letto o scritto male?',

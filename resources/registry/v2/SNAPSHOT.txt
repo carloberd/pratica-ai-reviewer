@@ -28,6 +28,21 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
        - vehicle.plate, insurance.vehicle_plate: vehicle_plate;
        - vehicle.vin: vin;
        extraction_schemas_v2.generated.json allineato sugli stessi quattro campi.
+       19/09/2026, codice fiscale, partita IVA e REA in campi distinti
+       (docs/exports/2026-09-18/new_fields.md, PR 1):
+       - field_ontology_v2.json: sette campi che il pack non ha. issuer.vat_number,
+         recipient.vat_number, company.vat_number (format vat_number, vat_number_format);
+         issuer.tax_code, recipient.tax_code, company.tax_code (italian_tax_code_format);
+         company.rea_number (format rea_number). *.tax_id e company.registration_number
+         restano come sono, e con loro gli altri tipi;
+       - validators_v2.json: vat_number_format (builtin, warning), solo le 11 cifre;
+       - extraction_hints_v2.json: le etichette dei sette campi;
+       - class_extraction_profiles_v2.json passa a 2.0.2: su accounting.fattura issuer.tax_id e
+         recipient.tax_id lasciano il posto a *.vat_number e *.tax_code; su
+         corporate_registry.visura_camerale company.tax_id e company.registration_number a
+         company.vat_number, company.tax_code e company.rea_number. Stesso ruolo (core),
+         provenienza REVIEWER_ANNOTATIONS;
+       extraction_schemas_v2.generated.json allineato sugli stessi due tipi.
        Chi aggiorna il pack riporta queste righe o le sostituisce con quelle del pack.
 note: profili EXTRACTION_SCHEMA_DRAFT salvo 15 READY_FOR_FIELD_TEST, nessuno VALIDATED.
       I 16 tipi del registry v1 senza profilo esplicito ricevono un LEGACY_FALLBACK.

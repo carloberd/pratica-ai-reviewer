@@ -108,7 +108,7 @@ async function setup() {
   return { repo, db, deps, open, field, measure, measured }
 }
 
-/** Due fatture vere, annotate: una col numero corretto a mano, una con la P.IVA scritta. */
+/** Due fatture vere, annotate: una col numero corretto a mano, una col codice fiscale scritto. */
 async function annotated() {
   const context = await setup()
   const { repo, open, field } = context
@@ -122,12 +122,13 @@ async function annotated() {
   submitReview(repo, { documentId: withRows, action: 'SAVE' })
 
   const native = await open('fattura-nativa.pdf')
-  // Il documento porta «Partita IVA: 01234567890», che gli hint del campo non conoscono:
-  // il motore non lo trova e il revisore lo scrive a mano.
-  expect(field(native, 'issuer.tax_id').value).toBe('')
+  // Il documento porta solo «Partita IVA: 01234567890». Per una S.r.l. è anche il codice
+  // fiscale, ma nessuna etichetta del campo lo dice: il motore non lo trova e il revisore
+  // lo scrive a mano.
+  expect(field(native, 'issuer.tax_code').value).toBe('')
   updateFieldValue(repo, {
     documentId: native,
-    fieldId: field(native, 'issuer.tax_id').id,
+    fieldId: field(native, 'issuer.tax_code').id,
     correctedValue: '01234567890'
   })
   submitReview(repo, { documentId: native, action: 'SAVE' })
@@ -226,7 +227,11 @@ describe('insegnare al motore l’etichetta che gli manca', () => {
   it('porta il campo da «scritto a mano» a «confermato» sul documento aperto', async () => {
     const { deps, measured, repo, native, field, db } = await annotated()
 
-    expect(measured('issuer.tax_id')).toMatchObject({ manual: 1, confirmed: 0, manualRate: 0.5 })
+    expect(measured('issuer.tax_code')).toMatchObject({
+      manual: 1,
+      confirmed: 0,
+      manualRate: 0.5
+    })
 
     // Una correzione su un altro campo, che la rielaborazione non deve perdere.
     const number = field(native, 'document.number')
@@ -235,17 +240,17 @@ describe('insegnare al motore l’etichetta che gli manca', () => {
     const result = await editMapFromDocument(deps, native, {
       kind: 'ADD_HINT_LABEL',
       documentType: FATTURA,
-      fieldId: 'issuer.tax_id',
+      fieldId: 'issuer.tax_code',
       label: 'Partita IVA'
     })
 
-    expect(deps.registry.hints('issuer.tax_id')).toContain('Partita IVA')
+    expect(deps.registry.hints('issuer.tax_code')).toContain('Partita IVA')
 
     // Ora il motore lo trova, e propone proprio il valore che il revisore aveva scritto:
     // quella non è più una correzione.
-    expect(field(native, 'issuer.tax_id').value).toBe('01234567890')
+    expect(field(native, 'issuer.tax_code').value).toBe('01234567890')
     expect(
-      result.map.measure.fields.find((entry) => entry.fieldId === 'issuer.tax_id')
+      result.map.measure.fields.find((entry) => entry.fieldId === 'issuer.tax_code')
     ).toMatchObject({ manual: 0, confirmed: 1, corrected: 0 })
 
     // Le correzioni del revisore sopravvivono alla rielaborazione.
@@ -405,15 +410,15 @@ describe('annullare una correzione', () => {
     const first = editProfileMap(deps, {
       kind: 'SET_ROLE',
       documentType: FATTURA,
-      fieldId: 'issuer.tax_id',
+      fieldId: 'issuer.vat_number',
       role: 'required'
     })
-    expect(deps.registry.profile(FATTURA)!.required_fields).toContain('issuer.tax_id')
+    expect(deps.registry.profile(FATTURA)!.required_fields).toContain('issuer.vat_number')
 
     revertProfileAction(deps, first.id)
 
     expect(repo.profileMap.forType(FATTURA)).toEqual({})
-    expect(deps.registry.profile(FATTURA)!.core_fields).toContain('issuer.tax_id')
+    expect(deps.registry.profile(FATTURA)!.core_fields).toContain('issuer.vat_number')
 
     db.close()
   })
@@ -487,7 +492,7 @@ describe('l’export della mappa corretta', () => {
     editProfileMap(deps, {
       kind: 'ADD_HINT_LABEL',
       documentType: FATTURA,
-      fieldId: 'issuer.tax_id',
+      fieldId: 'issuer.tax_code',
       label: 'Partita IVA'
     })
 
@@ -513,13 +518,19 @@ describe('l’export della mappa corretta', () => {
     expect(profiles.profiles[FATTURA]!.x_reviewer_excluded_fields).toEqual(['procurement.cig'])
 
     const hints = JSON.parse(readFileSync(join(directory, HINTS_FILE), 'utf8')) as HintsFile
-    expect(hints.hints['issuer.tax_id']!.labels).toContain('Partita IVA')
+    expect(hints.hints['issuer.tax_code']!.labels).toContain('Partita IVA')
 
     const schemas = JSON.parse(readFileSync(join(directory, SCHEMAS_FILE), 'utf8')) as Record<
       string,
       { properties: Record<string, unknown> }
     >
     expect(Object.keys(schemas[FATTURA]!.properties)).not.toContain('procurement.cig')
+    // Le chiavi che il pack non ha escono con la loro forma, e quelle che hanno sostituito no.
+    expect(schemas[FATTURA]!.properties['issuer.vat_number']).toMatchObject({
+      type: 'string',
+      'x-praticaai-validators': ['vat_number_format']
+    })
+    expect(Object.keys(schemas[FATTURA]!.properties)).not.toContain('issuer.tax_id')
 
     const changelog = JSON.parse(readFileSync(join(directory, CHANGELOG_FILE), 'utf8')) as {
       changes: Array<{ documentType: string; excluded: string[] }>
