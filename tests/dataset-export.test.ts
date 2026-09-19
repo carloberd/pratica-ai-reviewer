@@ -98,6 +98,9 @@ describe('export del dataset annotato', () => {
   it('dal database di prova al file atteso, con before/after che sopravvivono al re-run', async () => {
     const { db, repo, processDocument, open, field } = setup()
 
+    // L'azienda di cui sono i documenti: è quella con cui si decide emesso o ricevuto.
+    repo.company.set({ name: 'Alfa Costruzioni S.r.l.', vatNumber: '09876543210', taxCode: null })
+
     // 1. Fattura con righe: si corregge riga per riga e qualche campo singolo.
     const invoice = await open('fattura-righe.pdf', PDF)
     const rows = field(invoice.id, 'line_items').items
@@ -191,6 +194,16 @@ describe('export del dataset annotato', () => {
     })
     const [contractDoc, invoiceDoc, memoDoc] = dataset.documents
     expect(contractDoc).toMatchObject({ status: 'DISCARDED', fields: [], corrections: [] })
+    // La partita IVA che il revisore ha scritto sull'emittente è quella dell'azienda: la
+    // fattura è emessa. Sugli altri due tipi la direzione non si pone.
+    expect(invoiceDoc.direction).toEqual({
+      value: 'EMESSO',
+      computed: 'EMESSO',
+      matchedBy: 'FISCAL_ID',
+      chosenBy: 'ENGINE',
+      choice: null
+    })
+    expect(contractDoc.direction).toBeNull()
     expect(invoiceDoc.corrections).toEqual([
       {
         field: 'document.number',

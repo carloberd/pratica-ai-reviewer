@@ -1,4 +1,10 @@
 import { type DatasetValueOrigin, fieldOrigin, itemOrigin, proposedFieldValue } from './dataset'
+import {
+  type CompanyIdentity,
+  type DocumentDirection,
+  directionOf,
+  EMPTY_COMPANY
+} from './document-direction'
 import type { Cardinality, FieldRole } from './extraction-v2'
 import { currentFieldValue, currentItemValue, sortedItems } from './field-edits'
 import type { EvidenceItem, ExtractedField, FieldItem, ReviewDocument } from './types'
@@ -29,6 +35,13 @@ export interface XlsxDocumentRow {
   /** Impronta del layout della prima pagina; vuota se la copia locale non è più in cache. */
   template_fingerprint: string | null
   review_status: 'REVIEWED' | 'DISCARDED'
+  /**
+   * Emesso o ricevuto per l'azienda di cui sono i documenti: vuota sui tipi che non hanno
+   * una direzione, e su quelli in cui non si è ricavata.
+   */
+  direction: DocumentDirection | null
+  /** `REVIEWER` se la direzione l'ha scelta il revisore, `ENGINE` se viene dal calcolo. */
+  direction_chosen_by: 'REVIEWER' | 'ENGINE' | null
   /** Nota scritta dal revisore chiudendo il documento; vuota se non l'ha scritta. */
   review_note: string | null
 }
@@ -60,6 +73,8 @@ export interface XlsxRows {
 
 export interface XlsxSource {
   document: ReviewDocument
+  /** L'azienda di cui sono i documenti: senza, la direzione resta vuota. */
+  company?: CompanyIdentity
   /** `metrics_json` dell'ultimo run del documento: è quello che corrisponde ai campi di adesso. */
   metricsJson: string | null
   templateFingerprint: string | null
@@ -76,6 +91,8 @@ export const XLSX_DOCUMENT_COLUMNS: Array<keyof XlsxDocumentRow> = [
   'margin',
   'template_fingerprint',
   'review_status',
+  'direction',
+  'direction_chosen_by',
   'review_note'
 ]
 
@@ -130,6 +147,12 @@ export function classifierAudit(metricsJson: string | null): ClassifierAudit {
 function toDocumentRow(source: XlsxSource): XlsxDocumentRow {
   const { document } = source
   const { runnerUp, margin } = classifierAudit(source.metricsJson)
+  const direction = directionOf({
+    documentType: document.documentType,
+    company: source.company ?? EMPTY_COMPANY,
+    fields: document.fields,
+    choice: document.directionChoice
+  })
   return {
     document_id: document.id,
     drive_file_id: document.driveFileId,
@@ -140,6 +163,8 @@ function toDocumentRow(source: XlsxSource): XlsxDocumentRow {
     margin,
     template_fingerprint: source.templateFingerprint,
     review_status: document.status === 'DISCARDED' ? 'DISCARDED' : 'REVIEWED',
+    direction: direction.value,
+    direction_chosen_by: direction.chosenBy,
     // Una nota di soli spazi non è una nota: in foglio sarebbe una cella che sembra
     // piena e non dice niente.
     review_note: document.reviewNote?.trim() ? document.reviewNote.trim() : null

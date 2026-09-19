@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { type DatasetManifestInput, datasetFileName } from '@shared/dataset'
 import { datasetXlsxFileName } from '@shared/dataset-xlsx'
+import { isDirectionChoice } from '@shared/document-direction'
 import {
   type LearningExportResult,
   type LearningOverview,
@@ -62,6 +63,7 @@ import type { RulesChange } from '../review-learning'
 import { collectXlsxRows, writeXlsxFile } from '../xlsx-export'
 import {
   addFieldItemSchema,
+  companyIdentitySchema,
   documentFiltersSchema,
   documentIdSchema,
   documentRefSchema,
@@ -77,6 +79,7 @@ import {
   removeFieldItemSchema,
   reviewSubmissionSchema,
   searchSchema,
+  setDirectionSchema,
   setTypeSchema,
   updateFieldItemSchema,
   updateFieldSchema
@@ -230,6 +233,19 @@ export function registerIpcHandlers(context: IpcContext): void {
   handle('docs:set-type', setTypeSchema, ({ id, documentType }) =>
     assignDocumentType({ repo, documentId: id, documentType, process: context.process })
   )
+
+  // La direzione non fa rielaborare niente: non è un campo estratto, è una decisione sul
+  // documento. Si scrive e si rilegge, e il calcolo resta per confronto.
+  handle('docs:set-direction', setDirectionSchema, ({ id, choice }) => {
+    if (!repo.documents.get(id)) throw new ReviewerError('NOT_FOUND', 'Documento non trovato.')
+    repo.documents.setDirectionChoice(id, isDirectionChoice(choice) ? choice : null)
+    return repo.getReviewDocument(id)!
+  })
+
+  // ---- impostazioni --------------------------------------------------------
+  handle('settings:company', noInput, () => repo.company.get())
+
+  handle('settings:set-company', companyIdentitySchema, (identity) => repo.company.set(identity))
 
   // ---- campi e revisione ---------------------------------------------------
   // Solo i campi davvero cambiati diventano una correzione: riscrivere lo stesso valore

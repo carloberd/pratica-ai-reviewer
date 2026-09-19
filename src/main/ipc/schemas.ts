@@ -1,3 +1,4 @@
+import { DIRECTION_CHOICES } from '@shared/document-direction'
 import { z } from 'zod'
 
 /**
@@ -27,6 +28,22 @@ export const documentTypeSlugSchema = z
 export const setTypeSchema = z.object({
   id: z.string().min(1),
   documentType: documentTypeSlugSchema.nullable()
+})
+
+/** Emesso o ricevuto scelto dal revisore; `null` rimette quella calcolata. */
+export const setDirectionSchema = z.object({
+  id: z.string().min(1),
+  choice: z.enum(DIRECTION_CHOICES as [string, ...string[]]).nullable()
+})
+
+/**
+ * L'azienda di cui sono i documenti. Campi corti e facoltativi: il revisore può
+ * scriverne uno solo, e un campo in bianco vale come non scritto.
+ */
+export const companyIdentitySchema = z.object({
+  name: z.string().max(200).nullable(),
+  vatNumber: z.string().max(40).nullable(),
+  taxCode: z.string().max(40).nullable()
 })
 
 /** Coordinate di pagina: non negative, come le produce il visualizzatore. */

@@ -16,6 +16,8 @@ import { learningSnapshot } from './learning-workspace'
  */
 export function collectDataset(repo: Repository, manifest: DatasetManifestInput): AnnotatedDataset {
   const sources: DatasetSource[] = []
+  // L'azienda di adesso: la direzione si ricalcola all'export, non era salvata da nessuna parte.
+  const company = repo.company.get()
   for (const row of repo.documents.list()) {
     if (row.status === 'NEEDS_REVIEW') continue
     const document = repo.getReviewDocument(row.id)
@@ -23,6 +25,7 @@ export function collectDataset(repo: Repository, manifest: DatasetManifestInput)
     const [run] = repo.extractionRuns.listForDocument(row.id)
     sources.push({
       document,
+      company,
       extraction: run
         ? {
             engineVersion: run.engine_version,

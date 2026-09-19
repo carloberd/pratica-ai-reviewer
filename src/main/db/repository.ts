@@ -1,4 +1,5 @@
 import { bandOf } from '@shared/confidence'
+import { isDirectionChoice } from '@shared/document-direction'
 import { UNIVERSAL_FIELDS } from '@shared/fields'
 import type {
   DashboardKpi,
@@ -6,6 +7,7 @@ import type {
   ReviewDocument,
   ReviewDocumentSummary
 } from '@shared/types'
+import { createCompanyDao } from './dao/company'
 import { createDocumentsDao } from './dao/documents'
 import { createEventsDao } from './dao/events'
 import { createEvidenceDao } from './dao/evidence'
@@ -51,6 +53,7 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
   const profileMap = createProfileMapDao(db)
   const pages = createPagesDao(db)
   const learning = createLearningDao(db)
+  const company = createCompanyDao(db)
 
   const requiredFields = deps.requiredFields ?? (() => [...UNIVERSAL_FIELDS])
   const typeLabel = deps.typeLabel ?? (() => null)
@@ -140,6 +143,8 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
     learning,
     /** La mappa «tipo ↔ dati da estrarre» corretta dal revisore, e la sua cronologia. */
     profileMap,
+    /** L'azienda di cui sono i documenti: quella con cui si decide emesso o ricevuto. */
+    company,
 
     listSummaries(filters: DocumentFilters = {}): ReviewDocumentSummary[] {
       const ftsIds = filters.query?.trim()
@@ -220,7 +225,10 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
         timeline: events.listForDocument(id).map(toTimelineItem),
         classification: parseClassification(row.classification_json, typeLabel),
         reviewedAt: row.reviewed_at,
-        reviewNote: row.review_note
+        reviewNote: row.review_note,
+        // La direzione non si salva: si ricalcola da qui in poi con l'azienda e i campi.
+        // Del revisore resta solo la scelta, quando ne ha fatta una.
+        directionChoice: isDirectionChoice(row.direction_choice) ? row.direction_choice : null
       }
     },
 

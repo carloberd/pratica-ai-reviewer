@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { CompanyIdentity, DirectionChoice } from '../shared/document-direction'
 import type {
   LearningExportResult,
   LearningOverview,
@@ -72,6 +73,12 @@ export const reviewerApi = {
     stats: () => invoke<IpcResultOf<DashboardStats>>('docs:stats'),
     setType: (id: string, documentType: string | null) =>
       invoke<IpcResultOf<ReviewDocument>>('docs:set-type', { id, documentType }),
+    /**
+     * Emesso o ricevuto scelto dal revisore; `null` rimette quella calcolata. Non rielabora
+     * niente: la direzione non è un campo estratto.
+     */
+    setDirection: (id: string, choice: DirectionChoice | null) =>
+      invoke<IpcResultOf<ReviewDocument>>('docs:set-direction', { id, choice }),
     /** Toglie dalla cache la copia locale, lasciando intatti dati estratti ed evidenze. */
     evict: (id: string) => invoke<IpcResultOf<{ freedBytes: number }>>('docs:evict', { id }),
     types: () => invoke<IpcResultOf<RegistryTypeOption[]>>('docs:types')
@@ -95,6 +102,12 @@ export const reviewerApi = {
     }) => invoke<IpcResultOf<ReviewDocument>>('fields:item-update', input),
     removeItem: (input: { documentId: string; itemId: string; removed: boolean }) =>
       invoke<IpcResultOf<ReviewDocument>>('fields:item-remove', input)
+  },
+  /** L'azienda di cui sono i documenti: serve a dire se un documento è emesso o ricevuto. */
+  settings: {
+    company: () => invoke<IpcResultOf<CompanyIdentity>>('settings:company'),
+    setCompany: (identity: CompanyIdentity) =>
+      invoke<IpcResultOf<CompanyIdentity>>('settings:set-company', identity)
   },
   dataset: {
     /** Chiede dove salvare e scrive il dataset annotato. */
