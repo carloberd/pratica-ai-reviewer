@@ -290,7 +290,11 @@ identificativi, testo). Un importo è negativo solo se il meno è attaccato al n
 alla valuta (`-1.234,56`, `€ -100,00`): `Totale - 100,00` resta positivo. I validatori
 sono quelli dell'ontologia, salvo dove il profilo del tipo li sostituisce
 (`field_validator_overrides`): sulla nota di credito un totale negativo non è un errore,
-e lo schema esportato non lo dichiara non negativo. Fra due campi che leggono la stessa
+e lo schema esportato non lo dichiara non negativo. I validatori controllano che una data
+esista, che un importo non sia negativo, l'IBAN col checksum mod 97, la partita IVA con la
+cifra di controllo e il codice fiscale col carattere di controllo (omocodia compresa; `IT`
+davanti alle 11 cifre non conta), la targa nel formato in vigore dal 1994 e il telaio di 17
+caratteri. Un validatore fallito non toglie il valore: lo manda in revisione. Fra due campi che leggono la stessa
 riga vince l'etichetta più specifica; a parità, o con due valori diversi per la stessa
 etichetta, il campo va in `CONFLICT`. I campi ripetuti (righe, rate, garanzie) finiscono
 in `field_items`, un elemento per riga. Ogni esecuzione lascia un rigo in `extraction_runs` con motore,
