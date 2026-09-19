@@ -1,10 +1,11 @@
 import { type EvidenceTarget, targetOfEvidence } from '@shared/evidence-locate'
 import type { EvidenceItem, ExtractedField } from '@shared/types'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { cx } from '../lib/cx'
 import { pct } from '../lib/format'
 import styles from './document-review.module.css'
 import EvidenceLink from './evidence-link'
+import ValidationNote from './validation-note'
 
 interface Props {
   field: ExtractedField
@@ -63,6 +64,9 @@ export default function FieldEditor({
   const dirty = draft !== current
   const corrected = field.correctedValue !== undefined && field.correctedValue !== field.value
   const cleared = corrected && field.correctedValue === ''
+  // Gli errori sono del valore salvato: mentre si scrive non dicono niente.
+  const errors = dirty ? [] : (field.validationErrors ?? [])
+  const noteId = useId()
 
   function commit() {
     if (!dirty) return
@@ -92,8 +96,14 @@ export default function FieldEditor({
       </div>
 
       <input
-        className={cx(styles.fieldInput, (dirty || corrected) && styles.fieldDirty)}
+        className={cx(
+          styles.fieldInput,
+          (dirty || corrected) && styles.fieldDirty,
+          errors.length > 0 && styles.fieldInvalid
+        )}
         value={draft}
+        aria-invalid={errors.length > 0 || undefined}
+        aria-describedby={errors.length > 0 ? noteId : undefined}
         disabled={disabled}
         placeholder={
           cleared
@@ -110,6 +120,8 @@ export default function FieldEditor({
           if (event.key === 'Escape') setDraft(current)
         }}
       />
+
+      {errors.length > 0 && <ValidationNote id={noteId} errors={errors} />}
 
       {evidence && (
         <EvidenceLink

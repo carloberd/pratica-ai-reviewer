@@ -158,6 +158,12 @@ export interface ExtractedField {
   /** v2 reviewer: ruolo nel profilo del tipo; `null` sulle righe scritte dal motore v1. */
   role: FieldRole | null
   reviewStatus: FieldReviewStatus | null
+  /**
+   * Validatori falliti sul valore corrente — la correzione se c'è, altrimenti la proposta —
+   * calcolati quando il documento si legge. Assente se non ce ne sono, e sui campi ripetuti,
+   * dove sta su ogni riga.
+   */
+  validationErrors?: string[]
   /** v2 reviewer: una voce per riga, solo per `cardinality = 'many'`. */
   items: FieldItem[]
 }
@@ -182,6 +188,8 @@ export interface FieldItem {
   /** Riga proposta che il revisore ha tolto: resta visibile per poterla ripristinare. */
   removed: boolean
   updatedAt?: string
+  /** Validatori falliti sul valore corrente della riga; assente se non ce ne sono. */
+  validationErrors?: string[]
 }
 
 export interface TimelineItem {
