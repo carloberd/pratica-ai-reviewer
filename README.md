@@ -276,7 +276,7 @@ documento resta `UNKNOWN` e la timeline dice perché (`BELOW_THRESHOLD`, `LOW_MA
 prima pagina (0,90) e sul nome del file (0,70); sotto 0,75 il tipo resta da assegnare.
 
 **Precompilazione v2.** I campi sono quelli del profilo del tipo
-(`class_extraction_profiles_v2.json`, 500 profili su un'ontologia di 255 campi), ognuno
+(`class_extraction_profiles_v2.json`, 500 profili su un'ontologia di 257 campi), ognuno
 col suo ruolo: obbligatorio, principale, opzionale, condizionale. I 16 tipi del registry
 senza profilo esplicito ricevono un profilo ricavato dal loro schema v1
 (`LEGACY_FALLBACK`). Quei profili sono quasi tutti bozze mai verificate: quanto valgano lo
@@ -301,7 +301,12 @@ riga vince l'etichetta più specifica; a parità, o con due valori diversi per l
 etichetta, il campo va in `CONFLICT`. L'eccezione è «C.F. e P.IVA 01234567890»: partita IVA
 e codice fiscale della stessa parte prendono lo stesso numero dalla stessa riga, senza
 conflitto. Emittente e destinatario invece hanno le stesse etichette, e una partita IVA li
-manda in `CONFLICT` tutti e due: il motore non indovina di chi è. I campi ripetuti (righe, rate, garanzie) finiscono
+manda in `CONFLICT` tutti e due: il motore non indovina di chi è. Una riga che è soltanto
+l'etichetta di un campo del profilo non è il valore di nessuno: se l'OCR perde il cognome
+di una carta d'identità, sotto «COGNOME / SURNAME» c'è «NOME / NAME», e il cognome resta
+vuoto invece di prenderla. Sui documenti d'identità cognome e nome sono due campi
+(`person.last_name`, `person.first_name`), e numero, rilascio e scadenza stanno sulle chiavi
+generiche `document.*`. I campi ripetuti (righe, rate, garanzie) finiscono
 in `field_items`, un elemento per riga. Ogni esecuzione lascia un rigo in `extraction_runs` con motore,
 versione dei profili, obbligatori mancanti, conflitti e metriche. Un campo che il profilo
 chiede e l'ontologia non descrive non si può cercare — non si sa con che etichette né con
@@ -704,7 +709,7 @@ repository che sulla sua macchina non c'è. Adesso il lavoro sta accanto alle an
 che lo motivano, nello stesso database, e diventa un file solo quando lo si esporta.
 
 **Uno o più valori.** Ogni campo dell'ontologia ha una cardinalità di partenza
-(`default_cardinality`): 36 campi su 255 chiedono più valori (righe, parti, garanzie…),
+(`default_cardinality`): 36 campi su 257 chiedono più valori (righe, parti, garanzie…),
 gli altri uno solo. Lo stesso dato può però averne uno su un tipo e più d'uno su un altro,
 e il revisore lo decide tipo per tipo: la decisione è una riga su
 `profile_cardinality_overrides` (migrazione `0009`), separata dal peso, e c'è solo quando
@@ -729,7 +734,7 @@ con il peso (obbligatorio, principale, opzionale, condizionale), i **valori da e
 nei documenti veri, **Segna non utile** lo toglie dalla mappa, **Ripristina** toglie la
 decisione del revisore e rimette quello che dice il registry. Sotto la mappa: i campi che
 il revisore compila a mano e la mappa non prevede, da aggiungere col peso scelto; quelli
-segnati non utili, con il modo di rimetterli; e **l'ontologia intera**, tutti i 255 campi,
+segnati non utili, con il modo di rimetterli; e **l'ontologia intera**, tutti i 257 campi,
 perché una mappa sbagliata si vede anche per assenza. Un id che l'ontologia non conosce
 viene rifiutato al confine IPC: nessun motore saprebbe cercarlo. In fondo, le **modifiche a
 questo tipo** ancora annullabili, ognuna col suo «Annulla».
