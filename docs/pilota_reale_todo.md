@@ -84,7 +84,7 @@ conforme. Entrano solo le frasi che descrivono il tipo:
 
 | Classe | Entra | Resta fuori |
 |---|---|---|
-| `white_list_prefettura` | hard negative «comunicazione dell'interesse a permanere nella white list» | — |
+| `white_list_prefettura` | hard negative «a permanere nella white list» (vedi sotto) | — |
 | `patente_di_guida` | «fronte patente», «retro patente»; hard negative «patente a crediti» | «dichiaro che la fotocopia», «presente documento e conforme all originale» |
 | `visura_camerale` | «registro imprese archivio ufficiale», «documento n estratto dal registro imprese» | «esito evasione protocollo» (è un altro documento), «numero rea» (sta nelle intestazioni di mezzo mondo) |
 | `nota_di_credito` | «nota di credito nr»; negativo «fattura nr» | «riepilogo iva imponibile imposte» (c'è in ogni fattura) |
@@ -97,6 +97,26 @@ non regge più per intero, e va bene così: quel numero valeva per quei file.
 
 È la prima volta che `resources/registry/v2` si scosta dal programmer pack. `SNAPSHOT.txt`
 lo dichiara classe per classe, così chi aggiorna il pack sa cosa riportare.
+
+Tre cose trovate facendo la PR 2:
+
+- **La frase della White List è più corta di quella del pilota.** La normalizzazione v2
+  tiene l'apostrofo, quindi in «dell'interesse» c'è una parola sola. Scritta senza
+  apostrofo, come le altre frasi del file, «comunicazione dell interesse…» non scatta mai
+  su un testo che lo ha; scritta con l'apostrofo non scatta quando l'OCR lo perde. La coda
+  «a permanere nella white list» scatta in tutti i casi.
+- **Per lo stesso motivo alcune frasi del pack non scattano quasi mai.** «si dispone il
+  rinnovo dell iscrizione», «iscrizione nell elenco dei fornitori…» e «ricevuta di
+  presentazione dell istanza» (usata tre volte) valgono solo su un testo che ha perso
+  l'apostrofo. Sistemarlo vuol dire decidere se la normalizzazione trasforma l'apostrofo
+  in spazio, e questo tocca anche gli alias del registry: è fuori dalla sequenza.
+- **«nota di credito nr» non descrive solo il tipo.** È anche la forma con cui una
+  fattura cita una nota. Una fattura con «Rif. nota di credito nr. 5» nella zona del
+  titolo prima restava `UNKNOWN` (nota di credito a 0,72, sotto soglia); adesso diventa
+  `nota_di_credito`, a 0,755 se scrive «Fattura nr» e a 0,99 se no. È un tipo plausibile e
+  sbagliato, cioè proprio quello che il criterio esclude. La frase è entrata come diceva la
+  tabella: **da riconsiderare** con l'harness della PR 4, o da togliere se non c'è un
+  corpus su cui misurarla prima.
 
 ### 3. Nota di credito con importi negativi
 
@@ -161,6 +181,6 @@ L'ha riparato #41, prima della PR 1.
 | PR | Contenuto | Migrazione | Stato |
 |---|---|---|---|
 | 1 | Tre guardie nel fact-reader (punto 1) | no | fatta (#42) |
-| 2 | Segnali del classificatore potati (punto 2) | no | da fare |
+| 2 | Segnali del classificatore potati (punto 2) | no | fatta (#43) |
 | 3 | Nota di credito: `field_validator_overrides` (punto 3) | no | da fare |
 | 4 | Harness del benchmark su corpus reale (punto 5) | no | da fare |
