@@ -37,7 +37,9 @@ import { runFieldValidator, validatorsOf } from './validators'
  *   con lo stesso valore non può essere il numero di protocollo e il numero documento,
  *   e se nessuna etichetta è più specifica il campo va in CONFLICT. L'eccezione sono
  *   partita IVA e codice fiscale della stessa parte, che possono essere lo stesso numero
- *   sulla stessa riga (`fiscalTwinOf`);
+ *   sulla stessa riga (`fiscalTwinOf`). Una riga già presa da un'etichetta più specifica
+ *   non è nemmeno un secondo candidato per un altro campo: «IBAN ordinante» è il conto di
+ *   addebito, e l'IBAN del beneficiario resta uno solo;
  * - una riga che è soltanto l'etichetta di un campo del profilo non è il valore di nessuno:
  *   su una carta d'identità a cui l'OCR ha perso il cognome, «COGNOME / SURNAME» seguita da
  *   «NOME / NAME» lascia il cognome vuoto invece di dargli l'etichetta del nome;
@@ -305,6 +307,13 @@ export function readIdentifier(text: string, format: string | null | undefined):
     return match?.[1] && match.index <= VALUE_WINDOW
       ? match[1].replace(/\s/g, '').toUpperCase()
       : null
+  }
+  // Il conto da cui parte un bonifico è scritto come IBAN o come numero di rapporto: se è
+  // un IBAN va letto intero anche a gruppi di quattro, altrimenti vale la lettura per
+  // token, che di «IT60 X054 2811 …» terrebbe solo `IT60`.
+  if (format === 'account_number') {
+    const match = IBAN.exec(text)
+    if (match?.[1] && match.index <= VALUE_WINDOW) return match[1].replace(/\s/g, '').toUpperCase()
   }
 
   const unprefixed = text.replace(/^[\s.\-–—]+/, '')
@@ -738,6 +747,18 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
     if (conflicted.has(twin)) conflicted.add(fieldId)
   }
 
+  /**
+   * La riga di questo candidato è di un altro campo, che la chiama con un'etichetta più
+   * specifica: su una ricevuta di bonifico «IBAN ordinante» è il conto di addebito, e la
+   * sua riga non è un secondo candidato per l'IBAN del beneficiario.
+   */
+  const claimedByOther = (candidate: Candidate): boolean => {
+    const owner = claims.get(claimKey(candidate))
+    return (
+      owner !== undefined && owner.fieldId !== candidate.fieldId && moreSpecific(owner, candidate)
+    )
+  }
+
   const facts: ExtractedFactV2[] = []
   const missingRequired: string[] = []
 
@@ -798,7 +819,8 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
       (other) =>
         other.tier === pick.tier &&
         other.labelLength === pick.labelLength &&
-        other.value !== pick.value
+        other.value !== pick.value &&
+        !claimedByOther(other)
     )
     if (rivals.length > 0) {
       conflicted.add(fieldId)

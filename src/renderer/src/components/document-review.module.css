@@ -1341,6 +1341,11 @@ details > .candidatesTitle {
   color: #8b969d;
   overflow-wrap: anywhere;
 }
+.mapFieldNote {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #53646d;
+}
 .mapRoleSelect {
   flex: none;
   min-width: 0;
