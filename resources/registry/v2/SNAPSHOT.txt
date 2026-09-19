@@ -13,7 +13,8 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
          hard negative "patente a crediti";
        - corporate_registry.visura_camerale (nuova): positive "registro imprese archivio ufficiale",
          "documento n estratto dal registro imprese";
-       - accounting.nota_di_credito (nuova): positive "nota di credito nr"; negative "fattura nr";
+       - accounting.nota_di_credito (nuova): negative "fattura nr" (il positive "nota di credito nr"
+         del pilota è stato tolto: è anche la forma con cui una fattura cita una nota);
        - fiscal_tax.quietanza_versamento (nuova): positive "quietanza di versamento",
          "estremi del versamento", "protocollo telematico saldo delega", "dettaglio dei tributi";
        - sales_customers.rapportino_intervento (nuova): positive "durata del lavoro", "durata del viaggio".
