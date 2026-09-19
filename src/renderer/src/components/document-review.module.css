@@ -1134,6 +1134,11 @@
   color: #9f3f36;
   margin-left: 6px;
 }
+.pillComputed {
+  background: #eef2ff;
+  color: #3d4a8f;
+  margin-left: 6px;
+}
 
 .fieldGroup {
   display: grid;

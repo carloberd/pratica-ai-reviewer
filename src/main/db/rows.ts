@@ -69,6 +69,8 @@ export interface FieldRow {
   role: string | null
   /** Selezione del revisore da cui viene la correzione (migrazione 0010). */
   corrected_evidence_id: string | null
+  /** 1 se la proposta è dedotta e non letta (migrazione 0018). */
+  computed: number
 }
 
 /** Un elemento di un campo `many` (righe fattura, rate, ...). I valori sono JSON. */
@@ -333,6 +335,7 @@ export function toExtractedField(
     cardinality: many ? 'many' : 'one',
     role: ROLES.find((role) => role === row.role) ?? null,
     reviewStatus: REVIEW_STATUSES.find((status) => status === row.review_status) ?? null,
+    ...(row.computed ? { computed: true } : {}),
     ...(errors.length > 0 ? { validationErrors: errors } : {}),
     items: many ? items.map((item) => toFieldItem(item, validate)) : []
   }

@@ -91,6 +91,15 @@ export default function FieldEditor({
               conflitto
             </span>
           )}
+          {/* Senza questo, una data che nel documento non c'è sembrerebbe letta lì. */}
+          {field.computed && !corrected && (
+            <span
+              className={cx(styles.pill, styles.pillComputed)}
+              title="Il documento non la scrive: il motore l’ha calcolata dalla normativa. Controlla e conferma."
+            >
+              dedotto
+            </span>
+          )}
         </span>
         <span className={styles.confidence}>{field.value ? pct(field.confidence) : '—'}</span>
       </div>
