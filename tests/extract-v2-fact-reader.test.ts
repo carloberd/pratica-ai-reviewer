@@ -281,6 +281,12 @@ describe('normalizzazione dei valori', () => {
     expect(readMoney(' 2026', 40)).toBeNull()
   })
 
+  it('il meno attaccato all’importo resta, un trattino che separa no', () => {
+    expect(readMoney(': -1.234,56', 40)).toBe('-1234.56')
+    expect(readMoney(' € -100,00', 40)).toBe('-100.00')
+    expect(readMoney(' - 100,00', 40)).toBe('100.00')
+  })
+
   it('una data prima dell’importo non prende il suo posto', () => {
     expect(readMoney(' al 31.12.2025 di 1.234,56', 40)).toBe('1234.56')
     expect(readMoney(' del 08/09/2026', 40)).toBeNull()
@@ -693,6 +699,49 @@ describe('esito complessivo', () => {
     expect(values['document.protocol_number']).toBe('2026/554321')
     // Il profilo del DURC non chiede un «numero documento» distinto dal protocollo.
     expect(values['document.number']).toBeNull()
+  })
+})
+
+/**
+ * Su una nota di credito gli importi possono essere negativi: il profilo del tipo toglie
+ * `non_negative_money` da totale, imponibile e imposta (`field_validator_overrides`). Su una
+ * fattura il validatore dell'ontologia resta, e un totale negativo va rivisto.
+ */
+describe('validatori decisi dal profilo del tipo', () => {
+  const registry = testRegistryV2()
+  const lines = [
+    'Totale imponibile: -1.000,00',
+    'Totale IVA: -220,00',
+    'Totale documento: -1.220,00'
+  ]
+  const run = (documentType: string) => {
+    const result = extractFactsV2({ documentType, pages: [page(lines)], registry })
+    return (id: string) => result.facts.find((f) => f.fieldId === id)!
+  }
+
+  it('sulla nota di credito un importo negativo non è un errore', () => {
+    const fact = run('accounting.nota_di_credito')
+    for (const [id, value] of [
+      ['money.total', '-1220.00'],
+      ['money.taxable', '-1000.00'],
+      ['money.tax', '-220.00']
+    ] as const) {
+      expect(fact(id)).toMatchObject({
+        value,
+        confidence: CONFIDENCE_SAME_LINE,
+        reviewStatus: 'AUTO_ACCEPTED',
+        validationErrors: []
+      })
+    }
+  })
+
+  it('sulla fattura lo stesso totale negativo va rivisto', () => {
+    const fact = run('accounting.fattura')
+    expect(fact('money.total')).toMatchObject({
+      value: '-1220.00',
+      reviewStatus: 'NEEDS_REVIEW',
+      validationErrors: ['NEGATIVE_MONEY']
+    })
   })
 })
 

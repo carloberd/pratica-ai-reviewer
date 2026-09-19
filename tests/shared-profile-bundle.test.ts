@@ -1,6 +1,8 @@
-import { readFileSync } from 'node:fs'
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { createExtractionRegistryV2 } from '../src/main/extract/v2/profile-loader'
 import type { FieldOntologyEntry } from '../src/shared/extraction-v2'
 import {
   buildProfileBundle,
@@ -12,11 +14,12 @@ import {
   PROFILES_FILE,
   type ProfilesFile,
   REVIEWER_PROVENANCE,
-  SCHEMAS_FILE
+  SCHEMAS_FILE,
+  serializeRegistryJson
 } from '../src/shared/profile-bundle'
 import type { ProfileAction } from '../src/shared/profile-history'
 import type { ProfileOverlay } from '../src/shared/profile-overlay'
-import { REGISTRY_V2_DIR } from './helpers/registry'
+import { REGISTRY_DIR, REGISTRY_V2_DIR } from './helpers/registry'
 
 /**
  * I file che il revisore consegna a pratica-ai.
@@ -99,6 +102,21 @@ describe('gli schemi JSON rigenerati', () => {
 
     expect(unknownFields).toEqual(['campo.inventato'])
     expect(Object.keys(schema.properties as object)).not.toContain('campo.inventato')
+  })
+
+  it('la nota di credito non dichiara non negativi i suoi importi, la fattura sì', () => {
+    const validators = (documentType: string) => {
+      const { schema } = jsonSchemaFor(documentType, PROFILES.profiles[documentType]!, ONTOLOGY)
+      const properties = schema.properties as Record<string, Record<string, unknown>>
+      return (fieldId: string) => properties[fieldId]?.['x-praticaai-validators']
+    }
+    const note = validators('accounting.nota_di_credito')
+    const invoice = validators('accounting.fattura')
+
+    for (const fieldId of ['money.total', 'money.taxable', 'money.tax']) {
+      expect(note(fieldId)).toEqual([])
+      expect(invoice(fieldId)).toEqual(['non_negative_money'])
+    }
   })
 })
 
@@ -227,6 +245,44 @@ describe('il pacchetto della mappa corretta', () => {
     expect(file(CHANGELOG_FILE).changes[0].cardinality).toEqual([
       { fieldId: 'bank.iban', from: 'one', to: 'many' }
     ])
+  })
+
+  it('un importo della nota di credito segnato non utile porta via anche la sua eccezione', () => {
+    const { file } = bundle({
+      ...EMPTY,
+      fields: { 'accounting.nota_di_credito': { 'money.tax': 'excluded' } }
+    })
+    const profile = file(PROFILES_FILE).profiles['accounting.nota_di_credito']
+
+    // Un'eccezione su un campo fuori profilo farebbe rifiutare il file al loader.
+    expect(profile.field_validator_overrides).toEqual({ 'money.total': [], 'money.taxable': [] })
+
+    const dir = mkdtempSync(join(tmpdir(), 'bundle-'))
+    try {
+      cpSync(REGISTRY_V2_DIR, dir, { recursive: true })
+      writeFileSync(join(dir, PROFILES_FILE), serializeRegistryJson(file(PROFILES_FILE)))
+      const reloaded = createExtractionRegistryV2(dir, REGISTRY_DIR)
+      expect(reloaded.profile('accounting.nota_di_credito')?.optional_fields).toEqual([
+        'money.taxable'
+      ])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('le altre decisioni sulla nota di credito lasciano le eccezioni com’erano', () => {
+    const { file } = bundle({
+      ...EMPTY,
+      fields: { 'accounting.nota_di_credito': { 'money.taxable': 'core' } }
+    })
+    const profile = file(PROFILES_FILE).profiles['accounting.nota_di_credito']
+
+    expect(profile.field_validator_overrides).toEqual(
+      PROFILES.profiles['accounting.nota_di_credito']!.field_validator_overrides
+    )
+    expect(file(SCHEMAS_FILE)['accounting.nota_di_credito'].properties['money.taxable']).toEqual(
+      expect.objectContaining({ 'x-praticaai-validators': [] })
+    )
   })
 
   it('due export di fila danno gli stessi byte', () => {

@@ -18,6 +18,10 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
        - fiscal_tax.quietanza_versamento (nuova): positive "quietanza di versamento",
          "estremi del versamento", "protocollo telematico saldo delega", "dettaglio dei tributi";
        - sales_customers.rapportino_intervento (nuova): positive "durata del lavoro", "durata del viaggio".
+       19/09/2026, class_extraction_profiles_v2.json passa a 2.0.1 (docs/pilota_reale_todo.md, punto 3):
+       - accounting.nota_di_credito: field_validator_overrides con [] su money.total, money.taxable
+         e money.tax (niente non_negative_money: su una nota di credito un importo negativo è
+         legittimo); extraction_schemas_v2.generated.json allineato sugli stessi tre campi.
        Chi aggiorna il pack riporta queste righe o le sostituisce con quelle del pack.
 note: profili EXTRACTION_SCHEMA_DRAFT salvo 15 READY_FOR_FIELD_TEST, nessuno VALIDATED.
       I 16 tipi del registry v1 senza profilo esplicito ricevono un LEGACY_FALLBACK.

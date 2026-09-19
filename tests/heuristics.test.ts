@@ -87,6 +87,41 @@ describe('importi', () => {
     expect(findMoney('quota 31.02 del lotto')?.value).toBe('31.02')
   })
 
+  // Una nota di credito letta in positivo è un valore plausibile e sbagliato: il meno
+  // attaccato al numero, o alla valuta davanti, è un segno e resta.
+  it.each([
+    ['-1.234,56', '-1234.56'],
+    ['Totale documento: -1.234,56', '-1234.56'],
+    ['Totale:-100,00', '-100.00'],
+    ['€ -100,00', '-100.00'],
+    ['€-100,00', '-100.00'],
+    ['-€ 100,00', '-100.00'],
+    ['Totale documento: € -1.234,56', '-1234.56'],
+    ['EUR -24.000,00', '-24000.00'],
+    ['Imponibile −100,00', '-100.00'],
+    ['Storno al 31/12/2025 -50,00 €', '-50.00']
+  ])('tiene il segno meno: %s -> %s', (input, expected) => {
+    expect(findMoney(input)?.value).toBe(expected)
+  })
+
+  // Un trattino che non è un segno non deve rendere negativo il totale di una fattura.
+  it.each([
+    ['Totale - 100,00', '100.00'],
+    ['- 100,00 €', '100.00'],
+    ['Totale – 100,00', '100.00'],
+    ['Totale–100,00', '100.00'],
+    ['Totale-100,00', '100.00'],
+    ['da 10,00-20,00', '10.00'],
+    ['Tel. 051-123.456', '123456.00'],
+    ['Totale 1.234,56 - IVA inclusa', '1234.56'],
+    ['----------- 1.234,56', '1234.56'],
+    ['(100,00)', '100.00'],
+    ['100,00-', '100.00'],
+    ['Totale -0,00', '0.00']
+  ])('un trattino che non è un segno non cambia l’importo: %s -> %s', (input, expected) => {
+    expect(findMoney(input)?.value).toBe(expected)
+  })
+
   it('normalizza a due decimali con il punto', () => {
     expect(parseMoney('7,5')).toBe('7.50')
     expect(parseMoney('1.000')).toBe('1000.00')

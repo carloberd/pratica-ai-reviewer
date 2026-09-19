@@ -11,6 +11,7 @@ import {
   type ProfileOverlay,
   ROLE_KEYS,
   ROLES,
+  roleIn,
   type TypeCardinality,
   type TypeOverrides
 } from './profile-overlay'
@@ -50,6 +51,8 @@ export interface RawProfile {
   field_provenance?: Record<string, string>
   /** Uno o più valori per campo, dove il revisore l'ha deciso diversamente dall'ontologia. */
   field_cardinality?: Record<string, Cardinality>
+  /** I validatori del campo su questo tipo, al posto di quelli dell'ontologia. */
+  field_validator_overrides?: Record<string, string[]>
   [key: string]: unknown
 }
 
@@ -155,7 +158,22 @@ function correctedProfile(
   const corrected: RawProfile = { ...next, field_provenance: provenance, [EDITED_KEY]: true }
   if (excluded.length > 0) corrected[EXCLUDED_KEY] = excluded
   else delete corrected[EXCLUDED_KEY]
+  const validators = validatorOverridesIn(corrected)
+  if (validators) corrected.field_validator_overrides = validators
+  else delete corrected.field_validator_overrides
   return corrected
+}
+
+/**
+ * Le eccezioni ai validatori dei soli campi che il profilo corretto chiede ancora. Un campo
+ * segnato «non utile» esce dal profilo, e un'eccezione su un campo fuori profilo farebbe
+ * rifiutare il file esportato al loader che lo rilegge.
+ */
+function validatorOverridesIn(profile: RawProfile): Record<string, string[]> | null {
+  const overrides = profile.field_validator_overrides
+  if (!overrides) return null
+  const kept = Object.entries(overrides).filter(([fieldId]) => roleIn(profile, fieldId) !== null)
+  return kept.length > 0 ? Object.fromEntries(kept) : null
 }
 
 /** Le etichette insegnate, in coda a quelle del registry. */
@@ -182,8 +200,13 @@ type JsonSchemaProperty = Record<string, unknown>
 /**
  * La forma di un campo, dedotta dall'ontologia come nel file del programmer pack. La
  * cardinalità è quella del profilo: l'ontologia, o la decisione del revisore per il tipo.
+ * I validatori anche: quelli dell'ontologia, o l'eccezione del profilo per il tipo.
  */
-function propertyFor(field: FieldOntologyEntry, cardinality: Cardinality): JsonSchemaProperty {
+function propertyFor(
+  field: FieldOntologyEntry,
+  cardinality: Cardinality,
+  validators: string[]
+): JsonSchemaProperty {
   const scalar: JsonSchemaProperty =
     field.type === 'date'
       ? { type: 'string', format: 'date' }
@@ -204,7 +227,7 @@ function propertyFor(field: FieldOntologyEntry, cardinality: Cardinality): JsonS
     ...shape,
     'x-praticaai-evidence-required': field.evidence_required,
     'x-praticaai-pii': field.pii,
-    'x-praticaai-validators': field.validators
+    'x-praticaai-validators': validators
   }
 }
 
@@ -243,7 +266,8 @@ export function jsonSchemaFor(
     }
     properties[fieldId] = propertyFor(
       field,
-      cardinalityOf(profile, fieldId, field.default_cardinality)
+      cardinalityOf(profile, fieldId, field.default_cardinality),
+      profile.field_validator_overrides?.[fieldId] ?? field.validators
     )
   }
 
