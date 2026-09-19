@@ -1,11 +1,12 @@
 import { findTextualDate } from '@shared/date-value'
-import type {
-  ClassExtractionProfile,
-  ExtractedFactV2,
-  ExtractionEvidenceV2,
-  ExtractionResultV2,
-  FieldOntologyEntry,
-  FieldRole
+import {
+  type ClassExtractionProfile,
+  type ExtractedFactV2,
+  type ExtractionEvidenceV2,
+  type ExtractionResultV2,
+  type FieldOntologyEntry,
+  type FieldRole,
+  piiOf
 } from '@shared/extraction-v2'
 import { isRegistryField } from '@shared/fields'
 import type { AnchorRelation, LearningRuleScope } from '@shared/local-learning'
@@ -672,8 +673,12 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
       continue
     }
     // I validatori del tipo, dove il profilo li decide: su una nota di credito un totale
-    // negativo è il valore giusto, non un errore da segnalare.
-    const spec = { ...ontologySpec, validators: validatorsOf(profile, fieldId, ontologySpec) }
+    // negativo è il valore giusto, non un errore da segnalare. Lo stesso per il `pii`.
+    const spec = {
+      ...ontologySpec,
+      validators: validatorsOf(profile, fieldId, ontologySpec),
+      pii: piiOf(profile, fieldId, ontologySpec)
+    }
     specs.set(fieldId, spec)
     labels.set(fieldId, labelsFor(fieldId, spec, input.registry, input.learnedLabels ?? []))
   }

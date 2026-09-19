@@ -12885,6 +12885,11 @@
         "identity.issuing_authority"
       ],
       "conditional_fields": [],
+      "field_pii_overrides": {
+        "document.number": "sensitive",
+        "document.issue_date": "sensitive",
+        "document.expiry_date": "sensitive"
+      },
       "field_provenance": {
         "identity.document_type": "AI_PROPOSED_FAMILY",
         "person.birth_place": "AI_PROPOSED_FAMILY",
@@ -13088,6 +13093,11 @@
         "person.address"
       ],
       "conditional_fields": [],
+      "field_pii_overrides": {
+        "document.number": "sensitive",
+        "document.issue_date": "sensitive",
+        "document.expiry_date": "sensitive"
+      },
       "field_provenance": {
         "identity.document_type": "AI_PROPOSED_FAMILY",
         "person.birth_place": "AI_PROPOSED_FAMILY",
@@ -13136,6 +13146,11 @@
         "identity.issuing_authority"
       ],
       "conditional_fields": [],
+      "field_pii_overrides": {
+        "document.number": "sensitive",
+        "document.issue_date": "sensitive",
+        "document.expiry_date": "sensitive"
+      },
       "field_provenance": {
         "identity.document_type": "AI_PROPOSED_FAMILY",
         "person.birth_place": "AI_PROPOSED_FAMILY",
@@ -13184,6 +13199,11 @@
         "identity.issuing_authority"
       ],
       "conditional_fields": [],
+      "field_pii_overrides": {
+        "document.number": "sensitive",
+        "document.issue_date": "sensitive",
+        "document.expiry_date": "sensitive"
+      },
       "field_provenance": {
         "identity.document_type": "AI_PROPOSED_FAMILY",
         "person.birth_place": "AI_PROPOSED_FAMILY",
