@@ -168,14 +168,12 @@
       "notes": "Official extract wording. REA number alone appears in any company letterhead."
     },
     "accounting.nota_di_credito": {
-      "positive_phrases": [
-        "nota di credito nr"
-      ],
+      "positive_phrases": [],
       "negative_phrases": [
         "fattura nr"
       ],
       "hard_negative_phrases": [],
-      "notes": "Sibling discrimination against the invoice; the VAT summary is shared by both."
+      "notes": "Sibling discrimination against the invoice; the VAT summary is shared by both, and \"nota di credito nr\" is also how an invoice cites a credit note."
     },
     "fiscal_tax.quietanza_versamento": {
       "positive_phrases": [

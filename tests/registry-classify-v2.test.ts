@@ -324,6 +324,23 @@ describe('segnali presi dal pilota su documenti reali', () => {
     expect(candidateOf(text, 'accounting.nota_di_credito')).toBeUndefined()
   })
 
+  // «nota di credito nr» è anche la forma con cui una fattura cita una nota. Come segnale
+  // positivo faceva diventare nota di credito, fino al 99%, una fattura che la citava vicino
+  // al titolo: un tipo plausibile e sbagliato. La frase è stata tolta; senza, la fattura
+  // resta sotto soglia e chi annota sceglie il tipo.
+  it.each([
+    'FATTURA\nFattura nr. 12 del 01/03/2026\nRif. nota di credito nr. 5',
+    'FATTURA\nRif. nota di credito nr. 5',
+    'Fattura n. 12 del 01/03/2026\nRif. nota di credito nr. 5\nCliente Rossi Srl'
+  ])('una fattura che cita una nota di credito non diventa una nota di credito (%j)', (text) => {
+    const result = run(text)
+    expect(result.documentType).not.toBe('accounting.nota_di_credito')
+    expect(result.decision).toBe('UNKNOWN')
+    expect(
+      candidateOf(text, 'accounting.nota_di_credito')?.evidence.map((item) => item.source)
+    ).not.toContain('positive-signal')
+  })
+
   it('su una nota di credito «fattura nr» costa la penalità dei segnali contrari', () => {
     const clean = candidateOf(
       'NOTA DI CREDITO\nNota di credito nr. 5',
