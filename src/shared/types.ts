@@ -164,6 +164,12 @@ export interface ExtractedField {
    * dove sta su ogni riga.
    */
   validationErrors?: string[]
+  /**
+   * v6 reviewer: la proposta è dedotta, non letta sul documento, e infatti non ha
+   * evidenza. Oggi solo la scadenza di un attestato di formazione, calcolata dalla
+   * normativa (`@shared/training-expiry`). Assente su tutto il resto.
+   */
+  computed?: boolean
   /** v2 reviewer: una voce per riga, solo per `cardinality = 'many'`. */
   items: FieldItem[]
 }

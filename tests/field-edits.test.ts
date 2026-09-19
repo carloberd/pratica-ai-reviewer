@@ -469,3 +469,62 @@ describe('valori presi dal documento', () => {
     expect(r.evidence.listForDocument(id).filter((row) => row.origin === 'REVIEWER')).toEqual([])
   })
 })
+
+describe('un valore dedotto, dal database alla revisione', () => {
+  /** La scadenza che il motore ha calcolato: proposta senza evidenza, e marcata. */
+  const computedExpiry: FieldInput = {
+    name: 'hse.training_expiry',
+    label: 'Scadenza formazione',
+    value: '2026-05-13',
+    confidence: 0.6,
+    semanticType: 'date',
+    role: 'core',
+    reviewStatus: 'NEEDS_REVIEW',
+    computed: true
+  }
+
+  it('resta dedotto fino a che il revisore non lo tocca', () => {
+    const r = createTestRepository()
+    repo = r
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, [
+      computedExpiry,
+      {
+        name: 'document.issue_date',
+        label: 'Data emissione',
+        value: '2021-05-13',
+        confidence: 0.85
+      }
+    ])
+
+    const field = r.getReviewDocument(id)!.fields.find((f) => f.name === 'hse.training_expiry')!
+    expect(field).toMatchObject({ value: '2026-05-13', computed: true })
+    // Un valore letto non porta il marchio: `computed` è assente, non `false`.
+    const read = r.getReviewDocument(id)!.fields.find((f) => f.name === 'document.issue_date')!
+    expect(read.computed).toBeUndefined()
+
+    // La correzione non cancella come il motore ci era arrivato: resta accanto alla
+    // proposta, com'è per ogni altro campo.
+    updateFieldValue(r, { documentId: id, fieldId: field.id, correctedValue: '2026-05-04' })
+    const corrected = r.getReviewDocument(id)!.fields.find((f) => f.name === 'hse.training_expiry')!
+    expect(corrected).toMatchObject({
+      value: '2026-05-13',
+      correctedValue: '2026-05-04',
+      computed: true
+    })
+  })
+
+  it('un nuovo run che non lo deduce più lo riscrive letto', () => {
+    const r = createTestRepository()
+    repo = r
+    const id = seedDocument(r)
+    r.fields.replaceForDocument(id, [computedExpiry])
+    r.fields.replaceForDocument(id, [
+      { ...computedExpiry, computed: undefined, value: '2026-06-30' }
+    ])
+
+    const field = r.getReviewDocument(id)!.fields.find((f) => f.name === 'hse.training_expiry')!
+    expect(field.value).toBe('2026-06-30')
+    expect(field.computed).toBeUndefined()
+  })
+})

@@ -6,6 +6,7 @@ import type {
 import { describe, expect, it } from 'vitest'
 import type { ExtractedPage } from '../src/main/extract/types'
 import {
+  CONFIDENCE_COMPUTED,
   CONFIDENCE_NEXT_LINE,
   CONFIDENCE_SAME_LINE,
   extractFactsV2,
@@ -1229,5 +1230,63 @@ describe('le date e il conto di un bonifico', () => {
     const { fact } = read(['Valuta: EUR', 'Data valuta: 13/03/2026'])
     expect(fact('money.currency').value).toBe('EUR')
     expect(fact('payment.value_date').value).toBe('2026-03-13')
+  })
+})
+
+describe('la scadenza della formazione si calcola', () => {
+  /**
+   * Con il registry vero. Le righe sono ricostruite sul modello di un attestato di
+   * formazione generale: l'export del 18/09 non porta il testo delle pagine, ma porta i
+   * valori che il revisore ha scritto su `6ad7d267`.
+   */
+  const read = (documentType: string, lines: string[]) => {
+    const result = extractFactsV2({
+      documentType,
+      pages: [page(lines)],
+      registry: testRegistryV2()
+    })
+    return { result, fact: (id: string) => result.facts.find((f) => f.fieldId === id)! }
+  }
+  const GENERALE = 'hse_training.attestato_formazione_generale'
+
+  const ATTESTATO = [
+    'ATTESTATO DI FREQUENZA',
+    'Formazione generale dei lavoratori',
+    'Rossi Mario',
+    'Data emissione: 13/05/2021',
+    'Data formazione: 04/05/2021'
+  ]
+
+  it('il documento non la scrive: il motore la deduce, e si vede che è dedotta', () => {
+    const { fact } = read(GENERALE, ATTESTATO)
+    expect(fact('hse.training_expiry')).toMatchObject({
+      value: '2026-05-13',
+      computed: true,
+      evidence: [],
+      reviewStatus: 'NEEDS_REVIEW'
+    })
+    expect(fact('hse.training_expiry').confidence).toBe(CONFIDENCE_COMPUTED)
+    // Gli altri campi restano letti: la deduzione non tocca niente che fosse nel documento.
+    expect(fact('document.issue_date').value).toBe('2021-05-13')
+    expect(fact('document.issue_date').computed).toBeUndefined()
+  })
+
+  it('una scadenza scritta sul documento vince sempre', () => {
+    const { fact } = read(GENERALE, [...ATTESTATO, 'Scadenza formazione: 30/06/2026'])
+    expect(fact('hse.training_expiry')).toMatchObject({
+      value: '2026-06-30',
+      reviewStatus: 'AUTO_ACCEPTED'
+    })
+    expect(fact('hse.training_expiry').computed).toBeUndefined()
+  })
+
+  it('senza la data di rilascio non si deduce niente', () => {
+    const { fact } = read(GENERALE, ['ATTESTATO DI FREQUENZA', 'Data formazione: 04/05/2021'])
+    expect(fact('hse.training_expiry')).toMatchObject({ value: null, reviewStatus: 'MISSING' })
+  })
+
+  it('un corso che la tabella non conosce resta senza scadenza', () => {
+    const { fact } = read('hse_training.attestato_preposto', ATTESTATO)
+    expect(fact('hse.training_expiry').value).toBeNull()
   })
 })
