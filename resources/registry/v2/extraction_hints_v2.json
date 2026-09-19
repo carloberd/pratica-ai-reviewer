@@ -35,7 +35,9 @@
     "document.issue_date": {
       "labels": [
         "Data emissione",
-        "issue date"
+        "issue date",
+        "Data rilascio",
+        "Data di rilascio"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -62,7 +64,9 @@
     "document.expiry_date": {
       "labels": [
         "Data scadenza",
-        "expiry date"
+        "expiry date",
+        "Scadenza",
+        "Data di scadenza"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -313,8 +317,34 @@
     },
     "person.name": {
       "labels": [
-        "Nome persona",
+        "Nome e cognome",
         "name"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "person.last_name": {
+      "labels": [
+        "Cognome",
+        "surname",
+        "Nom",
+        "Cognome/Surname",
+        "Cognome/Surname/Nom"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "person.first_name": {
+      "labels": [
+        "Nome",
+        "name",
+        "Prénom",
+        "Prénoms",
+        "Given names",
+        "Nome/Name",
+        "Nome/Given names/Prénoms"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -353,7 +383,10 @@
     "person.address": {
       "labels": [
         "Residenza/domicilio",
-        "address"
+        "address",
+        "Residenza",
+        "Indirizzo di residenza",
+        "Indirizzo di residenza/Residence"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -2292,7 +2325,8 @@
     "identity.nationality": {
       "labels": [
         "Cittadinanza",
-        "nationality"
+        "nationality",
+        "Nazionalità"
       ],
       "regexes": [],
       "scope": "whole_document",

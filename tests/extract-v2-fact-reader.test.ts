@@ -651,6 +651,157 @@ describe('partita IVA e codice fiscale in campi distinti', () => {
   })
 })
 
+describe('cognome e nome distinti sui documenti d’identità', () => {
+  /**
+   * Con il registry vero: le etichette sono quelle degli hint. Le righe sono ricostruite
+   * sul modello della carta d'identità elettronica e del permesso di soggiorno, non prese
+   * da un documento: l'export del 18/09 non porta il testo delle pagine.
+   */
+  const read = (documentType: string, pages: ExtractedPage[]) => {
+    const result = extractFactsV2({ documentType, pages, registry: testRegistryV2() })
+    return { result, fact: (id: string) => result.facts.find((f) => f.fieldId === id)! }
+  }
+  const CARTA = 'identity_personal.carta_identita'
+  const PERMESSO = 'identity_personal.permesso_di_soggiorno'
+
+  it('«Nome» non si trova dentro «Cognome», né «Name» dentro «Surname»', () => {
+    // Due regole lo tengono fuori: l'etichetta si cerca a confini di parola, e il testo
+    // libero la vuole in testa al segmento. Basta una delle due; il test cade senza entrambe.
+    const spec = testRegistryV2().field('person.first_name')!
+    expect(readsOfLabel('person.first_name', spec, [{ text: 'COGNOME: ROSSI' }], 'Nome')).toEqual(
+      []
+    )
+    expect(readsOfLabel('person.first_name', spec, [{ text: 'SURNAME: ROSSI' }], 'Name')).toEqual(
+      []
+    )
+    expect(readsOfLabel('person.first_name', spec, [{ text: 'NOME: MARIO' }], 'Nome')).toEqual([
+      { line: 0, valueLine: 0, sameLine: true, labelEnd: 4, value: 'MARIO' }
+    ])
+  })
+
+  it('carta elettronica: etichette bilingui su righe proprie, valore sotto', () => {
+    const front = page([
+      'REPUBBLICA ITALIANA',
+      "MINISTERO DELL'INTERNO",
+      'CARTA DI IDENTITÀ / IDENTITY CARD',
+      'CA00000AA',
+      'COMUNE DI / MUNICIPALITY',
+      'ROVIGO',
+      'COGNOME / SURNAME',
+      'ROSSI',
+      'NOME / NAME',
+      'MARIO',
+      'LUOGO E DATA DI NASCITA / PLACE AND DATE OF BIRTH',
+      'ROMA (RM) 01.01.1980',
+      'SESSO / SEX STATURA / HEIGHT CITTADINANZA / NATIONALITY',
+      'M 180 ITA',
+      'EMISSIONE / ISSUING SCADENZA / EXPIRY',
+      '05.07.2022 05.07.2033',
+      "FIRMA DEL TITOLARE / HOLDER'S SIGNATURE"
+    ])
+    // Sul retro «NOME» e «NAME» tornano dentro un'altra etichetta: non sono il nome.
+    const back = page(
+      [
+        'CODICE FISCALE / FISCAL CODE',
+        'RSSMRA80A01H501U',
+        'INDIRIZZO DI RESIDENZA / RESIDENCE',
+        'VIA ROMA 1, ROVIGO (RO)',
+        'COGNOME, NOME DEI GENITORI O DI CHI NE FA LE VECI / SURNAME AND NAME OF PARENTS',
+        'ROSSI GIUSEPPE'
+      ],
+      2
+    )
+    const { result, fact } = read(CARTA, [front, back])
+    expect(fact('person.last_name')).toMatchObject({
+      value: 'ROSSI',
+      evidence: [{ page: 1, text: 'COGNOME / SURNAME\nROSSI' }]
+    })
+    expect(fact('person.first_name')).toMatchObject({
+      value: 'MARIO',
+      evidence: [{ page: 1, text: 'NOME / NAME\nMARIO' }]
+    })
+    expect(fact('person.address').value).toBe('VIA ROMA 1, ROVIGO (RO)')
+    // Emissione e scadenza stanno affiancate, e il lettore non sa in che colonna è il
+    // valore: la scadenza resta vuota invece di prendere la data di emissione.
+    expect(fact('document.expiry_date').value).toBeNull()
+    expect(result.conflicts).toEqual([])
+  })
+
+  it('valore accanto all’etichetta: coi due punti si legge, senza resta vuoto', () => {
+    for (const lines of [
+      ['Cognome: ROSSI', 'Nome: MARIO'],
+      ['Nome: MARIO', 'Cognome: ROSSI']
+    ]) {
+      const { fact } = read(CARTA, [page(lines)])
+      expect(fact('person.last_name'), lines.join(' | ')).toMatchObject({
+        value: 'ROSSI',
+        reviewStatus: 'AUTO_ACCEPTED'
+      })
+      expect(fact('person.first_name'), lines.join(' | ')).toMatchObject({
+        value: 'MARIO',
+        reviewStatus: 'AUTO_ACCEPTED'
+      })
+    }
+    // Il testo libero vuole i due punti sulla stessa riga, come per ogni altro campo: una
+    // riga come questa non si legge, ma il nome non prende niente dalla riga del cognome.
+    const { fact } = read(CARTA, [page(['COGNOME / SURNAME ROSSI', 'NOME / NAME MARIO'])])
+    expect(fact('person.last_name').value).toBeNull()
+    expect(fact('person.first_name').value).toBeNull()
+  })
+
+  it('una frase con «nome» e «cognome» non è né l’uno né l’altro', () => {
+    const { fact } = read(CARTA, [
+      page([
+        'Cognome e nome: ROSSI MARIO',
+        'Nome e cognome del padre: ROSSI GIUSEPPE',
+        'Il sottoscritto, nome del dichiarante: BIANCHI'
+      ])
+    ])
+    expect(fact('person.last_name').value).toBeNull()
+    expect(fact('person.first_name').value).toBeNull()
+  })
+
+  it('se l’OCR perde il cognome, il cognome resta vuoto e non prende l’etichetta del nome', () => {
+    for (const lines of [
+      ['COGNOME / SURNAME', 'NOME / NAME', 'MARIO'],
+      ['COGNOME', 'NOME', 'MARIO']
+    ]) {
+      const { fact } = read(CARTA, [page(lines)])
+      expect(fact('person.last_name'), lines.join(' | ')).toMatchObject({
+        value: null,
+        reviewStatus: 'MISSING'
+      })
+      expect(fact('person.first_name').value, lines.join(' | ')).toBe('MARIO')
+    }
+  })
+
+  it('permesso di soggiorno: etichette in italiano, valore sotto', () => {
+    const { result, fact } = read(PERMESSO, [
+      page([
+        'PERMESSO DI SOGGIORNO',
+        'COGNOME',
+        'AYAD',
+        'NOME',
+        'HAMID',
+        'NAZIONALITÀ',
+        'MAR',
+        'DATA DI RILASCIO',
+        '28.06.2023',
+        'SCADENZA',
+        '29.07.2026'
+      ])
+    ])
+    expect(fact('person.last_name').value).toBe('AYAD')
+    expect(fact('person.first_name').value).toBe('HAMID')
+    expect(fact('identity.nationality').value).toBe('MAR')
+    // Rilascio e scadenza sulle chiavi generiche, con le etichette di `identity.*`.
+    expect(fact('document.issue_date').value).toBe('2023-06-28')
+    expect(fact('document.expiry_date').value).toBe('2026-07-29')
+    expect(result.facts.map((f) => f.fieldId)).not.toContain('person.name')
+    expect(result.conflicts).toEqual([])
+  })
+})
+
 describe('etichette imparate dalle revisioni', () => {
   const learned = (
     fieldId: string,
