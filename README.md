@@ -331,6 +331,15 @@ proposto invece sì: il motore aveva letto qualcosa che nel documento non c'è. 
 modifica è già a database nel momento in cui si esce dal campo — i tasti in fondo non
 salvano i dati, dichiarano l'esito.
 
+Accanto a ogni campo, e a ogni riga di un campo ripetuto, la scheda dice se il valore
+**corrente** non passa i validatori del tipo: un IBAN col codice di controllo sbagliato, una
+partita IVA con due cifre scambiate, un codice fiscale con un carattere di troppo. Il
+controllo gira ogni volta che la revisione legge il documento (`validateFieldValue`), sulla
+correzione se c'è e sulla proposta altrimenti. Quello che si scrive si controlla quindi
+appena si esce dal campo, e un validatore migliorato vale anche sui documenti già chiusi.
+È un avviso e non blocca niente: un documento può riportare davvero un codice sbagliato, e
+allora il valore giusto da trascrivere è quello.
+
 La scheda Dati è fatta per controllare in fretta, senza togliere niente al controllo:
 
 - **Evidenza cliccabile.** Sotto ogni valore proposto c'è la sua origine, pagina e riga.

@@ -15,7 +15,7 @@ import { FIELD_SPECS, findDate, findMoney, fold, OCR_PENALTY } from '../heuristi
 import { precededByReference, readsReferences } from '../reference-context'
 import type { ExtractedPage, TextLine } from '../types'
 import type { ExtractionRegistryV2 } from './profile-loader'
-import { runFieldValidator } from './validators'
+import { runFieldValidator, validatorsOf } from './validators'
 
 /**
  * Precompilazione v2: un profilo di campi per tipo documento, regole fisse, nessun LLM.
@@ -626,8 +626,7 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
     }
     // I validatori del tipo, dove il profilo li decide: su una nota di credito un totale
     // negativo è il valore giusto, non un errore da segnalare.
-    const validators = profile.field_validator_overrides?.[fieldId]
-    const spec = validators === undefined ? ontologySpec : { ...ontologySpec, validators }
+    const spec = { ...ontologySpec, validators: validatorsOf(profile, fieldId, ontologySpec) }
     specs.set(fieldId, spec)
     candidates.set(
       fieldId,

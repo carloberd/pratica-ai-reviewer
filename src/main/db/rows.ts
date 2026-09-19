@@ -261,19 +261,28 @@ export function parseItemValue(json: string | null): string | null {
   }
 }
 
-export function toFieldItem(row: FieldItemRow): FieldItem {
+/** Gli errori di validazione di un valore salvato: `[]` dove non si valida. */
+export type ValidateValue = (value: string | null) => string[]
+
+const NOT_VALIDATED: ValidateValue = () => []
+
+export function toFieldItem(row: FieldItemRow, validate: ValidateValue = NOT_VALIDATED): FieldItem {
   const corrected = parseItemValue(row.corrected_value_json)
+  const value = parseItemValue(row.value_json) ?? ''
+  // Una riga tolta non finisce nel dataset: non c'è niente da segnalare.
+  const errors = row.removed === 1 ? [] : validate(corrected ?? value)
   return {
     id: row.id,
     index: row.item_index,
-    value: parseItemValue(row.value_json) ?? '',
+    value,
     ...(corrected !== null ? { correctedValue: corrected } : {}),
     confidence: row.confidence,
     ...(row.evidence_id ? { evidenceId: row.evidence_id } : {}),
     ...(row.corrected_evidence_id ? { correctedEvidenceId: row.corrected_evidence_id } : {}),
     origin: row.origin === 'MANUAL' ? 'MANUAL' : 'ENGINE',
     removed: row.removed === 1,
-    ...(row.updated_at ? { updatedAt: row.updated_at } : {})
+    ...(row.updated_at ? { updatedAt: row.updated_at } : {}),
+    ...(errors.length > 0 ? { validationErrors: errors } : {})
   }
 }
 
@@ -304,8 +313,11 @@ export function parseClassification(
 export function toExtractedField(
   row: FieldRow,
   required: boolean,
-  items: FieldItemRow[] = []
+  items: FieldItemRow[] = [],
+  validate: ValidateValue = NOT_VALIDATED
 ): ExtractedField {
+  const many = row.cardinality === 'many'
+  const errors = many ? [] : validate(row.corrected_value ?? row.value)
   return {
     id: row.id,
     name: row.name,
@@ -318,10 +330,11 @@ export function toExtractedField(
     required,
     semanticType: semanticTypeOf(row),
     ...(row.updated_at ? { updatedAt: row.updated_at } : {}),
-    cardinality: row.cardinality === 'many' ? 'many' : 'one',
+    cardinality: many ? 'many' : 'one',
     role: ROLES.find((role) => role === row.role) ?? null,
     reviewStatus: REVIEW_STATUSES.find((status) => status === row.review_status) ?? null,
-    items: row.cardinality === 'many' ? items.map(toFieldItem) : []
+    ...(errors.length > 0 ? { validationErrors: errors } : {}),
+    items: many ? items.map((item) => toFieldItem(item, validate)) : []
   }
 }
 

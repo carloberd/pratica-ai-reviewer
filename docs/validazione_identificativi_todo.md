@@ -46,7 +46,7 @@ un carattere di controllo li avrebbe segnalati tutti.
 Resta fuori: se la partita IVA **esiste**. Servirebbe VIES o l'Agenzia delle Entrate, cioè
 mandare i dati a un servizio esterno.
 
-### PR 2 — Il valore che si vede si valida, e si vede che non va
+### PR 2 — Il valore che si vede si valida, e si vede che non va ✅
 
 Un solo meccanismo per le due metà del problema: i validatori del campo (quelli
 dell'ontologia, o quelli che il profilo del tipo mette al loro posto) girano sul valore
@@ -59,3 +59,26 @@ campi, e la scheda mostra un avviso accanto al campo. Così:
 
 L'avviso non blocca: un documento può riportare davvero un codice sbagliato, e il compito
 è trascriverlo. Una partita IVA straniera non passa il controllo italiano.
+
+Com'è fatta: `validateFieldValue` (in `validators.ts`) prende i validatori con
+`validatorsOf`, la stessa funzione che ora usa il motore, e li fa girare con
+`validationErrorsOf`, che su un valore vuoto non dice niente. Il repository la riceve come
+dipendenza (`validateField`) e mette `validationErrors` sui campi e sulle righe di
+`getReviewDocument`, tranne sulle righe tolte, che nel dataset non finiscono. La scheda
+mostra il messaggio sotto il campo (`validation-note.tsx`, testi in
+`@shared/validation-messages`) e lo nasconde mentre si scrive, perché riguarda il valore
+salvato. Le PR 2 e 3 della proposta iniziale (validare quello che scrive chi rivede,
+mostrare gli errori del motore) erano lo stesso meccanismo, e sono diventate una PR sola.
+
+---
+
+## Cosa resta aperto
+
+- **L'export.** Il dataset non dice quali valori non passano i validatori. Chi lo usa per
+  misurare l'estrazione li ricalcola da sé, oppure un campo `validationErrors` va aggiunto
+  al formato, con la versione del formato da alzare.
+- **Normalizzare quello che si salva.** Un identificativo scritto con gli spazi, o con
+  l'etichetta dentro («IBAN: …»), ora si segnala ma si salva com'è. Toglierli in silenzio
+  cambierebbe il valore trascritto: va deciso, non dato per scontato.
+- **Se il codice esiste.** VIES per la partita IVA, l'Agenzia per il codice fiscale:
+  servizi esterni, e i dati uscirebbero dalla macchina.

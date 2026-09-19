@@ -13,6 +13,7 @@ import {
   loadLegacyFieldMap,
   type ReloadableExtractionRegistryV2
 } from './extract/v2/profile-loader'
+import { validateFieldValue } from './extract/v2/validators'
 import { registerIpcHandlers } from './ipc'
 import {
   cacheDir,
@@ -51,7 +52,10 @@ function start(): void {
 
   const repo = createRepository(db, {
     requiredFields: (documentType) => registry.requiredFor(documentType),
-    typeLabel: (documentType) => registry.label(documentType)
+    typeLabel: (documentType) => registry.label(documentType),
+    // `v2` si legge solo quando la revisione apre un documento, dopo l'avvio.
+    validateField: (documentType, fieldName, value) =>
+      validateFieldValue(v2.extractionRegistryV2, documentType, fieldName, value)
   })
 
   // Il registry v2 arriva dopo il database perché le correzioni del revisore stanno lì:
