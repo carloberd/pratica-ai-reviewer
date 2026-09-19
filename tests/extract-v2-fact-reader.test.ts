@@ -317,6 +317,11 @@ describe('normalizzazione dei valori', () => {
     expect(readIdentifier(' 08/09/2026', null)).toBeNull()
     expect(readIdentifier(': 01234567890', 'tax_id')).toBe('01234567890')
     expect(readIdentifier(': rssmra80a01h501u', 'italian_tax_code')).toBe('RSSMRA80A01H501U')
+    // Il prefisso comunitario attaccato alle cifre: senza, la partita IVA non si leggeva.
+    expect(readIdentifier(': IT12345678903', 'tax_id')).toBe('12345678903')
+    expect(readIdentifier(' IT 12345678903', 'tax_id')).toBe('12345678903')
+    // Omocodia: lettere al posto delle cifre, e il codice resta un codice fiscale.
+    expect(readIdentifier(': RSSMRA80A01H5LMX', 'italian_tax_code')).toBe('RSSMRA80A01H5LMX')
     expect(readIdentifier(': IT60 X054 2811 1010 0000 0123 456', 'iban')).toBe(
       'IT60X0542811101000000123456'
     )
@@ -341,6 +346,30 @@ describe('normalizzazione dei valori', () => {
     expect(fact('bank.iban')).toMatchObject({
       value: 'IT61X0542811101000000123456',
       validationErrors: ['INVALID_IBAN'],
+      reviewStatus: 'NEEDS_REVIEW',
+      confidence: 0.67
+    })
+  })
+
+  it('una partita IVA con la cifra di controllo sbagliata va rivista, una giusta no', () => {
+    const registry = registryOf({
+      'issuer.tax_id': {
+        type: 'identifier',
+        format: 'tax_id',
+        labels: ['partita iva'],
+        validators: ['tax_id_format']
+      }
+    })
+    const read = (line: string) => extract(registry, [page([line])]).fact('issuer.tax_id')
+    expect(read('Partita IVA: IT12345678903')).toMatchObject({
+      value: '12345678903',
+      validationErrors: [],
+      reviewStatus: 'AUTO_ACCEPTED'
+    })
+    // Come la legge un OCR che scambia due cifre.
+    expect(read('Partita IVA: 12345678930')).toMatchObject({
+      value: '12345678930',
+      validationErrors: ['INVALID_TAX_ID_CHECKSUM'],
       reviewStatus: 'NEEDS_REVIEW',
       confidence: 0.67
     })
