@@ -3747,13 +3747,17 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "vehicle.vin": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vin"
+        ]
       },
       "contract.start_date": {
         "type": "string",
@@ -4841,13 +4845,17 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "vehicle.vin": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vin"
+        ]
       }
     },
     "required": [
@@ -12794,7 +12802,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "money.gross": {
         "type": "number",
@@ -15932,7 +15942,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -16114,7 +16126,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -16219,7 +16233,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -16331,7 +16347,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -16443,7 +16461,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -16555,7 +16575,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -16667,7 +16689,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -16779,7 +16803,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -16891,7 +16917,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -17003,7 +17031,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -17115,7 +17145,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -17227,7 +17259,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -17339,7 +17373,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -17451,7 +17487,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -17563,7 +17601,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -17679,7 +17719,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.start_date": {
         "type": "string",
@@ -17832,7 +17874,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -17964,7 +18008,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.contract_type": {
         "type": "string",
@@ -18101,7 +18147,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.start_date": {
         "type": "string",
@@ -18303,7 +18351,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -18403,7 +18453,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -18521,7 +18573,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -18603,7 +18657,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -18685,7 +18741,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -18767,7 +18825,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -18867,7 +18927,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -18949,7 +19011,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -19049,7 +19113,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -19131,7 +19197,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -19213,7 +19281,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -19295,7 +19365,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -19395,7 +19467,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -19477,7 +19551,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -19559,7 +19635,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -19659,7 +19737,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -19741,7 +19821,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "employment.employer_name": {
         "type": "string",
@@ -20146,7 +20228,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "company.name": {
         "type": "string",
@@ -20211,7 +20295,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "company.name": {
         "type": "string",
@@ -20276,7 +20362,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "company.name": {
         "type": "string",
@@ -20341,7 +20429,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "company.name": {
         "type": "string",
@@ -20406,7 +20496,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "company.name": {
         "type": "string",
@@ -20471,7 +20563,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "company.name": {
         "type": "string",
@@ -20561,7 +20655,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "company.name": {
         "type": "string",
@@ -20626,7 +20722,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "company.name": {
         "type": "string",
@@ -20691,7 +20789,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "company.name": {
         "type": "string",
@@ -22935,7 +23035,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "hse.training_course": {
         "type": "string",
@@ -23008,7 +23110,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "hse.training_course": {
         "type": "string",
@@ -23106,7 +23210,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "hse.training_course": {
         "type": "string",
@@ -23179,7 +23285,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "hse.training_course": {
         "type": "string",
@@ -23252,7 +23360,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "hse.training_course": {
         "type": "string",
@@ -23325,7 +23435,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "hse.training_course": {
         "type": "string",
@@ -23398,7 +23510,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "hse.training_course": {
         "type": "string",
@@ -23471,7 +23585,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "hse.training_course": {
         "type": "string",
@@ -23544,7 +23660,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "hse.training_course": {
         "type": "string",
@@ -23617,7 +23735,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "hse.training_course": {
         "type": "string",
@@ -23715,7 +23835,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
       },
       "hse.training_course": {
         "type": "string",
@@ -24907,7 +25029,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "insurance.coverage_start": {
         "type": "string",
@@ -25039,7 +25163,9 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "issuer.name": {
         "type": "string",
@@ -41422,13 +41548,17 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "vehicle.vin": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vin"
+        ]
       },
       "vehicle.make": {
         "type": "string",
@@ -41506,13 +41636,17 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "vehicle.vin": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vin"
+        ]
       },
       "vehicle.make": {
         "type": "string",
@@ -41583,13 +41717,17 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "vehicle.vin": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vin"
+        ]
       },
       "vehicle.make": {
         "type": "string",
@@ -41660,13 +41798,17 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "vehicle.vin": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vin"
+        ]
       },
       "vehicle.make": {
         "type": "string",
@@ -41760,13 +41902,17 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "vehicle.vin": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vin"
+        ]
       },
       "vehicle.make": {
         "type": "string",
@@ -41885,13 +42031,17 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "vehicle.vin": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vin"
+        ]
       },
       "vehicle.make": {
         "type": "string",
@@ -41962,13 +42112,17 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "vehicle.vin": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vin"
+        ]
       },
       "vehicle.make": {
         "type": "string",
@@ -42039,13 +42193,17 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "vehicle.vin": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vin"
+        ]
       },
       "vehicle.make": {
         "type": "string",
@@ -42130,13 +42288,17 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "vehicle.vin": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vin"
+        ]
       },
       "vehicle.make": {
         "type": "string",
@@ -42207,13 +42369,17 @@
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vehicle_plate"
+        ]
       },
       "vehicle.vin": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "vin"
+        ]
       },
       "vehicle.make": {
         "type": "string",

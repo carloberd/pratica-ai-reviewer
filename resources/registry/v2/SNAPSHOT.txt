@@ -22,6 +22,12 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
        - accounting.nota_di_credito: field_validator_overrides con [] su money.total, money.taxable
          e money.tax (niente non_negative_money: su una nota di credito un importo negativo è
          legittimo); extraction_schemas_v2.generated.json allineato sugli stessi tre campi.
+       19/09/2026, field_ontology_v2.json (docs/validazione_identificativi_todo.md, PR 1): i
+       validatori che il pack dichiara in validators_v2.json ma non assegna a nessun campo:
+       - employment.employee_tax_code: italian_tax_code_format (come person.tax_code);
+       - vehicle.plate, insurance.vehicle_plate: vehicle_plate;
+       - vehicle.vin: vin;
+       extraction_schemas_v2.generated.json allineato sugli stessi quattro campi.
        Chi aggiorna il pack riporta queste righe o le sostituisce con quelle del pack.
 note: profili EXTRACTION_SCHEMA_DRAFT salvo 15 READY_FOR_FIELD_TEST, nessuno VALIDATED.
       I 16 tipi del registry v1 senza profilo esplicito ricevono un LEGACY_FALLBACK.
