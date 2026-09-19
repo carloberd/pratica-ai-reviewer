@@ -921,6 +921,52 @@
   color: #243139;
 }
 
+.companyCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+.companyFields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.companyField {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 180px;
+}
+
+.directionChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.directionChoice {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+/* Quella che vale adesso: il revisore deve vederla senza leggere la riga sotto. */
+.directionActive {
+  border-color: #b9c9d3;
+  background: #eef3f6;
+  color: #243139;
+  font-weight: 600;
+}
+.linkButton {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: inherit;
+  color: #3d6b8f;
+  text-decoration: underline;
+}
+
 .docxText {
   position: relative;
   white-space: pre-wrap;

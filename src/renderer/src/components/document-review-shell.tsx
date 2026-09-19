@@ -1,3 +1,4 @@
+import type { CompanyIdentity, DirectionChoice } from '@shared/document-direction'
 import type { LearningOverview, ManualRuleStatus } from '@shared/learning-workspace'
 import { LEARNING_MODE_LABELS, type LearningMode } from '@shared/local-learning'
 import type { ProfileEdit } from '@shared/profile-edit'
@@ -29,6 +30,7 @@ import { formatBytes } from '../lib/format'
 import { api, errorMessage, needsLogin } from '../lib/ipc'
 import AccountMenu from './account-menu'
 import AuthPanel from './auth-panel'
+import CompanyPanel from './company-panel'
 import styles from './document-review.module.css'
 import DocumentTable from './document-table'
 import DriveFiles from './drive-files'
@@ -86,6 +88,7 @@ export default function DocumentReviewShell() {
   const [historyLoaded, setHistoryLoaded] = useState(false)
   /** Quello che il motore ha imparato: si rilegge con il resto, perché cambia a ogni revisione. */
   const [learning, setLearning] = useState<LearningOverview | null>(null)
+  const [company, setCompany] = useState<CompanyIdentity | null>(null)
   /**
    * La prima lettura del database è finita. Prima che lo sia, «nessun documento» non è
    * una risposta: è una domanda ancora aperta, e darla per buona significa smentirsi
@@ -95,16 +98,18 @@ export default function DocumentReviewShell() {
 
   const refresh = useCallback(async () => {
     try {
-      const [status, stats, list, overview] = await Promise.all([
+      const [status, stats, list, overview, identity] = await Promise.all([
         api.auth.status(),
         api.docs.stats(),
         api.docs.list(),
-        api.learning.overview()
+        api.learning.overview(),
+        api.settings.company()
       ])
       setAuth(status)
       setKpis(stats.kpis)
       setDocuments(list)
       setLearning(overview)
+      setCompany(identity)
     } catch (caught) {
       setError(errorMessage(caught))
     } finally {
@@ -429,6 +434,22 @@ export default function DocumentReviewShell() {
     })
   }
 
+  /** La direzione non rielabora niente: si scrive e il documento si rilegge. */
+  const chooseDirection = (choice: DirectionChoice | null) => {
+    if (!selected) return
+    const documentId = selected.id
+    void run('direction', async () => {
+      setSelected(await api.docs.setDirection(documentId, choice))
+    })
+  }
+
+  const saveCompany = (identity: CompanyIdentity) => {
+    void run('company', async () => {
+      setCompany(await api.settings.setCompany(identity))
+      setMessage('Azienda salvata: la direzione dei documenti si ricalcola da sola.')
+    })
+  }
+
   const busy = pending !== null
   const queue = documents.filter((doc) => doc.status === 'NEEDS_REVIEW')
 
@@ -512,6 +533,8 @@ export default function DocumentReviewShell() {
             ) : (
               <KpiSkeleton />
             )}
+
+            <CompanyPanel company={company} busy={busy} onSave={saveCompany} />
 
             <div className={styles.sectionHeader}>
               <div>
@@ -622,6 +645,8 @@ export default function DocumentReviewShell() {
               onItemAdd={addItem}
               onDecide={decide}
               onAssignType={assignType}
+              company={company}
+              onChooseDirection={chooseDirection}
               onEvict={() => evictDocument(selected.id)}
               fieldMap={fieldMap}
               onLoadFieldMap={loadFieldMap}

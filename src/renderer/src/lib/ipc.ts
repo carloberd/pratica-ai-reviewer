@@ -1,3 +1,4 @@
+import type { CompanyIdentity, DirectionChoice } from '@shared/document-direction'
 import type { ManualRuleStatus } from '@shared/learning-workspace'
 import type { LearningMode } from '@shared/local-learning'
 import type { ProfileEdit } from '@shared/profile-edit'
@@ -51,7 +52,14 @@ export const api = {
     types: () => call(() => window.reviewer.docs.types()),
     setType: (id: string, documentType: string | null) =>
       call(() => window.reviewer.docs.setType(id, documentType)),
+    setDirection: (id: string, choice: DirectionChoice | null) =>
+      call(() => window.reviewer.docs.setDirection(id, choice)),
     evict: (id: string) => call(() => window.reviewer.docs.evict(id))
+  },
+  settings: {
+    company: () => call(() => window.reviewer.settings.company()),
+    setCompany: (identity: CompanyIdentity) =>
+      call(() => window.reviewer.settings.setCompany(identity))
   },
   fields: {
     update: (
