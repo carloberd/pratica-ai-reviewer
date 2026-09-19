@@ -72,6 +72,31 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
        documenti d'identità document.number, document.issue_date e document.expiry_date
        sono sensitive, il pii delle chiavi identity.* che sostituiscono; nell'ontologia
        restano none. extraction_schemas_v2.generated.json allineato (x-praticaai-pii).
+       19/09/2026, le date e il conto di un bonifico
+       (docs/exports/2026-09-18/new_fields.md, PR 3):
+       - field_ontology_v2.json: quattro campi che il pack non ha. payment.entry_date
+         («Data inserimento»), payment.execution_date («Data esecuzione»),
+         payment.value_date («Data valuta»), tutti e tre date con valid_date;
+         payment.debit_account («Conto di addebito», format account_number, pii financial,
+         nessun validatore: la nota dice «numero rapporto/conto», e un numero di rapporto
+         non è un IBAN da verificare);
+       - extraction_hints_v2.json: le etichette dei quattro campi, compresa «IBAN
+         ordinante» sul conto di addebito, che sulla riga dell'ordinante batte l'«IBAN»
+         del beneficiario;
+       - class_extraction_profiles_v2.json passa a 2.0.4: su banking.ricevuta_bonifico i
+         quattro campi entrano core, provenienza REVIEWER_ANNOTATIONS; escono
+         finance.transaction_date («Data operazione» su una ricevuta è una di quelle tre,
+         e il revisore l'ha usata per l'esecuzione) e utility.account_id, che il revisore
+         aveva già tolto dalla mappa. Solo questo tipo: disposizione_bonifico e
+         distinta_bonifici li aggiunge il revisore dalla mappa se servono;
+       extraction_schemas_v2.generated.json allineato su quel tipo.
+       19/09/2026, stessa PR: class_extraction_profiles_v2.json ha una seconda chiave che
+       il pack non ha, field_description_overrides (cosa vuol dire un campo su un tipo, al
+       posto della descrizione dell'ontologia, come field_pii_overrides per il pii). Le 257
+       descrizioni del pack ripetono l'etichetta; su banking.ricevuta_bonifico bank.iban è
+       «IBAN del beneficiario, non il conto da cui parte il bonifico», e il revisore la
+       legge sulla scheda del campo. L'ontologia non cambia: bank.iban è su 40 tipi
+       bancari. Non esce negli schemi, che non hanno descrizioni.
        Chi aggiorna il pack riporta queste righe o le sostituisce con quelle del pack.
 note: profili EXTRACTION_SCHEMA_DRAFT salvo 15 READY_FOR_FIELD_TEST, nessuno VALIDATED.
       I 16 tipi del registry v1 senza profilo esplicito ricevono un LEGACY_FALLBACK.

@@ -6,7 +6,7 @@ import {
   createExtractionRegistryV2,
   loadLegacyFieldMap
 } from '../src/main/extract/v2/profile-loader'
-import { piiOf } from '../src/shared/extraction-v2'
+import { descriptionOf, piiOf } from '../src/shared/extraction-v2'
 import { REGISTRY_DIR, REGISTRY_V2_DIR, testRegistry, testRegistryV2 } from './helpers/registry'
 
 const registry = testRegistryV2()
@@ -55,7 +55,25 @@ describe('profili espliciti', () => {
     expect(registry.field('non.esiste')).toBeNull()
     expect(registry.hints('money.total')).toContain('totale documento')
     expect(registry.hints('non.esiste')).toEqual([])
-    expect(registry.schemaVersion()).toBe('2.0.3')
+    expect(registry.schemaVersion()).toBe('2.0.4')
+  })
+
+  it('la descrizione di un campo su un tipo la scrive il profilo, non l’ontologia', () => {
+    const bonifico = registry.profile('banking.ricevuta_bonifico')!
+    expect(descriptionOf(bonifico, 'bank.iban', registry.field('bank.iban'))).toBe(
+      'IBAN del beneficiario, non il conto da cui parte il bonifico'
+    )
+    // Le 257 descrizioni del pack ripetono l'etichetta: senza eccezione non c'è niente da
+    // leggere, né qui né sugli altri 40 tipi che chiedono l'IBAN.
+    expect(registry.field('bank.iban')?.description).toBe('IBAN')
+    expect(descriptionOf(bonifico, 'document.number', registry.field('document.number'))).toBeNull()
+    expect(
+      descriptionOf(
+        registry.profile('accounting.fattura'),
+        'bank.iban',
+        registry.field('bank.iban')
+      )
+    ).toBeNull()
   })
 
   it('legge le eccezioni ai validatori solo sul tipo che le dichiara', () => {
@@ -343,6 +361,21 @@ describe('errori d’avvio', () => {
     })
     expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
       `accounting.fattura.field_validator_overrides: ${fieldId}`
+    )
+  })
+
+  it.each([
+    ['un campo fuori dal profilo del tipo', 'finance.balance_closing'],
+    ['un campo assente dall’ontologia', 'campo.inventato']
+  ])('una descrizione per tipo su %s', (_, fieldId) => {
+    const dir = registryCopy()
+    editJson<{
+      profiles: Record<string, { field_description_overrides?: Record<string, string> }>
+    }>(dir, 'class_extraction_profiles_v2.json', (data) => {
+      data.profiles['accounting.fattura']!.field_description_overrides = { [fieldId]: 'boh' }
+    })
+    expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
+      `accounting.fattura.field_description_overrides: ${fieldId}`
     )
   })
 

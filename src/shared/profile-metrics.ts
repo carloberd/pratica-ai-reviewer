@@ -115,6 +115,8 @@ export interface MeasuredTypeInput {
   decisions?: Record<string, FieldState>
   /** L'etichetta di un campo dell'ontologia, per quelli che nessun documento porta. */
   fieldLabel?: (fieldId: string) => string | null
+  /** Cosa vuol dire il campo su questo tipo, dove il profilo lo dice. */
+  fieldNote?: (fieldId: string) => string | null
   /** Quanti valori chiede il campo su questo tipo adesso: decisione del revisore o ontologia. */
   fieldCardinality?: (fieldId: string) => Cardinality
   /** Le cardinalità decise dal revisore su questo tipo, dove diverse dall'ontologia. */
@@ -125,6 +127,12 @@ export interface MeasuredTypeInput {
 export interface ProfileFieldMeasure {
   fieldId: string
   label: string
+  /**
+   * Cosa vuol dire il campo su questo tipo, quando il profilo lo scrive: l'IBAN di una
+   * ricevuta di bonifico è quello del beneficiario. `null` quando non c'è niente da
+   * aggiungere all'etichetta.
+   */
+  note: string | null
   /** Ruolo nel profilo attuale; `null` quando il profilo non prevede il campo. */
   role: FieldRole | null
   inProfile: boolean
@@ -321,6 +329,7 @@ export function measureType(input: MeasuredTypeInput): ProfileTypeMeasure {
     return {
       fieldId: tally.fieldId,
       label: tally.label,
+      note: input.fieldNote?.(tally.fieldId) ?? null,
       role,
       inProfile: role !== null,
       confirmed: tally.confirmed,

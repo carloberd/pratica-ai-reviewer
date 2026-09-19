@@ -1,4 +1,4 @@
-import type { FieldRole } from '@shared/extraction-v2'
+import { descriptionOf, type FieldRole } from '@shared/extraction-v2'
 import {
   isFieldTestedProfile,
   type MeasuredTypeInput,
@@ -92,6 +92,7 @@ function inputFor(deps: ProfileInsightsDeps, documentType: string): MeasuredType
     profileFields: profileFieldsOf(registry, documentType),
     decisions: repo.profileMap.forType(documentType),
     fieldLabel: (fieldId) => registry.field(fieldId)?.label_it ?? null,
+    fieldNote: (fieldId) => descriptionOf(profile, fieldId, registry.field(fieldId)),
     fieldCardinality: (fieldId) =>
       cardinalityOf(profile, fieldId, registry.field(fieldId)?.default_cardinality ?? 'one'),
     cardinalityDecisions: repo.profileMap.cardinalityForType(documentType),

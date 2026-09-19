@@ -50,6 +50,7 @@ const profileSchema = z.looseObject({
   conditional_fields: stringList,
   field_validator_overrides: z.record(z.string(), stringList).optional(),
   field_pii_overrides: z.record(z.string(), piiSchema).optional(),
+  field_description_overrides: z.record(z.string(), z.string()).optional(),
   literal_evidence_required: z.boolean(),
   unknown_value_policy: z.literal('LEAVE_EMPTY'),
   review_policy: z.string()
@@ -157,9 +158,14 @@ export function createExtractionRegistryV2(
         if (!ontology.fields[fieldId]) unknownRefs.push(`${documentType}.${key}: ${fieldId}`)
       }
     }
-    // Un'eccezione ai validatori o al `pii` vale per un campo che il tipo chiede: su un campo
-    // fuori profilo non cambierebbe niente, e dice che il profilo o l'eccezione sono sbagliati.
-    for (const overrides of ['field_validator_overrides', 'field_pii_overrides'] as const) {
+    // Un'eccezione ai validatori, al `pii` o alla descrizione vale per un campo che il tipo
+    // chiede: su un campo fuori profilo non cambierebbe niente, e dice che il profilo o
+    // l'eccezione sono sbagliati.
+    for (const overrides of [
+      'field_validator_overrides',
+      'field_pii_overrides',
+      'field_description_overrides'
+    ] as const) {
       for (const fieldId of Object.keys(profile[overrides] ?? {})) {
         if (!ontology.fields[fieldId] || !ROLE_KEYS.some((key) => profile[key].includes(fieldId))) {
           unknownRefs.push(`${documentType}.${overrides}: ${fieldId}`)

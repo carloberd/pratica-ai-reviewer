@@ -497,6 +497,37 @@ describe('candidati concorrenti', () => {
     expect(fact('issuer.name')).toMatchObject({ value: 'Alfa S.r.l.', reviewStatus: 'CONFLICT' })
     expect(result.conflicts).toEqual(['MULTIPLE_CANDIDATES:issuer.name'])
   })
+
+  it('una riga presa da un’etichetta più specifica non è un secondo candidato', () => {
+    const registry = registryOf({
+      'bank.iban': { type: 'identifier', format: 'iban', labels: ['iban'] },
+      'payment.debit_account': {
+        type: 'identifier',
+        format: 'account_number',
+        labels: ['iban ordinante']
+      }
+    })
+    const lines = [
+      'IBAN ordinante: IT60X0542811101000000123456',
+      'IBAN: IT41W8000000292100645211151'
+    ]
+    const { fact, result } = extract(registry, [page(lines)])
+    expect(fact('payment.debit_account').value).toBe('IT60X0542811101000000123456')
+    // Il documento dice di chi è la prima riga: l'IBAN del beneficiario resta uno solo.
+    expect(fact('bank.iban')).toMatchObject({
+      value: 'IT41W8000000292100645211151',
+      reviewStatus: 'AUTO_ACCEPTED'
+    })
+    expect(result.conflicts).toEqual([])
+
+    // Senza il campo che se la prende, le due righe restano due candidati alla pari.
+    const alone = extract(
+      registryOf({ 'bank.iban': { type: 'identifier', format: 'iban', labels: ['iban'] } }),
+      [page(lines)]
+    )
+    expect(alone.fact('bank.iban').reviewStatus).toBe('CONFLICT')
+    expect(alone.result.conflicts).toEqual(['MULTIPLE_CANDIDATES:bank.iban'])
+  })
 })
 
 describe('partita IVA e codice fiscale in campi distinti', () => {
@@ -1132,5 +1163,71 @@ describe('la provenienza della lettura', () => {
       'LABEL_STRICT',
       'NEXT_LINE'
     ])
+  })
+})
+
+describe('le date e il conto di un bonifico', () => {
+  /**
+   * Con il registry vero: le etichette sono quelle degli hint. Le righe sono ricostruite
+   * sul modello di una ricevuta di bonifico online, non prese da un documento: l'export
+   * del 18/09 non porta il testo delle pagine.
+   */
+  const read = (lines: string[]) => {
+    const result = extractFactsV2({
+      documentType: 'banking.ricevuta_bonifico',
+      pages: [page(lines)],
+      registry: testRegistryV2()
+    })
+    return { result, fact: (id: string) => result.facts.find((f) => f.fieldId === id)! }
+  }
+
+  it('le tre date stanno in tre campi, e nessuna è «Data operazione»', () => {
+    const { result, fact } = read([
+      'RICEVUTA DI BONIFICO',
+      'Data inserimento: 11/03/2026',
+      'Data esecuzione: 12/03/2026',
+      'Data valuta beneficiario: 13/03/2026',
+      'Importo: 1.250,00 EUR'
+    ])
+    expect(fact('payment.entry_date')).toMatchObject({
+      value: '2026-03-11',
+      reviewStatus: 'AUTO_ACCEPTED'
+    })
+    expect(fact('payment.execution_date').value).toBe('2026-03-12')
+    expect(fact('payment.value_date').value).toBe('2026-03-13')
+    // `finance.transaction_date` è uscito dal profilo: «Data operazione» su una ricevuta è
+    // una di quelle tre, e il revisore ci scriveva la data di esecuzione.
+    expect(result.facts.map((f) => f.fieldId)).not.toContain('finance.transaction_date')
+    expect(result.conflicts).toEqual([])
+  })
+
+  it('il conto da cui parte: IBAN a gruppi di quattro o numero di rapporto', () => {
+    const iban = read(['Conto di addebito: IT60 X054 2811 1010 0000 0123 456'])
+    expect(iban.fact('payment.debit_account').value).toBe('IT60X0542811101000000123456')
+
+    const rapporto = read(['Numero rapporto: 000012345678'])
+    expect(rapporto.fact('payment.debit_account').value).toBe('000012345678')
+  })
+
+  it('l’IBAN della ricevuta è del beneficiario, quello dell’ordinante è il conto di addebito', () => {
+    const { result, fact } = read([
+      'Ordinante: ALFA S.R.L.',
+      'IBAN ordinante: IT60X0542811101000000123456',
+      'Beneficiario: BETA S.P.A.',
+      'IBAN: IT41W8000000292100645211151'
+    ])
+    // L'etichetta più lunga vince sulla riga dell'ordinante: `bank.iban` non la prende.
+    expect(fact('payment.debit_account').value).toBe('IT60X0542811101000000123456')
+    expect(fact('bank.iban')).toMatchObject({
+      value: 'IT41W8000000292100645211151',
+      reviewStatus: 'AUTO_ACCEPTED'
+    })
+    expect(result.conflicts).toEqual([])
+  })
+
+  it('«Valuta» da sola è la moneta, «Data valuta» è una data', () => {
+    const { fact } = read(['Valuta: EUR', 'Data valuta: 13/03/2026'])
+    expect(fact('money.currency').value).toBe('EUR')
+    expect(fact('payment.value_date').value).toBe('2026-03-13')
   })
 })

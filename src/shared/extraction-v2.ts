@@ -59,6 +59,13 @@ export interface ClassExtractionProfile {
    * `identity.document_number`. Solo per i campi del profilo. Lo scrive il registry.
    */
   field_pii_overrides?: Record<string, FieldPii>
+  /**
+   * Cosa vuol dire un campo su questo tipo, al posto della descrizione dell'ontologia:
+   * su una ricevuta di bonifico `bank.iban` è l'IBAN di chi incassa, e accanto c'è il
+   * conto da cui il bonifico parte. Solo per i campi del profilo. Lo scrive il registry,
+   * e il revisore la legge sulla scheda del campo nella mappa del tipo.
+   */
+  field_description_overrides?: Record<string, string>
 }
 
 /** Il `pii` di un campo su un tipo: l'eccezione del profilo, o quello dell'ontologia. */
@@ -68,6 +75,22 @@ export function piiOf(
   spec: Pick<FieldOntologyEntry, 'pii'>
 ): FieldPii {
   return profile?.field_pii_overrides?.[fieldId] ?? spec.pii
+}
+
+/**
+ * Cosa vuol dire un campo su un tipo: l'eccezione del profilo, o la descrizione
+ * dell'ontologia. Le 257 descrizioni del pack ripetono l'etichetta e non dicono niente di
+ * più: `null` quando non c'è altro da leggere oltre al nome del campo.
+ */
+export function descriptionOf(
+  profile: Pick<ClassExtractionProfile, 'field_description_overrides'> | null | undefined,
+  fieldId: string,
+  spec: Pick<FieldOntologyEntry, 'label_it' | 'description'> | null | undefined
+): string | null {
+  const override = profile?.field_description_overrides?.[fieldId]
+  if (override) return override
+  if (!spec || spec.description === spec.label_it) return null
+  return spec.description || null
 }
 
 /**
