@@ -1,7 +1,11 @@
 import SqliteDatabase from 'better-sqlite3'
 import { type Db, openDatabase } from '../../src/main/db'
 import { MIGRATIONS } from '../../src/main/db/migrations'
-import { createRepository, type Repository } from '../../src/main/db/repository'
+import {
+  createRepository,
+  type Repository,
+  type RepositoryDeps
+} from '../../src/main/db/repository'
 
 /**
  * Database in memoria per i test: nessun file, nessuna credenziale, nessuna rete.
@@ -9,12 +13,14 @@ import { createRepository, type Repository } from '../../src/main/db/repository'
  * dipendono dal registry.
  */
 export function createTestRepository(
-  requiredByType: Record<string, string[]> = {}
+  requiredByType: Record<string, string[]> = {},
+  deps: Pick<RepositoryDeps, 'validateField'> = {}
 ): Repository & { close: () => void } {
   const db = openDatabase({ file: ':memory:' })
   const repo = createRepository(db, {
     requiredFields: (type) => requiredByType[type ?? ''] ?? ['document_number', 'issue_date'],
-    typeLabel: (type) => (type ? type.split('.').pop()!.replace(/_/g, ' ') : null)
+    typeLabel: (type) => (type ? type.split('.').pop()!.replace(/_/g, ' ') : null),
+    ...deps
   })
   return Object.assign(repo, { close: () => db.close() })
 }

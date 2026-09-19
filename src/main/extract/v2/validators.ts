@@ -1,3 +1,6 @@
+import type { ClassExtractionProfile, FieldOntologyEntry } from '@shared/extraction-v2'
+import type { ExtractionRegistryV2 } from './profile-loader'
+
 function normalizeIban(value: string): string {
   return value.replace(/\s+/g, '').toUpperCase()
 }
@@ -155,4 +158,46 @@ export function runFieldValidator(name: string, value: unknown): string | null {
     if (Number.isFinite(amount) && amount < 0) return 'NEGATIVE_MONEY'
   }
   return null
+}
+
+/**
+ * I validatori di un campo su un tipo: quelli che il profilo mette al posto dell'ontologia
+ * (`field_validator_overrides`), o quelli dell'ontologia. Un campo che l'ontologia non
+ * conosce — i nomi del motore v1 — non ne ha.
+ */
+export function validatorsOf(
+  profile: Pick<ClassExtractionProfile, 'field_validator_overrides'> | null | undefined,
+  fieldId: string,
+  spec: Pick<FieldOntologyEntry, 'validators'> | null | undefined
+): string[] {
+  return profile?.field_validator_overrides?.[fieldId] ?? spec?.validators ?? []
+}
+
+/**
+ * Gli errori di un valore salvato, della proposta o della correzione. Un valore vuoto non
+ * ne ha: che manchi lo dice già il campo vuoto.
+ */
+export function validationErrorsOf(
+  validators: readonly string[],
+  value: string | null | undefined
+): string[] {
+  if (value === null || value === undefined || value.trim() === '') return []
+  return validators
+    .map((validator) => runFieldValidator(validator, value))
+    .filter((error): error is string => error !== null)
+}
+
+/**
+ * Gli errori di un valore del campo `fieldName` su un documento di quel tipo, con i
+ * validatori del registry v2: quello che la revisione mostra accanto al campo.
+ */
+export function validateFieldValue(
+  registry: Pick<ExtractionRegistryV2, 'profile' | 'field'> | undefined,
+  documentType: string | null,
+  fieldName: string,
+  value: string | null
+): string[] {
+  if (!registry) return []
+  const profile = documentType ? registry.profile(documentType) : null
+  return validationErrorsOf(validatorsOf(profile, fieldName, registry.field(fieldName)), value)
 }

@@ -9,7 +9,9 @@ import {
   isValidIban,
   isValidPartitaIva,
   normalizeTaxId,
-  runFieldValidator
+  runFieldValidator,
+  validationErrorsOf,
+  validatorsOf
 } from '../src/main/extract/v2/validators'
 import { REGISTRY_V2_DIR } from './helpers/registry'
 
@@ -128,5 +130,21 @@ describe('validatori dell’ontologia v2', () => {
     expect(Object.keys(validators).filter((name) => !known.has(name))).toEqual([])
     expect(used.filter((name) => !known.has(name))).toEqual([])
     expect(new Set(used)).toEqual(known)
+  })
+
+  it('i validatori del profilo prendono il posto di quelli dell’ontologia', () => {
+    const spec = { validators: ['non_negative_money'] }
+    expect(validatorsOf(null, 'money.total', spec)).toEqual(['non_negative_money'])
+    expect(
+      validatorsOf({ field_validator_overrides: { 'money.total': [] } }, 'money.total', spec)
+    ).toEqual([])
+    expect(validatorsOf({}, 'money.total', null)).toEqual([])
+  })
+
+  it('un valore salvato vuoto non ha errori, uno pieno tutti quelli che fallisce', () => {
+    expect(validationErrorsOf(['non_empty', 'iban_checksum'], '')).toEqual([])
+    expect(validationErrorsOf(['iban_checksum'], '   ')).toEqual([])
+    expect(validationErrorsOf(['iban_checksum'], null)).toEqual([])
+    expect(validationErrorsOf(['iban_checksum', 'sconosciuto'], 'IT00')).toEqual(['INVALID_IBAN'])
   })
 })
