@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0",
+  "version": "2.0.1",
   "active_registry_source": "Document Brain 496 active classes",
   "profiles": {
     "accounting.autofattura": {
@@ -470,6 +470,11 @@
         "money.tax"
       ],
       "conditional_fields": [],
+      "field_validator_overrides": {
+        "money.total": [],
+        "money.taxable": [],
+        "money.tax": []
+      },
       "field_provenance": {
         "money.currency": "AI_PROPOSED_FAMILY",
         "money.total": "AI_PROPOSED_FAMILY",

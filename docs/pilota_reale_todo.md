@@ -124,14 +124,33 @@ Tre cose trovate facendo la PR 2:
 ### 3. Nota di credito con importi negativi
 
 L'ontologia mette `non_negative_money` su `money.total`, `money.taxable` e `money.tax`
-per ogni tipo, ma su una nota di credito gli importi sono negativi per definizione. Il
+per ogni tipo, ma una nota di credito può scrivere gli importi col meno davanti. Il
 pilota aggiunge al profilo `field_validator_overrides`: i validatori di quel campo per quel
 tipo, al posto di quelli dell'ontologia. Serve sia al fact-reader sia allo schema JSON
 esportato verso pratica-ai, che oggi dichiara «non negativo» su un campo che non lo è.
 
-Da verificare prima di scrivere codice: se il lettore degli importi perde il segno meno,
-una nota di credito viene letta **positiva**, e quello è un valore plausibile e sbagliato
-più grave del validatore. In quel caso la PR sistema anche la lettura.
+**Verificato con la PR 3: il segno si perdeva.** `parseMoney` teneva solo le cifre, e
+`findMoney` non guardava cosa c'era prima del numero: `-1.234,56`, `€ -100,00`,
+`-€ 100,00`, `Totale: -100,00` uscivano tutti positivi, nel v1 e nel v2, e con la
+confidence piena. Il pilota non lo risolveva: teneva il segno solo nelle sue ricette
+(`signed_money`), che non entrano. La PR 3 ha sistemato la lettura prima del validatore.
+
+Il meno conta solo se è un segno: attaccato al numero o alla valuta davanti, e preceduto
+da inizio riga, spazio, due punti o uguale. Restano positivi, come prima, il trattino
+staccato (`Totale - 100,00`, `- 100,00 €`), quello attaccato a una parola o a una cifra
+(`Totale-100,00`, `10,00-20,00`, `051-123.456`), il lineato `–`, le parentesi contabili
+`(100,00)` e il meno in coda `100,00-`. Le ultime due forme, se una nota di credito le
+usa, danno ancora un importo positivo: sono rare in italiano, e le parentesi racchiudono
+anche importi che non sono negativi. Si riguardano con l'harness della PR 4, se il corpus
+le mostra.
+
+Sulle fatture cambia solo l'importo scritto davvero col meno: prima passava positivo,
+adesso esce negativo e va in revisione con `NEGATIVE_MONEY`. Sulla nota di credito
+l'eccezione è `[]`, cioè nessun validatore: vanno bene sia il positivo sia il negativo,
+perché una nota di credito li scrive in entrambi i modi. All'export, se il revisore segna
+«non utile» uno dei tre importi, l'eccezione di quel campo sparisce con lui: il loader
+rifiuta un'eccezione su un campo fuori profilo, e rileggendo il file esportato si
+fermerebbe.
 
 ### 4. `money.amount` sull'estratto conto
 
@@ -187,5 +206,5 @@ con la 2 (vedi il punto 2).
 | 1 | Tre guardie nel fact-reader (punto 1) | no | fatta (#42) |
 | 2 | Segnali del classificatore potati (punto 2) | no | fatta (#43) |
 | 2b | Via «nota di credito nr» dai segnali (punto 2) | no | fatta (#44) |
-| 3 | Nota di credito: `field_validator_overrides` (punto 3) | no | da fare |
+| 3 | Nota di credito: `field_validator_overrides` e segno degli importi (punto 3) | no | fatta (#45) |
 | 4 | Harness del benchmark su corpus reale (punto 5) | no | da fare |
