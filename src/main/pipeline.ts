@@ -459,7 +459,8 @@ function prepareV2(input: {
       role: fact.role,
       cardinality: fact.cardinality,
       reviewStatus: fact.reviewStatus,
-      validationErrors: fact.validationErrors
+      validationErrors: fact.validationErrors,
+      ...(fact.computed ? { computed: true } : {})
     }
 
     if (fact.cardinality === 'many') {
@@ -478,24 +479,35 @@ function prepareV2(input: {
     }
 
     const source = fact.evidence[0]
-    if (fact.value === null || !source) {
+    // Un valore dedotto non ha evidenza — nel documento quella data non c'è — ma è
+    // comunque una proposta da scrivere: senza questa riga tornerebbe vuoto.
+    if (fact.value === null || (!source && !fact.computed)) {
       fields.push({ ...common, value: null })
       continue
     }
     fields.push({
       ...common,
       value: String(fact.value),
-      evidenceId: addEvidence(source, fact.confidence)
+      ...(source ? { evidenceId: addEvidence(source, fact.confidence) } : {})
     })
   }
 
   const filled = result.facts.filter((fact) => fact.value !== null).length
+  const deduced = result.facts.filter((fact) => fact.computed === true)
   const labelOf = (fieldId: string) => registry.field(fieldId)?.label_it ?? fieldId
   const profile =
     profileSource === 'LEGACY_FALLBACK'
       ? 'profilo ricavato dallo schema v1 (LEGACY_FALLBACK)'
       : `profilo v2 ${result.schemaState}`
-  const parts = [`${filled} campi su ${result.facts.length} con evidenza verbatim, ${profile}.`]
+  const parts = [
+    `${filled - deduced.length} campi su ${result.facts.length} con evidenza verbatim, ${profile}.`
+  ]
+  if (deduced.length > 0) {
+    // Dedotto non è letto: va detto qui, o il conto qui sopra sembrerebbe sbagliato.
+    parts.push(
+      `Dedotti dalla normativa, da confermare: ${deduced.map((fact) => labelOf(fact.fieldId)).join(', ')}.`
+    )
+  }
   if (result.missingRequired.length > 0) {
     parts.push(`Obbligatori senza evidenza: ${result.missingRequired.map(labelOf).join(', ')}.`)
   }

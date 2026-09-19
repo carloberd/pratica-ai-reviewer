@@ -325,8 +325,21 @@ documento, con le coordinate quando il text layer le espone. Se l'evidenza non s
 il campo resta vuoto: un dato che il revisore non può verificare costa più di un campo
 da riempire a mano.
 
+**Un'eccezione sola, dichiarata: la scadenza della formazione.** Un attestato dice quando
+il corso è stato fatto, non quando scade: la scadenza dipende dalla normativa, e il
+revisore la calcolava a mano. Il motore ora la propone — cinque anni dal rilascio per la
+formazione generale e specifica dei lavoratori — **solo** se il documento non la scrive e
+solo per i corsi che la tabella conosce (`src/shared/training-expiry.ts`). Una scadenza
+scritta sul documento vince sempre. Quel valore non ha evidenza, perché nel documento non
+c'è: arriva al revisore marcato «dedotto» e sotto la soglia di accettazione automatica, e
+nel dataset esce con `origin: "COMPUTED"`, che è quello che lo tiene separato da una
+lettura riuscita quando si misura l'estrazione. Gli altri corsi (preposto, antincendio,
+primo soccorso, lavori in quota, spazi confinati, DPI di terza categoria, RLS) non hanno
+una riga: la scrive chi conosce la norma in vigore, con il riferimento accanto. Meglio un
+campo vuoto che una data inventata.
+
 **Confidence.** v2: 0,85 col valore sulla riga dell'etichetta, 0,80 sulla riga
-successiva, meno 0,18 per ogni validatore fallito; sotto 0,85 il campo è `NEEDS_REVIEW`,
+successiva, meno 0,18 per ogni validatore fallito; 0,60 per un valore dedotto; sotto 0,85 il campo è `NEEDS_REVIEW`,
 sopra `AUTO_ACCEPTED`. v1: 0,85 con una keyword di contesto, 0,70 col solo pattern. In
 entrambi meno 0,10 per i campi che vengono da una pagina letta con OCR — la penalità è
 della pagina, non del documento: un allegato scansionato in fondo a un PDF non declassa i
@@ -454,7 +467,7 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.7.0",
+    "formatVersion": "1.8.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": { "name": "praticaai-reviewer", "version": "1.1.0" },
     // motori e versioni dell'app al momento dell'export
@@ -501,6 +514,9 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
         "pick": { "method": "TEXT_SELECTION", "page": 1, "text": "14/09/2026",
                   "bbox": { "x": 182.6, "y": 91, "w": 55, "h": 11 },
                   "location": { "lineStart": 1, "lineEnd": 1, "charStart": 47, "charEnd": 57 } } },
+      { "name": "hse.training_expiry", "label": "Scadenza formazione", "role": "core", "cardinality": "one",
+        // dedotta dalla normativa, non letta: il documento non la scrive, quindi niente evidenza
+        "value": "2026-05-13", "origin": "COMPUTED", "evidence": null, "pick": null },
       { "name": "line_items", "label": "Righe documento", "role": "core", "cardinality": "many",
         "value": ["Demolizione tramezzi - EUR 3.200,00", "…"],
         "origin": "MIXED",            // ENGINE | REVIEWER | MIXED, null se la lista è vuota
@@ -520,7 +536,13 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
   scartati restano stato e tipo, con `fields` e `corrections` vuoti: nessuno ne ha
   confermato i valori.
 - `value` è il valore confermato: la correzione del revisore dove c'è, altrimenti la
-  proposta del motore, `null` se il campo è vuoto. `origin` dice da chi viene. I campi
+  proposta del motore, `null` se il campo è vuoto. `origin` dice da chi viene: `ENGINE`
+  se il motore l'ha **letto** dal documento, `REVIEWER` se l'ha scritto il revisore,
+  `COMPUTED` (dalla `1.8.0`) se il motore l'ha **dedotto** — oggi solo la scadenza di un
+  attestato di formazione, calcolata dalla normativa perché l'attestato non la scrive
+  (`src/shared/training-expiry.ts`). Un valore dedotto non ha `evidence`, e contarlo come
+  una lettura riuscita gonfierebbe la misura dell'estrazione; corretto dal revisore torna
+  `REVIEWER` come ogni altro. I campi
   ripetuti hanno in `value` la lista dei valori e in `items` gli stessi con provenienza
   ed evidenza; le righe tolte non ci sono. Anche loro hanno `origin`, che vale per la lista
   intera: `MIXED` quando il revisore ha aggiunto righe alle proposte del motore, `null`
@@ -551,8 +573,9 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
   documento che il classificatore non ha mai visto.
 - `learning` dice in che modalità era il learner e quali regole valevano: due export con la
   stessa `rulesFingerprint` sono stati precompilati dalle stesse regole, ed è quello che un
-  benchmark deve dichiarare accanto ai suoi numeri. Dalla `1.0.0` alla `1.7.0` si aggiungono
-  solo campi, e un valore a `pick.method`: `AREA_TEXT`, l'area letta dal text layer.
+  benchmark deve dichiarare accanto ai suoi numeri. Dalla `1.0.0` alla `1.8.0` si aggiungono
+  solo campi, e due valori: `AREA_TEXT` a `pick.method`, l'area letta dal text layer, e
+  `COMPUTED` a `origin`, il valore dedotto.
 
 ### I nomi dei tipi
 

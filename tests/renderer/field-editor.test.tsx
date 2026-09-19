@@ -36,6 +36,25 @@ describe('FieldEditor', () => {
     )
   })
 
+  it('una data dedotta lo dice: nel documento non c’è, e va confermata', () => {
+    const deduced = scalarField({
+      name: 'hse.training_expiry',
+      label: 'Scadenza formazione',
+      value: '2026-05-13',
+      semanticType: 'date',
+      required: false,
+      reviewStatus: 'NEEDS_REVIEW',
+      computed: true
+    })
+    expect(text(<FieldEditor {...props} field={deduced} />)).toContain('dedotto')
+    expect(html(<FieldEditor {...props} field={deduced} />)).toContain('calcolata dalla normativa')
+    // Corretta dal revisore non è più dedotta: il valore è suo.
+    expect(
+      text(<FieldEditor {...props} field={{ ...deduced, correctedValue: '2026-05-04' }} />)
+    ).not.toContain('dedotto')
+    expect(text(<FieldEditor {...props} field={scalarField()} />)).not.toContain('dedotto')
+  })
+
   it('segnala un conflitto finché il revisore non corregge', () => {
     expect(
       text(<FieldEditor {...props} field={scalarField({ reviewStatus: 'CONFLICT' })} />)
