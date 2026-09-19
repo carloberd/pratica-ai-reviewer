@@ -314,23 +314,59 @@ Fuori da questa PR: «non riconosce documenti in orizzontale» (`eeba7565`). È
 l'orientamento della pagina prima dell'OCR, non un campo: va misurato su quel file e
 trattato a parte.
 
-### PR 3 — Date e conto di un bonifico
+### PR 3 — Date e conto di un bonifico ✅
 
 - Ontologia: `payment.entry_date` («Data inserimento»), `payment.execution_date` («Data
   esecuzione»), `payment.value_date` («Data valuta»), con `valid_date`;
   `payment.debit_account` («Conto di addebito»), senza `iban_checksum`, perché la nota
   dice «numero rapporto/conto» e un numero di rapporto non è un IBAN.
-- Profilo `banking.ricevuta_bonifico`: i quattro campi entrano come core;
-  `finance.transaction_date` esce, perché «Data operazione» su una ricevuta vuol dire una
-  di quelle tre, e il revisore l'ha usata per la data di esecuzione. Esce anche
-  `utility.account_id`, che il revisore ha già tolto dalla mappa.
+- Profilo `banking.ricevuta_bonifico` (`2.0.4`): i quattro campi entrano come core,
+  provenienza `REVIEWER_ANNOTATIONS`; `finance.transaction_date` esce, perché «Data
+  operazione» su una ricevuta vuol dire una di quelle tre, e il revisore l'ha usata per
+  la data di esecuzione. Esce anche `utility.account_id`, che il revisore ha già tolto
+  dalla mappa.
 - `bank.iban` resta, ed è l'IBAN del beneficiario. Va scritto nella descrizione del
   campo su questo tipo, non cambiato nell'ontologia: `bank.iban` è su 40 tipi bancari.
+- Etichette: «Data inserimento», «Data di inserimento», «Data e ora inserimento»; «Data
+  esecuzione», «Data di esecuzione», «Eseguito il»; «Data valuta», «Data di valuta»,
+  «Valuta beneficiario»; «Conto di addebito», «Conto addebito», «Numero rapporto»,
+  «Rapporto», «Conto ordinante», «IBAN ordinante».
 
 Solo `banking.ricevuta_bonifico`, il tipo della nota. `banking.disposizione_bonifico` e
 `payments_treasury.distinta_bonifici` (due distinte nell'export, senza note) sono lo
 stesso gesto visto da un altro documento: una volta che i campi sono nell'ontologia, il
 revisore li aggiunge dalla mappa se servono, senza un'altra PR.
+
+Quello che l'implementazione ha scoperto, e il piano non diceva:
+
+- **La descrizione di un campo non esisteva.** Le 257 descrizioni del pack ripetono
+  l'etichetta, e non c'era un posto dove scrivere che *su questo tipo* l'IBAN è del
+  beneficiario. Il profilo ora può dirlo, `field_description_overrides`, come fa col
+  `pii` (`field_pii_overrides`) e coi validatori: vale solo per i campi del profilo, e
+  il revisore la legge sulla scheda del campo nella mappa del tipo. Non esce negli
+  schemi, che non hanno descrizioni, ma esce nel profilo del pacchetto della mappa
+  corretta. Un campo segnato non utile porta via la sua descrizione, come per gli altri.
+- **Un IBAN a gruppi di quattro diventava `IT60`.** Il lettore degli identificativi si
+  ferma allo spazio. `payment.debit_account` ha un formato suo (`account_number`): se la
+  riga ha la forma di un IBAN lo legge intero, anche spaziato, altrimenti vale la
+  lettura per token, che è quella giusta per «Numero rapporto: 000012345678».
+- **«IBAN ordinante» mandava in conflitto «IBAN».** Due righe con la stessa etichetta e
+  due valori diversi sono un conflitto, e sulla ricevuta l'IBAN del beneficiario finiva
+  in `CONFLICT` con quello dell'ordinante — proprio il caso che questi campi servono a
+  distinguere. Ora una riga già presa da un campo con l'etichetta più specifica non è
+  nemmeno un secondo candidato per un altro: il documento ha detto di chi è. La regola
+  vale per tutti i tipi, e nessun test esistente è cambiato.
+
+Le righe dei test sono ricostruite sul modello di una ricevuta di bonifico online, non
+prese dai file: l'export non porta il testo delle pagine.
+
+#### Dopo il merge, nella mappa
+
+Sul bonifico l'export del 18/09 ha una sola decisione, l'esclusione di
+`utility.account_id`, che ora dice quello che dice già il registry e non ha più effetto.
+`finance.transaction_date` esce dal registry: se un documento già revisionato ci ha un
+valore, compare fra i «Compilati a mano, fuori dalla mappa» e non va riaggiunto, perché
+il dato ora sta in `payment.execution_date`.
 
 ### PR 4 — La scadenza della formazione si calcola
 

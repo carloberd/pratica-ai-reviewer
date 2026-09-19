@@ -328,6 +328,25 @@ describe('il pacchetto della mappa corretta', () => {
     )
   })
 
+  it('l’IBAN del bonifico segnato non utile porta via anche la sua descrizione', () => {
+    const { file } = bundle({
+      ...EMPTY,
+      fields: { 'banking.ricevuta_bonifico': { 'bank.iban': 'excluded' } }
+    })
+    const profile = file(PROFILES_FILE).profiles['banking.ricevuta_bonifico']
+    // Un'eccezione su un campo fuori profilo farebbe rifiutare il file al loader.
+    expect(profile.field_description_overrides).toBeUndefined()
+
+    // Un'altra decisione la lascia com'è.
+    const other = bundle({
+      ...EMPTY,
+      fields: { 'banking.ricevuta_bonifico': { 'payment.value_date': 'optional' } }
+    }).file(PROFILES_FILE).profiles['banking.ricevuta_bonifico']
+    expect(other.field_description_overrides).toEqual(
+      PROFILES.profiles['banking.ricevuta_bonifico']!.field_description_overrides
+    )
+  })
+
   it('la visura esce coi campi nuovi, e il ripiego del revisore resta finché non lo toglie', () => {
     // La mappa della visura com'era il 18/09: il codice fiscale in `recipient.tax_id`,
     // aggiunto perché `company.tax_id` era occupato dalla partita IVA.
