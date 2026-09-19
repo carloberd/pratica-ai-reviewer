@@ -9,6 +9,7 @@ import {
   CONFIDENCE_NEXT_LINE,
   CONFIDENCE_SAME_LINE,
   extractFactsV2,
+  fiscalTwinOf,
   foldWithOrigin,
   parseDecimal,
   readDate,
@@ -495,6 +496,158 @@ describe('candidati concorrenti', () => {
     ])
     expect(fact('issuer.name')).toMatchObject({ value: 'Alfa S.r.l.', reviewStatus: 'CONFLICT' })
     expect(result.conflicts).toEqual(['MULTIPLE_CANDIDATES:issuer.name'])
+  })
+})
+
+describe('partita IVA e codice fiscale in campi distinti', () => {
+  /** Le due chiavi di una parte, con le etichette che hanno nel registry. */
+  const fiscal = (party: string) =>
+    registryOf({
+      [`${party}.vat_number`]: {
+        type: 'identifier',
+        format: 'vat_number',
+        labels: ['partita iva', 'p.iva', 'p. iva'],
+        validators: ['vat_number_format']
+      },
+      [`${party}.tax_code`]: {
+        type: 'identifier',
+        format: 'italian_tax_code',
+        labels: ['codice fiscale', 'c.f.', 'cod. fisc.'],
+        validators: ['italian_tax_code_format']
+      }
+    })
+
+  it('«C.F. e P.IVA» su una riga: lo stesso numero è di tutti e due, senza conflitto', () => {
+    for (const line of [
+      'C.F. e P.IVA 12345678903',
+      'P.IVA/C.F. IT12345678903',
+      'Codice fiscale e partita IVA: 12345678903'
+    ]) {
+      const { fact, result } = extract(fiscal('issuer'), [page([line])])
+      expect(fact('issuer.vat_number'), line).toMatchObject({
+        value: '12345678903',
+        reviewStatus: 'AUTO_ACCEPTED'
+      })
+      expect(fact('issuer.tax_code'), line).toMatchObject({
+        value: '12345678903',
+        reviewStatus: 'AUTO_ACCEPTED'
+      })
+      expect(result.conflicts, line).toEqual([])
+    }
+  })
+
+  it('codice fiscale di persona e partita IVA sulla stessa riga vanno ognuno al suo campo', () => {
+    const { fact } = extract(fiscal('issuer'), [page(['C.F. RSSMRA80A01H501U P.IVA 12345678903'])])
+    expect(fact('issuer.tax_code').value).toBe('RSSMRA80A01H501U')
+    expect(fact('issuer.vat_number').value).toBe('12345678903')
+  })
+
+  it('la partita IVA non legge un codice fiscale di persona', () => {
+    // Una ditta individuale che scrive solo il codice fiscale sotto l'etichetta doppia.
+    const { fact } = extract(fiscal('issuer'), [page(['C.F./P.IVA: RSSMRA80A01H501U'])])
+    expect(fact('issuer.tax_code').value).toBe('RSSMRA80A01H501U')
+    expect(fact('issuer.vat_number')).toMatchObject({ value: null, reviewStatus: 'MISSING' })
+    expect(readIdentifier(': IT12345678903', 'vat_number')).toBe('12345678903')
+    expect(readIdentifier(': RSSMRA80A01H501U', 'vat_number')).toBeNull()
+  })
+
+  it('gemelli solo dentro la stessa parte', () => {
+    expect(fiscalTwinOf('issuer.vat_number')).toBe('issuer.tax_code')
+    expect(fiscalTwinOf('company.tax_code')).toBe('company.vat_number')
+    expect(fiscalTwinOf('issuer.tax_id')).toBeNull()
+    expect(fiscalTwinOf('employment.employee_tax_code')).toBeNull()
+
+    // Partita IVA dell'emittente e codice fiscale dell'impresa non sono la stessa cosa.
+    const registry = registryOf({
+      'issuer.vat_number': { type: 'identifier', format: 'vat_number', labels: ['p.iva'] },
+      'company.tax_code': { type: 'identifier', format: 'italian_tax_code', labels: ['cod fis'] }
+    })
+    const { fact } = extract(registry, [page(['Cod. Fis. e P.IVA 12345678903'])])
+    expect(fact('company.tax_code')).toMatchObject({ value: '12345678903' })
+    expect(fact('issuer.vat_number')).toMatchObject({ value: null })
+  })
+
+  it('con il registry vero, sulla fattura: la stessa riga non dice di quale parte è', () => {
+    const result = extractFactsV2({
+      documentType: 'accounting.fattura',
+      pages: [
+        page([
+          'ALFA S.R.L.',
+          'C.F. e P.IVA 12345678903',
+          'Spett.le',
+          'BETA S.P.A.',
+          'P.IVA 98765432103'
+        ])
+      ],
+      registry: testRegistryV2()
+    })
+    const fact = (id: string) => result.facts.find((f) => f.fieldId === id)!
+    // Emittente e destinatario hanno le stesse etichette: il motore non indovina, segnala.
+    // Il codice fiscale segue la sua partita IVA, anche nel conflitto.
+    for (const id of [
+      'issuer.vat_number',
+      'issuer.tax_code',
+      'recipient.vat_number',
+      'recipient.tax_code'
+    ]) {
+      expect(fact(id), id).toMatchObject({ value: '12345678903', reviewStatus: 'CONFLICT' })
+    }
+    expect(result.conflicts).toContain('SHARED_EVIDENCE:issuer.vat_number|recipient.vat_number')
+  })
+
+  it('con il registry vero, sulla visura: codice fiscale, partita IVA e REA', () => {
+    const read = (lines: string[]) => {
+      const result = extractFactsV2({
+        documentType: 'corporate_registry.visura_camerale',
+        pages: [page(lines)],
+        registry: testRegistryV2()
+      })
+      return (id: string) => result.facts.find((f) => f.fieldId === id)!
+    }
+    const fact = read([
+      'Registro Imprese Codice fiscale e numero di iscrizione: 12345678903',
+      'Numero REA RO - 160649',
+      'Data iscrizione REA 12/03/2010',
+      'Partita IVA 12345678903',
+      'Amministratore unico',
+      'Codice fiscale RSSMRA80A01H501U'
+    ])
+    // L'etichetta lunga è dell'impresa: il codice fiscale dell'amministratore non le fa
+    // concorrenza, e il valore non va in conflitto.
+    expect(fact('company.tax_code')).toMatchObject({
+      value: '12345678903',
+      reviewStatus: 'AUTO_ACCEPTED'
+    })
+    expect(fact('company.vat_number')).toMatchObject({
+      value: '12345678903',
+      reviewStatus: 'AUTO_ACCEPTED'
+    })
+    expect(fact('company.rea_number')).toMatchObject({
+      value: 'RO - 160649',
+      reviewStatus: 'AUTO_ACCEPTED'
+    })
+
+    // La forma del certificato camerale, e una ditta individuale col codice di persona.
+    const individual = read([
+      'Codice fiscale e n. iscrizione al Registro Imprese RSSMRA80A01H501U',
+      'Partita IVA 12345678903'
+    ])
+    expect(individual('company.tax_code').value).toBe('RSSMRA80A01H501U')
+    expect(individual('company.vat_number').value).toBe('12345678903')
+  })
+
+  it('il numero REA con la provincia, come lo scrive la visura', () => {
+    expect(readIdentifier(' RO - 160649', 'rea_number')).toBe('RO - 160649')
+    expect(readIdentifier(': RO-160649.', 'rea_number')).toBe('RO - 160649')
+    expect(readIdentifier(' n. RO 160649', 'rea_number')).toBe('RO - 160649')
+    expect(readIdentifier(' 160649', 'rea_number')).toBe('160649')
+    // Novara, non «numero».
+    expect(readIdentifier(' NO - 123456', 'rea_number')).toBe('NO - 123456')
+    expect(readIdentifier(' nr 160649', 'rea_number')).toBe('160649')
+    // Una data dopo l'etichetta non è un REA.
+    expect(readIdentifier(' 12/03/2010', 'rea_number')).toBeNull()
+    expect(readIdentifier(' 12.03.2010', 'rea_number')).toBeNull()
+    expect(readIdentifier(' iscritta dal 2010', 'rea_number')).toBeNull()
   })
 })
 

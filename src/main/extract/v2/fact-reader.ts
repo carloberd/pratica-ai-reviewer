@@ -34,7 +34,9 @@ import { runFieldValidator, validatorsOf } from './validators'
  *   generici («Data emissione») e da soli perderebbero quello che la v1 già leggeva;
  * - un'etichetta più lunga batte una più corta, anche fra campi diversi: la stessa riga
  *   con lo stesso valore non può essere il numero di protocollo e il numero documento,
- *   e se nessuna etichetta è più specifica il campo va in CONFLICT;
+ *   e se nessuna etichetta è più specifica il campo va in CONFLICT. L'eccezione sono
+ *   partita IVA e codice fiscale della stessa parte, che possono essere lo stesso numero
+ *   sulla stessa riga (`fiscalTwinOf`);
  * - i campi `many` raccolgono un elemento per riga, in ordine di documento;
  * - le etichette imparate dalle revisioni (`learnedLabels`) passano davanti a quelle del
  *   registry, quelle di un template davanti a quelle di un tipo: a parità di livello decide
@@ -259,7 +261,16 @@ function readBoolean(text: string): string | null {
  */
 const TAX_ID =
   /\b(?:IT)?(\d{11})\b|\b([A-Z]{6}[\dLMNPQRSTUV]{2}[A-Z][\dLMNPQRSTUV]{2}[A-Z][\dLMNPQRSTUV]{3}[A-Z])\b/i
+/** Solo partita IVA: un codice fiscale di persona accanto non è il valore di questo campo. */
+const VAT_NUMBER = /\b(?:IT)?(\d{11})\b/i
 const IBAN = /\b([A-Za-z]{2}\d{2}(?:\s?[A-Za-z0-9]){11,30})\b/
+/**
+ * Numero REA: la sigla della provincia e il numero, «RO - 160649», o il numero da solo.
+ * Deve stare in testa, e un numero seguito da `/` o `.` e altre cifre è l'inizio di una
+ * data («Data iscrizione REA 12/03/2010»), non il REA. La sigla è in maiuscolo, come la
+ * stampa la visura: così «nr 160649» non diventa la provincia `NR`.
+ */
+const REA_NUMBER = /^(?:([A-Z]{2})\s*[-–]?\s*)?(\d{1,7})(?!\d|[/.,]\d)/
 
 /**
  * Identificativo subito dopo l'etichetta: «Protocollo n. 2026/554321», «Documento n.
@@ -270,6 +281,20 @@ export function readIdentifier(text: string, format: string | null | undefined):
     const match = TAX_ID.exec(text)
     const id = match?.[1] ?? match?.[2]
     return match && id && match.index <= VALUE_WINDOW ? id.toUpperCase() : null
+  }
+  if (format === 'vat_number') {
+    const match = VAT_NUMBER.exec(text)
+    return match?.[1] && match.index <= VALUE_WINDOW ? match[1] : null
+  }
+  if (format === 'rea_number') {
+    const rest = text.replace(/^[\s:=°#.\-–—]+/, '')
+    // Prima con quello che c'è, poi senza «n.»: «NO - 123456» è Novara, non «numero».
+    const match =
+      REA_NUMBER.exec(rest) ??
+      REA_NUMBER.exec(rest.replace(/^(?:n|nr|no|num|numero)\b\.?\s*[:°]?\s*/i, ''))
+    if (!match?.[2]) return null
+    // La forma in cui la scrive la visura, e in cui la trascrive il revisore: «RO - 160649».
+    return match[1] ? `${match[1]} - ${match[2]}` : match[2]
   }
   if (format === 'iban') {
     const match = IBAN.exec(text)
@@ -548,6 +573,22 @@ function candidatesForField(
   return [...best.values()].sort(compareCandidates)
 }
 
+/**
+ * Partita IVA e codice fiscale della stessa parte possono essere lo stesso numero: per una
+ * società il codice fiscale è quasi sempre la partita IVA, e la fattura li scrive insieme,
+ * «C.F. e P.IVA 01234567890». Su quella riga il valore è di tutti e due i campi, e non è
+ * un conflitto: `issuer.tax_code` è il gemello di `issuer.vat_number`, e viceversa.
+ */
+export function fiscalTwinOf(fieldId: string): string | null {
+  const dot = fieldId.lastIndexOf('.')
+  if (dot === -1) return null
+  const party = fieldId.slice(0, dot)
+  const key = fieldId.slice(dot + 1)
+  if (key === 'vat_number') return `${party}.tax_code`
+  if (key === 'tax_code') return `${party}.vat_number`
+  return null
+}
+
 /** L'etichetta di `a` è più specifica di quella di `b`: livello, poi lunghezza. */
 function moreSpecific(a: Candidate, b: Candidate): boolean {
   return a.tier > b.tier || (a.tier === b.tier && a.labelLength > b.labelLength)
@@ -654,9 +695,20 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
     .flatMap(([, list]) => list)
     .sort(compareCandidates)
 
+  const claimKey = (candidate: Candidate) =>
+    `${candidate.position.page}:${candidate.position.line}:${candidate.value}`
+  // Campo -> il gemello di cui ha preso il valore: ne segue anche il conflitto.
+  const twinned = new Map<string, string>()
   for (const candidate of pairs) {
     if (chosen.has(candidate.fieldId)) continue
-    const key = `${candidate.position.page}:${candidate.position.line}:${candidate.value}`
+    const key = claimKey(candidate)
+    const twin = fiscalTwinOf(candidate.fieldId)
+    const twinPick = twin ? chosen.get(twin) : undefined
+    if (twin && twinPick && claimKey(twinPick) === key) {
+      twinned.set(candidate.fieldId, twin)
+      chosen.set(candidate.fieldId, candidate)
+      continue
+    }
     const owner = claims.get(key)
     if (owner && moreSpecific(owner, candidate)) continue
     if (owner) {
@@ -667,6 +719,10 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
       claims.set(key, candidate)
     }
     chosen.set(candidate.fieldId, candidate)
+  }
+  // Se il gemello è in conflitto — la riga è anche di un'altra parte — lo è anche lui.
+  for (const [fieldId, twin] of twinned) {
+    if (conflicted.has(twin)) conflicted.add(fieldId)
   }
 
   const facts: ExtractedFactV2[] = []

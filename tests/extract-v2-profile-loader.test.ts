@@ -54,7 +54,7 @@ describe('profili espliciti', () => {
     expect(registry.field('non.esiste')).toBeNull()
     expect(registry.hints('money.total')).toContain('totale documento')
     expect(registry.hints('non.esiste')).toEqual([])
-    expect(registry.schemaVersion()).toBe('2.0.1')
+    expect(registry.schemaVersion()).toBe('2.0.2')
   })
 
   it('legge le eccezioni ai validatori solo sul tipo che le dichiara', () => {
@@ -77,6 +77,54 @@ describe('profili espliciti', () => {
     const profile = corrected.profile('accounting.nota_di_credito')!
     expect(profile.required_fields).toContain('money.total')
     expect(profile.field_validator_overrides?.['money.total']).toEqual([])
+  })
+
+  it('fattura e visura chiedono partita IVA e codice fiscale distinti, gli altri tipi no', () => {
+    const fields = (type: string) => {
+      const profile = registry.profile(type)!
+      return [...profile.required_fields, ...profile.core_fields, ...profile.optional_fields]
+    }
+    expect(fields('accounting.fattura')).toEqual(
+      expect.arrayContaining([
+        'issuer.vat_number',
+        'issuer.tax_code',
+        'recipient.vat_number',
+        'recipient.tax_code'
+      ])
+    )
+    expect(fields('accounting.fattura')).not.toContain('issuer.tax_id')
+    const visura = fields('corporate_registry.visura_camerale')
+    expect(visura).toEqual(
+      expect.arrayContaining(['company.vat_number', 'company.tax_code', 'company.rea_number'])
+    )
+    expect(visura).not.toContain('company.tax_id')
+    expect(visura).not.toContain('company.registration_number')
+    // `*.tax_id` resta col suo significato dove c'era.
+    expect(fields('accounting.nota_di_credito')).toContain('issuer.tax_id')
+    expect(fields('payroll_contributions.durc')).toContain('company.tax_id')
+  })
+
+  it('la mappa del revisore si somma al profilo nuovo: il ripiego resta finché non lo toglie', () => {
+    // La mappa della visura il 18/09: il codice fiscale in `recipient.tax_id`, e un campo
+    // uscito dal registry a cui il revisore avesse cambiato il peso.
+    const corrected = createExtractionRegistryV2(REGISTRY_V2_DIR, REGISTRY_DIR, () => ({
+      fields: {
+        'corporate_registry.visura_camerale': {
+          'recipient.tax_id': 'core',
+          'recipient.name': 'excluded',
+          'company.registration_number': 'optional'
+        }
+      },
+      hintLabels: {},
+      cardinality: {}
+    }))
+    const profile = corrected.profile('corporate_registry.visura_camerale')!
+    expect(profile.core_fields).toEqual(
+      expect.arrayContaining(['company.tax_code', 'company.vat_number', 'recipient.tax_id'])
+    )
+    expect(profile.core_fields).not.toContain('recipient.name')
+    // Una decisione su un campo che il registry non chiede più lo rimette nel profilo.
+    expect(profile.optional_fields).toContain('company.registration_number')
   })
 
   it('ritrova i nomi v1 che la mappa porta su un id dell’ontologia', () => {

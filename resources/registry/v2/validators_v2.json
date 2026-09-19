@@ -21,6 +21,10 @@
       "kind": "builtin",
       "severity": "warning"
     },
+    "vat_number_format": {
+      "kind": "builtin",
+      "severity": "warning"
+    },
     "italian_tax_code_format": {
       "kind": "builtin",
       "severity": "warning"

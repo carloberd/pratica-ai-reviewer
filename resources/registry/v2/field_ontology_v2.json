@@ -195,6 +195,34 @@
       "description": "CF/P.IVA emittente",
       "label_aliases_it": []
     },
+    "issuer.vat_number": {
+      "id": "issuer.vat_number",
+      "label_it": "Partita IVA emittente",
+      "type": "identifier",
+      "format": "vat_number",
+      "default_cardinality": "one",
+      "pii": "none",
+      "evidence_required": true,
+      "validators": [
+        "vat_number_format"
+      ],
+      "description": "Partita IVA emittente",
+      "label_aliases_it": []
+    },
+    "issuer.tax_code": {
+      "id": "issuer.tax_code",
+      "label_it": "Codice fiscale emittente",
+      "type": "identifier",
+      "format": "italian_tax_code",
+      "default_cardinality": "one",
+      "pii": "none",
+      "evidence_required": true,
+      "validators": [
+        "italian_tax_code_format"
+      ],
+      "description": "Codice fiscale emittente",
+      "label_aliases_it": []
+    },
     "issuer.address": {
       "id": "issuer.address",
       "label_it": "Indirizzo emittente",
@@ -231,6 +259,34 @@
         "tax_id_format"
       ],
       "description": "CF/P.IVA destinatario",
+      "label_aliases_it": []
+    },
+    "recipient.vat_number": {
+      "id": "recipient.vat_number",
+      "label_it": "Partita IVA destinatario",
+      "type": "identifier",
+      "format": "vat_number",
+      "default_cardinality": "one",
+      "pii": "none",
+      "evidence_required": true,
+      "validators": [
+        "vat_number_format"
+      ],
+      "description": "Partita IVA destinatario",
+      "label_aliases_it": []
+    },
+    "recipient.tax_code": {
+      "id": "recipient.tax_code",
+      "label_it": "Codice fiscale destinatario",
+      "type": "identifier",
+      "format": "italian_tax_code",
+      "default_cardinality": "one",
+      "pii": "none",
+      "evidence_required": true,
+      "validators": [
+        "italian_tax_code_format"
+      ],
+      "description": "Codice fiscale destinatario",
       "label_aliases_it": []
     },
     "recipient.address": {
@@ -271,6 +327,34 @@
       "description": "CF/P.IVA impresa",
       "label_aliases_it": []
     },
+    "company.vat_number": {
+      "id": "company.vat_number",
+      "label_it": "Partita IVA impresa",
+      "type": "identifier",
+      "format": "vat_number",
+      "default_cardinality": "one",
+      "pii": "none",
+      "evidence_required": true,
+      "validators": [
+        "vat_number_format"
+      ],
+      "description": "Partita IVA impresa",
+      "label_aliases_it": []
+    },
+    "company.tax_code": {
+      "id": "company.tax_code",
+      "label_it": "Codice fiscale impresa",
+      "type": "identifier",
+      "format": "italian_tax_code",
+      "default_cardinality": "one",
+      "pii": "none",
+      "evidence_required": true,
+      "validators": [
+        "italian_tax_code_format"
+      ],
+      "description": "Codice fiscale impresa",
+      "label_aliases_it": []
+    },
     "company.registration_number": {
       "id": "company.registration_number",
       "label_it": "Numero REA/registro imprese",
@@ -281,6 +365,18 @@
       "evidence_required": true,
       "validators": [],
       "description": "Numero REA/registro imprese",
+      "label_aliases_it": []
+    },
+    "company.rea_number": {
+      "id": "company.rea_number",
+      "label_it": "Numero REA",
+      "type": "identifier",
+      "format": "rea_number",
+      "default_cardinality": "one",
+      "pii": "none",
+      "evidence_required": true,
+      "validators": [],
+      "description": "Numero REA",
       "label_aliases_it": []
     },
     "company.register_office": {
