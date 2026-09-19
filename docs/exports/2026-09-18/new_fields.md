@@ -424,32 +424,60 @@ com'è negli schemi (`x-praticaai-evidence-required`). Non è una bugia sul camp
 l'estrazione lo legge, l'evidenza la vuole — ma chi consuma gli schemi va avvisato che
 `COMPUTED` esiste.
 
-### PR 5 — Emessa o ricevuta
+### PR 5 — Emessa o ricevuta ✅
 
 Non è un dato del documento: la stessa fattura è emessa per chi la scrive e ricevuta per
 chi la paga. Si ricava confrontando l'emittente con l'azienda di cui sono i documenti.
 
-- Un'impostazione: la partita IVA e il codice fiscale dell'azienda (oggi l'app non ha
-  niente del genere).
+- Un'impostazione: ragione sociale, partita IVA e codice fiscale dell'azienda
+  (`company_identity`, migrazione `0019`, nella dashboard). Il nome non era nel piano:
+  serve al preventivo, che nel profilo non ha nessun campo fiscale.
 - Un attributo del documento, non un campo estratto: `EMESSO` se l'emittente è
   l'azienda, `RICEVUTO` se lo è il destinatario, vuoto se non è nessuno dei due o se i
   campi mancano. Il revisore può correggerlo.
 - Vale per fattura, nota di credito, proforma e preventivo: il preventivo `e017c573` è
   emesso da POLESINE MASSETTI, ed è il motivo per cui il revisore non sapeva se tenerlo
   in `procurement` o in `sales_customers`.
-- Export: una proprietà nuova nel JSON e una colonna nell'xlsx, con
-  `DATASET_FORMAT_VERSION` da alzare.
+- Export: `direction` nel JSON e `direction`/`direction_chosen_by` nel foglio `documents`
+  dell'xlsx, con `DATASET_FORMAT_VERSION` a `1.9.0`.
 
 Dipende dalla PR 1: il confronto è affidabile solo quando partita IVA e codice fiscale
-stanno in campi diversi. E quando emittente e destinatario sono distinti: dopo la PR 1 una
-partita IVA che l'etichetta non attribuisce manda i due campi in `CONFLICT` con lo stesso
-valore, e questa PR deve decidere se calcolare la direzione su un valore ancora in
-conflitto. Nell'export tutte e tre le fatture hanno come emittente
+stanno in campi diversi. Nell'export tutte e tre le fatture hanno come emittente
 POLESINE MASSETTI SRLS (01479320291), quindi sono tutte emesse.
+
+Quello che l'implementazione ha scoperto, e il piano non diceva:
+
+- **La direzione non si salva.** Il piano la chiamava un attributo del documento, e la
+  cosa naturale sarebbe stata calcolarla all'elaborazione e scriverla. Ma dipende da
+  un'impostazione che si può cambiare, e dai valori che il revisore sta ancora
+  correggendo: salvata, sarebbe stata vecchia il giorno dopo. Si ricalcola a ogni lettura
+  (`@shared/document-direction`), e del revisore resta solo la scelta, quando ne fa una
+  (`documents.direction_choice`). Così la scheda si aggiorna mentre lui compila i campi.
+- **Il conflitto della PR 1 si risolve da sé.** La domanda che il piano lasciava aperta —
+  se calcolare la direzione su un valore ancora in `CONFLICT` — non aveva bisogno di una
+  regola sua: una «P.IVA» che l'etichetta non attribuisce finisce sulle due parti **con
+  lo stesso valore**, e l'azienda trovata da tutte e due non decide niente. Scartare a
+  priori i campi in conflitto sarebbe stato peggio: il revisore ne risolve uno e lascia
+  l'altro comʼè, quel campo resta segnato in conflitto per sempre, e la direzione non si
+  sarebbe più ricavata nemmeno a documento chiuso.
+- **Senza il nome dell'azienda il preventivo era fuori.** `procurement.preventivo` non ha
+  nessun campo fiscale in profilo, solo `issuer.name` e `recipient.name`: con la sola
+  partita IVA la sua direzione sarebbe stata sempre vuota, cioè proprio il documento da
+  cui la nota parte. Il confronto sul nome viene dopo gli identificativi e ignora
+  maiuscole, punteggiatura e forma societaria.
+- **«Né l'uno né l'altro» è una decisione.** Un documento fra due terzi non è emesso né
+  ricevuto, e lasciarlo vuoto non si distinguerebbe da «non calcolato». Nel dataset esce
+  come `choice: "NESSUNA"` con `chosenBy: "REVIEWER"`.
+- **Nel dataset escono tutti e due.** Il piano diceva «una proprietà»; ne esce un oggetto,
+  col calcolo accanto alla scelta, come per il tipo del classificatore: è la differenza
+  fra i due a dire se il calcolo funziona.
 
 **Perché non due tipi `fattura_emessa` e `fattura_ricevuta`:** la tassonomia è del pack,
 e la direzione dipende da chi guarda, non dal documento. Due tipi raddoppierebbero
 classificatore e profili per un dato che si calcola.
+
+Resta da verificare: che pratica-ai legga `direction`. La proprietà è nuova nel formato
+`1.9.0`, e chi consuma il dataset deve saperla leggere o ignorarla senza rompersi.
 
 ---
 
