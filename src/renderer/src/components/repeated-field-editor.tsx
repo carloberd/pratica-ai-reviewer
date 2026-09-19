@@ -2,10 +2,11 @@ import { type EvidenceTarget, targetOfEvidence } from '@shared/evidence-locate'
 import { confirmedItems, sortedItems } from '@shared/field-edits'
 import { pickOfEvidence } from '@shared/pick-cleanup'
 import type { DocumentPick, EvidenceItem, ExtractedField, FieldItem } from '@shared/types'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { cx } from '../lib/cx'
 import styles from './document-review.module.css'
 import EvidenceLink from './evidence-link'
+import ValidationNote from './validation-note'
 
 /** Dove finisce il testo selezionato sul documento, dentro un campo ripetuto. */
 export type RowTarget = { kind: 'item'; itemId: string } | { kind: 'new-item' }
@@ -175,6 +176,8 @@ function ItemRow({
     item.origin === 'ENGINE' &&
     item.correctedValue !== undefined &&
     item.correctedValue !== item.value
+  const errors = draft !== current || item.removed ? [] : (item.validationErrors ?? [])
+  const noteId = useId()
 
   return (
     <tr className={cx(item.removed && styles.itemRemoved)} data-origin={item.origin}>
@@ -188,9 +191,12 @@ function ItemRow({
               className={cx(
                 styles.fieldInput,
                 (draft !== current || corrected) && styles.fieldDirty,
-                active && styles.fieldInputActive
+                active && styles.fieldInputActive,
+                errors.length > 0 && styles.fieldInvalid
               )}
               value={draft}
+              aria-invalid={errors.length > 0 || undefined}
+              aria-describedby={errors.length > 0 ? noteId : undefined}
               disabled={disabled}
               aria-label={`Riga ${item.index + 1}`}
               onChange={(event) => setDraft(event.target.value)}
@@ -204,6 +210,7 @@ function ItemRow({
               }}
             />
           )}
+          {errors.length > 0 && <ValidationNote id={noteId} errors={errors} />}
           {corrected && !item.removed && (
             <div className={styles.beforeAfter}>
               proposta: <s>{item.value}</s>

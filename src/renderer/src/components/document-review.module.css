@@ -1594,3 +1594,14 @@ details > .candidatesTitle {
   background: rgba(255, 196, 92, 0.2);
   color: #ffd38a;
 }
+
+/* Un validatore fallito sul valore salvato: avviso, non errore che blocca. */
+.fieldInvalid {
+  border-color: #d9a19b;
+}
+.validationNote {
+  display: grid;
+  gap: 2px;
+  font-size: 11px;
+  color: #9f3f36;
+}

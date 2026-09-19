@@ -34,6 +34,11 @@ export interface RepositoryDeps {
   requiredFields?: (documentType: string | null) => string[]
   /** Nome leggibile del tipo (`canonical_name` del registry). */
   typeLabel?: (documentType: string | null) => string | null
+  /**
+   * Gli errori di validazione di un valore del campo su quel tipo. Senza il registry v2
+   * (motore v1, test) nessun campo si valida.
+   */
+  validateField?: (documentType: string | null, fieldName: string, value: string | null) => string[]
 }
 
 export function createRepository(db: Db, deps: RepositoryDeps = {}) {
@@ -49,6 +54,7 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
 
   const requiredFields = deps.requiredFields ?? (() => [...UNIVERSAL_FIELDS])
   const typeLabel = deps.typeLabel ?? (() => null)
+  const validateField = deps.validateField ?? (() => [])
 
   function warningsFor(row: DocumentRow, missingRequired: FieldRow[]): string[] {
     const warnings: string[] = []
@@ -191,8 +197,16 @@ export function createRepository(db: Db, deps: RepositoryDeps = {}) {
         cachedPath: row.cached_path,
         contentSha256: row.content_sha256,
         warnings: warningsFor(row, missing),
+        // I validatori girano sul valore corrente a ogni lettura: quello scritto da chi
+        // rivede si controlla appena salvato, e un validatore migliorato vale anche sui
+        // documenti già fatti.
         fields: fieldRows.map((field) =>
-          toExtractedField(field, isRequired(field, required), itemsByField.get(field.id))
+          toExtractedField(
+            field,
+            isRequired(field, required),
+            itemsByField.get(field.id),
+            (value) => validateField(row.document_type, field.name, value)
+          )
         ),
         evidence: evidence.listForDocument(id).map((item) => {
           const text = labelByEvidence.get(item.id) ?? 'Evidenza'
