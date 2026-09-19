@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0-draft.1",
+  "version": "2.0.1-draft.1",
   "defaults": {
     "auto_assign_threshold": 0.74,
     "minimum_margin": 0.08,
@@ -110,7 +110,8 @@
         "domanda di iscrizione"
       ],
       "hard_negative_phrases": [
-        "istanza di permanenza"
+        "istanza di permanenza",
+        "a permanere nella white list"
       ],
       "notes": "Official Prefecture decision versus company application."
     },
@@ -145,6 +146,55 @@
         "ricevuta di presentazione dell istanza"
       ],
       "hard_negative_phrases": []
+    },
+    "identity_personal.patente_di_guida": {
+      "positive_phrases": [
+        "fronte patente",
+        "retro patente"
+      ],
+      "negative_phrases": [],
+      "hard_negative_phrases": [
+        "patente a crediti"
+      ],
+      "notes": "Scanned copies often expose only the front/back captions. A generic certified-copy declaration is not a signal."
+    },
+    "corporate_registry.visura_camerale": {
+      "positive_phrases": [
+        "registro imprese archivio ufficiale",
+        "documento n estratto dal registro imprese"
+      ],
+      "negative_phrases": [],
+      "hard_negative_phrases": [],
+      "notes": "Official extract wording. REA number alone appears in any company letterhead."
+    },
+    "accounting.nota_di_credito": {
+      "positive_phrases": [
+        "nota di credito nr"
+      ],
+      "negative_phrases": [
+        "fattura nr"
+      ],
+      "hard_negative_phrases": [],
+      "notes": "Sibling discrimination against the invoice; the VAT summary is shared by both."
+    },
+    "fiscal_tax.quietanza_versamento": {
+      "positive_phrases": [
+        "quietanza di versamento",
+        "estremi del versamento",
+        "protocollo telematico saldo delega",
+        "dettaglio dei tributi"
+      ],
+      "negative_phrases": [],
+      "hard_negative_phrases": []
+    },
+    "sales_customers.rapportino_intervento": {
+      "positive_phrases": [
+        "durata del lavoro",
+        "durata del viaggio"
+      ],
+      "negative_phrases": [],
+      "hard_negative_phrases": [],
+      "notes": "Job reports may be titled Report or COMMESSA instead of rapportino."
     }
   }
 }

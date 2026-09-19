@@ -264,7 +264,7 @@ l'ambiente, poi il `.env`. Un valore diverso da `v1`/`v2` ferma l'avvio. Con ent
 **Classificazione v2** (deterministica, nessun LLM). Combina più indizi sulle prime
 pagine (`max_pages` in `resources/registry/v2/classifier_signals_v2.json`): alias del
 registry pesati per posizione (zona del titolo o resto del testo) e specificità, segnali
-positivi, contrari ed esclusivi configurati per 11 classi che si confondono (CU, UNILAV,
+positivi, contrari ed esclusivi configurati per 16 classi che si confondono (CU, UNILAV,
 patente a crediti…), il nome del file solo come conferma. Assegna il tipo solo se il
 punteggio supera la soglia **e** stacca abbastanza il secondo candidato; altrimenti il
 documento resta `UNKNOWN` e la timeline dice perché (`BELOW_THRESHOLD`, `LOW_MARGIN`,
