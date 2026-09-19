@@ -175,6 +175,94 @@ Si porta senza la dimensione high-recall, che in `main` non esiste. Il protocoll
 report per una misura valida entra nel README con il comando: congelare codice e regole,
 corpus indipendente, annotazione fatta senza guardare gli output del motore.
 
+**Fatto con la PR 4.** `tests/pilot-corpus-benchmark.test.ts`, lanciato da `pnpm
+benchmark:pilot`; il conto sta in `tests/helpers/pilot-benchmark.ts`, puro, e lo provano
+test ordinari su dati scritti a mano (`tests/pilot-benchmark-scoring.test.ts`), così non
+resta codice che gira solo quando qualcuno ha un corpus. Il comando e il protocollo sono
+nel [README](../README.md#misurare-su-un-corpus-reale).
+
+```bash
+PRACTICAAI_PILOT_CORPUS=/percorso/ai/documenti \
+PRACTICAAI_PILOT_MANIFEST=/percorso/al/manifest.json \
+PRACTICAAI_PILOT_OUTPUT=/percorso/privato/report.json \
+pnpm benchmark:pilot
+```
+
+Con una sola delle prime due il test fallisce invece di saltare: saltare farebbe credere
+di aver misurato.
+
+**Il manifest.** Un JSON, coi percorsi relativi alla cartella del corpus:
+
+```json
+{
+  "version": "corpus-2026-10",
+  "documents": [
+    {
+      "file": "fornitori/fattura-114.pdf",
+      "sha256": "e8e2…",
+      "documentType": "accounting.fattura",
+      "fields": {
+        "document.issue_date": "08/09/2026",
+        "money.total": "86.420,00",
+        "line_items": ["Demolizione tramezzi", "Smaltimento macerie"]
+      },
+      "expectedAbsent": ["bank.iban"]
+    },
+    { "file": "domanda-white-list.pdf", "sha256": "78e6…", "documentType": null, "fields": {} }
+  ]
+}
+```
+
+- `documentType` è l'id del registry v2, `null` se il documento deve restare `UNKNOWN`;
+  un documento senza tipo non ha campi. Un tipo senza profilo di estrazione ferma il test
+  prima di cominciare: è quasi sempre un refuso.
+- `fields` ha gli id dell'ontologia v2 (quelli dell'export JSON) e solo i campi che si
+  vogliono misurare, non per forza tutti quelli del profilo. Un valore è una stringa, un
+  numero o un booleano; per un campo `many` la lista delle righe.
+- `expectedAbsent` sono i campi che il documento non ha, e che il motore non deve
+  compilare. Un valore vuoto non si scrive in `fields`: si dichiara qui.
+- Le chiavi sono quelle e basta: una scritta male (`expectedAbsents`) è un errore, non
+  un campo che sparisce in silenzio. Lo stesso file due volte, o un campo insieme atteso e
+  atteso assente, anche.
+
+**Il confronto.** Parte da quello della revisione (`normalizeFieldValue`: spazi in testa e
+in coda via, una data scritta per intero diventa `yyyy-mm-dd`) e aggiunge il tipo
+dell'ontologia: importi e numeri si confrontano come numeri, all'italiana («1.234,56» è
+`1234.56`, «1.250» è milleduecentocinquanta, il segno conta); gli identificativi senza
+spazi e in maiuscolo; il testo libero comprime gli spazi ma tiene le maiuscole. Un campo
+`many` è giusto solo se le righe lette sono esattamente quelle attese, in qualunque
+ordine: una in più o in meno lo fa sbagliato, perché chi annota dovrebbe comunque
+toglierla o aggiungerla. Il pilota confrontava il JSON, e «1.234,56» contro `1234.56`
+contava come errore.
+
+**Due popolazioni.** Ogni documento si estrae col tipo vero del manifest (oracle: misura
+l'estrazione da sola) e col tipo del classificatore (end-to-end). Qui c'è una differenza
+dal pilota: con un tipo sbagliato l'end-to-end estrae col profilo sbagliato, invece di
+contare tutto mancante. È quello che chi annota si troverebbe precompilato, e un valore
+plausibile di un profilo sbagliato deve pesare come errore. Un'astensione dà tutto
+mancante. Accanto ai totali, per ogni documento: l'esito campo per campo, i campi che il
+profilo non chiede (mai cercati, non «non trovati»), i conflitti e i valori letti.
+
+**Il learner.** Senza altro la misura è `BASELINE`. Con
+`PRACTICAAI_PILOT_LEARNED_RULES` che punta a un file «Esporta le regole» è `FROZEN`: le
+regole attive del file passano da `templateMemoryFor` e `learnedLabelsFor` come in
+`pipeline.ts`, e il report dichiara file, sha-256 e quali regole hanno lavorato su ogni
+documento. È la misura della fase 2: `BASELINE` e `FROZEN` sullo stesso corpus, con
+regole imparate su altri documenti.
+
+**Provato** su un corpus sintetico fatto con le fixture (quattro tipi, una scansione, un
+`UNKNOWN`), in `BASELINE` e in `FROZEN` con una regola attiva e una sospesa: la sospesa
+non lavora, l'attiva trova il campo che il registry mancava, e un valore atteso
+sbagliato apposta e un atteso assente compilato si contano dove devono. Nessun numero da
+riportare: le fixture le ha scritte chi ha scritto il motore.
+
+**Un'idea, non fatta: il manifest dall'export del dataset.** L'export JSON ha già quasi
+tutto: `contentSha256`, `filename`, `documentType.id`, `fields[].name` e `value` (una
+lista per i `many`), e le correzioni `CLEARED` sono candidate naturali per
+`expectedAbsent`. Uno script di poche righe lo trasformerebbe. Ma quel dataset è annotato
+con la proposta del motore davanti, quindi un manifest ricavato da lì non rispetta il
+protocollo: va bene per una misura di sviluppo, non per quella che decide.
+
 ### 6. Le ricette di classe — non si prendono
 
 Sono 88 espressioni regolari su 12 classi, scritte sui documenti del pilota: «il
@@ -207,4 +295,40 @@ con la 2 (vedi il punto 2).
 | 2 | Segnali del classificatore potati (punto 2) | no | fatta (#43) |
 | 2b | Via «nota di credito nr» dai segnali (punto 2) | no | fatta (#44) |
 | 3 | Nota di credito: `field_validator_overrides` e segno degli importi (punto 3) | no | fatta (#45) |
-| 4 | Harness del benchmark su corpus reale (punto 5) | no | da fare |
+| 4 | Harness del benchmark su corpus reale (punto 5) | no | fatta (#46) |
+
+---
+
+## Dove siamo, e cosa resta aperto
+
+La sequenza è chiusa: cinque PR, la 2b compresa. Del pilota è dentro quello che toglie
+un errore o rende il tool misurabile senza essere stato tarato sui documenti su cui poi
+è stato misurato: le tre guardie del fact-reader (#42), i segnali del classificatore che
+descrivono un tipo e non un'azienda (#43, #44), gli importi col segno e le eccezioni ai
+validatori sulla nota di credito (#45), l'harness del benchmark (#46). Il bundle resta
+come riferimento; da qui non se ne prende più niente a scatola chiusa.
+
+Restano aperti cinque pezzi, e la condizione per riaprirli è la stessa per tutti: **un
+corpus reale annotato, indipendente, su cui misurare il prima e il dopo con l'harness.**
+Adesso lo strumento c'è; mancano il corpus e i numeri.
+
+- **Le 88 ricette di classe** (punto 6). Si riaprono partendo da quelle che valgono per
+  un tipo e non per un layout, misurate in `BASELINE` sul corpus nuovo, e dopo la prima
+  misura `FROZEN`: sono, a mano, le regole che il learner deve imparare, e metterle prima
+  confonderebbe quanto impara lui.
+- **`prospetto_costo_del_personale`** (punto 2). Nessuna delle quattro frasi del pilota è
+  entrata: erano i reparti di un'azienda. Si riapre quando il corpus ha prospetti di più
+  aziende, e se ne trova una che tutti scrivono.
+- **L'apostrofo nel classificatore** (punto 2, trovato con la #43). La normalizzazione v2
+  lo tiene, quindi le frasi del pack scritte senza («dell istanza») scattano solo su un
+  testo che l'ha perso. Trasformarlo in spazio tocca anche gli alias del registry: va
+  deciso guardando quanti tipi cambiano sul corpus, non a occhio.
+- **«nota di credito nr»** (punto 2, tolta con la 2b). Si riapre cercando sul corpus una
+  frase che una nota di credito scrive e una fattura no.
+- **Parentesi contabili e meno in coda** (punto 3). Restano positivi; si riguardano se il
+  corpus mostra note di credito che li usano.
+
+Il ranking pesato, `FAMILY` e high-recall stanno in
+[`learner_v2_todo.md`](learner_v2_todo.md#dove-siamo-e-cosa-resta-aperto), con la stessa
+condizione. La prima misura da fare, quando il corpus c'è, è `BASELINE` seguendo il
+protocollo del README: è il metro con cui si confrontano tutti gli altri.
