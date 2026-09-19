@@ -4,5 +4,19 @@ files: class_extraction_profiles_v2.json, field_ontology_v2.json, extraction_hin
        validators_v2.json, relations_v2.json, extraction_schemas_v2.generated.json,
        classifier_signals_v2.json, legacy_field_map_v2.json
 source/registry_496_source.csv: materiale di riferimento, non letto a runtime.
+local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a 2.0.1-draft.1
+       con segnali presi, potati, dal pilota su documenti reali (docs/pilota_reale_todo.md, punto 2):
+       - certifications_licenses.white_list_prefettura: hard negative "a permanere nella white list"
+         (coda di "comunicazione dell'interesse a permanere...": la normalizzazione tiene l'apostrofo,
+         quindi una frase che lo attraversa scatta solo se il testo lo scrive allo stesso modo);
+       - identity_personal.patente_di_guida (nuova): positive "fronte patente", "retro patente";
+         hard negative "patente a crediti";
+       - corporate_registry.visura_camerale (nuova): positive "registro imprese archivio ufficiale",
+         "documento n estratto dal registro imprese";
+       - accounting.nota_di_credito (nuova): positive "nota di credito nr"; negative "fattura nr";
+       - fiscal_tax.quietanza_versamento (nuova): positive "quietanza di versamento",
+         "estremi del versamento", "protocollo telematico saldo delega", "dettaglio dei tributi";
+       - sales_customers.rapportino_intervento (nuova): positive "durata del lavoro", "durata del viaggio".
+       Chi aggiorna il pack riporta queste righe o le sostituisce con quelle del pack.
 note: profili EXTRACTION_SCHEMA_DRAFT salvo 15 READY_FOR_FIELD_TEST, nessuno VALIDATED.
       I 16 tipi del registry v1 senza profilo esplicito ricevono un LEGACY_FALLBACK.
