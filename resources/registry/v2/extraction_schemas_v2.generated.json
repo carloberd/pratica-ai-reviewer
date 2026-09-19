@@ -23939,7 +23939,7 @@
       "document.number": {
         "type": "string",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": [
           "non_empty"
         ]
@@ -23948,7 +23948,7 @@
         "type": "string",
         "format": "date",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": [
           "valid_date"
         ]
@@ -23957,7 +23957,7 @@
         "type": "string",
         "format": "date",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": [
           "valid_date"
         ]
@@ -24361,7 +24361,7 @@
       "document.number": {
         "type": "string",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": [
           "non_empty"
         ]
@@ -24370,7 +24370,7 @@
         "type": "string",
         "format": "date",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": [
           "valid_date"
         ]
@@ -24379,7 +24379,7 @@
         "type": "string",
         "format": "date",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": [
           "valid_date"
         ]
@@ -24465,7 +24465,7 @@
       "document.number": {
         "type": "string",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": [
           "non_empty"
         ]
@@ -24474,7 +24474,7 @@
         "type": "string",
         "format": "date",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": [
           "valid_date"
         ]
@@ -24483,7 +24483,7 @@
         "type": "string",
         "format": "date",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": [
           "valid_date"
         ]
@@ -24556,7 +24556,7 @@
       "document.number": {
         "type": "string",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": [
           "non_empty"
         ]
@@ -24565,7 +24565,7 @@
         "type": "string",
         "format": "date",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": [
           "valid_date"
         ]
@@ -24574,7 +24574,7 @@
         "type": "string",
         "format": "date",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": [
           "valid_date"
         ]

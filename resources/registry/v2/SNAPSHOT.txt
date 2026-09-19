@@ -66,6 +66,12 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
          REVIEWER_ANNOTATIONS per i campi entrati o ripesati;
        extraction_schemas_v2.generated.json allineato su quei quattro tipi e sui quattro che
        tengono le date di identity.*.
+       19/09/2026, stessa PR: class_extraction_profiles_v2.json ha una chiave che il pack non
+       ha, field_pii_overrides (il pii di un campo su un tipo, al posto di quello
+       dell'ontologia, come field_validator_overrides per i validatori). Sui quattro
+       documenti d'identità document.number, document.issue_date e document.expiry_date
+       sono sensitive, il pii delle chiavi identity.* che sostituiscono; nell'ontologia
+       restano none. extraction_schemas_v2.generated.json allineato (x-praticaai-pii).
        Chi aggiorna il pack riporta queste righe o le sostituisce con quelle del pack.
 note: profili EXTRACTION_SCHEMA_DRAFT salvo 15 READY_FOR_FIELD_TEST, nessuno VALIDATED.
       I 16 tipi del registry v1 senza profilo esplicito ricevono un LEGACY_FALLBACK.

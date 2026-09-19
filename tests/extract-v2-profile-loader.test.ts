@@ -6,6 +6,7 @@ import {
   createExtractionRegistryV2,
   loadLegacyFieldMap
 } from '../src/main/extract/v2/profile-loader'
+import { piiOf } from '../src/shared/extraction-v2'
 import { REGISTRY_DIR, REGISTRY_V2_DIR, testRegistry, testRegistryV2 } from './helpers/registry'
 
 const registry = testRegistryV2()
@@ -188,6 +189,13 @@ describe('profili espliciti', () => {
     expect(registry.profile('identity_personal.certificato_nascita')!.core_fields).toEqual(
       expect.arrayContaining(['identity.issue_date', 'identity.expiry_date'])
     )
+    // Numero e date sulle chiavi generiche, ma col `pii` delle chiavi `identity.*` che
+    // sostituiscono: lo decide il profilo del tipo, non l'ontologia.
+    const pii = (type: string, fieldId: string) =>
+      piiOf(registry.profile(type), fieldId, registry.field(fieldId)!)
+    expect(pii('identity_personal.patente_di_guida', 'document.number')).toBe('sensitive')
+    expect(pii('identity_personal.carta_identita', 'document.expiry_date')).toBe('sensitive')
+    expect(pii('accounting.fattura', 'document.number')).toBe('none')
     expect(registry.field('identity.issue_date')?.validators).toEqual(['valid_date'])
     expect(registry.field('identity.expiry_date')?.validators).toEqual(['valid_date'])
   })
@@ -335,6 +343,35 @@ describe('errori d’avvio', () => {
     })
     expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
       `accounting.fattura.field_validator_overrides: ${fieldId}`
+    )
+  })
+
+  it.each([
+    ['un campo fuori dal profilo del tipo', 'finance.balance_closing'],
+    ['un campo assente dall’ontologia', 'campo.inventato']
+  ])('un’eccezione al pii su %s', (_, fieldId) => {
+    const dir = registryCopy()
+    editJson<{
+      profiles: Record<string, { field_pii_overrides?: Record<string, string> }>
+    }>(dir, 'class_extraction_profiles_v2.json', (data) => {
+      data.profiles['accounting.fattura']!.field_pii_overrides = { [fieldId]: 'sensitive' }
+    })
+    expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
+      `accounting.fattura.field_pii_overrides: ${fieldId}`
+    )
+  })
+
+  it('un’eccezione al pii vale solo coi valori del pack', () => {
+    const dir = registryCopy()
+    editJson<{
+      profiles: Record<string, { field_pii_overrides?: Record<string, string> }>
+    }>(dir, 'class_extraction_profiles_v2.json', (data) => {
+      data.profiles['identity_personal.carta_identita']!.field_pii_overrides = {
+        'document.number': 'segreto'
+      }
+    })
+    expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
+      /class_extraction_profiles_v2\.json ha una struttura inattesa in «profiles\.identity_personal\.carta_identita\.field_pii_overrides\.document\.number»/
     )
   })
 

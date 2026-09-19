@@ -1,4 +1,4 @@
-import type { Cardinality, FieldOntologyEntry } from './extraction-v2'
+import { type Cardinality, type FieldOntologyEntry, type FieldPii, piiOf } from './extraction-v2'
 import type { ProfileAction } from './profile-history'
 import { countStandingEdits, isMapEdit } from './profile-history'
 import { REVIEWER_EDITED_SCHEMA_STATE } from './profile-metrics'
@@ -53,6 +53,8 @@ export interface RawProfile {
   field_cardinality?: Record<string, Cardinality>
   /** I validatori del campo su questo tipo, al posto di quelli dell'ontologia. */
   field_validator_overrides?: Record<string, string[]>
+  /** Il `pii` del campo su questo tipo, al posto di quello dell'ontologia. */
+  field_pii_overrides?: Record<string, FieldPii>
   [key: string]: unknown
 }
 
@@ -158,19 +160,24 @@ function correctedProfile(
   const corrected: RawProfile = { ...next, field_provenance: provenance, [EDITED_KEY]: true }
   if (excluded.length > 0) corrected[EXCLUDED_KEY] = excluded
   else delete corrected[EXCLUDED_KEY]
-  const validators = validatorOverridesIn(corrected)
+  const validators = overridesIn(corrected, corrected.field_validator_overrides)
   if (validators) corrected.field_validator_overrides = validators
   else delete corrected.field_validator_overrides
+  const pii = overridesIn(corrected, corrected.field_pii_overrides)
+  if (pii) corrected.field_pii_overrides = pii
+  else delete corrected.field_pii_overrides
   return corrected
 }
 
 /**
- * Le eccezioni ai validatori dei soli campi che il profilo corretto chiede ancora. Un campo
- * segnato «non utile» esce dal profilo, e un'eccezione su un campo fuori profilo farebbe
- * rifiutare il file esportato al loader che lo rilegge.
+ * Le eccezioni per campo (validatori, `pii`) dei soli campi che il profilo corretto chiede
+ * ancora. Un campo segnato «non utile» esce dal profilo, e un'eccezione su un campo fuori
+ * profilo farebbe rifiutare il file esportato al loader che lo rilegge.
  */
-function validatorOverridesIn(profile: RawProfile): Record<string, string[]> | null {
-  const overrides = profile.field_validator_overrides
+function overridesIn<T>(
+  profile: RawProfile,
+  overrides: Record<string, T> | undefined
+): Record<string, T> | null {
   if (!overrides) return null
   const kept = Object.entries(overrides).filter(([fieldId]) => roleIn(profile, fieldId) !== null)
   return kept.length > 0 ? Object.fromEntries(kept) : null
@@ -205,7 +212,8 @@ type JsonSchemaProperty = Record<string, unknown>
 function propertyFor(
   field: FieldOntologyEntry,
   cardinality: Cardinality,
-  validators: string[]
+  validators: string[],
+  pii: FieldPii
 ): JsonSchemaProperty {
   const scalar: JsonSchemaProperty =
     field.type === 'date'
@@ -226,7 +234,7 @@ function propertyFor(
   return {
     ...shape,
     'x-praticaai-evidence-required': field.evidence_required,
-    'x-praticaai-pii': field.pii,
+    'x-praticaai-pii': pii,
     'x-praticaai-validators': validators
   }
 }
@@ -267,7 +275,8 @@ export function jsonSchemaFor(
     properties[fieldId] = propertyFor(
       field,
       cardinalityOf(profile, fieldId, field.default_cardinality),
-      profile.field_validator_overrides?.[fieldId] ?? field.validators
+      profile.field_validator_overrides?.[fieldId] ?? field.validators,
+      piiOf(profile, fieldId, field)
     )
   }
 
