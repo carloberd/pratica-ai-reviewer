@@ -87,7 +87,7 @@ conforme. Entrano solo le frasi che descrivono il tipo:
 | `white_list_prefettura` | hard negative «a permanere nella white list» (vedi sotto) | — |
 | `patente_di_guida` | «fronte patente», «retro patente»; hard negative «patente a crediti» | «dichiaro che la fotocopia», «presente documento e conforme all originale» |
 | `visura_camerale` | «registro imprese archivio ufficiale», «documento n estratto dal registro imprese» | «esito evasione protocollo» (è un altro documento), «numero rea» (sta nelle intestazioni di mezzo mondo) |
-| `nota_di_credito` | «nota di credito nr»; negativo «fattura nr» | «riepilogo iva imponibile imposte» (c'è in ogni fattura) |
+| `nota_di_credito` | negativo «fattura nr» | «riepilogo iva imponibile imposte» (c'è in ogni fattura), «nota di credito nr» (è anche il modo in cui una fattura cita una nota: vedi sotto) |
 | `quietanza_versamento` | tutte e quattro | — |
 | `rapportino_intervento` | «durata del lavoro», «durata del viaggio» | «commessa durata» (colonne fuse di un generatore), «ricetta», «costo del lavoro» |
 | `prospetto_costo_del_personale` | niente | tutte e quattro: sono i reparti di un'azienda |
@@ -112,11 +112,14 @@ Tre cose trovate facendo la PR 2:
   in spazio, e questo tocca anche gli alias del registry: è fuori dalla sequenza.
 - **«nota di credito nr» non descrive solo il tipo.** È anche la forma con cui una
   fattura cita una nota. Una fattura con «Rif. nota di credito nr. 5» nella zona del
-  titolo prima restava `UNKNOWN` (nota di credito a 0,72, sotto soglia); adesso diventa
-  `nota_di_credito`, a 0,755 se scrive «Fattura nr» e a 0,99 se no. È un tipo plausibile e
-  sbagliato, cioè proprio quello che il criterio esclude. La frase è entrata come diceva la
-  tabella: **da riconsiderare** con l'harness della PR 4, o da togliere se non c'è un
-  corpus su cui misurarla prima.
+  titolo prima restava `UNKNOWN` (nota di credito a 0,72, sotto soglia); con la frase
+  diventava `nota_di_credito`, a 0,755 se scrive «Fattura nr» e a 0,99 se no. È un tipo
+  plausibile e sbagliato, cioè proprio quello che il criterio esclude. La frase è entrata
+  con la PR 2 come diceva la tabella, ed è **uscita con la 2b**: non c'è un corpus su cui
+  misurarla prima. Il prezzo è che una nota di credito con solo il titolo e «Nota di
+  credito nr.» torna sotto soglia (0,72), com'era prima della PR 2, e il tipo lo sceglie
+  chi annota. Si riapre con l'harness della PR 4, cercando una frase che una fattura non
+  scriva.
 
 ### 3. Nota di credito con importi negativi
 
@@ -176,11 +179,13 @@ punto 5, e partendo da quelle che valgono per un tipo e non per un layout.
 Quattro PR piccole, in quest'ordine, ognuna coi gate verdi prima della successiva. Nel
 gate c'è anche `pnpm build`: da #35 a #40 mancava, e il build del renderer si era rotto
 senza che nessuno se ne accorgesse (`local-learning.ts` si portava dietro `node:crypto`).
-L'ha riparato #41, prima della PR 1.
+L'ha riparato #41, prima della PR 1. La 2b non era prevista: toglie una frase entrata
+con la 2 (vedi il punto 2).
 
 | PR | Contenuto | Migrazione | Stato |
 |---|---|---|---|
 | 1 | Tre guardie nel fact-reader (punto 1) | no | fatta (#42) |
 | 2 | Segnali del classificatore potati (punto 2) | no | fatta (#43) |
+| 2b | Via «nota di credito nr» dai segnali (punto 2) | no | fatta (#44) |
 | 3 | Nota di credito: `field_validator_overrides` (punto 3) | no | da fare |
 | 4 | Harness del benchmark su corpus reale (punto 5) | no | da fare |
