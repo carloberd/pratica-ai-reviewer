@@ -527,6 +527,53 @@
       "scope": "whole_document",
       "candidate_limit": 10
     },
+    "payment.entry_date": {
+      "labels": [
+        "Data inserimento",
+        "entry date",
+        "Data di inserimento",
+        "Data e ora inserimento"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payment.execution_date": {
+      "labels": [
+        "Data esecuzione",
+        "execution date",
+        "Data di esecuzione",
+        "Eseguito il"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payment.value_date": {
+      "labels": [
+        "Data valuta",
+        "value date",
+        "Data di valuta",
+        "Valuta beneficiario"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "payment.debit_account": {
+      "labels": [
+        "Conto di addebito",
+        "debit account",
+        "Conto addebito",
+        "Numero rapporto",
+        "Rapporto",
+        "Conto ordinante",
+        "IBAN ordinante"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
     "bank.iban": {
       "labels": [
         "IBAN",

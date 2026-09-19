@@ -671,6 +671,60 @@
       "description": "Metodo pagamento",
       "label_aliases_it": []
     },
+    "payment.entry_date": {
+      "id": "payment.entry_date",
+      "label_it": "Data inserimento",
+      "type": "date",
+      "format": "date",
+      "default_cardinality": "one",
+      "pii": "none",
+      "evidence_required": true,
+      "validators": [
+        "valid_date"
+      ],
+      "description": "Data inserimento",
+      "label_aliases_it": []
+    },
+    "payment.execution_date": {
+      "id": "payment.execution_date",
+      "label_it": "Data esecuzione",
+      "type": "date",
+      "format": "date",
+      "default_cardinality": "one",
+      "pii": "none",
+      "evidence_required": true,
+      "validators": [
+        "valid_date"
+      ],
+      "description": "Data esecuzione",
+      "label_aliases_it": []
+    },
+    "payment.value_date": {
+      "id": "payment.value_date",
+      "label_it": "Data valuta",
+      "type": "date",
+      "format": "date",
+      "default_cardinality": "one",
+      "pii": "none",
+      "evidence_required": true,
+      "validators": [
+        "valid_date"
+      ],
+      "description": "Data valuta",
+      "label_aliases_it": []
+    },
+    "payment.debit_account": {
+      "id": "payment.debit_account",
+      "label_it": "Conto di addebito",
+      "type": "identifier",
+      "format": "account_number",
+      "default_cardinality": "one",
+      "pii": "financial",
+      "evidence_required": true,
+      "validators": [],
+      "description": "Conto di addebito",
+      "label_aliases_it": []
+    },
     "bank.iban": {
       "id": "bank.iban",
       "label_it": "IBAN",

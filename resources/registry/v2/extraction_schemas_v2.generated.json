@@ -5265,17 +5265,37 @@
           "non_empty"
         ]
       },
-      "utility.account_id": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
-      },
-      "finance.transaction_date": {
+      "payment.entry_date": {
         "type": "string",
         "format": "date",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
+      },
+      "payment.execution_date": {
+        "type": "string",
+        "format": "date",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "none",
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
+      },
+      "payment.value_date": {
+        "type": "string",
+        "format": "date",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "none",
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
+      },
+      "payment.debit_account": {
+        "type": "string",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "financial",
         "x-praticaai-validators": []
       },
       "money.amount": {

@@ -260,6 +260,23 @@ describe('misure sui profili dal database', () => {
     expect(map.fields.every((entry) => entry.inProfile && entry.signal === 'OK')).toBe(true)
   })
 
+  it('la descrizione di un campo su un tipo arriva alla sua scheda', () => {
+    const { repo } = scenario()
+    const deps = {
+      repo,
+      registry: fakeRegistry({
+        'hr.unilav': profile({
+          field_description_overrides: { 'document.number': 'Il numero della comunicazione' }
+        })
+      })
+    }
+    const map = collectTypeMap(deps, 'hr.unilav')
+    const note = (fieldId: string) => map.fields.find((f) => f.fieldId === fieldId)?.note
+    expect(note('document.number')).toBe('Il numero della comunicazione')
+    // Gli altri campi non hanno niente da aggiungere all'etichetta.
+    expect(note('issuer.name')).toBeNull()
+  })
+
   it('i profili verificati su documenti reali sono marcati', () => {
     const { repo } = scenario()
     const deps = {

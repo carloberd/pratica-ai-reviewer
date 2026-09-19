@@ -15,6 +15,7 @@ function fieldMeasure(overrides: Partial<ProfileFieldMeasure> = {}): ProfileFiel
   const base: ProfileFieldMeasure = {
     fieldId: 'document.issue_date',
     label: 'Data emissione',
+    note: null,
     role: 'required',
     inProfile: true,
     confirmed: 12,
@@ -122,6 +123,19 @@ describe('scheda «Campi da estrarre»', () => {
     expect(view).toContain('Le modifiche valgono per tutti i documenti di questo tipo')
     expect(view).toContain('torna a «Dati» per completarlo')
     expect(view).toContain('Numeri su 12 documenti revisionati')
+  })
+
+  it('un campo che su questo tipo vuol dire qualcosa di preciso lo dice nella scheda', () => {
+    const iban = fieldMeasure({
+      fieldId: 'bank.iban',
+      label: 'IBAN',
+      role: 'core',
+      note: 'IBAN del beneficiario, non il conto da cui parte il bonifico'
+    })
+    const view = text(
+      <ExtractionFields {...props} map={fieldMap({ measure: measure({ fields: [iban] }) })} />
+    )
+    expect(view).toContain('IBAN del beneficiario, non il conto da cui parte il bonifico')
   })
 
   it('non ha pulsanti di export: la mappa si esporta dalla dashboard', () => {

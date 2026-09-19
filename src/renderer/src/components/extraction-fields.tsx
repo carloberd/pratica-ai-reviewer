@@ -321,6 +321,8 @@ function FieldName({ field }: { field: ProfileFieldMeasure }) {
         )}
       </span>
       <span className={styles.mapFieldId}>{field.fieldId}</span>
+      {/* Cosa vuol dire il campo qui: su una ricevuta di bonifico l'IBAN è del beneficiario. */}
+      {field.note && <span className={styles.mapFieldNote}>{field.note}</span>}
     </div>
   )
 }

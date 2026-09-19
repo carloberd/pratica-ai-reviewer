@@ -55,6 +55,8 @@ export interface RawProfile {
   field_validator_overrides?: Record<string, string[]>
   /** Il `pii` del campo su questo tipo, al posto di quello dell'ontologia. */
   field_pii_overrides?: Record<string, FieldPii>
+  /** Cosa vuol dire il campo su questo tipo, al posto della descrizione dell'ontologia. */
+  field_description_overrides?: Record<string, string>
   [key: string]: unknown
 }
 
@@ -166,13 +168,16 @@ function correctedProfile(
   const pii = overridesIn(corrected, corrected.field_pii_overrides)
   if (pii) corrected.field_pii_overrides = pii
   else delete corrected.field_pii_overrides
+  const descriptions = overridesIn(corrected, corrected.field_description_overrides)
+  if (descriptions) corrected.field_description_overrides = descriptions
+  else delete corrected.field_description_overrides
   return corrected
 }
 
 /**
- * Le eccezioni per campo (validatori, `pii`) dei soli campi che il profilo corretto chiede
- * ancora. Un campo segnato «non utile» esce dal profilo, e un'eccezione su un campo fuori
- * profilo farebbe rifiutare il file esportato al loader che lo rilegge.
+ * Le eccezioni per campo (validatori, `pii`, descrizione) dei soli campi che il profilo
+ * corretto chiede ancora. Un campo segnato «non utile» esce dal profilo, e un'eccezione su
+ * un campo fuori profilo farebbe rifiutare il file esportato al loader che lo rilegge.
  */
 function overridesIn<T>(
   profile: RawProfile,

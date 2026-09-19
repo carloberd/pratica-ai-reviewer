@@ -1,5 +1,5 @@
 {
-  "version": "2.0.3",
+  "version": "2.0.4",
   "active_registry_source": "Document Brain 496 active classes",
   "profiles": {
     "accounting.autofattura": {
@@ -2785,24 +2785,31 @@
         "money.currency",
         "bank.iban",
         "document.number",
-        "utility.account_id"
+        "payment.entry_date",
+        "payment.execution_date",
+        "payment.value_date",
+        "payment.debit_account"
       ],
       "optional_fields": [
-        "finance.transaction_date",
         "money.amount"
       ],
       "conditional_fields": [],
+      "field_description_overrides": {
+        "bank.iban": "IBAN del beneficiario, non il conto da cui parte il bonifico"
+      },
       "field_provenance": {
-        "utility.account_id": "LEGACY_REGISTRY",
         "money.currency": "AI_PROPOSED_FAMILY",
         "finance.product_type": "AI_PROPOSED_FAMILY",
-        "finance.transaction_date": "LEGACY_REGISTRY",
         "document.issue_date": "AI_PROPOSED_FAMILY",
         "bank.iban": "AI_PROPOSED_FAMILY",
         "money.amount": "LEGACY_REGISTRY",
         "document.number": "LEGACY_REGISTRY",
         "issuer.name": "AI_PROPOSED_FAMILY",
-        "recipient.name": "AI_PROPOSED_FAMILY"
+        "recipient.name": "AI_PROPOSED_FAMILY",
+        "payment.entry_date": "REVIEWER_ANNOTATIONS",
+        "payment.execution_date": "REVIEWER_ANNOTATIONS",
+        "payment.value_date": "REVIEWER_ANNOTATIONS",
+        "payment.debit_account": "REVIEWER_ANNOTATIONS"
       },
       "confusables": [
         "banking.disposizione_bonifico",
