@@ -58,6 +58,7 @@ function document(overrides: Partial<ReviewDocument> = {}): ReviewDocument {
     classification: null,
     reviewedAt: null,
     reviewNote: null,
+    directionChoice: null,
     ...overrides
   }
 }

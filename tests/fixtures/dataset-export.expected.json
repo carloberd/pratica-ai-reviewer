@@ -1,7 +1,7 @@
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.8.0",
+    "formatVersion": "1.9.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": {
       "name": "praticaai-reviewer",
@@ -65,6 +65,7 @@
           "score": 0.945
         }
       },
+      "direction": null,
       "extraction": {
         "engineVersion": "extraction-brain-v2/2.1.0-draft.1",
         "schemaVersion": "2.0.4",
@@ -110,6 +111,13 @@
           "rank": 1,
           "score": 0.8267
         }
+      },
+      "direction": {
+        "value": "EMESSO",
+        "computed": "EMESSO",
+        "matchedBy": "FISCAL_ID",
+        "chosenBy": "ENGINE",
+        "choice": null
       },
       "extraction": {
         "engineVersion": "extraction-brain-v2/2.1.0-draft.1",
@@ -488,6 +496,7 @@
           "score": null
         }
       },
+      "direction": null,
       "extraction": {
         "engineVersion": "extraction-brain-v2/2.1.0-draft.1",
         "schemaVersion": "2.0.4",

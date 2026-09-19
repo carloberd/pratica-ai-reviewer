@@ -8,6 +8,7 @@
  * (drive, correzioni con before/after) sono marcate con `// v1 reviewer`.
  */
 
+import type { DirectionChoice } from './document-direction'
 import type {
   Cardinality,
   ExtractionRuleScope,
@@ -236,6 +237,12 @@ export interface ReviewDocument {
   reviewedAt: string | null
   /** Nota facoltativa scritta dal revisore chiudendo il documento; `null` se non l'ha scritta. */
   reviewNote: string | null
+  /**
+   * v6 reviewer: emesso o ricevuto **scelto dal revisore**; `null` se non l'ha toccato.
+   * La direzione vera si calcola a ogni lettura (`@shared/document-direction`): non è un
+   * dato del documento, dipende da chi guarda, e qui resta solo la decisione umana.
+   */
+  directionChoice: DirectionChoice | null
 }
 
 /** v2 reviewer: motivo per cui il classificatore ha assegnato o no il tipo. */

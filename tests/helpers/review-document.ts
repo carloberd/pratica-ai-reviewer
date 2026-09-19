@@ -71,6 +71,7 @@ export function reviewDocument(overrides: Partial<ReviewDocument> = {}): ReviewD
     classification: null,
     reviewedAt: null,
     reviewNote: null,
+    directionChoice: null,
     ...overrides
   }
 }

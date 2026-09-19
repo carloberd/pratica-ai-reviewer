@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DatasetScalarField } from '../src/shared/dataset'
-import { DATASET_FORMAT_VERSION, fieldOrigin, toDatasetDocument } from '../src/shared/dataset'
+import { fieldOrigin, toDatasetDocument } from '../src/shared/dataset'
 import type { ExtractedField } from '../src/shared/types'
 import { reviewDocument, scalarField } from './helpers/review-document'
 
@@ -53,10 +53,5 @@ describe('lʼorigine di un valore dedotto', () => {
   it('un valore letto resta ENGINE', () => {
     expect(fieldOrigin(scalarField())).toBe('ENGINE')
     expect(exported(scalarField()).origin).toBe('ENGINE')
-  })
-
-  it('il formato del dataset dichiara il valore nuovo', () => {
-    // `COMPUTED` è un valore in più in `origin`: chi legge il formato deve saperlo.
-    expect(DATASET_FORMAT_VERSION).toBe('1.8.0')
   })
 })

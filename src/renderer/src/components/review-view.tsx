@@ -1,3 +1,8 @@
+import {
+  type CompanyIdentity,
+  type DirectionChoice,
+  EMPTY_COMPANY
+} from '@shared/document-direction'
 import { type EvidenceTarget, targetOfEvidence } from '@shared/evidence-locate'
 import { documentCorrections } from '@shared/field-edits'
 import { pickValue } from '@shared/pick-locate'
@@ -7,6 +12,7 @@ import type { DocumentPick, RegistryTypeOption, ReviewAction, ReviewDocument } f
 import { useEffect, useMemo, useState } from 'react'
 import { cx } from '../lib/cx'
 import { formatDateTime, pct, STATUS_LABELS, textSourceLabel } from '../lib/format'
+import DirectionPanel from './direction-panel'
 import DocumentPreview from './document-preview'
 import styles from './document-review.module.css'
 import { BAND_CLASS } from './document-table'
@@ -28,6 +34,9 @@ interface Props {
   onItemAdd: (fieldId: string, value: string, pick?: DocumentPick) => void
   onDecide: (action: ReviewAction, note?: string) => void
   onAssignType: (documentType: string | null) => void
+  /** L'azienda di cui sono i documenti: con lei si decide emesso o ricevuto. */
+  company: CompanyIdentity | null
+  onChooseDirection: (choice: DirectionChoice | null) => void
   /** Toglie la copia locale del file, lasciando i dati estratti. */
   onEvict: () => void
   /** La mappa del tipo del documento, per la scheda «Campi da estrarre». */
@@ -63,6 +72,8 @@ export default function ReviewView({
   onItemAdd,
   onDecide,
   onAssignType,
+  company,
+  onChooseDirection,
   onEvict,
   fieldMap,
   onLoadFieldMap,
@@ -217,6 +228,13 @@ export default function ReviewView({
                     onFocusEvidence={focusEvidence}
                   />
                 </div>
+
+                <DirectionPanel
+                  document={document}
+                  company={company ?? EMPTY_COMPANY}
+                  busy={busy}
+                  onChoose={onChooseDirection}
+                />
 
                 <div className={styles.panelSection}>
                   <div className={styles.panelLabel}>
