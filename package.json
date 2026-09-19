@@ -1,6 +1,6 @@
 {
   "name": "praticaai-reviewer",
-  "version": "1.5.5",
+  "version": "1.6.0",
   "description": "App desktop per la revisione dei documenti su Google Drive con il registry PraticaAI",
   "private": true,
   "author": "Carlo Berdondini",
