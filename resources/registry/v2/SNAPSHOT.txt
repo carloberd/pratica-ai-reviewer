@@ -43,6 +43,35 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
          company.vat_number, company.tax_code e company.rea_number. Stesso ruolo (core),
          provenienza REVIEWER_ANNOTATIONS;
        extraction_schemas_v2.generated.json allineato sugli stessi due tipi.
+       19/09/2026, cognome e nome distinti sui documenti d'identità
+       (docs/exports/2026-09-18/new_fields.md, PR 2):
+       - field_ontology_v2.json: person.last_name («Cognome») e person.first_name («Nome»),
+         pii personal come person.name, che il pack non ha. person.name resta, rinominato
+         «Nome e cognome». identity.issue_date e identity.expiry_date prendono valid_date:
+         restano su certificato_nascita, certificato_residenza, codice_fiscale e
+         stato_di_famiglia;
+       - extraction_hints_v2.json: le etichette dei due campi nuovi, anche nella forma
+         bilingue della carta elettronica («Cognome/Surname», «Nome/Name»); «Data rilascio»,
+         «Data di rilascio» su document.issue_date e «Scadenza», «Data di scadenza» su
+         document.expiry_date, che ereditano il lavoro di identity.*; «Nazionalità» su
+         identity.nationality; «Residenza», «Indirizzo di residenza» su person.address;
+         il primo hint di person.name segue il nuovo nome;
+       - class_extraction_profiles_v2.json passa a 2.0.3: su carta_identita,
+         permesso_di_soggiorno, passaporto e patente_di_guida escono person.name,
+         identity.document_number, identity.issue_date, identity.expiry_date, issuer.name e
+         recipient.name; entrano required person.last_name, person.first_name,
+         document.number, document.issue_date, document.expiry_date. identity.nationality
+         required su carta, permesso e passaporto; person.address core su carta e permesso,
+         optional sul passaporto; sulla patente nessuno dei due. Provenienza
+         REVIEWER_ANNOTATIONS per i campi entrati o ripesati;
+       extraction_schemas_v2.generated.json allineato su quei quattro tipi e sui quattro che
+       tengono le date di identity.*.
+       19/09/2026, stessa PR: class_extraction_profiles_v2.json ha una chiave che il pack non
+       ha, field_pii_overrides (il pii di un campo su un tipo, al posto di quello
+       dell'ontologia, come field_validator_overrides per i validatori). Sui quattro
+       documenti d'identità document.number, document.issue_date e document.expiry_date
+       sono sensitive, il pii delle chiavi identity.* che sostituiscono; nell'ontologia
+       restano none. extraction_schemas_v2.generated.json allineato (x-praticaai-pii).
        Chi aggiorna il pack riporta queste righe o le sostituisce con quelle del pack.
 note: profili EXTRACTION_SCHEMA_DRAFT salvo 15 READY_FOR_FIELD_TEST, nessuno VALIDATED.
       I 16 tipi del registry v1 senza profilo esplicito ricevono un LEGACY_FALLBACK.

@@ -23924,22 +23924,54 @@
     "$id": "schema.document.identity_personal.carta_identita.v2",
     "type": "object",
     "properties": {
-      "identity.document_type": {
+      "person.last_name": {
         "type": "string",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "personal",
         "x-praticaai-validators": []
       },
-      "identity.document_number": {
+      "person.first_name": {
+        "type": "string",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "personal",
+        "x-praticaai-validators": []
+      },
+      "document.number": {
+        "type": "string",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "sensitive",
+        "x-praticaai-validators": [
+          "non_empty"
+        ]
+      },
+      "document.issue_date": {
+        "type": "string",
+        "format": "date",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "sensitive",
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
+      },
+      "document.expiry_date": {
+        "type": "string",
+        "format": "date",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "sensitive",
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
+      },
+      "identity.nationality": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
       },
-      "person.name": {
+      "identity.document_type": {
         "type": "string",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "personal",
+        "x-praticaai-pii": "none",
         "x-praticaai-validators": []
       },
       "person.tax_code": {
@@ -23965,16 +23997,8 @@
         "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
       },
-      "identity.issue_date": {
+      "person.address": {
         "type": "string",
-        "format": "date",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
-      },
-      "identity.expiry_date": {
-        "type": "string",
-        "format": "date",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
@@ -23984,38 +24008,16 @@
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
-      },
-      "document.number": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": [
-          "non_empty"
-        ]
-      },
-      "document.issue_date": {
-        "type": "string",
-        "format": "date",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": [
-          "valid_date"
-        ]
-      },
-      "issuer.name": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
-      },
-      "recipient.name": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
       }
     },
-    "required": [],
+    "required": [
+      "person.last_name",
+      "person.first_name",
+      "document.number",
+      "document.issue_date",
+      "document.expiry_date",
+      "identity.nationality"
+    ],
     "additionalProperties": false,
     "x-praticaai-schema-state": "EXTRACTION_SCHEMA_DRAFT",
     "x-praticaai-evidence-basis": "LEGACY_REGISTRY+AI_PROPOSED",
@@ -24072,14 +24074,18 @@
         "format": "date",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
       },
       "identity.expiry_date": {
         "type": "string",
         "format": "date",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
       },
       "identity.issuing_authority": {
         "type": "string",
@@ -24174,14 +24180,18 @@
         "format": "date",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
       },
       "identity.expiry_date": {
         "type": "string",
         "format": "date",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
       },
       "identity.issuing_authority": {
         "type": "string",
@@ -24276,14 +24286,18 @@
         "format": "date",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
       },
       "identity.expiry_date": {
         "type": "string",
         "format": "date",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
       },
       "identity.issuing_authority": {
         "type": "string",
@@ -24332,22 +24346,54 @@
     "$id": "schema.document.identity_personal.passaporto.v2",
     "type": "object",
     "properties": {
-      "identity.document_type": {
+      "person.last_name": {
         "type": "string",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "personal",
         "x-praticaai-validators": []
       },
-      "identity.document_number": {
+      "person.first_name": {
+        "type": "string",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "personal",
+        "x-praticaai-validators": []
+      },
+      "document.number": {
+        "type": "string",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "sensitive",
+        "x-praticaai-validators": [
+          "non_empty"
+        ]
+      },
+      "document.issue_date": {
+        "type": "string",
+        "format": "date",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "sensitive",
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
+      },
+      "document.expiry_date": {
+        "type": "string",
+        "format": "date",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "sensitive",
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
+      },
+      "identity.nationality": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
       },
-      "person.name": {
+      "identity.document_type": {
         "type": "string",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "personal",
+        "x-praticaai-pii": "none",
         "x-praticaai-validators": []
       },
       "person.tax_code": {
@@ -24373,57 +24419,27 @@
         "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
       },
-      "identity.issue_date": {
-        "type": "string",
-        "format": "date",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
-      },
-      "identity.expiry_date": {
-        "type": "string",
-        "format": "date",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
-      },
       "identity.issuing_authority": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
       },
-      "document.number": {
+      "person.address": {
         "type": "string",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": [
-          "non_empty"
-        ]
-      },
-      "document.issue_date": {
-        "type": "string",
-        "format": "date",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": [
-          "valid_date"
-        ]
-      },
-      "issuer.name": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
-      },
-      "recipient.name": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
       }
     },
-    "required": [],
+    "required": [
+      "person.last_name",
+      "person.first_name",
+      "document.number",
+      "document.issue_date",
+      "document.expiry_date",
+      "identity.nationality"
+    ],
     "additionalProperties": false,
     "x-praticaai-schema-state": "EXTRACTION_SCHEMA_DRAFT",
     "x-praticaai-evidence-basis": "LEGACY_REGISTRY+AI_PROPOSED",
@@ -24434,22 +24450,48 @@
     "$id": "schema.document.identity_personal.patente_di_guida.v2",
     "type": "object",
     "properties": {
+      "person.last_name": {
+        "type": "string",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "personal",
+        "x-praticaai-validators": []
+      },
+      "person.first_name": {
+        "type": "string",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "personal",
+        "x-praticaai-validators": []
+      },
+      "document.number": {
+        "type": "string",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "sensitive",
+        "x-praticaai-validators": [
+          "non_empty"
+        ]
+      },
+      "document.issue_date": {
+        "type": "string",
+        "format": "date",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "sensitive",
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
+      },
+      "document.expiry_date": {
+        "type": "string",
+        "format": "date",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "sensitive",
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
+      },
       "identity.document_type": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
-      },
-      "identity.document_number": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
-      },
-      "person.name": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "personal",
         "x-praticaai-validators": []
       },
       "person.tax_code": {
@@ -24475,57 +24517,20 @@
         "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
       },
-      "identity.issue_date": {
-        "type": "string",
-        "format": "date",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
-      },
-      "identity.expiry_date": {
-        "type": "string",
-        "format": "date",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
-      },
       "identity.issuing_authority": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
-      },
-      "document.number": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": [
-          "non_empty"
-        ]
-      },
-      "document.issue_date": {
-        "type": "string",
-        "format": "date",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": [
-          "valid_date"
-        ]
-      },
-      "issuer.name": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
-      },
-      "recipient.name": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
       }
     },
-    "required": [],
+    "required": [
+      "person.last_name",
+      "person.first_name",
+      "document.number",
+      "document.issue_date",
+      "document.expiry_date"
+    ],
     "additionalProperties": false,
     "x-praticaai-schema-state": "EXTRACTION_SCHEMA_DRAFT",
     "x-praticaai-evidence-basis": "LEGACY_REGISTRY+AI_PROPOSED",
@@ -24536,22 +24541,54 @@
     "$id": "schema.document.identity_personal.permesso_di_soggiorno.v2",
     "type": "object",
     "properties": {
-      "identity.document_type": {
+      "person.last_name": {
         "type": "string",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
+        "x-praticaai-pii": "personal",
         "x-praticaai-validators": []
       },
-      "identity.document_number": {
+      "person.first_name": {
+        "type": "string",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "personal",
+        "x-praticaai-validators": []
+      },
+      "document.number": {
+        "type": "string",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "sensitive",
+        "x-praticaai-validators": [
+          "non_empty"
+        ]
+      },
+      "document.issue_date": {
+        "type": "string",
+        "format": "date",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "sensitive",
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
+      },
+      "document.expiry_date": {
+        "type": "string",
+        "format": "date",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "sensitive",
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
+      },
+      "identity.nationality": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
       },
-      "person.name": {
+      "identity.document_type": {
         "type": "string",
         "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "personal",
+        "x-praticaai-pii": "none",
         "x-praticaai-validators": []
       },
       "person.tax_code": {
@@ -24577,16 +24614,8 @@
         "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
       },
-      "identity.issue_date": {
+      "person.address": {
         "type": "string",
-        "format": "date",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
-      },
-      "identity.expiry_date": {
-        "type": "string",
-        "format": "date",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
@@ -24596,38 +24625,16 @@
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
         "x-praticaai-validators": []
-      },
-      "document.number": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": [
-          "non_empty"
-        ]
-      },
-      "document.issue_date": {
-        "type": "string",
-        "format": "date",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": [
-          "valid_date"
-        ]
-      },
-      "issuer.name": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
-      },
-      "recipient.name": {
-        "type": "string",
-        "x-praticaai-evidence-required": true,
-        "x-praticaai-pii": "none",
-        "x-praticaai-validators": []
       }
     },
-    "required": [],
+    "required": [
+      "person.last_name",
+      "person.first_name",
+      "document.number",
+      "document.issue_date",
+      "document.expiry_date",
+      "identity.nationality"
+    ],
     "additionalProperties": false,
     "x-praticaai-schema-state": "EXTRACTION_SCHEMA_DRAFT",
     "x-praticaai-evidence-basis": "LEGACY_REGISTRY+AI_PROPOSED",
@@ -24684,14 +24691,18 @@
         "format": "date",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
       },
       "identity.expiry_date": {
         "type": "string",
         "format": "date",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "sensitive",
-        "x-praticaai-validators": []
+        "x-praticaai-validators": [
+          "valid_date"
+        ]
       },
       "identity.issuing_authority": {
         "type": "string",

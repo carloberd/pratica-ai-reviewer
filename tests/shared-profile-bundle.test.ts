@@ -285,6 +285,49 @@ describe('il pacchetto della mappa corretta', () => {
     )
   })
 
+  it('numero e date di un documento d’identità escono sensitive, sulla fattura no', () => {
+    const { file } = bundle(EMPTY)
+    const pii = (documentType: string, fieldId: string) =>
+      file(SCHEMAS_FILE)[documentType].properties[fieldId]['x-praticaai-pii']
+    // Sui quattro tipi le chiavi generiche prendono il posto di `identity.*`, che erano
+    // `sensitive`: il profilo lo dice al posto dell'ontologia, che per `document.*` dice `none`.
+    for (const documentType of [
+      'identity_personal.carta_identita',
+      'identity_personal.permesso_di_soggiorno',
+      'identity_personal.passaporto',
+      'identity_personal.patente_di_guida'
+    ]) {
+      for (const fieldId of ['document.number', 'document.issue_date', 'document.expiry_date']) {
+        expect(pii(documentType, fieldId), `${documentType} ${fieldId}`).toBe('sensitive')
+      }
+      expect(pii(documentType, 'person.last_name')).toBe('personal')
+    }
+    expect(ONTOLOGY['document.number']!.pii).toBe('none')
+    expect(pii('accounting.fattura', 'document.number')).toBe('none')
+    expect(pii('accounting.fattura', 'document.issue_date')).toBe('none')
+  })
+
+  it('un campo d’identità segnato non utile porta via anche il suo pii', () => {
+    const { file } = bundle({
+      ...EMPTY,
+      fields: { 'identity_personal.carta_identita': { 'document.number': 'excluded' } }
+    })
+    const profile = file(PROFILES_FILE).profiles['identity_personal.carta_identita']
+    // Un'eccezione su un campo fuori profilo farebbe rifiutare il file al loader.
+    expect(profile.field_pii_overrides).toEqual({
+      'document.issue_date': 'sensitive',
+      'document.expiry_date': 'sensitive'
+    })
+    // Un'altra decisione la lascia com'è.
+    const other = bundle({
+      ...EMPTY,
+      fields: { 'identity_personal.carta_identita': { 'person.address': 'optional' } }
+    }).file(PROFILES_FILE).profiles['identity_personal.carta_identita']
+    expect(other.field_pii_overrides).toEqual(
+      PROFILES.profiles['identity_personal.carta_identita']!.field_pii_overrides
+    )
+  })
+
   it('la visura esce coi campi nuovi, e il ripiego del revisore resta finché non lo toglie', () => {
     // La mappa della visura com'era il 18/09: il codice fiscale in `recipient.tax_id`,
     // aggiunto perché `company.tax_id` era occupato dalla partita IVA.

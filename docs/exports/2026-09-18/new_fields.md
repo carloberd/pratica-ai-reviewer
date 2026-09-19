@@ -202,33 +202,113 @@ Resta da verificare: che pratica-ai accetti chiavi che il pack non ha. Arrivano 
 `extraction_schemas_v2.json` del pacchetto della mappa, ma chi le consuma deve saperle
 leggere.
 
-### PR 2 — Cognome e nome distinti sui documenti d'identità
+### PR 2 — Cognome e nome distinti sui documenti d'identità ✅
 
-- Ontologia: `person.last_name` («Cognome»), `person.first_name` («Nome»). `person.name`
-  resta, come «Nome e cognome», per i 32 tipi dove una persona compare per intero.
-- Profili: su `carta_identita`, `permesso_di_soggiorno`, `passaporto`, `patente_di_guida`
-  `person.last_name` e `person.first_name` prendono il peso che oggi ha `person.name`
-  (required nella mappa del revisore), e `person.name` esce. Sulla carta e sul permesso
-  entrano anche `identity.nationality` e `person.address`, che il revisore ha aggiunto
-  alla mappa della carta.
-- Etichette: «Cognome», «Surname», «Nom»; «Nome», «Name», «Prénom». **Rischio da provare
-  con un test:** «Nome» sta dentro «Cognome». Se il lettore confronta le etichette senza
-  confine di parola, il nome prende il valore del cognome.
-- I doppioni, deciso il 19/09: **numero, rilascio e scadenza stanno sulle chiavi
-  generiche** `document.number`, `document.issue_date`, `document.expiry_date`. Sono le
-  chiavi di fatture, visure e DURC, e hanno già i validatori (`non_empty`, `valid_date`).
-  Escono `identity.document_number`, `identity.issue_date`, `identity.expiry_date`, e
-  con loro `issuer.name` e `recipient.name` (provenienza `LEGACY_REGISTRY`). Di
-  `identity.*` restano `identity.document_type` e `identity.issuing_authority`, che non
-  hanno un corrispettivo generico. È la direzione che il revisore aveva già preso: il
-  numero in `document.number` su entrambi i tipi, la data in `document.issue_date` sulla
-  carta. Pesi: numero, rilascio e scadenza required, come nella mappa del revisore.
-- Che cosa fa l'overlay con un campo tolto dal registry a cui il revisore aveva cambiato
-  il peso (`identity.expiry_date`, portato a required): lo rimette nel profilo con quel
-  peso (verificato nella PR 1, `tests/extract-v2-profile-loader.test.ts`). Dopo il merge
-  il revisore lo toglie dalla mappa del tipo.
-- I documenti già revisionati (due carte, un permesso) tengono i valori sotto le chiavi di
-  allora: nessuna migrazione.
+- Ontologia: `person.last_name` («Cognome»), `person.first_name` («Nome»), `pii`
+  `personal` come `person.name`. `person.name` resta, come «Nome e cognome», per i 28 tipi
+  dove una persona compare per intero; il nuovo nome è anche un'etichetta in più per il
+  lettore, su quei tipi.
+- Profili (`2.0.3`): su `carta_identita`, `permesso_di_soggiorno`, `passaporto`,
+  `patente_di_guida` `person.last_name` e `person.first_name` entrano required, e
+  `person.name` esce. Numero, rilascio e scadenza stanno sulle chiavi generiche
+  `document.number`, `document.issue_date`, `document.expiry_date`, required (deciso il
+  19/09): sono le chiavi di fatture, visure e DURC, e hanno già i validatori (`non_empty`,
+  `valid_date`). Escono `identity.document_number`, `identity.issue_date`,
+  `identity.expiry_date`, `issuer.name` e `recipient.name`; di `identity.*` restano
+  `identity.document_type` (core) e `identity.issuing_authority` (optional), che non hanno
+  un corrispettivo generico. Provenienza `REVIEWER_ANNOTATIONS` per i campi entrati o
+  ripesati.
+- Cittadinanza e residenza, tipo per tipo:
+  - carta e permesso: `identity.nationality` required e `person.address` core, come nella
+    mappa della carta;
+  - passaporto: `identity.nationality` required (la stampa sempre), `person.address`
+    optional (il passaporto italiano ha la residenza, molti stranieri no);
+  - patente: nessuno dei due. La patente europea non stampa la cittadinanza, e la
+    residenza non sta sulla tessera: un cambio arriva col tagliando sul retro. Il revisore
+    li aggiunge dalla mappa se servono.
+- `identity.issue_date` e `identity.expiry_date` restano su `certificato_nascita`,
+  `certificato_residenza`, `codice_fiscale`, `stato_di_famiglia`: prendono `valid_date`
+  (sotto, «Un valore nel campo sbagliato»).
+- Etichette: «Cognome», «Surname», «Nom»; «Nome», «Name», «Prénom», «Prénoms», «Given
+  names». I documenti già revisionati (due carte, un permesso) tengono i valori sotto le
+  chiavi di allora: nessuna migrazione.
+
+Quello che l'implementazione ha scoperto, e il piano non diceva:
+
+- **«Nome» dentro «Cognome» non è il rischio.** Il lettore cerca le etichette a confini di
+  parola, e il testo libero vuole l'etichetta in testa al segmento: basta una delle due
+  regole, e un test cade solo senza entrambe. Anche «COGNOME, NOME DEI GENITORI…» sul retro
+  della carta e «Cognome e nome: ROSSI MARIO» non danno niente a nessuno dei due campi.
+- **Il rischio vero era l'etichetta bilingue.** Sulla carta elettronica l'etichetta è
+  «COGNOME / SURNAME» e il valore sta sotto. Con la sola «Cognome», la riga non finisce
+  con l'etichetta e il lettore non guarda sotto: il campo restava vuoto. Negli hint ci
+  sono anche «Cognome/Surname», «Nome/Name», «Indirizzo di residenza/Residence».
+- **Una riga-etichetta non è un valore.** Se l'OCR perde il cognome, sotto «COGNOME /
+  SURNAME» c'è «NOME / NAME», e il lettore la prendeva per il cognome. Ora una riga che è
+  soltanto l'etichetta di un campo del profilo non è il valore di nessuno: il cognome
+  resta vuoto. La regola vale per tutti i tipi, e nessun test esistente è cambiato.
+- **Le chiavi generiche non avevano le etichette di `identity.*`.** `document.expiry_date`
+  si cercava con «Data scadenza», non con «Scadenza»; `document.issue_date` non aveva
+  «Data rilascio». Spostare i campi senza le etichette sarebbe stata una perdita: ora le
+  hanno, per tutti i tipi che le chiedono, e sul permesso «Nazionalità» si legge.
+- **Il `pii` è del campo, e le chiavi generiche sono `none`.** `identity.document_number`
+  e le date di `identity.*` sono `pii: sensitive`, `document.*` `pii: none`: senza altro,
+  lo schema esportato avrebbe detto `none` per il numero di una carta d'identità, ed è
+  quello che pratica-ai riceve (`x-praticaai-pii`). Il profilo di un tipo ora può
+  cambiare il `pii` di un campo, `field_pii_overrides`, come fa coi validatori
+  (`field_validator_overrides`). Sui quattro documenti d'identità `document.number`,
+  `document.issue_date` e `document.expiry_date` sono `sensitive`; sulla fattura e sugli
+  altri tipi restano `none`. Un campo segnato non utile porta via la sua eccezione, come
+  per i validatori.
+
+Non si legge ancora, e resta fuori:
+
+- **Valore accanto all'etichetta senza i due punti** («COGNOME / SURNAME ROSSI», «Cognome
+  ROSSI» sulla carta cartacea): il testo libero vuole i due punti sulla stessa riga, per
+  tutti i campi. Il campo resta vuoto, non sbagliato.
+- **Due etichette affiancate** («EMISSIONE / ISSUING SCADENZA / EXPIRY», con le due date
+  sotto): il lettore non sa in che colonna sta il valore. La scadenza resta vuota invece
+  di prendere la data di emissione, per questo non c'è un'etichetta «Scadenza/Expiry».
+- **Il passaporto** scrive «Cognome/Surname/Nom (1)»: il numero del campo dopo
+  l'etichetta ferma la lettura sulla riga sotto. **La patente** non ha etichette, solo
+  numeri («1.», «2.»). Su tutti e due il revisore scrive cognome e nome a mano, come
+  faceva col nome intero; le etichette imparate dalle revisioni restano la strada.
+- **La zona a lettura ottica** (MRZ) della carta e del passaporto porta cognome e nome
+  separati da `<<`: un lettore suo, non un'etichetta.
+
+Le righe dei test sono ricostruite sul modello della carta elettronica e del permesso,
+non prese dai file: l'export non porta il testo delle pagine.
+
+#### Dopo il merge, nella mappa
+
+La mappa si somma al registry (`applyOverlay`): una decisione del revisore su un campo
+uscito dal profilo lo rimette dentro col suo peso, e un'esclusione resta un'esclusione
+(verificato in `tests/extract-v2-profile-loader.test.ts`, con le decisioni che l'export
+del 18/09 fa vedere). Cosa vedrà il revisore, e cosa ripristinare (**Ripristina** sulla
+scheda del campo, o sulla lista «Segnati non utili»):
+
+- **Carta d'identità.** Tornano `person.name` (required) accanto a cognome e nome, e
+  `identity.expiry_date` (required) accanto a `document.expiry_date`: il motore cerca
+  tutti e quattro, e la scheda li chiede tutti. Ripristinare `person.name` e
+  `identity.expiry_date`, che escono dalla mappa. `identity.document_type` resta escluso,
+  perché è una decisione sua: il registry lo tiene core. Le decisioni uguali al registry
+  nuovo (`identity.nationality` required, `person.address` core, `document.number` e
+  `document.issue_date` required) non cambiano niente, e si possono ripristinare per
+  pulizia. Le esclusioni su `identity.document_number`, `identity.issue_date`,
+  `issuer.name`, `recipient.name` non hanno più effetto. Nascita e luogo di nascita
+  required restano sue decisioni: il registry li tiene core.
+- **Permesso di soggiorno.** Tornano `person.name` e `identity.expiry_date` (required) e
+  `identity.document_number` (optional): ripristinarli. E soprattutto: **ripristinare
+  `document.issue_date` fra i «Segnati non utili»**. Il revisore l'aveva escluso perché
+  usava `identity.issue_date`, che ora esce dal registry: senza ripristino il permesso
+  resta senza data di rilascio.
+- Passaporto e patente non hanno decisioni nell'export.
+
+Sui documenti già revisionati `person.name`, `identity.expiry_date`,
+`identity.document_number` e `identity.issue_date` hanno un valore: una volta fuori dalla
+mappa compaiono fra i «Compilati a mano, fuori dalla mappa» (`identity.issue_date` del
+permesso subito, gli altri dopo il ripristino). Non vanno riaggiunti: il dato ora sta
+nei campi nuovi.
 
 Fuori da questa PR: «non riconosce documenti in orizzontale» (`eeba7565`). È
 l'orientamento della pagina prima dell'OCR, non un campo: va misurato su quel file e
@@ -331,5 +411,5 @@ classificatore e profili per un dato che si calcola.
 - **Un valore nel campo sbagliato.** Sulla carta d'identità `46a0c3b6`
   `identity.expiry_date` vale `COMUNE DI ROVIGO`. Nessuno poteva segnalarlo: la scheda
   valida quello che si vede solo dal 19/09 (`eaf310a`), e le date di `identity.*`
-  (`issue_date`, `expiry_date`) non hanno validatori, mentre `document.issue_date` ha
-  `valid_date`. Aggiungerlo è una riga nell'ontologia, da mettere nella PR 2.
+  (`issue_date`, `expiry_date`) non avevano validatori. Chiuso nella PR 2: hanno
+  `valid_date`, e la carta del 18/09 mostra l'avviso sotto la chiave di allora.
