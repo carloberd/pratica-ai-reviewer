@@ -368,32 +368,61 @@ Sul bonifico l'export del 18/09 ha una sola decisione, l'esclusione di
 valore, compare fra i «Compilati a mano, fuori dalla mappa» e non va riaggiunto, perché
 il dato ora sta in `payment.execution_date`.
 
-### PR 4 — La scadenza della formazione si calcola
+### PR 4 — La scadenza della formazione si calcola ✅
 
 Oggi `hse.training_expiry` è un campo da leggere. Un attestato di solito non la scrive:
 la scadenza dipende dal corso e dalla normativa. Il revisore ha scritto `13-05-2026` per
 un attestato del 13/05/2021, cioè cinque anni dopo.
 
-- Una tabella `corso → validità in anni` (modulo puro in `src/shared`), con la data da
-  cui si parte: rilascio dell'attestato o fine del corso. Nell'esempio il revisore è
-  partito dal rilascio (13/05), non dall'ultima giornata (04/05).
+- Una tabella `corso → validità in anni` (`src/shared/training-expiry.ts`, modulo puro),
+  con la data da cui si parte: rilascio dell'attestato o fine del corso. Nell'esempio il
+  revisore è partito dal rilascio (13/05), non dall'ultima giornata (04/05).
 - Il motore propone la scadenza quando il documento non la scrive e il corso è nella
   tabella. Una scadenza scritta sul documento vince sempre.
-- Il dataset deve dire che il valore è calcolato: oggi `origin` è `ENGINE | REVIEWER`.
-  Serve un terzo valore, o un flag sul campo, e `DATASET_FORMAT_VERSION` da alzare.
-  Senza, una scadenza dedotta si misurerebbe come una letta.
+- Il dataset dice che il valore è calcolato: `origin` ha un terzo valore, `COMPUTED`,
+  e `DATASET_FORMAT_VERSION` passa a `1.8.0`. Senza, una scadenza dedotta si misurerebbe
+  come una letta.
 
 La tabella non si scrive a memoria. L'unico dato che l'export conferma sono i cinque anni
 della formazione lavoratori: la PR parte con quella riga sola, su
 `hse_training.attestato_formazione_generale` e `attestato_formazione_specifica`. Gli
 altri corsi (preposto, antincendio, primo soccorso, lavori in quota, spazi confinati, DPI
-di terza categoria) non hanno una scadenza calcolata finché qualcuno che conosce la
+di terza categoria, RLS) non hanno una scadenza calcolata finché qualcuno che conosce la
 normativa in vigore non scrive la riga, con il riferimento accanto. La PR lascia il posto
 e dice come aggiungerla.
+
+Quello che l'implementazione ha scoperto, e il piano non diceva:
+
+- **Un valore dedotto non è solo un'origine nel dataset.** Fino a qui «proposto» e
+  «letto» erano la stessa cosa, e l'evidenza lo dimostrava: campo pieno voleva dire riga
+  verbatim del documento. Una scadenza calcolata rompe la coppia, e il flag serve lungo
+  tutta la catena, non solo in fondo: `computed` sul fatto, sul campo e nel database
+  (migrazione `0018`), o al primo salvataggio la deduzione sparisce e resta una data che
+  sembra letta. Nel dataset diventa `origin: "COMPUTED"`; corretta dal revisore torna
+  `REVIEWER`, come ogni altra proposta.
+- **Il campo tornava vuoto appena salvato.** La pipeline scriveva il valore solo se il
+  fatto aveva un'evidenza — regola giusta fino a ieri, ma un valore dedotto non ne ha
+  nessuna, e finiva a `null` fra la lettura e il database.
+- **Il revisore doveva poterlo distinguere a colpo d'occhio.** Una data senza evidenza e
+  senza altro sembra una lettura andata male. Sulla scheda ora c'è la pillola «dedotto»,
+  la confidence è 0,60 — sotto la soglia di accettazione automatica — e lo stato è
+  `NEEDS_REVIEW`: il motore la propone, non l'afferma.
+- **«N campi con evidenza verbatim» sarebbe diventata falsa.** L'evento
+  dell'elaborazione conta i letti e elenca i dedotti a parte.
+- **Un obbligatorio dedotto non è più mancante.** `hse.training_expiry` oggi è core
+  dappertutto, ma se un profilo lo chiedesse required il run avrebbe segnalato «manca» un
+  campo che ha un valore, chiedendo di cercare nel documento una data che il documento non
+  ha.
 
 Fuori da questa PR, alla tassonomia: generale e specifica a volte sono un attestato solo, a
 volte due. Il revisore ha tenuto «formazione generale». Un campo `hse.training_course`
 con più valori coprirebbe il caso senza un tipo nuovo.
+
+E fuori da questa PR, all'ontologia: `hse.training_expiry` ha `evidence_required: true`,
+come tutti e 257 i campi del pack. Un valore dedotto non ce l'ha, e il flag esce così
+com'è negli schemi (`x-praticaai-evidence-required`). Non è una bugia sul campo — quando
+l'estrazione lo legge, l'evidenza la vuole — ma chi consuma gli schemi va avvisato che
+`COMPUTED` esiste.
 
 ### PR 5 — Emessa o ricevuta
 
