@@ -1,5 +1,5 @@
 {
-  "version": "2.0.1",
+  "version": "2.0.2",
   "active_registry_source": "Document Brain 496 active classes",
   "profiles": {
     "accounting.autofattura": {
@@ -216,8 +216,10 @@
         "money.total"
       ],
       "core_fields": [
-        "issuer.tax_id",
-        "recipient.tax_id",
+        "issuer.vat_number",
+        "issuer.tax_code",
+        "recipient.vat_number",
+        "recipient.tax_code",
         "money.taxable",
         "money.tax",
         "money.currency",
@@ -235,8 +237,10 @@
         "money.currency": "AI_PROPOSED_FAMILY",
         "line_items": "AI_PROPOSED_CLASS",
         "procurement.cup": "AI_PROPOSED_CLASS",
-        "issuer.tax_id": "AI_PROPOSED_FAMILY",
-        "recipient.tax_id": "AI_PROPOSED_FAMILY",
+        "issuer.vat_number": "REVIEWER_ANNOTATIONS",
+        "issuer.tax_code": "REVIEWER_ANNOTATIONS",
+        "recipient.vat_number": "REVIEWER_ANNOTATIONS",
+        "recipient.tax_code": "REVIEWER_ANNOTATIONS",
         "document.issue_date": "AI_PROPOSED_FAMILY",
         "money.tax": "LEGACY_REGISTRY",
         "money.taxable": "LEGACY_REGISTRY",
@@ -5607,8 +5611,9 @@
       "core_fields": [
         "document.issue_date",
         "company.name",
-        "company.tax_id",
-        "company.registration_number",
+        "company.vat_number",
+        "company.tax_code",
+        "company.rea_number",
         "company.register_office",
         "document.number",
         "issuer.name",
@@ -5626,7 +5631,8 @@
         "document.declaration_date": "AI_PROPOSED_CLASS",
         "environment.criteria": "AI_PROPOSED_CLASS",
         "company.register_office": "AI_PROPOSED_FAMILY",
-        "company.tax_id": "AI_PROPOSED_FAMILY",
+        "company.vat_number": "REVIEWER_ANNOTATIONS",
+        "company.tax_code": "REVIEWER_ANNOTATIONS",
         "company.name": "AI_PROPOSED_FAMILY",
         "document.issue_date": "AI_PROPOSED_FAMILY",
         "document.number": "LEGACY_REGISTRY",
@@ -5635,7 +5641,7 @@
         "product.name": "AI_PROPOSED_CLASS",
         "issuer.name": "LEGACY_REGISTRY",
         "recipient.name": "LEGACY_REGISTRY",
-        "company.registration_number": "AI_PROPOSED_FAMILY"
+        "company.rea_number": "REVIEWER_ANNOTATIONS"
       },
       "confusables": [
         "corporate_registry.certificato_camerale",

@@ -126,6 +126,23 @@ describe('la revisione valida il valore che si vede', () => {
     ])
   })
 
+  it('sulla fattura un codice fiscale di persona non passa per partita IVA', () => {
+    const cf = 'RSSMRA80A01H501U'
+    const { field } = setup('accounting.fattura', [
+      one('issuer.vat_number', cf),
+      one('issuer.tax_code', cf),
+      one('recipient.vat_number', 'IT12345678903'),
+      one('recipient.tax_code', '12345678903'),
+      // Una fattura elaborata prima tiene le chiavi di allora, coi validatori di allora.
+      one('issuer.tax_id', cf)
+    ])
+    expect(field('issuer.vat_number').validationErrors).toEqual(['INVALID_VAT_FORMAT'])
+    expect(field('issuer.tax_code')).not.toHaveProperty('validationErrors')
+    expect(field('recipient.vat_number')).not.toHaveProperty('validationErrors')
+    expect(field('recipient.tax_code')).not.toHaveProperty('validationErrors')
+    expect(field('issuer.tax_id')).not.toHaveProperty('validationErrors')
+  })
+
   it('senza registry v2, o su un nome del motore v1, non si valida niente', () => {
     expect(validateFieldValue(undefined, 'accounting.fattura', 'bank.iban', BAD_IBAN)).toEqual([])
     expect(validateFieldValue(testRegistryV2(), 'accounting.fattura', 'iban', BAD_IBAN)).toEqual([])

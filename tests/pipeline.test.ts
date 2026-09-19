@@ -320,7 +320,7 @@ describe('motore v2 — PDF con testo nativo', () => {
 
     expect(outcome.documentType).toBe('accounting.fattura')
     expect(outcome.typeConfidence).toBeGreaterThanOrEqual(0.74)
-    expect(outcome).toMatchObject({ filledFields: 8, totalFields: 15, confidence: 0.85 })
+    expect(outcome).toMatchObject({ filledFields: 10, totalFields: 17, confidence: 0.814 })
 
     const rows = repo.fields.listForDocument(id)
     expect(rows.map((f) => [f.name, f.role, f.review_status, f.value])).toEqual([
@@ -329,8 +329,12 @@ describe('motore v2 — PDF con testo nativo', () => {
       ['issuer.name', 'required', 'AUTO_ACCEPTED', 'Alfa S.r.l.'],
       ['recipient.name', 'required', 'AUTO_ACCEPTED', 'Beta Costruzioni S.p.A.'],
       ['money.total', 'required', 'AUTO_ACCEPTED', '86420.00'],
-      ['issuer.tax_id', 'core', 'MISSING', null],
-      ['recipient.tax_id', 'core', 'MISSING', null],
+      // Una partita IVA sola, e l'etichetta non dice di chi è: le due parti la leggono
+      // entrambe e vanno in conflitto, invece di indovinare.
+      ['issuer.vat_number', 'core', 'CONFLICT', '01234567890'],
+      ['issuer.tax_code', 'core', 'MISSING', null],
+      ['recipient.vat_number', 'core', 'CONFLICT', '01234567890'],
+      ['recipient.tax_code', 'core', 'MISSING', null],
       ['money.taxable', 'core', 'AUTO_ACCEPTED', '70836.07'],
       ['money.tax', 'core', 'AUTO_ACCEPTED', '15583.93'],
       ['money.currency', 'core', 'AUTO_ACCEPTED', 'EUR'],
@@ -358,7 +362,7 @@ describe('motore v2 — PDF con testo nativo', () => {
       const evidence = document.evidence.find((item) => item.id === field.evidenceId)
       expect(evidence?.bbox?.w, `${field.name} senza evidenza`).toBeGreaterThan(0)
     }
-    expect(document.evidence).toHaveLength(8)
+    expect(document.evidence).toHaveLength(10)
     expect(document.warnings).toEqual([])
     expect(repo.search.matchingDocumentIds('costruzioni')).toEqual([id])
 
@@ -368,17 +372,17 @@ describe('motore v2 — PDF con testo nativo', () => {
       /^accounting\.fattura al 83% col classificatore v2 da «fattura»; nessun altro candidato, margine 0,83\.$/
     )
     expect(events[1]?.detail).toBe(
-      '8 campi su 15 con evidenza verbatim, profilo v2 EXTRACTION_SCHEMA_READY_FOR_FIELD_TEST.'
+      '10 campi su 17 con evidenza verbatim, profilo v2 EXTRACTION_SCHEMA_READY_FOR_FIELD_TEST. Un conflitto fra candidati da verificare.'
     )
 
     const [run] = repo.extractionRuns.listForDocument(id)
     expect(run).toMatchObject({
       engine_version: EXTRACTION_ENGINE_V2_VERSION,
-      schema_version: '2.0.1',
+      schema_version: '2.0.2',
       document_type: 'accounting.fattura',
       status: 'COMPLETED',
       missing_required_json: '[]',
-      conflicts_json: '[]'
+      conflicts_json: '["SHARED_EVIDENCE:issuer.vat_number|recipient.vat_number"]'
     })
     // La proposta del classificatore resta sul documento, con la riga da cui viene.
     expect(document.classification).toMatchObject({
@@ -407,11 +411,11 @@ describe('motore v2 — PDF con testo nativo', () => {
 
     expect(JSON.parse(run!.metrics_json!)).toMatchObject({
       profileSource: 'V2_EXPLICIT',
-      coverage: 0.53,
-      filledFields: 8,
-      totalFields: 15,
+      coverage: 0.59,
+      filledFields: 10,
+      totalFields: 17,
       textSource: 'NATIVE_TEXT',
-      reviewStatus: { AUTO_ACCEPTED: 8, MISSING: 7 },
+      reviewStatus: { AUTO_ACCEPTED: 8, CONFLICT: 2, MISSING: 7 },
       classifier: {
         engine: 'v2',
         decision: 'ASSIGN',
@@ -455,9 +459,12 @@ describe('motore v2 — un campo del profilo che l’ontologia non descrive', ()
 
     const [run] = repo.extractionRuns.listForDocument(id)
     expect(JSON.parse(run!.missing_required_json!)).toEqual(['ghost.field'])
-    expect(JSON.parse(run!.conflicts_json!)).toEqual(['UNKNOWN_FIELD:ghost.field'])
+    expect(JSON.parse(run!.conflicts_json!)).toEqual([
+      'UNKNOWN_FIELD:ghost.field',
+      'SHARED_EVIDENCE:issuer.vat_number|recipient.vat_number'
+    ])
     // Prima il campo spariva dal run: copertura 1,0 su un obbligatorio mai cercato.
-    expect(JSON.parse(run!.metrics_json!)).toMatchObject({ coverage: 0.5, totalFields: 16 })
+    expect(JSON.parse(run!.metrics_json!)).toMatchObject({ coverage: 0.56, totalFields: 18 })
     expect(repo.getReviewDocument(id)!.warnings).toContain(
       'Campo obbligatorio senza evidenza: ghost.field.'
     )
@@ -664,7 +671,7 @@ describe('motori combinati', () => {
     const outcome = await processorFor(repo, { classifier: 'v1', extraction: 'v2' })(
       inputFor(id, 'fattura-nativa.pdf', PDF)
     )
-    expect(outcome).toMatchObject({ typeConfidence: 0.9, totalFields: 15 })
+    expect(outcome).toMatchObject({ typeConfidence: 0.9, totalFields: 17 })
     expect(repo.events.listForDocument(id)[0]?.detail).toBe(
       'accounting.fattura al 90% da «fattura» in prima pagina.'
     )
@@ -693,8 +700,8 @@ describe('motore v2 — rielaborazione e correzioni', () => {
     await process(input)
 
     const document = repo.getReviewDocument(id)!
-    expect(document.fields).toHaveLength(15)
-    expect(document.evidence).toHaveLength(8)
+    expect(document.fields).toHaveLength(17)
+    expect(document.evidence).toHaveLength(10)
     expect(repo.extractionRuns.listForDocument(id)).toHaveLength(2)
     repo.close()
   })
@@ -893,7 +900,7 @@ describe('il testo su cui si ritrovano le selezioni', () => {
     })
     // Le evidenze del motore non si moltiplicano, quella del revisore resta una.
     expect(document.evidence.filter((e) => e.origin === 'REVIEWER')).toHaveLength(1)
-    expect(document.evidence.filter((e) => e.origin === 'ENGINE')).toHaveLength(8)
+    expect(document.evidence.filter((e) => e.origin === 'ENGINE')).toHaveLength(10)
     repo.close()
   })
 })

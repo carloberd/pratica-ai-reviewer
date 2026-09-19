@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   checkTaxId,
+  checkVatNumber,
   FIELD_VALIDATORS,
   isValidCodiceFiscale,
   isValidDate,
@@ -13,6 +14,7 @@ import {
   validationErrorsOf,
   validatorsOf
 } from '../src/main/extract/v2/validators'
+import { validationMessage } from '../src/shared/validation-messages'
 import { REGISTRY_V2_DIR } from './helpers/registry'
 
 const readRegistry = <T>(file: string): T =>
@@ -66,6 +68,24 @@ describe('validatori dell’ontologia v2', () => {
     expect(checkTaxId('RSSMRA80A01H501UXY')).toBe('BAD_FORMAT')
     // Una lettera letta come cifra rompe la forma, non solo il controllo.
     expect(checkTaxId('RSSMRA80A017501U')).toBe('BAD_FORMAT')
+  })
+
+  it('la partita IVA vuole undici cifre: un codice fiscale di persona non ha la forma', () => {
+    expect(checkVatNumber('12345678903')).toBe('VALID')
+    expect(checkVatNumber('IT 12345678903')).toBe('VALID')
+    expect(checkVatNumber('12345678930')).toBe('BAD_CHECKSUM')
+    // Un codice fiscale valido, ma nel campo sbagliato: `checkTaxId` lo farebbe passare.
+    expect(checkTaxId('RSSMRA80A01H501U')).toBe('VALID')
+    expect(checkVatNumber('RSSMRA80A01H501U')).toBe('BAD_FORMAT')
+    expect(checkVatNumber('1234567890')).toBe('BAD_FORMAT')
+    expect(runFieldValidator('vat_number_format', 'rssmra80a01h501u')).toBe('INVALID_VAT_FORMAT')
+    expect(runFieldValidator('vat_number_format', '12345678930')).toBe('INVALID_VAT_CHECKSUM')
+    expect(runFieldValidator('vat_number_format', 'IT12345678903')).toBeNull()
+    // Chi rivede legge una frase, non il codice.
+    expect(validationMessage('INVALID_VAT_FORMAT')).toBe(
+      'Non ha la forma di una partita IVA: 11 cifre.'
+    )
+    expect(validationMessage('INVALID_VAT_CHECKSUM')).not.toBe('INVALID_VAT_CHECKSUM')
   })
 
   it('IBAN col controllo del checksum', () => {
