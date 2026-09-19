@@ -74,6 +74,7 @@ export async function collectXlsxRows(
 ): Promise<XlsxRows> {
   const firstPageLines = deps.firstPageLines ?? readFirstPageLines
   const sources: XlsxSource[] = []
+  const company = repo.company.get()
 
   for (const row of repo.documents.list()) {
     if (row.status === 'NEEDS_REVIEW') continue
@@ -84,6 +85,7 @@ export async function collectXlsxRows(
     const [run] = repo.extractionRuns.listForDocument(row.id)
     sources.push({
       document,
+      company,
       metricsJson: run?.metrics_json ?? null,
       templateFingerprint: await ensureFingerprint(repo, row, firstPageLines)
     })

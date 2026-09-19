@@ -1,3 +1,12 @@
+import {
+  type CompanyIdentity,
+  type DirectionChoice,
+  type DirectionMatch,
+  type DocumentDirection,
+  directionOf,
+  EMPTY_COMPANY,
+  isDirectionalType
+} from './document-direction'
 import type { FieldRole } from './extraction-v2'
 import {
   type CorrectionKind,
@@ -30,7 +39,7 @@ import type {
  */
 
 export const DATASET_FORMAT = 'praticaai-reviewer/annotated-dataset'
-export const DATASET_FORMAT_VERSION = '1.8.0'
+export const DATASET_FORMAT_VERSION = '1.9.0'
 
 export type EngineVersion = 'v1' | 'v2'
 
@@ -225,6 +234,28 @@ export interface DatasetDocumentType {
   chosen: DatasetChosenAmongCandidates | null
 }
 
+/**
+ * Emesso o ricevuto, dalla `1.9.0`. `null` sui tipi che non hanno una direzione: su una
+ * visura la domanda non ha senso.
+ *
+ * Non è un campo estratto e non ha evidenza: si ricava confrontando le parti del
+ * documento con l'azienda di cui sono i documenti, che è un'impostazione dell'app. Per
+ * questo escono tutti e tre i pezzi — quello che vale, quello che il calcolo aveva detto
+ * e la scelta del revisore — come per il tipo: è la differenza fra i due che dice se il
+ * calcolo funziona.
+ */
+export interface DatasetDocumentDirection {
+  /** La direzione che vale: la scelta del revisore, o il calcolo. */
+  value: DocumentDirection | null
+  /** Quella calcolata dal documento, anche quando il revisore ha scelto altro. */
+  computed: DocumentDirection | null
+  /** Su cosa ha deciso il calcolo: identificativo fiscale o nome della parte. */
+  matchedBy: DirectionMatch | null
+  chosenBy: 'REVIEWER' | 'ENGINE' | null
+  /** La scelta del revisore comʼè: `NESSUNA` dice «né l'una né l'altra». */
+  choice: DirectionChoice | null
+}
+
 export interface DatasetDocument {
   /** Chiave stabile: `https://drive.google.com/file/d/<driveFileId>/view`. */
   driveFileId: string
@@ -236,6 +267,8 @@ export interface DatasetDocument {
   reviewedAt: string | null
   textSource: TextSource | null
   documentType: DatasetDocumentType
+  /** Emesso o ricevuto per l'azienda di cui sono i documenti; `null` se il tipo non ne ha. */
+  direction: DatasetDocumentDirection | null
   /** L'ultima estrazione che ha prodotto i campi proposti. */
   extraction: {
     engineVersion: string
@@ -256,6 +289,11 @@ export interface AnnotatedDataset {
 export interface DatasetSource {
   document: ReviewDocument
   extraction: DatasetDocument['extraction']
+  /**
+   * L'azienda di cui sono i documenti, con cui si decide emesso o ricevuto. Senza, la
+   * direzione resta vuota su tutti i documenti: non c'è niente con cui confrontare le parti.
+   */
+  company?: CompanyIdentity
 }
 
 export type DatasetManifestInput = Pick<DatasetManifest, 'exportedAt' | 'app' | 'engines'> &
@@ -423,6 +461,7 @@ export function toDatasetDocument(source: DatasetSource): DatasetDocument | null
     reviewedAt: document.reviewedAt,
     textSource: document.textSource,
     documentType: toDocumentType(document),
+    direction: toDirection(document, source.company ?? EMPTY_COMPANY),
     extraction: source.extraction,
     fields: reviewed ? document.fields.map((field) => toDatasetField(field, byId)) : [],
     corrections: reviewed
@@ -436,6 +475,29 @@ export function toDatasetDocument(source: DatasetSource): DatasetDocument | null
           pick: correction.after === null ? null : correctionPick(correction)
         }))
       : []
+  }
+}
+
+/** La direzione di un documento, nella forma del dataset. */
+function toDirection(
+  document: ReviewDocument,
+  company: CompanyIdentity
+): DatasetDocumentDirection | null {
+  const state = directionOf({
+    documentType: document.documentType,
+    company,
+    fields: document.fields,
+    choice: document.directionChoice
+  })
+  // Un tipo senza direzione non ha la proprietà; uno che ce l'ha la porta anche vuota,
+  // perché «non si è ricavata» è un esito, e chi conta gli esiti deve poterlo vedere.
+  if (!isDirectionalType(document.documentType)) return null
+  return {
+    value: state.value,
+    computed: state.computed?.direction ?? null,
+    matchedBy: state.computed?.matchedBy ?? null,
+    chosenBy: state.chosenBy,
+    choice: state.choice
   }
 }
 

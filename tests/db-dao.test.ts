@@ -981,3 +981,36 @@ describe('transazioni', () => {
     expect(r.events.listForDocument(id)).toHaveLength(0)
   })
 })
+
+describe('l’azienda e la direzione', () => {
+  it('l’azienda parte vuota e resta quella scritta, senza spazi inutili', () => {
+    const r = makeRepo()
+    expect(r.company.get()).toEqual({ name: null, vatNumber: null, taxCode: null })
+
+    expect(
+      r.company.set({ name: '  POLESINE MASSETTI SRLS ', vatNumber: '01479320291', taxCode: '  ' })
+    ).toEqual({
+      name: 'POLESINE MASSETTI SRLS',
+      vatNumber: '01479320291',
+      // Un campo lasciato in bianco non è un valore: tornerebbe a confrontarsi con tutto.
+      taxCode: null
+    })
+    expect(r.company.get().name).toBe('POLESINE MASSETTI SRLS')
+  })
+
+  it('la direzione scelta dal revisore si scrive sul documento, e si toglie', () => {
+    const r = makeRepo()
+    const id = seedDocument(r)
+    expect(r.getReviewDocument(id)?.directionChoice).toBeNull()
+
+    r.documents.setDirectionChoice(id, 'RICEVUTO')
+    expect(r.getReviewDocument(id)?.directionChoice).toBe('RICEVUTO')
+
+    // «Né l'una né l'altra» è una decisione, non un buco.
+    r.documents.setDirectionChoice(id, 'NESSUNA')
+    expect(r.getReviewDocument(id)?.directionChoice).toBe('NESSUNA')
+
+    r.documents.setDirectionChoice(id, null)
+    expect(r.getReviewDocument(id)?.directionChoice).toBeNull()
+  })
+})

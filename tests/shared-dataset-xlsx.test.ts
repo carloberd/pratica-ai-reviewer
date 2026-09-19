@@ -88,6 +88,9 @@ describe('righe dell’export XLSX', () => {
         margin: 0.42,
         template_fingerprint: 'a1b2c3d4e5f60718',
         review_status: 'REVIEWED',
+        // Senza l'azienda di cui sono i documenti non c'è niente con cui confrontare le parti.
+        direction: null,
+        direction_chosen_by: null,
         review_note: null
       }
     ])

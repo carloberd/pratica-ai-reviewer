@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import type { DirectionChoice } from '@shared/document-direction'
 import type { NormalizedTemplateSignature } from '@shared/template-fingerprint'
 import type {
   ConfidenceBand,
@@ -124,6 +125,14 @@ export function createDocumentsDao(db: Db) {
     },
 
     /** Assegnazione manuale del tipo dalla UI: la confidence del tipo diventa nulla. */
+    /**
+     * La direzione scelta dal revisore, o `null` per tornare a quella calcolata. Non è un
+     * campo del documento: si scrive sul documento perché è una decisione su di lui.
+     */
+    setDirectionChoice(id: string, choice: DirectionChoice | null): void {
+      db.prepare('UPDATE documents SET direction_choice = ? WHERE id = ?').run(choice, id)
+    },
+
     setType(id: string, documentType: string | null, typeConfidence: number | null): void {
       db.prepare('UPDATE documents SET document_type = ?, type_confidence = ? WHERE id = ?').run(
         documentType,

@@ -49,6 +49,11 @@ export interface DocumentRow {
   review_note: string | null
   /** Sha-256 del file elaborato (migrazione 0010); NULL = elaborato prima. */
   content_sha256: string | null
+  /**
+   * La direzione scelta dal revisore (migrazione 0019): NULL vuol dire che non l'ha
+   * toccata, e allora vale quella che si ricava dal documento.
+   */
+  direction_choice: string | null
 }
 
 export interface FieldRow {
