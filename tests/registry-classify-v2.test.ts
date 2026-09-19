@@ -87,6 +87,42 @@ describe('decisione', () => {
     expect(result.documentType).not.toBe('certifications_licenses.white_list_prefettura')
   })
 
+  it('una comunicazione di permanenza nella White List non diventa il provvedimento', () => {
+    const result = matchDocumentTypeV2({
+      aliases: realAliases,
+      pages: [
+        'COMUNICAZIONE DELL’INTERESSE A PERMANERE NELLA WHITE LIST\nAlla Prefettura - Ufficio Antimafia\nAllegati: documento di identità del sottoscrittore'
+      ],
+      filename: 'rinnovo-white-list.pdf',
+      config: realConfig
+    })
+    expect(result.decision).toBe('UNKNOWN')
+    expect(result.documentType).not.toBe('certifications_licenses.white_list_prefettura')
+  })
+
+  // La normalizzazione tiene l'apostrofo: «dell’interesse» resta una parola sola. La frase
+  // esclusiva parte dopo, così scatta con l'apostrofo tipografico, con quello dritto e
+  // anche quando l'OCR lo perde.
+  it.each([
+    'COMUNICAZIONE DELL’INTERESSE A PERMANERE NELLA WHITE LIST',
+    "COMUNICAZIONE DELL'INTERESSE A PERMANERE NELLA WHITE LIST",
+    'COMUNICAZIONE DELL INTERESSE A PERMANERE NELLA WHITE LIST',
+    'COMUNICAZIONE DELLINTERESSE A PERMANERE NELLA WHITE LIST'
+  ])('col titolo del provvedimento, «%s» resta UNKNOWN', (line) => {
+    const result = matchDocumentTypeV2({
+      aliases: [alias('certifications_licenses.white_list_prefettura', 'white list prefettura')],
+      pages: [`WHITE LIST PREFETTURA\n${line}`],
+      filename: 'documento.pdf',
+      config: realConfig
+    })
+    expect(result).toMatchObject({ decision: 'UNKNOWN', reason: 'HARD_NEGATIVE' })
+    expect(result.candidates[0]?.evidence).toContainEqual({
+      source: 'hard-negative-signal',
+      phrase: 'a permanere nella white list',
+      delta: -realConfig.defaults.hard_negative_penalty
+    })
+  })
+
   it('una frase solo nel nome del file non assegna mai', () => {
     const result = matchDocumentTypeV2({
       aliases: [alias('accounting.fattura', 'fattura')],
@@ -200,13 +236,16 @@ describe('decisione', () => {
 describe('profili di segnali delle classi problematiche', () => {
   const classes = Object.entries(realConfig.classes)
 
-  it('il file reale ne configura 11', () => {
-    expect(classes).toHaveLength(11)
+  it('il file reale ne configura 16', () => {
+    expect(classes).toHaveLength(16)
   })
 
   it.each(classes)('%s legge i propri segnali positivi, contrari ed esclusivi', (type, profile) => {
-    // Un titolo forte tiene il punteggio sopra zero anche dopo tutte le penalità:
-    // un candidato a zero non compare fra i candidati e le sue evidenze non si vedono.
+    // Un candidato a zero non compare fra i candidati e le sue evidenze non si vedono.
+    // Il test guarda quali frasi vengono lette, non quanto pesano: le penalità scendono
+    // a un centesimo, così nessuna somma di frasi contrarie ed esclusive azzera il
+    // punteggio (la White List, con tre contrarie e due esclusive, andrebbe sotto zero
+    // anche col titolo più forte).
     const title = 'intestazione di prova numero uno'
     const phrases = [
       ...(profile.positive_phrases ?? []),
@@ -217,7 +256,11 @@ describe('profili di segnali delle classi problematiche', () => {
       aliases: [alias(type, title)],
       pages: [[title, ...phrases].join('\n')],
       filename: 'documento.pdf',
-      config: { ...realConfig, classes: { [type]: profile } }
+      config: {
+        ...realConfig,
+        defaults: { ...realConfig.defaults, negative_penalty: 0.01, hard_negative_penalty: 0.01 },
+        classes: { [type]: profile }
+      }
     })
     const candidate = result.candidates.find((c) => c.documentType === type)
     const seen = (source: string) =>
@@ -228,6 +271,84 @@ describe('profili di segnali delle classi problematiche', () => {
     )
     expect(seen('negative-signal')).toEqual(profile.negative_phrases ?? [])
     expect(seen('hard-negative-signal')).toEqual(profile.hard_negative_phrases ?? [])
+  })
+})
+
+describe('segnali presi dal pilota su documenti reali', () => {
+  const run = (text: string) =>
+    matchDocumentTypeV2({
+      aliases: realAliases,
+      pages: [text],
+      filename: 'documento.pdf',
+      config: realConfig
+    })
+  const candidateOf = (text: string, type: string) =>
+    run(text).candidates.find((c) => c.documentType === type)
+
+  it('le didascalie fronte e retro portano la patente di guida, senza assegnarla da sole', () => {
+    const result = run('FRONTE PATENTE\nRETRO PATENTE')
+    expect(result.candidates[0]?.documentType).toBe('identity_personal.patente_di_guida')
+    expect(result.decision).toBe('UNKNOWN')
+    expect(result.reason).toBe('BELOW_THRESHOLD')
+  })
+
+  it('una dichiarazione di copia conforme qualunque non diventa una patente di guida', () => {
+    const text =
+      'DICHIARAZIONE SOSTITUTIVA DELL’ATTO DI NOTORIETÀ\nIl sottoscritto dichiaro che la fotocopia allegata è conforme all originale\nIl presente documento e conforme all originale'
+    expect(candidateOf(text, 'identity_personal.patente_di_guida')).toBeUndefined()
+    expect(run(text).decision).toBe('UNKNOWN')
+  })
+
+  // Frasi del pilota che descrivono un'azienda, un generatore di PDF o un altro documento,
+  // non il tipo: da sole non devono proporre la classe (docs/pilota_reale_todo.md, punto 2).
+  it.each([
+    ['identity_personal.patente_di_guida', 'dichiaro che la fotocopia'],
+    ['identity_personal.patente_di_guida', 'presente documento e conforme all originale'],
+    ['corporate_registry.visura_camerale', 'esito evasione protocollo'],
+    ['corporate_registry.visura_camerale', 'numero rea'],
+    ['accounting.nota_di_credito', 'riepilogo iva imponibile imposte'],
+    ['sales_customers.rapportino_intervento', 'commessa durata'],
+    ['sales_customers.rapportino_intervento', 'ricetta'],
+    ['sales_customers.rapportino_intervento', 'costo del lavoro'],
+    ['hr_payroll.prospetto_costo_del_personale', 'trasferta fuori'],
+    ['hr_payroll.prospetto_costo_del_personale', 'ferie dal al'],
+    ['hr_payroll.prospetto_costo_del_personale', 'dimissioni assente'],
+    ['hr_payroll.prospetto_costo_del_personale', 'autista caposquadra']
+  ])('%s non si accende su «%s»', (type, phrase) => {
+    expect(candidateOf(`Documento interno\n${phrase}`, type)).toBeUndefined()
+  })
+
+  it('una fattura con numero REA e riepilogo IVA resta fuori da visura e nota di credito', () => {
+    const text = 'FATTURA\nNumero REA MI-123456\nRiepilogo IVA Imponibile Imposte'
+    expect(candidateOf(text, 'corporate_registry.visura_camerale')).toBeUndefined()
+    expect(candidateOf(text, 'accounting.nota_di_credito')).toBeUndefined()
+  })
+
+  it('su una nota di credito «fattura nr» costa la penalità dei segnali contrari', () => {
+    const clean = candidateOf(
+      'NOTA DI CREDITO\nNota di credito nr. 5',
+      'accounting.nota_di_credito'
+    )
+    const citing = candidateOf(
+      'NOTA DI CREDITO\nNota di credito nr. 5\nA storno della fattura nr. 12',
+      'accounting.nota_di_credito'
+    )
+    expect(citing?.evidence).toContainEqual({
+      source: 'negative-signal',
+      phrase: 'fattura nr',
+      delta: -realConfig.defaults.negative_penalty
+    })
+    expect(clean!.score - citing!.score).toBeGreaterThan(0)
+  })
+
+  it('le quattro frasi della quietanza assegnano anche senza titolo', () => {
+    const result = run(
+      'Modello F24\nQuietanza di versamento\nEstremi del versamento\nProtocollo telematico saldo delega\nDettaglio dei tributi'
+    )
+    expect(result).toMatchObject({
+      decision: 'ASSIGN',
+      documentType: 'fiscal_tax.quietanza_versamento'
+    })
   })
 })
 
