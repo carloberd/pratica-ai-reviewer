@@ -54,7 +54,29 @@ describe('profili espliciti', () => {
     expect(registry.field('non.esiste')).toBeNull()
     expect(registry.hints('money.total')).toContain('totale documento')
     expect(registry.hints('non.esiste')).toEqual([])
-    expect(registry.schemaVersion()).toBe('2.0.0')
+    expect(registry.schemaVersion()).toBe('2.0.1')
+  })
+
+  it('legge le eccezioni ai validatori solo sul tipo che le dichiara', () => {
+    expect(registry.profile('accounting.nota_di_credito')?.field_validator_overrides).toEqual({
+      'money.total': [],
+      'money.taxable': [],
+      'money.tax': []
+    })
+    expect(registry.profile('accounting.fattura')?.field_validator_overrides).toBeUndefined()
+    // L'ontologia non cambia: vale per tutti gli altri tipi.
+    expect(registry.field('money.total')?.validators).toEqual(['non_negative_money'])
+  })
+
+  it('le correzioni del revisore non perdono le eccezioni ai validatori', () => {
+    const corrected = createExtractionRegistryV2(REGISTRY_V2_DIR, REGISTRY_DIR, () => ({
+      fields: { 'accounting.nota_di_credito': { 'money.total': 'required' } },
+      hintLabels: {},
+      cardinality: { 'accounting.nota_di_credito': { 'money.total': 'many' } }
+    }))
+    const profile = corrected.profile('accounting.nota_di_credito')!
+    expect(profile.required_fields).toContain('money.total')
+    expect(profile.field_validator_overrides?.['money.total']).toEqual([])
   })
 
   it('ritrova i nomi v1 che la mappa porta su un id dell’ontologia', () => {
@@ -117,6 +139,21 @@ describe('errori d’avvio', () => {
     )
     expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
       /1 riferimenti a campi assenti.*accounting\.fattura\.core_fields: campo\.inventato/
+    )
+  })
+
+  it.each([
+    ['un campo fuori dal profilo del tipo', 'finance.balance_closing'],
+    ['un campo assente dall’ontologia', 'campo.inventato']
+  ])('un’eccezione ai validatori su %s', (_, fieldId) => {
+    const dir = registryCopy()
+    editJson<{
+      profiles: Record<string, { field_validator_overrides?: Record<string, string[]> }>
+    }>(dir, 'class_extraction_profiles_v2.json', (data) => {
+      data.profiles['accounting.fattura']!.field_validator_overrides = { [fieldId]: [] }
+    })
+    expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
+      `accounting.fattura.field_validator_overrides: ${fieldId}`
     )
   })
 

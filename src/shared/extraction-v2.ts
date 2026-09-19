@@ -43,6 +43,12 @@ export interface ClassExtractionProfile {
    * dell'ontologia. Il registry non la scrive: la mette il revisore (`@shared/profile-overlay`).
    */
   field_cardinality?: Record<string, Cardinality>
+  /**
+   * I validatori di un campo su questo tipo, al posto di quelli dell'ontologia: su una nota
+   * di credito `money.total` può essere negativo, su una fattura no. Solo per i campi del
+   * profilo; lista vuota vuol dire nessun validatore. Lo scrive il registry, non il revisore.
+   */
+  field_validator_overrides?: Record<string, string[]>
 }
 
 /**

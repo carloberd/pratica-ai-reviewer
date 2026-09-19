@@ -115,12 +115,26 @@ export function parseMoney(raw: string): string | null {
 }
 
 /**
+ * Il meno di un importo negativo, subito prima del numero o della valuta: `-1.234,56`,
+ * `€ -100,00`, `-€ 100,00`, `Totale: -100,00`, anche col segno tipografico `−`.
+ *
+ * Un trattino staccato dal numero non è un segno: in `Totale - 100,00` separa l'etichetta
+ * dal valore, e leggerlo come meno trasformerebbe il totale di una fattura in un valore
+ * plausibile e sbagliato. Non lo è nemmeno un trattino attaccato a una parola o a una
+ * cifra (`10,00-20,00`, `051-123.456`), né il lineato `–`, che fa da separatore. Le
+ * parentesi contabili `(100,00)` e il meno in coda `100,00-` restano fuori: in italiano
+ * sono rare, e le parentesi racchiudono anche importi che non sono negativi.
+ */
+const MINUS_BEFORE = /(?:^|[\s:=])€?\s*[-−]$/
+
+/**
  * Primo importo della riga.
  *
  * Un numero nudo non basta: «2026» è un anno, non un totale. Serve un simbolo di
  * valuta, una parte decimale o il raggruppamento delle migliaia. E le cifre di una data
  * non contano: sono l'unico numero della riga che imita un importo senza essere un
- * candidato.
+ * candidato. Il meno resta solo se è davvero un segno (`MINUS_BEFORE`): una nota di
+ * credito letta in positivo sarebbe un valore plausibile e sbagliato.
  */
 export function findMoney(line: string): { raw: string; value: string } | null {
   const dates = dateSpans(line)
@@ -136,7 +150,10 @@ export function findMoney(line: string): { raw: string; value: string } | null {
     if (!hasCurrency && !hasDecimals && !hasGrouping) continue
 
     const value = parseMoney(raw)
-    if (value) return { raw: raw.trim(), value }
+    if (value) {
+      const negative = Number(value) !== 0 && MINUS_BEFORE.test(line.slice(0, match.index))
+      return { raw: raw.trim(), value: negative ? `-${value}` : value }
+    }
   }
   return null
 }

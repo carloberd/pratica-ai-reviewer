@@ -38,7 +38,9 @@ import { runFieldValidator } from './validators'
  * - i campi `many` raccolgono un elemento per riga, in ordine di documento;
  * - le etichette imparate dalle revisioni (`learnedLabels`) passano davanti a quelle del
  *   registry, quelle di un template davanti a quelle di un tipo: a parità di livello decide
- *   ancora la lunghezza. I validatori restano l'ultima parola per tutte.
+ *   ancora la lunghezza. I validatori restano l'ultima parola per tutte: quelli
+ *   dell'ontologia, o quelli che il profilo del tipo mette al loro posto
+ *   (`field_validator_overrides`).
  */
 
 export const CONFIDENCE_SAME_LINE = 0.85
@@ -608,14 +610,18 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
   const specs = new Map<string, FieldOntologyEntry>()
   const candidates = new Map<string, Candidate[]>()
   for (const fieldId of fieldIds) {
-    const spec = input.registry.field(fieldId)
-    if (!spec) {
+    const ontologySpec = input.registry.field(fieldId)
+    if (!ontologySpec) {
       // Un campo che il profilo chiede e l'ontologia non descrive non si può cercare: non
       // si sa con che etichette né con che lettore. Ma non può nemmeno sparire, o il run
       // chiuderebbe con copertura piena su un obbligatorio mai cercato.
       conflicts.push(`UNKNOWN_FIELD:${fieldId}`)
       continue
     }
+    // I validatori del tipo, dove il profilo li decide: su una nota di credito un totale
+    // negativo è il valore giusto, non un errore da segnalare.
+    const validators = profile.field_validator_overrides?.[fieldId]
+    const spec = validators === undefined ? ontologySpec : { ...ontologySpec, validators }
     specs.set(fieldId, spec)
     candidates.set(
       fieldId,
