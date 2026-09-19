@@ -16,6 +16,7 @@
     "lint:fix": "biome check --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "benchmark:pilot": "vitest run tests/pilot-corpus-benchmark.test.ts",
     "dist": "electron-vite build && electron-builder --mac --win --publish never",
     "dist:mac": "electron-vite build && electron-builder --mac --publish never",
     "dist:win": "electron-vite build && electron-builder --win --publish never",
