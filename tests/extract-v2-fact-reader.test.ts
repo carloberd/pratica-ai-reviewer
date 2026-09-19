@@ -181,6 +181,17 @@ describe('posizione del valore', () => {
     expect(fact('recipient.name').value).toBeNull()
   })
 
+  it('una riga che comincia con la barra è la coda dell’etichetta, non il valore', () => {
+    // «Ragione sociale/Nome e cognome» andata a capo sulla barra.
+    const registry = registryOf({ 'issuer.name': { type: 'string', labels: ['ragione sociale'] } })
+    const read = (lines: string[]) => extract(registry, [page(lines)]).fact('issuer.name').value
+    expect(read(['Ragione sociale', '/Nome e cognome'])).toBeNull()
+    expect(read(['Ragione sociale', '\\ Nome e cognome'])).toBeNull()
+    expect(read(['Ragione sociale: /Nome e cognome'])).toBeNull()
+    // Una barra in mezzo al valore resta sua.
+    expect(read(['Ragione sociale', 'Alfa S.r.l. / Beta S.p.A.'])).toBe('Alfa S.r.l. / Beta S.p.A.')
+  })
+
   it('il testo libero vuole l’etichetta in testa al segmento, non a metà frase', () => {
     const registry = registryOf({ 'recipient.name': { type: 'string', labels: ['cliente'] } })
     expect(
@@ -190,6 +201,48 @@ describe('posizione del valore', () => {
       extract(registry, [page(['Fattura n. 114 - Cliente: Alfa S.r.l.'])]).fact('recipient.name')
         .value
     ).toBe('Alfa S.r.l.')
+  })
+
+  it('un’etichetta fusa in coda a un identificativo fiscale vale, se chiude la riga', () => {
+    // Il generatore PDF fonde la partita IVA con l'intestazione della colonna accanto.
+    const registry = registryOf({ 'recipient.name': { type: 'string', labels: ['destinatario'] } })
+    const read = (lines: string[]) => extract(registry, [page(lines)]).fact('recipient.name')
+    expect(read(['P.IVA 01234567890 DESTINATARIO', 'BETA COSTRUZIONI SRL'])).toMatchObject({
+      value: 'BETA COSTRUZIONI SRL',
+      confidence: CONFIDENCE_NEXT_LINE,
+      evidence: [{ text: 'P.IVA 01234567890 DESTINATARIO\nBETA COSTRUZIONI SRL' }]
+    })
+    expect(read(['P.IVA IT01234567890 DESTINATARIO', 'BETA COSTRUZIONI SRL']).value).toBe(
+      'BETA COSTRUZIONI SRL'
+    )
+    expect(read(['C.F. RSSMRA80A01H501U DESTINATARIO', 'BETA COSTRUZIONI SRL']).value).toBe(
+      'BETA COSTRUZIONI SRL'
+    )
+  })
+
+  it('con il registry vero: «Destinatario» è fra le etichette di `recipient.name`', () => {
+    const result = extractFactsV2({
+      documentType: 'accounting.fattura',
+      pages: [page(['P.IVA 09876543210 DESTINATARIO', 'BETA COSTRUZIONI SRL'])],
+      registry: testRegistryV2()
+    })
+    expect(result.facts.find((fact) => fact.fieldId === 'recipient.name')).toMatchObject({
+      value: 'BETA COSTRUZIONI SRL',
+      reviewStatus: 'NEEDS_REVIEW'
+    })
+  })
+
+  it('a metà riga, senza un identificativo intero davanti, resta a metà frase', () => {
+    const registry = registryOf({ 'recipient.name': { type: 'string', labels: ['destinatario'] } })
+    const read = (lines: string[]) => extract(registry, [page(lines)]).fact('recipient.name').value
+    // Davanti c'è una frase, non un identificativo.
+    expect(read(['Spedizione a cura del DESTINATARIO', 'BETA COSTRUZIONI SRL'])).toBeNull()
+    // Dieci cifre non sono una partita IVA, e dodici sono un altro numero.
+    expect(read(['P.IVA 0123456789 DESTINATARIO', 'BETA COSTRUZIONI SRL'])).toBeNull()
+    expect(read(['Conto 012345678901 DESTINATARIO', 'BETA COSTRUZIONI SRL'])).toBeNull()
+    // L'eccezione vale solo se l'etichetta chiude la riga: con qualcosa dopo, torna la regola
+    // di sempre, anche quando quel qualcosa sarebbe il valore.
+    expect(read(['P.IVA 01234567890 DESTINATARIO: BETA COSTRUZIONI SRL'])).toBeNull()
   })
 
   it('un valore tipizzato troppo lontano dall’etichetta non le appartiene', () => {
@@ -333,6 +386,15 @@ describe('etichette dentro una citazione', () => {
   it('non legge la data dellʼatto a cui il documento rimanda', () => {
     const { fact } = extract(data(), [page(['pratica con atto del 06/03/2017'])])
     expect(fact('document.issue_date').value).toBeNull()
+  })
+
+  it('non legge il numero del documento a cui si rimanda, anche abbreviato', () => {
+    expect(
+      extract(numero(), [page(['Riferim. fattura n. 12'])]).fact('document.number').value
+    ).toBeNull()
+    expect(
+      extract(numero(), [page(['Riferimento fattura n. 12'])]).fact('document.number').value
+    ).toBeNull()
   })
 
   it('quello che è del documento continua a leggersi', () => {
