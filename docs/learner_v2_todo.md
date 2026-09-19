@@ -178,6 +178,10 @@ pre/post, non i numeri. Il test attuale è una fixture con la regola **costruita
 regressione e chiamato così. La sezione «Limiti e release gate» del loro `benchmark.md` è
 invece onesta e ben scritta.
 
+> Poi entrato in un'altra forma: non lo script di questo ramo ma l'harness del pilota
+> reale, `pnpm benchmark:pilot` (#46), che misura su un corpus vero fuori dal repository.
+> Il protocollo pre/post sta nel README, in «Misurare su un corpus reale».
+
 ---
 
 ## Ostacoli da togliere comunque
@@ -252,5 +256,7 @@ viene proposto senza che nessuno possa dire se in meglio.
   il resto. Salvabile a parte il fallback per gli identificativi a forma forte (IBAN,
   targa, VIN, codice fiscale), dietro un flag legato alla modalità e spento in `BASELINE`.
 
-Fuori sequenza resta il **benchmark sul corpus reale (11)**: l'impalcatura c'è, i numeri
-no, e sono quelli che sbloccano gli altri tre.
+Fuori sequenza restava il **benchmark sul corpus reale (11)**. L'impalcatura adesso è in
+`main`, arrivata dal pilota reale invece che da questo ramo: `pnpm benchmark:pilot`, con
+`BASELINE` e `FROZEN` e il protocollo nel README (#46, [`pilota_reale_todo.md`](pilota_reale_todo.md#5-harness-del-benchmark-su-corpus-reale)).
+I numeri no, e sono quelli che sbloccano gli altri tre.

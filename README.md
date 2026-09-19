@@ -35,7 +35,8 @@ lasciato vuoto: il vuoto si vede, l'errore no, e va a finire nel training.
 misura del learner gira su fixture scritte a mano e prova solo che il codice fa quello
 che il test dice. Le tre modalità del learner (`LEARNING`, `FROZEN`, `BASELINE`)
 esistono apposta per il confronto pre/post su documenti mai visti: valgono quando ci
-sono i documenti veri da passarci.
+sono i documenti veri da passarci. Il banco su cui passarli c'è già: [Misurare su un
+corpus reale](#misurare-su-un-corpus-reale).
 
 **Alla fine: portare il tool dentro pratica-ai**, e lì usare un LLM dove l'euristica
 non arriva — sui documenti senza un modulo che si ripete, o per proporre l'ancora che il
@@ -131,6 +132,7 @@ utenti di test elencati.
 | `pnpm lint` / `pnpm lint:fix` | Biome |
 | `pnpm test` | Vitest: nessuna credenziale, nessuna rete |
 | `pnpm build` | Compila main, preload e renderer in `out/` |
+| `pnpm benchmark:pilot` | Benchmark su un corpus reale fuori dal repository: vedi [Misurare su un corpus reale](#misurare-su-un-corpus-reale) |
 | `pnpm dist` | Pacchetti mac (dmg, zip) e Windows (nsis, zip) in `release/` |
 | `pnpm dist:mac` / `pnpm dist:win` | Solo una delle due piattaforme |
 | `node scripts/make-fixtures.mjs [nomi…]` | Rigenera le fixture di `tests/fixtures/`, o solo quelle nominate: rigenerare un PDF ne cambia lo sha-256 |
@@ -979,6 +981,42 @@ quindi solo regole di tipo. Una regola attiva che perde prove per uno scarto res
 finché le prove contro non la sospendono. La soglia di somiglianza fra moduli non è stata
 misurata su documenti reali: troppo bassa fonde stampati diversi, troppo alta riporta allo
 scope template che non si attivava mai.
+
+### Misurare su un corpus reale
+
+`tests/pilot-corpus-benchmark.test.ts` misura classificazione ed estrazione su documenti
+veri contro un manifest annotato a mano. Documenti, manifest e report stanno fuori dal
+repository e arrivano solo da variabili d'ambiente; senza, il test è saltato.
+
+```bash
+PRACTICAAI_PILOT_CORPUS=/percorso/ai/documenti \
+PRACTICAAI_PILOT_MANIFEST=/percorso/al/manifest.json \
+PRACTICAAI_PILOT_OUTPUT=/percorso/privato/report.json \
+PRACTICAAI_PILOT_LEARNED_RULES=/percorso/regole-apprese.json \
+pnpm benchmark:pilot
+```
+
+L'ultima è facoltativa: senza, la misura è `BASELINE` (solo registry); con un file
+«Esporta le regole», è `FROZEN`, con le regole attive del file applicate come nell'app.
+Ogni documento si misura col tipo del classificatore e col tipo vero; il report dà tipi
+giusti, astensioni e top-1, campi giusti, sbagliati e mancanti, i campi attesi assenti
+compilati lo stesso, e quanti valori arrivano `AUTO_ACCEPTED`, `NEEDS_REVIEW` o
+`CONFLICT`. Il formato del manifest e il confronto dei valori stanno in
+[`docs/pilota_reale_todo.md`](docs/pilota_reale_todo.md#5-harness-del-benchmark-su-corpus-reale).
+
+**Una misura vale solo così:**
+
+- **codice e regole congelati.** Un commit senza modifiche aperte (il report scrive il
+  commit e se era pulito) e le regole in un file esportato, mai il deposito che sta
+  ancora imparando. Le regole vengono da documenti diversi da quelli del corpus;
+- **corpus indipendente.** Nessuno dei documenti è servito a scrivere segnali, soglie o
+  regole, né a insegnare al learner. Una misura su documenti di cui si sono guardati gli
+  errori per correggere il codice è di sviluppo, non una stima: il 125/125 del pilota lo
+  era;
+- **annotazione senza gli output del motore.** Chi scrive il manifest legge il documento,
+  non la proposta: una scheda precompilata sposta il giudizio verso quello che il motore
+  ha già detto;
+- **report fuori dal repository.** Contiene nomi, valori ed evidenze dei documenti.
 
 ---
 
