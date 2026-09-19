@@ -885,7 +885,9 @@
       "default_cardinality": "one",
       "pii": "sensitive",
       "evidence_required": true,
-      "validators": [],
+      "validators": [
+        "italian_tax_code_format"
+      ],
       "description": "CF lavoratore",
       "label_aliases_it": []
     },
@@ -1581,7 +1583,9 @@
       "default_cardinality": "one",
       "pii": "none",
       "evidence_required": true,
-      "validators": [],
+      "validators": [
+        "vehicle_plate"
+      ],
       "description": "Targa assicurata",
       "label_aliases_it": []
     },
@@ -2325,7 +2329,9 @@
       "default_cardinality": "one",
       "pii": "none",
       "evidence_required": true,
-      "validators": [],
+      "validators": [
+        "vehicle_plate"
+      ],
       "description": "Targa",
       "label_aliases_it": []
     },
@@ -2337,7 +2343,9 @@
       "default_cardinality": "one",
       "pii": "none",
       "evidence_required": true,
-      "validators": [],
+      "validators": [
+        "vin"
+      ],
       "description": "Telaio/VIN",
       "label_aliases_it": []
     },

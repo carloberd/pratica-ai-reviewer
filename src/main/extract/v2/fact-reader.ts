@@ -253,7 +253,12 @@ function readBoolean(text: string): string | null {
   return null
 }
 
-const TAX_ID = /\b(\d{11}|[A-Za-z]{6}\d{2}[A-Za-z]\d{2}[A-Za-z]\d{3}[A-Za-z])\b/
+/**
+ * Partita IVA, anche col prefisso `IT` attaccato, o codice fiscale di una persona, anche
+ * omocodico (lettere `LMNPQRSTUV` al posto delle cifre). Se è giusto lo dicono i validatori.
+ */
+const TAX_ID =
+  /\b(?:IT)?(\d{11})\b|\b([A-Z]{6}[\dLMNPQRSTUV]{2}[A-Z][\dLMNPQRSTUV]{2}[A-Z][\dLMNPQRSTUV]{3}[A-Z])\b/i
 const IBAN = /\b([A-Za-z]{2}\d{2}(?:\s?[A-Za-z0-9]){11,30})\b/
 
 /**
@@ -263,7 +268,8 @@ const IBAN = /\b([A-Za-z]{2}\d{2}(?:\s?[A-Za-z0-9]){11,30})\b/
 export function readIdentifier(text: string, format: string | null | undefined): string | null {
   if (format === 'tax_id' || format === 'italian_tax_code') {
     const match = TAX_ID.exec(text)
-    return match?.[1] && match.index <= VALUE_WINDOW ? match[1].toUpperCase() : null
+    const id = match?.[1] ?? match?.[2]
+    return match && id && match.index <= VALUE_WINDOW ? id.toUpperCase() : null
   }
   if (format === 'iban') {
     const match = IBAN.exec(text)
