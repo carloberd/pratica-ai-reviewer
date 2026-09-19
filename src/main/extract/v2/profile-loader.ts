@@ -43,6 +43,7 @@ const profileSchema = z.looseObject({
   core_fields: stringList,
   optional_fields: stringList,
   conditional_fields: stringList,
+  field_validator_overrides: z.record(z.string(), stringList).optional(),
   literal_evidence_required: z.boolean(),
   unknown_value_policy: z.literal('LEAVE_EMPTY'),
   review_policy: z.string()
@@ -120,9 +121,9 @@ const ROLE_KEYS = [
  * `extraction_schemas.json`, si sintetizza un profilo conservativo LEGACY_FALLBACK con i
  * campi v1 portati sull'ontologia. Non vale quanto un profilo v2: è marcato come tale.
  *
- * Ogni riferimento incrociato (campi dei profili, destinazioni della mappa legacy) è
- * controllato qui: un profilo che cita un campo inesistente è un errore d'avvio, non un
- * campo che manca in silenzio a ogni documento di quel tipo.
+ * Ogni riferimento incrociato (campi dei profili, eccezioni ai validatori, destinazioni
+ * della mappa legacy) è controllato qui: un profilo che cita un campo inesistente è un
+ * errore d'avvio, non un campo che manca in silenzio a ogni documento di quel tipo.
  */
 export function createExtractionRegistryV2(
   v2Directory: string,
@@ -150,6 +151,13 @@ export function createExtractionRegistryV2(
         if (!ontology.fields[fieldId]) unknownRefs.push(`${documentType}.${key}: ${fieldId}`)
       }
     }
+    // Un'eccezione ai validatori vale per un campo che il tipo chiede: su un campo fuori
+    // profilo non cambierebbe niente, e dice che il profilo o l'eccezione sono sbagliati.
+    for (const fieldId of Object.keys(profile.field_validator_overrides ?? {})) {
+      if (!ontology.fields[fieldId] || !ROLE_KEYS.some((key) => profile[key].includes(fieldId))) {
+        unknownRefs.push(`${documentType}.field_validator_overrides: ${fieldId}`)
+      }
+    }
   }
   for (const [legacy, fieldId] of Object.entries(legacyMap)) {
     if (!ontology.fields[fieldId])
@@ -158,7 +166,7 @@ export function createExtractionRegistryV2(
   if (unknownRefs.length > 0) {
     throw new Error(
       `Registry v2: ${unknownRefs.length} riferimenti a campi assenti da field_ontology_v2.json ` +
-        `in ${v2Directory} (primo: ${unknownRefs[0]}).`
+        `o dal profilo che li cita, in ${v2Directory} (primo: ${unknownRefs[0]}).`
     )
   }
 

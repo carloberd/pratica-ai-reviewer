@@ -989,25 +989,19 @@
         "type": "number",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": [
-          "non_negative_money"
-        ]
+        "x-praticaai-validators": []
       },
       "money.taxable": {
         "type": "number",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": [
-          "non_negative_money"
-        ]
+        "x-praticaai-validators": []
       },
       "money.tax": {
         "type": "number",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
-        "x-praticaai-validators": [
-          "non_negative_money"
-        ]
+        "x-praticaai-validators": []
       }
     },
     "required": [],
