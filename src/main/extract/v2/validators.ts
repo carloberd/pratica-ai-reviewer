@@ -101,6 +101,18 @@ export function checkTaxId(value: string): TaxIdCheck {
   return 'BAD_FORMAT'
 }
 
+/**
+ * Solo partita IVA: undici cifre, col prefisso `IT` tolto, e la cifra di controllo. Un
+ * codice fiscale di persona non ha la forma giusta anche se il suo carattere di controllo
+ * torna: è un identificativo vero nel campo sbagliato. Un codice fiscale numerico passa:
+ * ha la forma e il controllo di una partita IVA, e per una società di solito lo è.
+ */
+export function checkVatNumber(value: string): TaxIdCheck {
+  const id = normalizeTaxId(value)
+  if (!NUMERIC_TAX_ID.test(id)) return 'BAD_FORMAT'
+  return isValidPartitaIva(id) ? 'VALID' : 'BAD_CHECKSUM'
+}
+
 /** Targa italiana del sistema in vigore dal 1994, come la descrive `validators_v2.json`. */
 const VEHICLE_PLATE = /^[A-Z]{2}\d{3}[A-Z]{2}$/
 /** Numero di telaio: 17 caratteri, senza `I`, `O` e `Q`. */
@@ -118,6 +130,7 @@ export const FIELD_VALIDATORS = [
   'non_negative_money',
   'iban_checksum',
   'tax_id_format',
+  'vat_number_format',
   'italian_tax_code_format',
   'vehicle_plate',
   'vin'
@@ -131,7 +144,8 @@ export const FIELD_VALIDATORS = [
  * Un validatore che questo modulo non conosce non blocca nulla.
  *
  * I nomi sono quelli del pack: `tax_id_format` e `italian_tax_code_format` controllano
- * anche il carattere di controllo, non solo la forma. `vehicle_plate` e `vin` in
+ * anche il carattere di controllo, non solo la forma. `vat_number_format` non è del pack:
+ * è la partita IVA dei campi `*.vat_number`, che il pack non ha. `vehicle_plate` e `vin` in
  * `validators_v2.json` sono regex, ma quel file non si carica: le stesse regex stanno qui.
  */
 export function runFieldValidator(name: string, value: unknown): string | null {
@@ -143,6 +157,11 @@ export function runFieldValidator(name: string, value: unknown): string | null {
     const check = checkTaxId(text)
     if (check === 'BAD_FORMAT') return 'INVALID_TAX_ID_FORMAT'
     if (check === 'BAD_CHECKSUM') return 'INVALID_TAX_ID_CHECKSUM'
+  }
+  if (name === 'vat_number_format' && text !== null) {
+    const check = checkVatNumber(text)
+    if (check === 'BAD_FORMAT') return 'INVALID_VAT_FORMAT'
+    if (check === 'BAD_CHECKSUM') return 'INVALID_VAT_CHECKSUM'
   }
   if (name === 'italian_tax_code_format' && text !== null) {
     const check = checkTaxId(text)

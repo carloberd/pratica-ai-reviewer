@@ -126,10 +126,10 @@ describe('il pacchetto della mappa corretta', () => {
       'accounting.fattura': {
         'procurement.cig': 'excluded',
         'document.title': 'core',
-        'issuer.tax_id': 'required'
+        'issuer.vat_number': 'required'
       }
     },
-    hintLabels: { 'issuer.tax_id': ['Partita IVA'] },
+    hintLabels: { 'issuer.vat_number': ['Identificativo fiscale ai fini IVA'] },
     cardinality: {}
   }
 
@@ -154,9 +154,9 @@ describe('il pacchetto della mappa corretta', () => {
     expect(profile.conditional_fields).not.toContain('procurement.cig')
     expect(profile[EXCLUDED_KEY]).toEqual(['procurement.cig'])
     expect(profile.core_fields).toContain('document.title')
-    expect(profile.required_fields).toContain('issuer.tax_id')
+    expect(profile.required_fields).toContain('issuer.vat_number')
     expect(profile.field_provenance['document.title']).toBe(REVIEWER_PROVENANCE)
-    expect(profile.field_provenance['issuer.tax_id']).toBe(REVIEWER_PROVENANCE)
+    expect(profile.field_provenance['issuer.vat_number']).toBe(REVIEWER_PROVENANCE)
     // Il campo scartato non ha più una provenienza: non è più nella mappa.
     expect(profile.field_provenance['procurement.cig']).toBeUndefined()
   })
@@ -171,10 +171,10 @@ describe('il pacchetto della mappa corretta', () => {
 
   it('le etichette insegnate si sommano a quelle del registry', () => {
     const { file } = bundle(overlay)
-    const labels = file(HINTS_FILE).hints['issuer.tax_id'].labels
-    const registryLabels = HINTS.hints['issuer.tax_id']!.labels
+    const labels = file(HINTS_FILE).hints['issuer.vat_number'].labels
+    const registryLabels = HINTS.hints['issuer.vat_number']!.labels
 
-    expect(labels).toContain('Partita IVA')
+    expect(labels).toContain('Identificativo fiscale ai fini IVA')
     expect(labels.slice(0, registryLabels.length)).toEqual(registryLabels)
   })
 
@@ -184,7 +184,7 @@ describe('il pacchetto della mappa corretta', () => {
 
     expect(Object.keys(schema.properties)).toContain('document.title')
     expect(Object.keys(schema.properties)).not.toContain('procurement.cig')
-    expect(schema.required).toContain('issuer.tax_id')
+    expect(schema.required).toContain('issuer.vat_number')
   })
 
   it('il changelog dice cosa è cambiato e con che numeri', () => {
@@ -203,7 +203,7 @@ describe('il pacchetto della mappa corretta', () => {
     expect(changelog.changes[0].excluded).toEqual(['procurement.cig'])
     expect(changelog.changes[0].added).toEqual([{ fieldId: 'document.title', role: 'core' }])
     expect(changelog.changes[0].rerolled).toEqual([
-      { fieldId: 'issuer.tax_id', from: 'core', to: 'required' }
+      { fieldId: 'issuer.vat_number', from: 'core', to: 'required' }
     ])
     // Anche l'azione annullata resta: la cronologia non si riscrive.
     expect(changelog.actions).toHaveLength(2)
@@ -283,6 +283,50 @@ describe('il pacchetto della mappa corretta', () => {
     expect(file(SCHEMAS_FILE)['accounting.nota_di_credito'].properties['money.taxable']).toEqual(
       expect.objectContaining({ 'x-praticaai-validators': [] })
     )
+  })
+
+  it('la visura esce coi campi nuovi, e il ripiego del revisore resta finché non lo toglie', () => {
+    // La mappa della visura com'era il 18/09: il codice fiscale in `recipient.tax_id`,
+    // aggiunto perché `company.tax_id` era occupato dalla partita IVA.
+    const { file, result } = bundle({
+      ...EMPTY,
+      fields: {
+        'corporate_registry.visura_camerale': {
+          'recipient.tax_id': 'core',
+          'recipient.name': 'excluded',
+          'document.number': 'excluded'
+        }
+      }
+    })
+    const profile = file(PROFILES_FILE).profiles['corporate_registry.visura_camerale']
+    const schema = file(SCHEMAS_FILE)['corporate_registry.visura_camerale']
+
+    // I campi del registry arrivano anche nella mappa corretta, e il ripiego accanto:
+    // l'overlay si somma al profilo, non sa che un campo ne sostituisce un altro.
+    expect(profile.core_fields).toEqual(
+      expect.arrayContaining([
+        'company.vat_number',
+        'company.tax_code',
+        'company.rea_number',
+        'recipient.tax_id'
+      ])
+    )
+    expect(profile.core_fields).not.toContain('company.tax_id')
+    expect(schema.properties['company.vat_number']).toEqual({
+      type: 'string',
+      'x-praticaai-evidence-required': true,
+      'x-praticaai-pii': 'none',
+      'x-praticaai-validators': ['vat_number_format']
+    })
+    expect(schema.properties['company.tax_code']['x-praticaai-validators']).toEqual([
+      'italian_tax_code_format'
+    ])
+    expect(schema.properties['company.rea_number']['x-praticaai-validators']).toEqual([])
+    expect(file(CHANGELOG_FILE).fieldsWithoutOntology).toEqual({})
+    expect(file(CHANGELOG_FILE).changes[0].added).toEqual([
+      { fieldId: 'recipient.tax_id', role: 'core' }
+    ])
+    expect(result.types).toBe(1)
   })
 
   it('due export di fila danno gli stessi byte', () => {

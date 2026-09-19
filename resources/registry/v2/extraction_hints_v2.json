@@ -140,6 +140,30 @@
       "scope": "whole_document",
       "candidate_limit": 10
     },
+    "issuer.vat_number": {
+      "labels": [
+        "Partita IVA emittente",
+        "vat number",
+        "Partita IVA",
+        "P.IVA",
+        "P. IVA"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "issuer.tax_code": {
+      "labels": [
+        "Codice fiscale emittente",
+        "tax code",
+        "Codice fiscale",
+        "C.F.",
+        "Cod. Fisc."
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
     "issuer.address": {
       "labels": [
         "Indirizzo emittente",
@@ -162,6 +186,30 @@
       "labels": [
         "CF/P.IVA destinatario",
         "tax id"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "recipient.vat_number": {
+      "labels": [
+        "Partita IVA destinatario",
+        "vat number",
+        "Partita IVA",
+        "P.IVA",
+        "P. IVA"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "recipient.tax_code": {
+      "labels": [
+        "Codice fiscale destinatario",
+        "tax code",
+        "Codice fiscale",
+        "C.F.",
+        "Cod. Fisc."
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -199,10 +247,47 @@
       "scope": "whole_document",
       "candidate_limit": 10
     },
+    "company.vat_number": {
+      "labels": [
+        "Partita IVA impresa",
+        "vat number",
+        "Partita IVA",
+        "P.IVA",
+        "P. IVA"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "company.tax_code": {
+      "labels": [
+        "Codice fiscale impresa",
+        "tax code",
+        "Codice fiscale",
+        "C.F.",
+        "Cod. Fisc.",
+        "Codice fiscale e numero di iscrizione",
+        "Codice fiscale e n. iscrizione al Registro Imprese"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
     "company.registration_number": {
       "labels": [
         "Numero REA/registro imprese",
         "registration number"
+      ],
+      "regexes": [],
+      "scope": "whole_document",
+      "candidate_limit": 10
+    },
+    "company.rea_number": {
+      "labels": [
+        "Numero REA",
+        "rea number",
+        "REA",
+        "N. REA"
       ],
       "regexes": [],
       "scope": "whole_document",

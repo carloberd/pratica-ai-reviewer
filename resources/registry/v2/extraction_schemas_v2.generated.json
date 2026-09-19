@@ -452,20 +452,36 @@
           "non_negative_money"
         ]
       },
-      "issuer.tax_id": {
+      "issuer.vat_number": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
         "x-praticaai-validators": [
-          "tax_id_format"
+          "vat_number_format"
         ]
       },
-      "recipient.tax_id": {
+      "issuer.tax_code": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
         "x-praticaai-validators": [
-          "tax_id_format"
+          "italian_tax_code_format"
+        ]
+      },
+      "recipient.vat_number": {
+        "type": "string",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "none",
+        "x-praticaai-validators": [
+          "vat_number_format"
+        ]
+      },
+      "recipient.tax_code": {
+        "type": "string",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "none",
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
         ]
       },
       "money.taxable": {
@@ -10101,15 +10117,23 @@
         "x-praticaai-pii": "none",
         "x-praticaai-validators": []
       },
-      "company.tax_id": {
+      "company.vat_number": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
         "x-praticaai-validators": [
-          "tax_id_format"
+          "vat_number_format"
         ]
       },
-      "company.registration_number": {
+      "company.tax_code": {
+        "type": "string",
+        "x-praticaai-evidence-required": true,
+        "x-praticaai-pii": "none",
+        "x-praticaai-validators": [
+          "italian_tax_code_format"
+        ]
+      },
+      "company.rea_number": {
         "type": "string",
         "x-praticaai-evidence-required": true,
         "x-praticaai-pii": "none",
