@@ -29,6 +29,8 @@ export interface FieldInput {
   cardinality?: Cardinality
   reviewStatus?: FieldReviewStatus | null
   validationErrors?: string[] | null
+  /** La proposta è dedotta, non letta: senza evidenza, e marcata (migrazione 0018). */
+  computed?: boolean
   /** Solo per `cardinality = 'many'`. */
   items?: FieldItemInput[]
 }
@@ -196,8 +198,8 @@ export function createFieldsDao(db: Db) {
   const insert = db.prepare(`
     INSERT INTO fields (id, document_id, name, label, value, corrected_value, confidence, evidence_id,
                         updated_at, semantic_type, cardinality, review_status, validation_errors_json, role,
-                        corrected_evidence_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'one'), ?, ?, ?, ?)
+                        corrected_evidence_id, computed)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'one'), ?, ?, ?, ?, ?)
   `)
   const insertItem = db.prepare(`
     INSERT INTO field_items (id, field_id, item_index, value_json, corrected_value_json, confidence,
@@ -376,7 +378,8 @@ export function createFieldsDao(db: Db) {
           field.reviewStatus ?? null,
           errorsJson(field.validationErrors),
           field.role ?? null,
-          many ? null : (single?.corrected_evidence_id ?? null)
+          many ? null : (single?.corrected_evidence_id ?? null),
+          field.computed ? 1 : 0
         )
 
         if (!many) continue
@@ -438,7 +441,10 @@ export function createFieldsDao(db: Db) {
           'NEEDS_REVIEW',
           null,
           'optional',
-          kept.corrected_evidence_id
+          kept.corrected_evidence_id,
+          // La proposta di prima non c'è più: resta la correzione del revisore, che letta
+          // o dedotta non era comunque.
+          0
         )
       }
       // Lo stesso per un campo ripetuto: restano le righe che il revisore ha scritto.
@@ -462,7 +468,8 @@ export function createFieldsDao(db: Db) {
           'NEEDS_REVIEW',
           null,
           'optional',
-          null
+          null,
+          0
         )
         insertReviewerItems(id, 0, rows)
       }

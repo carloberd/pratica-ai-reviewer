@@ -146,6 +146,12 @@ export interface ExtractedFactV2 {
   evidence: ExtractionEvidenceV2[]
   reviewStatus: FieldReviewStatus
   validationErrors: string[]
+  /**
+   * Il valore è dedotto, non letto: non ha evidenza, perché nel documento non c'è. Oggi
+   * solo la scadenza di un attestato di formazione (`@shared/training-expiry`). Un valore
+   * letto non lo porta mai, e chi misura l'estrazione deve poterli separare.
+   */
+  computed?: boolean
 }
 
 export interface ExtractionResultV2 {

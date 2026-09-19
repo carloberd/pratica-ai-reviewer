@@ -11,6 +11,7 @@ import {
 import { isRegistryField } from '@shared/fields'
 import type { AnchorRelation, LearningRuleScope } from '@shared/local-learning'
 import { cardinalityOf } from '@shared/profile-overlay'
+import { TRAINING_EXPIRY_FIELD, trainingExpiryOf } from '@shared/training-expiry'
 import type { BoundingBox } from '@shared/types'
 import { FIELD_SPECS, findDate, findMoney, fold, OCR_PENALTY } from '../heuristics'
 import { precededByReference, readsReferences } from '../reference-context'
@@ -44,6 +45,9 @@ import { runFieldValidator, validatorsOf } from './validators'
  *   su una carta d'identità a cui l'OCR ha perso il cognome, «COGNOME / SURNAME» seguita da
  *   «NOME / NAME» lascia il cognome vuoto invece di dargli l'etichetta del nome;
  * - i campi `many` raccolgono un elemento per riga, in ordine di documento;
+ * - un solo valore non si legge ma si deduce: la scadenza di un attestato di formazione,
+ *   quando il documento non la scrive e il corso è in tabella (`@shared/training-expiry`).
+ *   Porta `computed`, non ha evidenza, e una scadenza scritta sul documento vince sempre;
  * - le etichette imparate dalle revisioni (`learnedLabels`) passano davanti a quelle del
  *   registry, quelle di un template davanti a quelle di un tipo: a parità di livello decide
  *   ancora la lunghezza. I validatori restano l'ultima parola per tutte: quelli
@@ -53,6 +57,11 @@ import { runFieldValidator, validatorsOf } from './validators'
 
 export const CONFIDENCE_SAME_LINE = 0.85
 export const CONFIDENCE_NEXT_LINE = 0.8
+/**
+ * Un valore dedotto non è mai accettato da solo: sta sotto `AUTO_ACCEPT_THRESHOLD`, così
+ * arriva al revisore come NEEDS_REVIEW. Il motore lo propone, non lo afferma.
+ */
+export const CONFIDENCE_COMPUTED = 0.6
 export const VALIDATOR_PENALTY = 0.18
 /** Sotto questa confidence un valore va comunque rivisto. */
 export const AUTO_ACCEPT_THRESHOLD = 0.85
@@ -843,6 +852,8 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
     })
   }
 
+  deduceFacts(input.documentType, facts, missingRequired)
+
   const filled = facts.filter((fact) => fact.value !== null)
   return {
     documentType: input.documentType,
@@ -858,6 +869,36 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
             (filled.reduce((sum, fact) => sum + fact.confidence, 0) / filled.length) * 1e4
           ) / 1e4
   }
+}
+
+/**
+ * L'unico valore che il motore propone senza averlo letto: la scadenza di un attestato di
+ * formazione. Vale solo se il campo è rimasto vuoto — una scadenza scritta sul documento
+ * vince sempre — e solo per i corsi che la tabella conosce. Resta senza evidenza, perché
+ * nel documento quella data non c'è, e `computed` lo dice a chi misura.
+ */
+function deduceFacts(
+  documentType: string,
+  facts: ExtractedFactV2[],
+  missingRequired: string[]
+): void {
+  const expiry = facts.find((fact) => fact.fieldId === TRAINING_EXPIRY_FIELD)
+  if (!expiry || expiry.value !== null) return
+
+  const computed = trainingExpiryOf(documentType, (fieldId) => {
+    const fact = facts.find((entry) => entry.fieldId === fieldId)
+    return typeof fact?.value === 'string' ? fact.value : null
+  })
+  if (!computed) return
+
+  expiry.value = computed.value
+  expiry.confidence = CONFIDENCE_COMPUTED
+  expiry.reviewStatus = 'NEEDS_REVIEW'
+  expiry.computed = true
+  // Un campo dedotto non è più un obbligatorio senza valore: il run non deve chiedere al
+  // revisore di cercare nel documento una data che il documento non ha.
+  const missing = missingRequired.indexOf(TRAINING_EXPIRY_FIELD)
+  if (missing !== -1) missingRequired.splice(missing, 1)
 }
 
 function emptyFact(fieldId: string, role: FieldRole, cardinality: 'one' | 'many'): ExtractedFactV2 {

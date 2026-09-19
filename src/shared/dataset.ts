@@ -30,7 +30,7 @@ import type {
  */
 
 export const DATASET_FORMAT = 'praticaai-reviewer/annotated-dataset'
-export const DATASET_FORMAT_VERSION = '1.7.0'
+export const DATASET_FORMAT_VERSION = '1.8.0'
 
 export type EngineVersion = 'v1' | 'v2'
 
@@ -96,8 +96,17 @@ export interface DatasetPick {
   textCorrected: boolean
 }
 
-/** `ENGINE` = proposto dal motore e confermato; `REVIEWER` = scritto dal revisore. */
-export type DatasetValueOrigin = 'ENGINE' | 'REVIEWER'
+/** `ENGINE` = letto dal motore e confermato; `REVIEWER` = scritto dal revisore. */
+export type DatasetItemOrigin = 'ENGINE' | 'REVIEWER'
+
+/**
+ * Da chi viene il valore di un campo singolo. `COMPUTED` è il terzo caso, dalla `1.8.0`:
+ * il motore l'ha **dedotto**, non letto, e il revisore l'ha confermato — oggi solo la
+ * scadenza di un attestato di formazione, calcolata dalla normativa. Senza un valore suo
+ * si conterebbe come una lettura riuscita, e la misura dell'estrazione direbbe una cosa
+ * per un'altra.
+ */
+export type DatasetValueOrigin = DatasetItemOrigin | 'COMPUTED'
 
 /**
  * Da chi viene una lista: da tutte e due, se il revisore ha aggiunto righe alle proposte.
@@ -106,7 +115,7 @@ export type DatasetValueOrigin = 'ENGINE' | 'REVIEWER'
  * era peggio: `origin` mancava solo sui campi `many`, e chi contava le origini leggendo
  * `field.origin` si trovava `undefined` invece di un errore, e li perdeva in silenzio.
  */
-export type DatasetListOrigin = DatasetValueOrigin | 'MIXED'
+export type DatasetListOrigin = DatasetItemOrigin | 'MIXED'
 
 export interface DatasetScalarField {
   name: string
@@ -114,6 +123,7 @@ export interface DatasetScalarField {
   role: FieldRole | null
   cardinality: 'one'
   value: string | null
+  /** `COMPUTED` quando la proposta confermata è dedotta: allora `evidence` è `null`. */
   origin: DatasetValueOrigin | null
   /** Riga da cui il motore aveva letto la proposta, anche se il revisore l'ha corretta. */
   evidence: DatasetEvidence | null
@@ -123,7 +133,7 @@ export interface DatasetScalarField {
 
 export interface DatasetListItem {
   value: string
-  origin: DatasetValueOrigin
+  origin: DatasetItemOrigin
   evidence: DatasetEvidence | null
   pick: DatasetPick | null
 }
@@ -277,7 +287,7 @@ function pickOf(
 }
 
 /** Chi ha messo il valore di una riga. La usa anche l'export XLSX, con la stessa semantica. */
-export function itemOrigin(item: FieldItem): DatasetValueOrigin {
+export function itemOrigin(item: FieldItem): DatasetItemOrigin {
   if (item.origin === 'MANUAL') return 'REVIEWER'
   return item.correctedValue === undefined || item.correctedValue === item.value
     ? 'ENGINE'
@@ -285,7 +295,7 @@ export function itemOrigin(item: FieldItem): DatasetValueOrigin {
 }
 
 /** Da chi vengono le righe di un campo ripetuto; `null` se la lista è vuota. */
-export function listOrigin(items: Array<{ origin: DatasetValueOrigin }>): DatasetListOrigin | null {
+export function listOrigin(items: Array<{ origin: DatasetItemOrigin }>): DatasetListOrigin | null {
   if (items.length === 0) return null
   const origins = new Set(items.map((item) => item.origin))
   return origins.size === 1 ? [...origins][0]! : 'MIXED'
@@ -296,13 +306,19 @@ export function proposedFieldValue(field: Pick<ExtractedField, 'value'>): string
   return field.value.trim() === '' ? null : field.value
 }
 
-/** Chi ha messo il valore confermato di un campo singolo; `null` se è rimasto vuoto. */
+/**
+ * Chi ha messo il valore confermato di un campo singolo; `null` se è rimasto vuoto.
+ *
+ * Una proposta dedotta che il revisore corregge torna `REVIEWER` come ogni altra: quello
+ * che conta è da dove viene il valore che resta, non da dove veniva quello scartato.
+ */
 export function fieldOrigin(
-  field: Pick<ExtractedField, 'value' | 'correctedValue'>
+  field: Pick<ExtractedField, 'value' | 'correctedValue' | 'computed'>
 ): DatasetValueOrigin | null {
   const value = currentFieldValue(field)
   if (value === null) return null
-  return value === proposedFieldValue(field) ? 'ENGINE' : 'REVIEWER'
+  if (value !== proposedFieldValue(field)) return 'REVIEWER'
+  return field.computed === true ? 'COMPUTED' : 'ENGINE'
 }
 
 function toDatasetField(field: ExtractedField, byId: Map<string, EvidenceItem>): DatasetField {
