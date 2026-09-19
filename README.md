@@ -467,7 +467,7 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
 {
   "manifest": {
     "format": "praticaai-reviewer/annotated-dataset",
-    "formatVersion": "1.8.0",
+    "formatVersion": "1.9.0",
     "exportedAt": "2026-09-16T18:00:00.000Z",
     "app": { "name": "praticaai-reviewer", "version": "1.1.0" },
     // motori e versioni dell'app al momento dell'export
@@ -501,6 +501,9 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
       // dov'era il tipo scelto dal revisore, fra quei candidati
       "chosen": { "rank": 1, "score": 0.8267 }
     },
+    // emesso o ricevuto per l'azienda di cui sono i documenti; assente sui tipi che non ne hanno
+    "direction": { "value": "EMESSO", "computed": "EMESSO", "matchedBy": "FISCAL_ID",
+                   "chosenBy": "ENGINE", "choice": null },
     "extraction": { "engineVersion": "…", "schemaVersion": "2.0.0", "status": "COMPLETED", "completedAt": "…" },
     "fields": [
       { "name": "document.number", "label": "Numero documento", "role": "required", "cardinality": "one",
@@ -558,6 +561,14 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
   quando il testo non si ritrova con certezza, `location` intera quando mancano le righe.
   `textCorrected: true` dice che `text` è una lettura dell'OCR che il revisore ha sistemato
   a mano: il valore buono è quello del campo, e chi misura l'OCR ha lì le due versioni.
+- `direction` dice se il documento è **emesso o ricevuto** dall'azienda di cui sono i
+  documenti, dalla `1.9.0`. È `null` sui tipi che una direzione non ce l'hanno (una visura
+  non è né l'una né l'altra); sugli altri c'è sempre, anche vuota, perché «non si è
+  ricavata» è un esito da contare. `computed` è quello che ha detto il calcolo e `value`
+  quello che resta: `chosenBy: "REVIEWER"` vuol dire che il revisore ha deciso diversamente,
+  e `choice: "NESSUNA"` che ha guardato e non è né l'una né l'altra. `matchedBy` dice su
+  cosa ha deciso il calcolo: `FISCAL_ID` o `NAME`. Vedi «[Emesso o
+  ricevuto](#emesso-o-ricevuto)».
 - `contentSha256` identifica i byte del file indipendentemente da Drive: è la chiave su
   cui pratica-ai indicizza il feedback.
 - `registry` porta gli stessi due tipi come li chiama pratica-ai: uguali a `id` e
@@ -573,7 +584,7 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
   documento che il classificatore non ha mai visto.
 - `learning` dice in che modalità era il learner e quali regole valevano: due export con la
   stessa `rulesFingerprint` sono stati precompilati dalle stesse regole, ed è quello che un
-  benchmark deve dichiarare accanto ai suoi numeri. Dalla `1.0.0` alla `1.8.0` si aggiungono
+  benchmark deve dichiarare accanto ai suoi numeri. Dalla `1.0.0` alla `1.9.0` si aggiungono
   solo campi, e due valori: `AREA_TEXT` a `pick.method`, l'area letta dal text layer, e
   `COMPUTED` a `origin`, il valore dedotto.
 
@@ -634,6 +645,8 @@ Il foglio **`documents`**, una riga per documento chiuso:
 | `margin` | distacco fra primo e secondo candidato |
 | `template_fingerprint` | impronta del layout della prima pagina |
 | `review_status` | `REVIEWED` o `DISCARDED` |
+| `direction` | `EMESSO` o `RICEVUTO`; vuota sui tipi senza direzione e dove non si è ricavata |
+| `direction_chosen_by` | `ENGINE` se viene dal calcolo, `REVIEWER` se l'ha scelta il revisore |
 | `review_note` | la nota del revisore, se l'ha scritta |
 
 Il foglio **`fields`**, una riga per campo — e una riga per ogni riga dei campi ripetuti,
@@ -677,6 +690,53 @@ Il test `tests/xlsx-export.test.ts` scrive il file dalle fixture e lo rilegge co
 exceljs: intestazioni, conteggi, impronte e valori confermati.
 
 ---
+
+## Emesso o ricevuto
+
+La stessa fattura è **emessa** per chi la scrive e **ricevuta** per chi la paga: la
+direzione non è un dato del documento, dipende da chi guarda. Per questo non è un campo
+estratto — non ha un'etichetta da cercare né un'evidenza verbatim — ma un attributo del
+documento, che si ricava confrontando emittente e destinatario con **l'azienda di cui sono
+i documenti**.
+
+Quell'azienda è l'unica impostazione dell'app: ragione sociale, partita IVA e codice
+fiscale, nella dashboard, sotto «L'azienda di cui sono i documenti» (tabella
+`company_identity`, migrazione `0019`). Finché è vuota nessun documento ha una direzione,
+ed è giusto: non c'è niente con cui confrontare le parti.
+
+Il conto sta in `src/shared/document-direction.ts`, modulo puro, e si rifà **a ogni
+lettura**: non è salvato da nessuna parte, così cambiare l'impostazione non lascia in giro
+direzioni vecchie, e mentre il revisore compila i campi la direzione si aggiorna da sola.
+Le regole, in ordine:
+
+1. **Partita IVA e codice fiscale** dell'emittente contro quelli dell'azienda: se
+   combaciano è `EMESSO`; col destinatario, `RICEVUTO`. I profili portano chiavi diverse a
+   seconda del tipo (`*.vat_number` e `*.tax_code` sulla fattura, `*.tax_id` sulla
+   proforma e sulla nota di credito), e un `tax_id` può essere l'uno o l'altro: si
+   confronta con tutti e due.
+2. **Il nome**, solo se gli identificativi non hanno deciso. Il preventivo non ha nessun
+   campo fiscale in profilo: senza il nome resterebbe sempre vuoto. Il confronto ignora
+   maiuscole, punteggiatura e forma societaria.
+3. Se non decide nessuno dei due, **o se l'azienda è da tutte e due le parti**, la
+   direzione resta vuota. È anche la risposta al conflitto che la separazione di partita
+   IVA e codice fiscale si porta dietro: una «P.IVA» che l'etichetta non attribuisce
+   finisce su emittente **e** destinatario con lo stesso valore, e lì non c'è niente da
+   decidere. Un campo segnato in conflitto vale comunque come ogni altro — scartarli tutti
+   avrebbe bloccato anche i documenti in cui il revisore ne ha accettato uno comʼera.
+
+I tipi con una direzione sono quattro: `accounting.fattura`, `accounting.fattura_proforma`,
+`accounting.nota_di_credito` e `procurement.preventivo`. Su una visura o su una carta
+d'identità la domanda non ha senso, e una riga vuota in più su 500 tipi sarebbe rumore.
+
+**Il revisore può correggerla**, dalla scheda «Dati», accanto al tipo: `Emesso`,
+`Ricevuto` o `Né l'uno né l'altro`. La sua scelta vince sempre e non si ricalcola (colonna
+`documents.direction_choice`); «Torna al calcolo» la toglie. Nel dataset escono tutti e due
+— quello che il calcolo aveva detto e quello che resta — perché è la differenza fra i due a
+dire se il calcolo funziona, come per il tipo del classificatore.
+
+**Perché non due tipi `fattura_emessa` e `fattura_ricevuta`:** la tassonomia è del pack, e
+la direzione dipende da chi guarda, non dal documento. Due tipi raddoppierebbero
+classificatore e profili per un dato che si calcola.
 
 ## Campi da estrarre
 
@@ -1074,7 +1134,7 @@ Tutto sotto la cartella dati dell'app
 
 | File | Contenuto |
 |---|---|
-| `praticaai-reviewer.db` | documenti, campi e righe dei campi ripetuti, evidenze del motore e selezioni del revisore, righe del testo per pagina, classificazione, eventi, indice FTS5, le correzioni alla mappa «tipo ↔ dati» e la loro cronologia, il deposito del learner |
+| `praticaai-reviewer.db` | documenti, campi e righe dei campi ripetuti, evidenze del motore e selezioni del revisore, righe del testo per pagina, classificazione, eventi, indice FTS5, le correzioni alla mappa «tipo ↔ dati» e la loro cronologia, il deposito del learner, l'azienda di cui sono i documenti |
 | `cache/<drive_file_id>.pdf\|.docx` | copia locale dei file di Drive |
 | `tokens.bin` | refresh token, cifrato con `safeStorage` (Keychain / DPAPI) |
 | `tessdata-cache/` | modelli tesseract scompattati |
