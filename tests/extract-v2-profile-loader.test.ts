@@ -6,6 +6,7 @@ import {
   createExtractionRegistryV2,
   loadLegacyFieldMap
 } from '../src/main/extract/v2/profile-loader'
+import { piiOf } from '../src/shared/extraction-v2'
 import { REGISTRY_DIR, REGISTRY_V2_DIR, testRegistry, testRegistryV2 } from './helpers/registry'
 
 const registry = testRegistryV2()
@@ -54,7 +55,7 @@ describe('profili espliciti', () => {
     expect(registry.field('non.esiste')).toBeNull()
     expect(registry.hints('money.total')).toContain('totale documento')
     expect(registry.hints('non.esiste')).toEqual([])
-    expect(registry.schemaVersion()).toBe('2.0.2')
+    expect(registry.schemaVersion()).toBe('2.0.3')
   })
 
   it('legge le eccezioni ai validatori solo sul tipo che le dichiara', () => {
@@ -125,6 +126,146 @@ describe('profili espliciti', () => {
     expect(profile.core_fields).not.toContain('recipient.name')
     // Una decisione su un campo che il registry non chiede più lo rimette nel profilo.
     expect(profile.optional_fields).toContain('company.registration_number')
+  })
+
+  it('i documenti d’identità chiedono cognome e nome distinti, e le chiavi generiche', () => {
+    const roles = (type: string) => {
+      const profile = registry.profile(type)!
+      return {
+        required: profile.required_fields,
+        core: profile.core_fields,
+        optional: profile.optional_fields
+      }
+    }
+    const required = [
+      'person.last_name',
+      'person.first_name',
+      'document.number',
+      'document.issue_date',
+      'document.expiry_date'
+    ]
+    const core = [
+      'identity.document_type',
+      'person.tax_code',
+      'person.birth_date',
+      'person.birth_place'
+    ]
+    // Carta e permesso: anche cittadinanza e residenza, come nella mappa della carta.
+    for (const type of [
+      'identity_personal.carta_identita',
+      'identity_personal.permesso_di_soggiorno'
+    ]) {
+      expect(roles(type), type).toEqual({
+        required: [...required, 'identity.nationality'],
+        core: [...core, 'person.address'],
+        optional: ['identity.issuing_authority']
+      })
+    }
+    // Il passaporto scrive sempre la cittadinanza, la residenza non sempre.
+    expect(roles('identity_personal.passaporto')).toEqual({
+      required: [...required, 'identity.nationality'],
+      core,
+      optional: ['identity.issuing_authority', 'person.address']
+    })
+    // La patente europea non stampa né cittadinanza né residenza.
+    expect(roles('identity_personal.patente_di_guida')).toEqual({
+      required,
+      core,
+      optional: ['identity.issuing_authority']
+    })
+
+    expect(registry.field('person.last_name')).toMatchObject({
+      label_it: 'Cognome',
+      pii: 'personal'
+    })
+    expect(registry.field('person.first_name')).toMatchObject({ label_it: 'Nome', pii: 'personal' })
+    // `person.name` resta dove una persona compare per intero.
+    expect(registry.field('person.name')?.label_it).toBe('Nome e cognome')
+    expect(registry.profile('real_estate.contratto_locazione')!.core_fields).toContain(
+      'person.name'
+    )
+    // Le date di `identity.*` restano su certificati e stato di famiglia, ora con un
+    // validatore: «COMUNE DI ROVIGO» in una scadenza non passa più in silenzio.
+    expect(registry.profile('identity_personal.certificato_nascita')!.core_fields).toEqual(
+      expect.arrayContaining(['identity.issue_date', 'identity.expiry_date'])
+    )
+    // Numero e date sulle chiavi generiche, ma col `pii` delle chiavi `identity.*` che
+    // sostituiscono: lo decide il profilo del tipo, non l'ontologia.
+    const pii = (type: string, fieldId: string) =>
+      piiOf(registry.profile(type), fieldId, registry.field(fieldId)!)
+    expect(pii('identity_personal.patente_di_guida', 'document.number')).toBe('sensitive')
+    expect(pii('identity_personal.carta_identita', 'document.expiry_date')).toBe('sensitive')
+    expect(pii('accounting.fattura', 'document.number')).toBe('none')
+    expect(registry.field('identity.issue_date')?.validators).toEqual(['valid_date'])
+    expect(registry.field('identity.expiry_date')?.validators).toEqual(['valid_date'])
+  })
+
+  it('la mappa del revisore sui documenti d’identità, dopo il cambio: cosa rientra', () => {
+    // Le decisioni del 18/09 che l'export fa vedere, confrontate col registry di allora.
+    const corrected = createExtractionRegistryV2(REGISTRY_V2_DIR, REGISTRY_DIR, () => ({
+      fields: {
+        'identity_personal.carta_identita': {
+          'identity.nationality': 'required',
+          'person.address': 'core',
+          'identity.document_type': 'excluded',
+          'identity.document_number': 'excluded',
+          'identity.issue_date': 'excluded',
+          'issuer.name': 'excluded',
+          'recipient.name': 'excluded',
+          'document.number': 'required',
+          'document.issue_date': 'required',
+          'person.name': 'required',
+          'person.birth_date': 'required',
+          'person.birth_place': 'required',
+          'identity.expiry_date': 'required'
+        },
+        'identity_personal.permesso_di_soggiorno': {
+          'document.number': 'required',
+          'identity.expiry_date': 'required',
+          'person.name': 'required',
+          'person.birth_date': 'required',
+          'person.birth_place': 'required',
+          'identity.document_number': 'optional',
+          'document.issue_date': 'excluded',
+          'issuer.name': 'excluded',
+          'recipient.name': 'excluded'
+        }
+      },
+      hintLabels: {},
+      cardinality: {}
+    }))
+    const fields = (type: string) => {
+      const profile = corrected.profile(type)!
+      return [...profile.required_fields, ...profile.core_fields, ...profile.optional_fields]
+    }
+
+    const carta = corrected.profile('identity_personal.carta_identita')!
+    // Le decisioni su campi usciti dal registry li rimettono nel profilo, col loro peso:
+    // accanto a cognome e nome torna `person.name`, accanto alla scadenza generica quella
+    // di `identity.*`. Finché il revisore non le ripristina, il motore cerca tutte e due.
+    expect(carta.required_fields).toEqual(
+      expect.arrayContaining([
+        'person.last_name',
+        'person.first_name',
+        'person.name',
+        'document.expiry_date',
+        'identity.expiry_date'
+      ])
+    )
+    // Le esclusioni su campi usciti non rimettono niente; quella sul tipo di documento,
+    // che il registry tiene, resta la decisione del revisore.
+    expect(fields('identity_personal.carta_identita')).not.toContain('identity.document_type')
+    expect(fields('identity_personal.carta_identita')).not.toContain('identity.issue_date')
+
+    const permesso = corrected.profile('identity_personal.permesso_di_soggiorno')!
+    expect(permesso.required_fields).toEqual(
+      expect.arrayContaining(['person.name', 'identity.expiry_date'])
+    )
+    expect(permesso.optional_fields).toContain('identity.document_number')
+    // Il permesso resta senza data di rilascio: `document.issue_date` è esclusa dalla mappa,
+    // e `identity.issue_date`, che il revisore usava al suo posto, esce dal registry.
+    expect(fields('identity_personal.permesso_di_soggiorno')).not.toContain('document.issue_date')
+    expect(fields('identity_personal.permesso_di_soggiorno')).not.toContain('identity.issue_date')
   })
 
   it('ritrova i nomi v1 che la mappa porta su un id dell’ontologia', () => {
@@ -202,6 +343,35 @@ describe('errori d’avvio', () => {
     })
     expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
       `accounting.fattura.field_validator_overrides: ${fieldId}`
+    )
+  })
+
+  it.each([
+    ['un campo fuori dal profilo del tipo', 'finance.balance_closing'],
+    ['un campo assente dall’ontologia', 'campo.inventato']
+  ])('un’eccezione al pii su %s', (_, fieldId) => {
+    const dir = registryCopy()
+    editJson<{
+      profiles: Record<string, { field_pii_overrides?: Record<string, string> }>
+    }>(dir, 'class_extraction_profiles_v2.json', (data) => {
+      data.profiles['accounting.fattura']!.field_pii_overrides = { [fieldId]: 'sensitive' }
+    })
+    expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
+      `accounting.fattura.field_pii_overrides: ${fieldId}`
+    )
+  })
+
+  it('un’eccezione al pii vale solo coi valori del pack', () => {
+    const dir = registryCopy()
+    editJson<{
+      profiles: Record<string, { field_pii_overrides?: Record<string, string> }>
+    }>(dir, 'class_extraction_profiles_v2.json', (data) => {
+      data.profiles['identity_personal.carta_identita']!.field_pii_overrides = {
+        'document.number': 'segreto'
+      }
+    })
+    expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
+      /class_extraction_profiles_v2\.json ha una struttura inattesa in «profiles\.identity_personal\.carta_identita\.field_pii_overrides\.document\.number»/
     )
   })
 

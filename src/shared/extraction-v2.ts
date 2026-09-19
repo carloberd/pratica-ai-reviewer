@@ -12,13 +12,17 @@ export type Cardinality = 'one' | 'many'
 export type FieldRole = 'required' | 'core' | 'optional' | 'conditional'
 export type FieldReviewStatus = 'AUTO_ACCEPTED' | 'NEEDS_REVIEW' | 'MISSING' | 'CONFLICT'
 
+/** Quanto è personale il dato di un campo: i valori del pack, dal meno al più delicato. */
+export const FIELD_PII = ['none', 'personal', 'business', 'sensitive', 'financial'] as const
+export type FieldPii = (typeof FIELD_PII)[number]
+
 export interface FieldOntologyEntry {
   id: string
   label_it: string
   type: ExtractionScalar
   format?: string | null
   default_cardinality: Cardinality
-  pii: 'none' | 'personal' | 'business' | 'sensitive' | 'financial'
+  pii: FieldPii
   evidence_required: boolean
   validators: string[]
   description: string
@@ -49,6 +53,21 @@ export interface ClassExtractionProfile {
    * profilo; lista vuota vuol dire nessun validatore. Lo scrive il registry, non il revisore.
    */
   field_validator_overrides?: Record<string, string[]>
+  /**
+   * Il `pii` di un campo su questo tipo, al posto di quello dell'ontologia: `document.number`
+   * è `none` su una fattura e `sensitive` su una carta d'identità, dove prende il posto di
+   * `identity.document_number`. Solo per i campi del profilo. Lo scrive il registry.
+   */
+  field_pii_overrides?: Record<string, FieldPii>
+}
+
+/** Il `pii` di un campo su un tipo: l'eccezione del profilo, o quello dell'ontologia. */
+export function piiOf(
+  profile: Pick<ClassExtractionProfile, 'field_pii_overrides'> | null | undefined,
+  fieldId: string,
+  spec: Pick<FieldOntologyEntry, 'pii'>
+): FieldPii {
+  return profile?.field_pii_overrides?.[fieldId] ?? spec.pii
 }
 
 /**

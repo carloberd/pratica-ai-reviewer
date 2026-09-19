@@ -1,4 +1,8 @@
-import type { ClassExtractionProfile, FieldOntologyEntry } from '@shared/extraction-v2'
+import {
+  type ClassExtractionProfile,
+  FIELD_PII,
+  type FieldOntologyEntry
+} from '@shared/extraction-v2'
 import {
   applyCardinalityOverlay,
   applyHintOverlay,
@@ -30,6 +34,7 @@ export interface ExtractionRegistryV2 {
 }
 
 const stringList = z.array(z.string())
+const piiSchema = z.enum(FIELD_PII)
 
 // Solo le chiavi che il motore legge: le altre (provenienza, confusables, note)
 // restano nel file per chi lo cura, ma qui non devono far fallire l'avvio.
@@ -44,6 +49,7 @@ const profileSchema = z.looseObject({
   optional_fields: stringList,
   conditional_fields: stringList,
   field_validator_overrides: z.record(z.string(), stringList).optional(),
+  field_pii_overrides: z.record(z.string(), piiSchema).optional(),
   literal_evidence_required: z.boolean(),
   unknown_value_policy: z.literal('LEAVE_EMPTY'),
   review_policy: z.string()
@@ -73,7 +79,7 @@ const ontologySchema = z.object({
       ]),
       format: z.string().nullable().optional(),
       default_cardinality: z.enum(['one', 'many']),
-      pii: z.enum(['none', 'personal', 'business', 'sensitive', 'financial']),
+      pii: piiSchema,
       evidence_required: z.boolean(),
       validators: stringList,
       description: z.string(),
@@ -151,11 +157,13 @@ export function createExtractionRegistryV2(
         if (!ontology.fields[fieldId]) unknownRefs.push(`${documentType}.${key}: ${fieldId}`)
       }
     }
-    // Un'eccezione ai validatori vale per un campo che il tipo chiede: su un campo fuori
-    // profilo non cambierebbe niente, e dice che il profilo o l'eccezione sono sbagliati.
-    for (const fieldId of Object.keys(profile.field_validator_overrides ?? {})) {
-      if (!ontology.fields[fieldId] || !ROLE_KEYS.some((key) => profile[key].includes(fieldId))) {
-        unknownRefs.push(`${documentType}.field_validator_overrides: ${fieldId}`)
+    // Un'eccezione ai validatori o al `pii` vale per un campo che il tipo chiede: su un campo
+    // fuori profilo non cambierebbe niente, e dice che il profilo o l'eccezione sono sbagliati.
+    for (const overrides of ['field_validator_overrides', 'field_pii_overrides'] as const) {
+      for (const fieldId of Object.keys(profile[overrides] ?? {})) {
+        if (!ontology.fields[fieldId] || !ROLE_KEYS.some((key) => profile[key].includes(fieldId))) {
+          unknownRefs.push(`${documentType}.${overrides}: ${fieldId}`)
+        }
       }
     }
   }

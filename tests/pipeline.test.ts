@@ -378,7 +378,7 @@ describe('motore v2 — PDF con testo nativo', () => {
     const [run] = repo.extractionRuns.listForDocument(id)
     expect(run).toMatchObject({
       engine_version: EXTRACTION_ENGINE_V2_VERSION,
-      schema_version: '2.0.2',
+      schema_version: '2.0.3',
       document_type: 'accounting.fattura',
       status: 'COMPLETED',
       missing_required_json: '[]',

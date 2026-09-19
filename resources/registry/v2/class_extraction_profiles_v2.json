@@ -1,5 +1,5 @@
 {
-  "version": "2.0.2",
+  "version": "2.0.3",
   "active_registry_source": "Document Brain 496 active classes",
   "profiles": {
     "accounting.autofattura": {
@@ -12866,39 +12866,43 @@
       "priority": "P2",
       "schema_state": "EXTRACTION_SCHEMA_DRAFT",
       "evidence_basis": "LEGACY_REGISTRY+AI_PROPOSED",
-      "required_fields": [],
+      "required_fields": [
+        "person.last_name",
+        "person.first_name",
+        "document.number",
+        "document.issue_date",
+        "document.expiry_date",
+        "identity.nationality"
+      ],
       "core_fields": [
         "identity.document_type",
-        "identity.document_number",
-        "person.name",
         "person.tax_code",
         "person.birth_date",
         "person.birth_place",
-        "identity.issue_date",
-        "identity.expiry_date"
+        "person.address"
       ],
       "optional_fields": [
-        "identity.issuing_authority",
-        "document.number",
-        "document.issue_date",
-        "issuer.name",
-        "recipient.name"
+        "identity.issuing_authority"
       ],
       "conditional_fields": [],
+      "field_pii_overrides": {
+        "document.number": "sensitive",
+        "document.issue_date": "sensitive",
+        "document.expiry_date": "sensitive"
+      },
       "field_provenance": {
-        "identity.expiry_date": "AI_PROPOSED_FAMILY",
-        "identity.document_number": "AI_PROPOSED_FAMILY",
         "identity.document_type": "AI_PROPOSED_FAMILY",
-        "person.name": "AI_PROPOSED_FAMILY",
         "person.birth_place": "AI_PROPOSED_FAMILY",
-        "identity.issue_date": "AI_PROPOSED_FAMILY",
         "identity.issuing_authority": "AI_PROPOSED_FAMILY",
         "person.birth_date": "AI_PROPOSED_FAMILY",
         "person.tax_code": "AI_PROPOSED_FAMILY",
-        "document.issue_date": "LEGACY_REGISTRY",
-        "document.number": "LEGACY_REGISTRY",
-        "issuer.name": "LEGACY_REGISTRY",
-        "recipient.name": "LEGACY_REGISTRY"
+        "document.issue_date": "REVIEWER_ANNOTATIONS",
+        "document.number": "REVIEWER_ANNOTATIONS",
+        "person.last_name": "REVIEWER_ANNOTATIONS",
+        "person.first_name": "REVIEWER_ANNOTATIONS",
+        "document.expiry_date": "REVIEWER_ANNOTATIONS",
+        "identity.nationality": "REVIEWER_ANNOTATIONS",
+        "person.address": "REVIEWER_ANNOTATIONS"
       },
       "confusables": [
         "vehicles_transport.carta_circolazione",
@@ -13070,39 +13074,43 @@
       "priority": "P2",
       "schema_state": "EXTRACTION_SCHEMA_DRAFT",
       "evidence_basis": "LEGACY_REGISTRY+AI_PROPOSED",
-      "required_fields": [],
+      "required_fields": [
+        "person.last_name",
+        "person.first_name",
+        "document.number",
+        "document.issue_date",
+        "document.expiry_date",
+        "identity.nationality"
+      ],
       "core_fields": [
         "identity.document_type",
-        "identity.document_number",
-        "person.name",
         "person.tax_code",
         "person.birth_date",
-        "person.birth_place",
-        "identity.issue_date",
-        "identity.expiry_date"
+        "person.birth_place"
       ],
       "optional_fields": [
         "identity.issuing_authority",
-        "document.number",
-        "document.issue_date",
-        "issuer.name",
-        "recipient.name"
+        "person.address"
       ],
       "conditional_fields": [],
+      "field_pii_overrides": {
+        "document.number": "sensitive",
+        "document.issue_date": "sensitive",
+        "document.expiry_date": "sensitive"
+      },
       "field_provenance": {
-        "identity.expiry_date": "AI_PROPOSED_FAMILY",
-        "identity.document_number": "AI_PROPOSED_FAMILY",
         "identity.document_type": "AI_PROPOSED_FAMILY",
-        "person.name": "AI_PROPOSED_FAMILY",
         "person.birth_place": "AI_PROPOSED_FAMILY",
-        "identity.issue_date": "AI_PROPOSED_FAMILY",
         "identity.issuing_authority": "AI_PROPOSED_FAMILY",
         "person.birth_date": "AI_PROPOSED_FAMILY",
         "person.tax_code": "AI_PROPOSED_FAMILY",
-        "document.issue_date": "LEGACY_REGISTRY",
-        "document.number": "LEGACY_REGISTRY",
-        "issuer.name": "LEGACY_REGISTRY",
-        "recipient.name": "LEGACY_REGISTRY"
+        "document.issue_date": "REVIEWER_ANNOTATIONS",
+        "document.number": "REVIEWER_ANNOTATIONS",
+        "person.last_name": "REVIEWER_ANNOTATIONS",
+        "person.first_name": "REVIEWER_ANNOTATIONS",
+        "document.expiry_date": "REVIEWER_ANNOTATIONS",
+        "identity.nationality": "REVIEWER_ANNOTATIONS",
+        "person.address": "REVIEWER_ANNOTATIONS"
       },
       "confusables": [
         "identity_personal.stato_di_famiglia",
@@ -13121,39 +13129,39 @@
       "priority": "P2",
       "schema_state": "EXTRACTION_SCHEMA_DRAFT",
       "evidence_basis": "LEGACY_REGISTRY+AI_PROPOSED",
-      "required_fields": [],
-      "core_fields": [
-        "identity.document_type",
-        "identity.document_number",
-        "person.name",
-        "person.tax_code",
-        "person.birth_date",
-        "person.birth_place",
-        "identity.issue_date",
-        "identity.expiry_date"
-      ],
-      "optional_fields": [
-        "identity.issuing_authority",
+      "required_fields": [
+        "person.last_name",
+        "person.first_name",
         "document.number",
         "document.issue_date",
-        "issuer.name",
-        "recipient.name"
+        "document.expiry_date"
+      ],
+      "core_fields": [
+        "identity.document_type",
+        "person.tax_code",
+        "person.birth_date",
+        "person.birth_place"
+      ],
+      "optional_fields": [
+        "identity.issuing_authority"
       ],
       "conditional_fields": [],
+      "field_pii_overrides": {
+        "document.number": "sensitive",
+        "document.issue_date": "sensitive",
+        "document.expiry_date": "sensitive"
+      },
       "field_provenance": {
-        "identity.expiry_date": "AI_PROPOSED_FAMILY",
-        "identity.document_number": "AI_PROPOSED_FAMILY",
         "identity.document_type": "AI_PROPOSED_FAMILY",
-        "person.name": "AI_PROPOSED_FAMILY",
         "person.birth_place": "AI_PROPOSED_FAMILY",
-        "identity.issue_date": "AI_PROPOSED_FAMILY",
         "identity.issuing_authority": "AI_PROPOSED_FAMILY",
         "person.birth_date": "AI_PROPOSED_FAMILY",
         "person.tax_code": "AI_PROPOSED_FAMILY",
-        "document.issue_date": "LEGACY_REGISTRY",
-        "document.number": "LEGACY_REGISTRY",
-        "issuer.name": "LEGACY_REGISTRY",
-        "recipient.name": "LEGACY_REGISTRY"
+        "document.issue_date": "REVIEWER_ANNOTATIONS",
+        "document.number": "REVIEWER_ANNOTATIONS",
+        "person.last_name": "REVIEWER_ANNOTATIONS",
+        "person.first_name": "REVIEWER_ANNOTATIONS",
+        "document.expiry_date": "REVIEWER_ANNOTATIONS"
       },
       "confusables": [
         "certifications_licenses.ricevuta_rilascio_patente_crediti",
@@ -13172,39 +13180,43 @@
       "priority": "P2",
       "schema_state": "EXTRACTION_SCHEMA_DRAFT",
       "evidence_basis": "LEGACY_REGISTRY+AI_PROPOSED",
-      "required_fields": [],
+      "required_fields": [
+        "person.last_name",
+        "person.first_name",
+        "document.number",
+        "document.issue_date",
+        "document.expiry_date",
+        "identity.nationality"
+      ],
       "core_fields": [
         "identity.document_type",
-        "identity.document_number",
-        "person.name",
         "person.tax_code",
         "person.birth_date",
         "person.birth_place",
-        "identity.issue_date",
-        "identity.expiry_date"
+        "person.address"
       ],
       "optional_fields": [
-        "identity.issuing_authority",
-        "document.number",
-        "document.issue_date",
-        "issuer.name",
-        "recipient.name"
+        "identity.issuing_authority"
       ],
       "conditional_fields": [],
+      "field_pii_overrides": {
+        "document.number": "sensitive",
+        "document.issue_date": "sensitive",
+        "document.expiry_date": "sensitive"
+      },
       "field_provenance": {
-        "identity.expiry_date": "AI_PROPOSED_FAMILY",
-        "identity.document_number": "AI_PROPOSED_FAMILY",
         "identity.document_type": "AI_PROPOSED_FAMILY",
-        "person.name": "AI_PROPOSED_FAMILY",
         "person.birth_place": "AI_PROPOSED_FAMILY",
-        "identity.issue_date": "AI_PROPOSED_FAMILY",
         "identity.issuing_authority": "AI_PROPOSED_FAMILY",
         "person.birth_date": "AI_PROPOSED_FAMILY",
         "person.tax_code": "AI_PROPOSED_FAMILY",
-        "document.issue_date": "LEGACY_REGISTRY",
-        "document.number": "LEGACY_REGISTRY",
-        "issuer.name": "LEGACY_REGISTRY",
-        "recipient.name": "LEGACY_REGISTRY"
+        "document.issue_date": "REVIEWER_ANNOTATIONS",
+        "document.number": "REVIEWER_ANNOTATIONS",
+        "person.last_name": "REVIEWER_ANNOTATIONS",
+        "person.first_name": "REVIEWER_ANNOTATIONS",
+        "document.expiry_date": "REVIEWER_ANNOTATIONS",
+        "identity.nationality": "REVIEWER_ANNOTATIONS",
+        "person.address": "REVIEWER_ANNOTATIONS"
       },
       "confusables": [
         "hse_risk.permesso_di_lavoro",
