@@ -251,11 +251,15 @@ Quello che l'implementazione ha scoperto, e il piano non diceva:
   si cercava con «Data scadenza», non con «Scadenza»; `document.issue_date` non aveva
   «Data rilascio». Spostare i campi senza le etichette sarebbe stata una perdita: ora le
   hanno, per tutti i tipi che le chiedono, e sul permesso «Nazionalità» si legge.
-- **Il segreto sparisce dallo schema.** `identity.document_number` e le date di
-  `identity.*` sono `pii: sensitive`, le chiavi `document.*` `pii: none`. Sui quattro tipi
-  lo schema esportato dice ora `none` per numero e date di un documento d'identità. Il
-  `pii` è del campo, non del tipo: se pratica-ai lo usa per mascherare, va deciso lì (o
-  con un'eccezione per tipo che il registry oggi non ha).
+- **Il `pii` è del campo, e le chiavi generiche sono `none`.** `identity.document_number`
+  e le date di `identity.*` sono `pii: sensitive`, `document.*` `pii: none`: senza altro,
+  lo schema esportato avrebbe detto `none` per il numero di una carta d'identità, ed è
+  quello che pratica-ai riceve (`x-praticaai-pii`). Il profilo di un tipo ora può
+  cambiare il `pii` di un campo, `field_pii_overrides`, come fa coi validatori
+  (`field_validator_overrides`). Sui quattro documenti d'identità `document.number`,
+  `document.issue_date` e `document.expiry_date` sono `sensitive`; sulla fattura e sugli
+  altri tipi restano `none`. Un campo segnato non utile porta via la sua eccezione, come
+  per i validatori.
 
 Non si legge ancora, e resta fuori:
 
