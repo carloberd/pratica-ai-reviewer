@@ -64,6 +64,8 @@ export const PRECEDING_MARKERS = new Set([
   'atto',
   'deposito',
   'rif',
+  // «Riferim. fattura n. 12»: l'abbreviazione lunga, che il ripiegamento non riduce a `rif`.
+  'riferim',
   'riferimento',
   'ns',
   'vs'

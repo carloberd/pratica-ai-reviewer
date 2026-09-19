@@ -298,6 +298,9 @@ function readText(text: string, mode: ReadMode): string | null {
     const colon = value.indexOf(':')
     if (colon !== -1 && colon < VALUE_WINDOW) return null
   }
+  // `/Nome e cognome` è la coda di un'etichetta composta — «Ragione sociale/Nome e
+  // cognome» andata a capo sulla barra — non il valore della sua prima metà.
+  if (/^[\\/]/.test(value)) return null
   return value.length > 0 && value.length <= MAX_TEXT_VALUE ? value : null
 }
 
@@ -370,10 +373,24 @@ function pageLines(page: ExtractedPage): TextLine[] {
     .map((text) => ({ text }))
 }
 
-/** Un testo libero con l'etichetta a metà frase non è un'etichetta: «Codice cliente: 12». */
-function startsSegment(text: string, start: number): boolean {
+/**
+ * Un identificativo fiscale completo in coda: partita IVA, anche col prefisso `IT`, o
+ * codice fiscale.
+ */
+const TRAILING_TAX_ID = /\b(?:(?:IT)?\d{11}|[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])$/i
+
+/**
+ * Un testo libero con l'etichetta a metà frase non è un'etichetta: «Codice cliente: 12».
+ *
+ * Un'eccezione, stretta: il generatore PDF fonde `P.IVA 01234567890` con l'intestazione
+ * della colonna accanto, e ne esce `P.IVA 01234567890 DESTINATARIO`. Quell'etichetta vale
+ * solo se chiude la riga — il valore sta sotto — e la precede un identificativo intero, non
+ * un pezzo di frase.
+ */
+function startsSegment(text: string, start: number, end: number): boolean {
   const before = text.slice(0, start).trimEnd()
-  return before === '' || /[-–—|;•(]$/.test(before)
+  if (before === '' || /[-–—|;•(]$/.test(before)) return true
+  return text.slice(end).trim() === '' && TRAILING_TAX_ID.test(before)
 }
 
 /** Una lettura di un'etichetta: dove compare, e il valore che si legge dopo. */
@@ -404,7 +421,7 @@ function readsInLines(
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index]!
     for (const { start, end, foldedStart } of labelOccurrences(folded[index]!, label)) {
-      if (isText && !startsSegment(line.text, start)) continue
+      if (isText && !startsSegment(line.text, start, end)) continue
       if (!citing && precededByReference(folded[index]!.folded, foldedStart, label)) continue
 
       const remainder = line.text.slice(end)

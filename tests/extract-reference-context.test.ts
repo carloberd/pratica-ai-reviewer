@@ -46,6 +46,8 @@ describe('etichetta dentro una citazione', () => {
   it('il rimando a un altro documento', () => {
     expect(cites('pratica con atto del 06/03/2017 Data deposito: 21/03/2017', 'del')).toBe(true)
     expect(cites('Rif.to Ns. Offerta n.3260/26 del 16/06/2026', 'n')).toBe(true)
+    expect(cites('Riferim. fattura n. 12 del 01/09/2026', 'n')).toBe(true)
+    expect(cites('Riferimento fattura n. 12 del 01/09/2026', 'n')).toBe(true)
   })
 
   it('unʼetichetta che non viene da una citazione passa', () => {
