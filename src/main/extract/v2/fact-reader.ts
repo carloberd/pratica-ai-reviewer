@@ -37,6 +37,9 @@ import { runFieldValidator, validatorsOf } from './validators'
  *   e se nessuna etichetta è più specifica il campo va in CONFLICT. L'eccezione sono
  *   partita IVA e codice fiscale della stessa parte, che possono essere lo stesso numero
  *   sulla stessa riga (`fiscalTwinOf`);
+ * - una riga che è soltanto l'etichetta di un campo del profilo non è il valore di nessuno:
+ *   su una carta d'identità a cui l'OCR ha perso il cognome, «COGNOME / SURNAME» seguita da
+ *   «NOME / NAME» lascia il cognome vuoto invece di dargli l'etichetta del nome;
  * - i campi `many` raccolgono un elemento per riga, in ordine di documento;
  * - le etichette imparate dalle revisioni (`learnedLabels`) passano davanti a quelle del
  *   registry, quelle di un template davanti a quelle di un tipo: a parità di livello decide
@@ -513,7 +516,8 @@ function candidatesForField(
   spec: FieldOntologyEntry,
   labels: LabelSource[],
   pages: ExtractedPage[],
-  fromOcr: Set<number>
+  fromOcr: Set<number>,
+  bareLabels: ReadonlySet<string>
 ): Candidate[] {
   // Per ogni riga del valore resta solo il candidato con l'etichetta più specifica.
   const best = new Map<string, Candidate>()
@@ -533,6 +537,8 @@ function candidatesForField(
         source.relation
       )) {
         const { value, sameLine } = read
+        // La riga sotto è l'etichetta di un altro campo: il valore di questa manca.
+        if (!sameLine && bareLabels.has(folded[read.valueLine]!.folded)) continue
         const failed = spec.validators
           .map((validator) => runFieldValidator(validator, value))
           .filter((error): error is string => error !== null)
@@ -655,7 +661,7 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
   const ocrPages = new Set(input.ocrPages ?? [])
   const conflicts: string[] = []
   const specs = new Map<string, FieldOntologyEntry>()
-  const candidates = new Map<string, Candidate[]>()
+  const labels = new Map<string, LabelSource[]>()
   for (const fieldId of fieldIds) {
     const ontologySpec = input.registry.field(fieldId)
     if (!ontologySpec) {
@@ -669,15 +675,17 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
     // negativo è il valore giusto, non un errore da segnalare.
     const spec = { ...ontologySpec, validators: validatorsOf(profile, fieldId, ontologySpec) }
     specs.set(fieldId, spec)
+    labels.set(fieldId, labelsFor(fieldId, spec, input.registry, input.learnedLabels ?? []))
+  }
+
+  // Le etichette di tutti i campi del profilo: una riga fatta solo di una di queste non è
+  // un valore da leggere sotto un'altra etichetta.
+  const bareLabels = new Set([...labels.values()].flatMap((list) => list.map((l) => l.label)))
+  const candidates = new Map<string, Candidate[]>()
+  for (const [fieldId, spec] of specs) {
     candidates.set(
       fieldId,
-      candidatesForField(
-        fieldId,
-        spec,
-        labelsFor(fieldId, spec, input.registry, input.learnedLabels ?? []),
-        input.pages,
-        ocrPages
-      )
+      candidatesForField(fieldId, spec, labels.get(fieldId)!, input.pages, ocrPages, bareLabels)
     )
   }
 

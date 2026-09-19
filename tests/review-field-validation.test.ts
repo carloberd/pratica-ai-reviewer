@@ -143,6 +143,20 @@ describe('la revisione valida il valore che si vede', () => {
     expect(field('issuer.tax_id')).not.toHaveProperty('validationErrors')
   })
 
+  it('sulla carta d’identità una scadenza che non è una data si vede, sotto tutte e due le chiavi', () => {
+    const { field } = setup('identity_personal.carta_identita', [
+      one('document.expiry_date', 'COMUNE DI ROVIGO'),
+      one('document.issue_date', '2022-07-05'),
+      one('person.last_name', 'AYAD'),
+      // La carta del 18/09 tiene la chiave di allora: il validatore la raggiunge lo stesso.
+      one('identity.expiry_date', 'COMUNE DI ROVIGO')
+    ])
+    expect(field('document.expiry_date').validationErrors).toEqual(['INVALID_DATE'])
+    expect(field('identity.expiry_date').validationErrors).toEqual(['INVALID_DATE'])
+    expect(field('document.issue_date')).not.toHaveProperty('validationErrors')
+    expect(field('person.last_name')).not.toHaveProperty('validationErrors')
+  })
+
   it('senza registry v2, o su un nome del motore v1, non si valida niente', () => {
     expect(validateFieldValue(undefined, 'accounting.fattura', 'bank.iban', BAD_IBAN)).toEqual([])
     expect(validateFieldValue(testRegistryV2(), 'accounting.fattura', 'iban', BAD_IBAN)).toEqual([])

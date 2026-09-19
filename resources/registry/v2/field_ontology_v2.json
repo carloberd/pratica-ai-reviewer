@@ -405,14 +405,38 @@
     },
     "person.name": {
       "id": "person.name",
-      "label_it": "Nome persona",
+      "label_it": "Nome e cognome",
       "type": "string",
       "format": null,
       "default_cardinality": "one",
       "pii": "personal",
       "evidence_required": true,
       "validators": [],
-      "description": "Nome persona",
+      "description": "Nome e cognome",
+      "label_aliases_it": []
+    },
+    "person.last_name": {
+      "id": "person.last_name",
+      "label_it": "Cognome",
+      "type": "string",
+      "format": null,
+      "default_cardinality": "one",
+      "pii": "personal",
+      "evidence_required": true,
+      "validators": [],
+      "description": "Cognome",
+      "label_aliases_it": []
+    },
+    "person.first_name": {
+      "id": "person.first_name",
+      "label_it": "Nome",
+      "type": "string",
+      "format": null,
+      "default_cardinality": "one",
+      "pii": "personal",
+      "evidence_required": true,
+      "validators": [],
+      "description": "Nome",
       "label_aliases_it": []
     },
     "person.tax_code": {
@@ -3005,7 +3029,9 @@
       "default_cardinality": "one",
       "pii": "sensitive",
       "evidence_required": true,
-      "validators": [],
+      "validators": [
+        "valid_date"
+      ],
       "description": "Data rilascio",
       "label_aliases_it": []
     },
@@ -3017,7 +3043,9 @@
       "default_cardinality": "one",
       "pii": "sensitive",
       "evidence_required": true,
-      "validators": [],
+      "validators": [
+        "valid_date"
+      ],
       "description": "Scadenza",
       "label_aliases_it": []
     },
