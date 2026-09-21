@@ -532,6 +532,44 @@ function cutAtNextColumn(text: string, labels: ReadonlySet<string>): string {
   return text.slice(0, cut)
 }
 
+/** Gli importi che compaiono in un testo, in ordine, con dove comincia ognuno. */
+function moneyRuns(text: string): Array<{ start: number; end: number }> {
+  const runs: Array<{ start: number; end: number }> = []
+  let offset = 0
+  for (let guard = 0; guard < 8; guard += 1) {
+    const money = findMoney(text.slice(offset))
+    if (!money) break
+    const at = text.slice(offset).indexOf(money.raw)
+    if (at === -1) break
+    runs.push({ start: offset + at, end: offset + at + money.raw.length })
+    offset += at + money.raw.length
+  }
+  return runs
+}
+
+/**
+ * La riga è una riga di tabella, e quale colonna sia questo campo non si sa.
+ *
+ * Il riepilogo IVA di una fattura mette aliquota, imponibile e imposta in colonna:
+ *
+ * ```
+ * Aliquota IVA 10%                   2.051,00            205,10
+ * ```
+ *
+ * L'etichetta «iva» aggancia, e prendere il primo importo dà 2.051,00 — l'imponibile
+ * scambiato per l'imposta, accettato da solo perché la lettura sulla stessa riga vale
+ * 0,85. Due importi separati da uno stacco di colonna dicono che la riga è una tabella:
+ * lì il campo resta vuoto, che è meno peggio di un numero sbagliato.
+ *
+ * Un valore seguito dall'etichetta di un altro campo non è questo caso: «Imponibile
+ * 1.000,00 Imposta 220,00» si taglia prima, e di importi ne resta uno solo.
+ */
+function columnAmbiguous(text: string): boolean {
+  const runs = moneyRuns(text)
+  if (runs.length < 2) return false
+  return runs.slice(1).some((run, index) => /\s{3,}/.test(text.slice(runs[index]!.end, run.start)))
+}
+
 /** Una lettura di un'etichetta: dove compare, e il valore che si legge dopo. */
 export interface LabelRead {
   /** Riga dell'etichetta e riga del valore, indici in `lines`. */
@@ -572,8 +610,14 @@ function readsInLines(
       if (isText && twinEnd === -1 && !startsSegment(line.text, start, end)) continue
       if (!citing && precededByReference(folded[index]!.folded, foldedStart, label)) continue
 
+      // Un importo si legge solo fino a dove comincia il campo accanto, e non si legge
+      // affatto se la riga è una tabella a colonne.
+      const sameLineText =
+        spec.type === 'money' ? cutAtNextColumn(remainder, bareLabels) : remainder
       const sameLine =
-        relation === 'next-line' ? null : readValue(fieldId, spec, remainder, 'same-line')
+        relation === 'next-line' || (spec.type === 'money' && columnAmbiguous(sameLineText))
+          ? null
+          : readValue(fieldId, spec, sameLineText, 'same-line')
       if (sameLine !== null) {
         reads.push({
           line: index,
