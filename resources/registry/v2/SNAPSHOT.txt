@@ -137,6 +137,15 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
          identity.issuing_authority resta senza: il permesso scrive «QUESTURA DI ROVIGO»
          di fila, senza due punti e senza didascalia bilingue, e il testo libero lì non si
          legge. È optional sul profilo.
+       21/09/2026, le sezioni delle parti:
+       - extraction_hints_v2.json passa a 2.1.0 e ha una chiave che il pack non ha,
+         `sections`: le intestazioni che aprono il blocco di una parte, per parte
+         (issuer, recipient). Sono le forme della resa SdI di una fattura elettronica —
+         «Cedente prestatore (fornitore)», «Cessionario committente (cliente)» e le
+         varianti con «Dati del». Restano fuori «Emittente», «Destinatario», «Cliente» e
+         «Fornitore»: sono etichette di campo che portano il loro valore sulla stessa
+         riga, e prese per intestazione si porterebbero dentro tutte le righe sotto.
+         Il lettore apre una sezione solo su una riga che è soltanto l'intestazione.
        Chi aggiorna il pack riporta queste righe o le sostituisce con quelle del pack.
 note: profili EXTRACTION_SCHEMA_DRAFT salvo 15 READY_FOR_FIELD_TEST, nessuno VALIDATED.
       I 16 tipi del registry v1 senza profilo esplicito ricevono un LEGACY_FALLBACK.

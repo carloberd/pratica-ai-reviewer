@@ -12,6 +12,7 @@ import {
 } from '@shared/profile-overlay'
 import { z } from 'zod'
 import { readRegistryJson } from '../../registry/v2/read-json'
+import { fold } from '../heuristics'
 
 export const LEGACY_FIELD_MAP_FILE = 'legacy_field_map_v2.json'
 
@@ -26,6 +27,11 @@ export interface ExtractionRegistryV2 {
   /** Tutti i campi dell'ontologia, in ordine di etichetta: il menu che li elenca tutti. */
   allFields(): FieldOntologyEntry[]
   hints(fieldId: string): string[]
+  /**
+   * Le intestazioni che aprono la sezione di una parte, ripiegate, per parte: su una
+   * fattura elettronica «Cedente prestatore (fornitore)» apre quella dell'emittente.
+   */
+  sections(): Array<{ party: string; label: string }>
   profileSource(documentType: string): ProfileSource
   /** Nomi campo v1 che la mappa legacy porta su questo id dell'ontologia. */
   legacyNames(fieldId: string): string[]
@@ -91,6 +97,9 @@ const ontologySchema = z.object({
 
 const hintsSchema = z.object({
   version: z.string(),
+  // Assente negli snapshot più vecchi: senza, il lettore non conosce sezioni e si
+  // comporta come prima.
+  sections: z.record(z.string(), stringList).optional(),
   hints: z.record(z.string(), z.looseObject({ labels: stringList }))
 })
 
@@ -150,6 +159,13 @@ export function createExtractionRegistryV2(
     'extraction_schemas.json',
     legacySchemasSchema
   )
+
+  // Le intestazioni di sezione, dalla più lunga: «Cedente prestatore (fornitore)» prima di
+  // «Cedente prestatore», così una riga che le contiene tutte e due non conta due volte.
+  const sectionLabels = Object.entries(hints.sections ?? {})
+    .flatMap(([party, labels]) => labels.map((label) => ({ party, label: fold(label) })))
+    .filter((entry) => entry.label.length > 0)
+    .sort((a, b) => b.label.length - a.label.length)
 
   const unknownRefs: string[] = []
   for (const [documentType, profile] of Object.entries(profiles.profiles)) {
@@ -252,6 +268,7 @@ export function createExtractionRegistryV2(
     allFields: () => sortedFields,
     hints: (fieldId) =>
       applyHintOverlay(hints.hints[fieldId]?.labels ?? [], overlay().hintLabels[fieldId]),
+    sections: () => sectionLabels,
     profileSource(documentType) {
       if (profiles.profiles[documentType]) return 'V2_EXPLICIT'
       if (legacySchemas[documentType]) return 'LEGACY_FALLBACK'
@@ -295,6 +312,7 @@ export function createReloadableExtractionRegistryV2(
     field: (fieldId) => current.field(fieldId),
     allFields: () => current.allFields(),
     hints: (fieldId) => current.hints(fieldId),
+    sections: () => current.sections(),
     profileSource: (documentType) => current.profileSource(documentType),
     legacyNames: (fieldId) => current.legacyNames(fieldId),
     schemaVersion: () => current.schemaVersion(),

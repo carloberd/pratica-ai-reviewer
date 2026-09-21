@@ -302,6 +302,14 @@ resta la stessa etichetta in un'altra lingua — `COGNOME/SURNAME`,
 `CITTADINANZA/NATIONALITY` — come la scrivono i documenti d'identità: ogni pezzo dopo la
 barra dev'essere un'etichetta che il registry dichiara **per quel campo**, altrimenti
 resta un'intestazione di colonna e la riga sotto è il suo primo dato, non un valore.
+Su un documento che dichiara le parti a blocchi — una fattura elettronica resa dallo
+stilo SdI scrive `Cedente prestatore (fornitore)` e `Cessionario committente (cliente)` —
+la **sezione** corrente si propaga di riga in riga (`sections` in
+`extraction_hints_v2.json`) e un campo `issuer.*` o `recipient.*` legge solo le righe
+della sua parte: `Denominazione` da sola non distingue l'emittente dal destinatario.
+Apre una sezione soltanto una riga che è **solo** l'intestazione, mai un'etichetta con il
+suo valore; due intestazioni sulla stessa riga non ne aprono nessuna, perché lì la parte
+dipende dalla colonna. Un documento senza intestazioni si legge esattamente come prima.
 Dopo una coda bilingue il valore si legge anche sulla stessa riga senza i due punti
 (`COGNOME/SURNAME ROSSI`), che su quei moduli non arrivano mai: si ferma dove comincia la
 colonna dopo, cioè all'etichetta di un altro campo del profilo o alla prossima parola
