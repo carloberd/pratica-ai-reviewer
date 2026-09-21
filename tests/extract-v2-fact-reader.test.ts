@@ -905,6 +905,26 @@ describe('cognome e nome distinti sui documenti d’identità', () => {
     expect(fact('person.birth_place').value).toBeNull()
   })
 
+  it('il riepilogo IVA a colonne non diventa un importo', () => {
+    // Riga verbatim da una fattura reale (corpus Generic Reader v3): l'imposta è 205,10 e
+    // 2.051,00 è l'imponibile. Prendere il primo importo dopo «IVA» dava l'imponibile
+    // dentro money.tax, accettato da solo perché la lettura sulla stessa riga vale 0,85.
+    const riepilogo = read('accounting.fattura', [
+      page(['Aliquota IVA 10%                   2.051,00            205,10'])
+    ])
+    expect(riepilogo.fact('money.tax').value).toBeNull()
+    expect(riepilogo.fact('money.taxable').value).toBeNull()
+
+    // Due campi affiancati non sono una tabella: ognuno si ferma all'etichetta del dopo.
+    const affiancati = read('accounting.fattura', [page(['Imponibile 1.000,00 Imposta 220,00'])])
+    expect(affiancati.fact('money.taxable').value).toBe('1000.00')
+    expect(affiancati.fact('money.tax').value).toBe('220.00')
+
+    // E una riga normale resta una riga normale.
+    const normale = read('accounting.fattura', [page(['Totale documento: 1.234,56'])])
+    expect(normale.fact('money.total').value).toBe('1234.56')
+  })
+
   it('una barra dentro il valore non lo taglia', () => {
     // `1/A` non è una parola bilingue: servono almeno tre lettere per lato.
     const registry = registryOf({
