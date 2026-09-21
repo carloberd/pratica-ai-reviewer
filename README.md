@@ -267,7 +267,13 @@ l'ambiente, poi il `.env`. Un valore diverso da `v1`/`v2` ferma l'avvio. Con ent
 pagine (`max_pages` in `resources/registry/v2/classifier_signals_v2.json`): alias del
 registry pesati per posizione (zona del titolo o resto del testo) e specificità, segnali
 positivi, contrari ed esclusivi configurati per 16 classi che si confondono (CU, UNILAV,
-patente a crediti…), il nome del file solo come conferma. Assegna il tipo solo se il
+patente a crediti…), il nome del file solo come conferma. I 15 tipi che il registry ha
+ritirato (`classification_enabled: false`: `carta_identit` accanto a `carta_identita`,
+`fattura_elettronica` accanto a `fattura`, e gli altri duplicati con l'accento troncato)
+non entrano in gara — i loro alias si sovrappongono a quelli del gemello vivo e il
+pareggio faceva perdere il margine — ma restano nel menu dei tipi e nelle etichette,
+perché un documento già chiuso su uno di loro deve continuare a mostrarne il nome.
+Assegna il tipo solo se il
 punteggio supera la soglia **e** stacca abbastanza il secondo candidato; altrimenti il
 documento resta `UNKNOWN` e la timeline dice perché (`BELOW_THRESHOLD`, `LOW_MARGIN`,
 `FILENAME_ONLY`, `HARD_NEGATIVE`, `NO_SIGNAL`) con miglior candidato, secondo e margine.
