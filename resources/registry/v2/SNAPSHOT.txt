@@ -111,6 +111,15 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
          contenuto: identity.issuing_authority sta solo sugli 8 profili identity_personal.
          «Data di emissione» non è stata aggiunta: arriva già dalle keyword v1 del campo
          legacy mappato, ed è quello che dimostra un test del fact reader.
+       21/09/2026, i segnali della carta d'identità elettronica
+       (export del 21/09/2026: nessuna delle 7 carte si è classificata da sola):
+       - classifier_signals_v2.json passa a 2.0.2-draft.1. identity_personal.carta_identita
+         (nuova): positive «comune di municipality», «statura height», «estremi del
+         documento». Sono le didascalie bilingui della CIE, e non stanno su un passaporto
+         né su un permesso di soggiorno. L'alias da solo vale 0,727 contro una soglia di
+         0,74, quindi una didascalia basta a decidere. Restano fuori di proposito
+         «cittadinanza nationality» e «repubblica italiana», che i tre documenti
+         condividono: darebbero punti alla carta su un passaporto.
        Chi aggiorna il pack riporta queste righe o le sostituisce con quelle del pack.
 note: profili EXTRACTION_SCHEMA_DRAFT salvo 15 READY_FOR_FIELD_TEST, nessuno VALIDATED.
       I 16 tipi del registry v1 senza profilo esplicito ricevono un LEGACY_FALLBACK.
