@@ -120,6 +120,23 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
          0,74, quindi una didascalia basta a decidere. Restano fuori di proposito
          «cittadinanza nationality» e «repubblica italiana», che i tre documenti
          condividono: darebbero punti alla carta su un passaporto.
+       21/09/2026, il permesso di soggiorno, come la carta d'identità:
+       - classifier_signals_v2.json passa a 2.0.3-draft.1.
+         identity_personal.permesso_di_soggiorno (nuova): positive «tipo di permesso»,
+         «motivi del soggiorno», «permesso soggiorno». Le prime due sono didascalie che
+         non stanno su nessun altro documento d'identità; la terza è la forma contratta
+         che producono i nomi dei file e l'OCR, e che l'alias «permesso di soggiorno» non
+         trova a confini di parola: come positivo corrobora e da sola non assegna.
+         L'alias vale 0,730 contro una soglia di 0,74. Resta fuori «questura», che il
+         passaporto condivide;
+       - extraction_hints_v2.json passa a 2.0.2. Il permesso chiama le stesse cose con
+         altre parole: document.expiry_date «Valido fino al», «Valid until»;
+         identity.document_type «Tipo di permesso», «Type of permit»; person.birth_date
+         «Data e luogo di nascita», «Date and place of birth» — solo su birth_date, per la
+         stessa ragione della carta, e qui la data precede il luogo invece di seguirlo.
+         identity.issuing_authority resta senza: il permesso scrive «QUESTURA DI ROVIGO»
+         di fila, senza due punti e senza didascalia bilingue, e il testo libero lì non si
+         legge. È optional sul profilo.
        Chi aggiorna il pack riporta queste righe o le sostituisce con quelle del pack.
 note: profili EXTRACTION_SCHEMA_DRAFT salvo 15 READY_FOR_FIELD_TEST, nessuno VALIDATED.
       I 16 tipi del registry v1 senza profilo esplicito ricevono un LEGACY_FALLBACK.

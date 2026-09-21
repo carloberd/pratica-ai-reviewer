@@ -1,5 +1,5 @@
 {
-  "version": "2.0.2-draft.1",
+  "version": "2.0.3-draft.1",
   "defaults": {
     "auto_assign_threshold": 0.74,
     "minimum_margin": 0.08,
@@ -203,6 +203,16 @@
       "negative_phrases": [],
       "hard_negative_phrases": [],
       "notes": "Bilingual captions of the Italian CIE. 'comune di municipality' and 'statura height' are on the card and not on a passport or a residence permit; the alias alone scores 0.727 against a 0.74 threshold, so a single corroborating caption decides. Deliberately not 'cittadinanza nationality' or 'repubblica italiana', which the sibling identity documents share."
+    },
+    "identity_personal.permesso_di_soggiorno": {
+      "positive_phrases": [
+        "tipo di permesso",
+        "motivi del soggiorno",
+        "permesso soggiorno"
+      ],
+      "negative_phrases": [],
+      "hard_negative_phrases": [],
+      "notes": "Captions of the electronic residence permit: 'tipo di permesso' and 'motivi del soggiorno' are on no other identity document. 'permesso soggiorno' is the contracted form filenames and OCR produce, which the alias 'permesso di soggiorno' misses at word boundaries; as a positive it corroborates and cannot assign alone. The alias alone scores 0.730 against a 0.74 threshold. Deliberately not 'questura', which the passport shares."
     }
   }
 }

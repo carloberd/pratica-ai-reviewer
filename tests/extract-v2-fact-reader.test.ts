@@ -867,6 +867,44 @@ describe('cognome e nome distinti sui documenti d’identità', () => {
     }
   })
 
+  it('permesso di soggiorno: le sue parole per le stesse cose', () => {
+    // Lo stesso profilo della carta, ma il modulo chiama le cose in un altro modo:
+    // «VALIDO FINO AL» per la scadenza, «RILASCIATO IL» per il rilascio, «TIPO DI
+    // PERMESSO» per il tipo, e nascita con data e luogo nell'ordine opposto alla carta.
+    const { fact } = read(PERMESSO, [
+      page([
+        'UNIONE EUROPEA',
+        'PERMESSO DI SOGGIORNO/RESIDENCE PERMIT',
+        'N. IT1234567',
+        'COGNOME/SURNAME',
+        'ROSSI',
+        'NOME/NAME',
+        'MARIO',
+        'DATA E LUOGO DI NASCITA/DATE AND PLACE OF BIRTH',
+        '01/01/1980 CASABLANCA',
+        'CITTADINANZA/NATIONALITY',
+        'MAR',
+        'TIPO DI PERMESSO/TYPE OF PERMIT',
+        'LAVORO SUBORDINATO',
+        'RILASCIATO IL/DATE OF ISSUE',
+        '12/03/2019',
+        'VALIDO FINO AL/VALID UNTIL',
+        '12/03/2029'
+      ])
+    ])
+    expect(fact('person.last_name').value).toBe('ROSSI')
+    expect(fact('person.first_name').value).toBe('MARIO')
+    expect(fact('document.number').value).toBe('IT1234567')
+    expect(fact('identity.nationality').value).toBe('MAR')
+    expect(fact('identity.document_type').value).toBe('LAVORO SUBORDINATO')
+    expect(fact('document.issue_date').value).toBe('2019-03-12')
+    expect(fact('document.expiry_date').value).toBe('2029-03-12')
+    expect(fact('person.birth_date').value).toBe('1980-01-01')
+    // Come sulla carta: data e luogo stanno sotto un'etichetta sola, e il luogo preso per
+    // intero sarebbe «01/01/1980 CASABLANCA». Resta vuoto invece che sbagliato.
+    expect(fact('person.birth_place').value).toBeNull()
+  })
+
   it('una barra dentro il valore non lo taglia', () => {
     // `1/A` non è una parola bilingue: servono almeno tre lettere per lato.
     const registry = registryOf({

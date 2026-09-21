@@ -1,5 +1,5 @@
 {
-  "version": "2.0.1",
+  "version": "2.0.2",
   "hints": {
     "document.title": {
       "labels": [
@@ -68,7 +68,9 @@
         "expiry date",
         "Scadenza",
         "Data di scadenza",
-        "Date of expiry"
+        "Date of expiry",
+        "Valido fino al",
+        "Valid until"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -371,7 +373,9 @@
         "Data di nascita",
         "Date of birth",
         "Luogo e data di nascita",
-        "Place and date of birth"
+        "Place and date of birth",
+        "Data e luogo di nascita",
+        "Date and place of birth"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -2335,7 +2339,9 @@
     "identity.document_type": {
       "labels": [
         "Tipo documento identità",
-        "document type"
+        "document type",
+        "Tipo di permesso",
+        "Type of permit"
       ],
       "regexes": [],
       "scope": "whole_document",

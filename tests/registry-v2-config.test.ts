@@ -21,11 +21,11 @@ afterEach(() => {
 })
 
 describe('configurazione del classificatore v2', () => {
-  it('carica il file reale con soglie e 17 classi', () => {
+  it('carica il file reale con soglie e 18 classi', () => {
     const config = loadClassifierConfigV2(REGISTRY_V2_DIR)
     expect(config.defaults.auto_assign_threshold).toBe(0.74)
     expect(config.defaults.minimum_margin).toBe(0.08)
-    expect(Object.keys(config.classes)).toHaveLength(17)
+    expect(Object.keys(config.classes)).toHaveLength(18)
   })
 
   it('un file mancante ferma l’avvio dicendo quale', () => {
