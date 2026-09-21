@@ -97,6 +97,20 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
        «IBAN del beneficiario, non il conto da cui parte il bonifico», e il revisore la
        legge sulla scheda del campo. L'ontologia non cambia: bank.iban è su 40 tipi
        bancari. Non esce negli schemi, che non hanno descrizioni.
+       21/09/2026, le etichette che i documenti d'identità scrivono davvero
+       (export del 21/09/2026: sulle 7 carte d'identità il motore precompilava 1 campo su 64,
+       e 62 correzioni su 64 sono su un campo vuoto):
+       - extraction_hints_v2.json passa a 2.0.1. document.issue_date: «Date of issue»;
+         document.expiry_date: «Date of expiry»; person.birth_date: «Data di nascita»,
+         «Date of birth», «Luogo e data di nascita», «Place and date of birth»;
+         person.birth_place: «Luogo di nascita», «Place of birth»;
+         identity.issuing_authority: «Autorità di rilascio», «Comune di», «Municipality».
+         «Luogo e data di nascita» sta solo su person.birth_date, che di quella riga legge
+         la data: dandola anche a person.birth_place il luogo diventerebbe «ROMA (RM)
+         01/01/1980», e un valore sbagliato è peggio di un campo vuoto. «Comune di» è
+         contenuto: identity.issuing_authority sta solo sugli 8 profili identity_personal.
+         «Data di emissione» non è stata aggiunta: arriva già dalle keyword v1 del campo
+         legacy mappato, ed è quello che dimostra un test del fact reader.
        Chi aggiorna il pack riporta queste righe o le sostituisce con quelle del pack.
 note: profili EXTRACTION_SCHEMA_DRAFT salvo 15 READY_FOR_FIELD_TEST, nessuno VALIDATED.
       I 16 tipi del registry v1 senza profilo esplicito ricevono un LEGACY_FALLBACK.
