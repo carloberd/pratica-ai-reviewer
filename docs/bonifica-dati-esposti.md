@@ -1,12 +1,13 @@
-# Bonifica dei dati esposti — cosa c'è, cosa è stato fatto, cosa resta da eseguire
+# Bonifica dei dati esposti — cosa c'era, cosa è stato fatto, cosa resta
 
-Punto 0 di `docs/mandato-hermes-v1.8.0-analisi.md`. Scritto il 21/09/2026 su `5f75bae`.
+Punto 0 di `docs/mandato-hermes-v1.8.0-analisi.md`. Eseguito il 21/09/2026.
 
 I valori reali non sono riprodotti qui, e non vanno riprodotti in report, fixture o issue.
 
 ## 1. Cosa è esposto, misurato
 
-`github.com/carloberd/pratica-ai-reviewer` è **pubblico**, 0 fork, ultimo push 19/09.
+`github.com/carloberd/pratica-ai-reviewer` è stato **pubblico** dal 18 al 21 settembre, con
+0 fork. Quello che segue è la misura fatta il 21, prima di toccare qualunque cosa.
 
 Scansione di **tutti i 1061 blob** della cronologia (tutti i ref, non solo `main`), inclusi
 gli archivi compressi aperti in memoria, contro i 5 IBAN e i 2 codici fiscali di persona
@@ -29,7 +30,7 @@ Il terzo export, `praticaai-regole-apprese-2026-09-18.json`, non porta valori: s
 etichette, hash e bbox. Una delle etichette apprese è il nome di un cliente — vedi il
 punto 4 qui sotto, che non si risolve riscrivendo la cronologia.
 
-## 2. Cosa è già stato fatto (questa PR)
+## 2. Cosa ha fatto la PR #54
 
 - `docs/exports/` è in `.gitignore`: nessun export entra più nel repository;
 - i tre file dell'export sono usciti dall'indice (`git rm --cached`) e restano sul disco;
@@ -40,30 +41,32 @@ punto 4 qui sotto, che non si risolve riscrivendo la cronologia.
   in `docs/export-2026-09-18-analisi.md` e `docs/new_fields.md`;
 - i valori di prova sintetici sono dichiarati in `docs/dataset/README.md`.
 
-**Questo toglie i file dal presente, non dalla cronologia.** Chiunque abbia l'URL del commit
-`a66e75c` continua a leggerli finché il punto 3 non viene eseguito.
+Questo toglie i file dal presente, non dalla cronologia: da solo non sarebbe bastato, ed è
+il motivo del punto 3.
 
-## 3. Cosa resta da eseguire, in quest'ordine
+## 3. Cosa è stato eseguito, il 21/09
 
-### 3.1 Repository privato — per primo
+### 3.1 Repository privato, per primo
 
 ```sh
 gh repo edit carloberd/pratica-ai-reviewer --visibility private --accept-visibility-change-consequences
 ```
 
-Va fatto **prima** della riscrittura, non dopo, e non è ridondante rispetto a essa: GitHub
-conserva i commit delle 53 pull request mergiate e li serve dalle pagine delle PR anche dopo
-un force push, perché sono raggiungibili da ref di pull request che il push non tocca. Finché
-il repository è pubblico, quelle pagine restano leggibili.
+Fatto **prima** della riscrittura, e non è ridondante rispetto a essa: GitHub conserva i
+commit delle pull request mergiate su ref `refs/pull/*` che un force push non può toccare.
+Non è una previsione, è quello che ha risposto il push della riscrittura:
 
-Conseguenze: il repository sparisce dalla rete finché non lo si rimette pubblico; nessun
-clone locale si rompe.
+```
+! [remote rejected] refs/pull/53/head -> refs/pull/53/head (deny updating a hidden ref)
+```
 
-### 3.2 Riscrittura della cronologia
+Cinquantaquattro ref di pull request rifiutati, uno per PR. Finché il repository fosse
+rimasto pubblico, quelle pagine avrebbero continuato a servire i file.
 
-Provata su un clone `--mirror` usa e getta il 21/09: 214 commit riscritti in 0,4 s, i 5 tag
-ri-puntati, zero valori reali nei blob risultanti (riverificato con la stessa scansione del
-punto 1).
+### 3.2 La PR del contenimento, poi la riscrittura
+
+La PR #54 è stata mergiata prima di riscrivere, così la riscrittura si porta dentro anche
+il `.gitignore` e il manifest.
 
 ```sh
 git clone --mirror https://github.com/carloberd/pratica-ai-reviewer.git bonifica.git
@@ -71,42 +74,69 @@ cd bonifica.git
 git filter-repo --invert-paths \
   --path docs/exports/2026-09-18/praticaai-dataset-2026-09-18.json \
   --path docs/exports/2026-09-18/praticaai-dataset-2026-09-18.xlsx
-# verificare qui che i valori non ci siano più, prima di spingere
 git push --force --mirror https://github.com/carloberd/pratica-ai-reviewer.git
 ```
 
-Il clone `--mirror` non è un dettaglio: i valori stanno anche nei 44 rami remoti delle PR
-già mergiate, e una riscrittura fatta sul checkout di lavoro li lascerebbe indietro.
+217 commit riscritti. Il clone `--mirror` non è un dettaglio: i valori stavano anche nei 44
+rami remoti delle PR già mergiate, e una riscrittura fatta sul checkout di lavoro li avrebbe
+lasciati indietro. Si rimuovono solo i due file che portano i valori, non tutta
+`docs/exports/`: la cronologia delle analisi resta leggibile.
 
-Si rimuovono solo i due file che portano i valori, non tutta `docs/exports/`: la cronologia
-delle analisi resta leggibile.
+Verificato prima di spingere, e di nuovo dopo: la stessa scansione del punto 1 sul
+repository riscritto dà **zero** su tutti i blob, e l'albero di `main` è identico byte per
+byte a quello di prima — la riscrittura ha cambiato la cronologia, non il contenuto di oggi.
 
-Conseguenze, tutte reali:
+Sha nuovi, da usare al posto dei vecchi:
 
-- **ogni commit dal 18/09 in poi cambia sha.** `5f75bae`, la baseline dichiarata dal mandato
-  Hermes (fonte R01), smette di esistere: sulla prova diventa `98a2d4e`. Il mandato va
-  aggiornato, o la corrispondenza va messa a verbale;
-- i cinque tag da `v1.5.4` a `v1.8.0` cambiano commit;
-- ogni clone esistente va ributtato via e riclonato: un `git pull` dopo il force push
-  produce una fusione delle due cronologie e rimette dentro i file;
-- le pagine delle PR mergiate restano a puntare ai commit vecchi (vedi 3.1).
+| | prima | dopo |
+|---|---|---|
+| `main` | `c503eda` | `7d5cf7f` |
+| `v1.8.0`, baseline del mandato (fonte R01) | `5f75bae` | `98a2d4e` |
 
-### 3.3 Dopo la riscrittura
+I 36 ref fra rami e tag su `origin` sono stati confrontati uno per uno con la versione
+riscritta: identici.
 
-- chiedere a GitHub Support la garbage collection degli oggetti resi irraggiungibili: senza,
-  restano leggibili per sha. Non ci sono fork da invalidare (contati: 0);
-- considerare gli IBAN e i codici fiscali esposti come **compromessi per il periodo
-  18/09–oggi**, e trattarli come tali indipendentemente dalla bonifica: la riscrittura riduce
-  l'esposizione, non la annulla retroattivamente;
-- decidere se e quando rimettere il repository pubblico.
+### 3.3 Il clone di lavoro
 
-## 4. Cosa questa bonifica non risolve
+Riportato sulla cronologia nuova (`git fetch --prune --tags --force`, `git reset --hard
+origin/main`), cancellati i venti rami locali rimasti sulla cronologia vecchia, reflog
+scaduto e `git gc --prune=now`. Scansione dei 1068 blob rimasti: zero valori reali.
 
-Nel codice di oggi — quindi in qualunque cronologia, riscritta o no — restano il **nome e la
+**Chiunque altro abbia un clone deve buttarlo via e riclonare.** Un `git pull` sulla
+cronologia vecchia fonde le due storie e rimette dentro i file.
+
+### 3.4 Una cosa andata storta, e cosa insegna
+
+Il merge della PR #54 ha **cancellato dal disco** i tre file dell'export: erano tracciati in
+`main` fino al commit precedente, e il checkout li ha rimossi come rimuove qualunque file
+che il commit nuovo non ha. Sono stati recuperati dalla cronologia e verificati contro gli
+sha-256 del manifest: identici. Il manifest ha fatto il suo mestiere il giorno in cui è
+nato.
+
+Dopo la riscrittura quel recupero non è più possibile: **l'export esiste ora in una copia
+sola, quella su disco**. Prima di toccarlo, copiarlo.
+
+## 4. Cosa resta
+
+- **Chiedere a GitHub Support la garbage collection** degli oggetti resi irraggiungibili:
+  senza, restano leggibili per sha da chi lo conosce e dalle pagine delle PR. Non ci sono
+  fork da invalidare (contati: 0).
+- **Trattare i 5 IBAN e i 2 codici fiscali come compromessi** per il periodo 18/09–21/09,
+  indipendentemente dalla bonifica: la riscrittura riduce l'esposizione, non la annulla
+  retroattivamente.
+- **Decidere se e quando rimettere pubblico il repository.** Non prima della garbage
+  collection, e non prima della PR del punto 5.
+- **Aggiornare il mandato Hermes**, che dichiara `5f75bae` come baseline: quel commit non
+  esiste più.
+
+## 5. Cosa questa bonifica non risolve
+
+Nel codice di oggi — quindi anche nella cronologia riscritta — restano il **nome e la
 partita IVA di un cliente reale**: una trentina di occorrenze in dieci file di test, più
 `src/main/learning-anchors.ts:114` e `src/shared/document-direction.ts:26`.
 
 Non sono dati di persona fisica e non hanno la gravità di un IBAN, ma identificano un
-cliente in un repository che è stato pubblico. La sostituzione con nomi sintetici tocca
+cliente in un repository che è stato pubblico dal 18 al 21 settembre. La sostituzione con
+nomi sintetici tocca
 asserzioni che dipendono dal valore (impronta del template, ancore di classe, piegatura del
-nome societario): è una PR a sé, da fare dopo questa.
+nome societario): è la PR successiva, e va fatta prima di rimettere pubblico il repository.
