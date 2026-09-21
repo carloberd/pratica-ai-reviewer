@@ -267,7 +267,8 @@ l'ambiente, poi il `.env`. Un valore diverso da `v1`/`v2` ferma l'avvio. Con ent
 pagine (`max_pages` in `resources/registry/v2/classifier_signals_v2.json`): alias del
 registry pesati per posizione (zona del titolo o resto del testo) e specificità, segnali
 positivi, contrari ed esclusivi configurati per 17 classi che si confondono (CU, UNILAV,
-patente a crediti, carta d'identità…), il nome del file solo come conferma.
+patente a crediti, carta d'identità, permesso di soggiorno…), il nome del file solo come
+conferma.
 L'apostrofo conta solo fra due lettere, dov'è un'elisione (`dell'iscrizione`): a fine
 parola è un accento scritto senza accento — `IDENTITA'` per `IDENTITÀ`, come lo scrive
 una tastiera italiana e come l'OCR rende gli accenti maiuscoli — e viene tolto, o la
