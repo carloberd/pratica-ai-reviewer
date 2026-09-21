@@ -448,6 +448,28 @@ function startsSegment(text: string, start: number, end: number): boolean {
   return text.slice(end).trim() === '' && TRAILING_TAX_ID.test(before)
 }
 
+/**
+ * La riga finisce con l'etichetta, e il valore sta sotto.
+ *
+ * Vale quando dopo l'etichetta non resta che punteggiatura, ma anche quando resta la
+ * **stessa etichetta in un'altra lingua**: i documenti d'identità le scrivono appaiate,
+ * «COGNOME/SURNAME», «CITTADINANZA/NATIONALITY», «NOME/GIVEN NAMES/PRÉNOMS», e il valore
+ * è sulla riga successiva. Senza questa eccezione la coda inglese fa sembrare la riga
+ * «già piena» e il valore sotto non viene nemmeno cercato: su una carta d'identità è la
+ * differenza fra leggere tre campi su dodici e leggerne nove.
+ *
+ * Il controllo è stretto di proposito: ogni pezzo dopo la barra dev'essere un'etichetta
+ * che il registry già dichiara **per lo stesso campo**. Una coda qualsiasi resterebbe
+ * un'intestazione di colonna, e la riga sotto il suo primo dato.
+ */
+function endsLabelLine(remainder: string, twins: ReadonlySet<string>): boolean {
+  if (/^[\s:=.°#\-–—]*$/.test(remainder)) return true
+  const rest = remainder.replace(/^[\s:=.°#\-–—]+/, '')
+  if (!rest.startsWith('/') && !rest.startsWith('\\')) return false
+  const parts = rest.split(/[/\\]/).filter((part) => part.trim().length > 0)
+  return parts.length > 0 && parts.every((part) => twins.has(fold(part)))
+}
+
 /** Una lettura di un'etichetta: dove compare, e il valore che si legge dopo. */
 export interface LabelRead {
   /** Riga dell'etichetta e riga del valore, indici in `lines`. */
@@ -465,7 +487,9 @@ function readsInLines(
   lines: TextLine[],
   folded: FoldedLine[],
   label: string,
-  relation: AnchorRelation | undefined
+  relation: AnchorRelation | undefined,
+  /** Le altre etichette dello stesso campo, ripiegate: le lingue in cui il modulo lo chiama. */
+  twins: ReadonlySet<string>
 ): LabelRead[] {
   const isText = !readsAsIdentifier(fieldId, spec) && ['string', 'object'].includes(spec.type)
   const citing = readsReferences(
@@ -492,11 +516,7 @@ function readsInLines(
         })
         continue
       }
-      if (
-        relation !== 'same-line' &&
-        /^[\s:=.°#\-–—]*$/.test(remainder) &&
-        index + 1 < lines.length
-      ) {
+      if (relation !== 'same-line' && endsLabelLine(remainder, twins) && index + 1 < lines.length) {
         const nextLine = readValue(fieldId, spec, lines[index + 1]!.text, 'next-line')
         if (nextLine !== null) {
           reads.push({
@@ -527,7 +547,9 @@ export function readsOfLabel(
   relation?: AnchorRelation
 ): LabelRead[] {
   const folded = lines.map((line) => foldWithOrigin(line.text))
-  return readsInLines(fieldId, spec, lines, folded, fold(label), relation)
+  // Nessuna gemella: qui si verifica un'etichetta candidata da sola, e una lettura in più
+  // aperta da un'altra lingua farebbe scartare un'ancora che invece è buona.
+  return readsInLines(fieldId, spec, lines, folded, fold(label), relation, new Set())
 }
 
 function candidatesForField(
@@ -540,6 +562,9 @@ function candidatesForField(
 ): Candidate[] {
   // Per ogni riga del valore resta solo il candidato con l'etichetta più specifica.
   const best = new Map<string, Candidate>()
+  // Tutte le etichette di questo campo: servono a riconoscere «COGNOME/SURNAME» come una
+  // riga che finisce con l'etichetta, non come una riga che ha già il suo valore.
+  const twins = new Set(labels.map((source) => source.label))
 
   for (const page of pages) {
     const penalty = fromOcr.has(page.page) ? OCR_PENALTY : 0
@@ -553,7 +578,8 @@ function candidatesForField(
         lines,
         folded,
         source.label,
-        source.relation
+        source.relation,
+        twins
       )) {
         const { value, sameLine } = read
         // La riga sotto è l'etichetta di un altro campo: il valore di questa manca.
