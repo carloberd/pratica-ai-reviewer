@@ -10,4 +10,7 @@ coverage/
 *.tsbuildinfo
 
 external/
-external/
+
+# Gli export del Reviewer contengono i documenti dei clienti: restano fuori dal repository.
+# Quello che si versiona è il manifest senza valori (docs/dataset/, scripts/export-manifest.mjs).
+docs/exports/
