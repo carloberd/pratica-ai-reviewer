@@ -1,10 +1,13 @@
 # Analisi export del 2026-09-18
 
-Fonti analizzate (`docs/exports/2026-09-18/`):
+Fonti analizzate (fuori dal repository, vedi `docs/dataset/README.md`):
 
 - `praticaai-dataset-2026-09-18.json` — 43 documenti, formato `praticaai-reviewer/annotated-dataset` 1.3.0
 - `praticaai-regole-apprese-2026-09-18.json` — 24 regole e 122 eventi, formato `praticaai-reviewer/learned-rules` 1.1.0
 - `praticaai-dataset-2026-09-18.xlsx` — doppione del dataset JSON (2 fogli, stessi documenti)
+
+I tre file contengono i documenti dei clienti e non stanno in git: nel repository ne resta
+il manifest senza valori, `docs/dataset/2026-09-18-manifest.json`, che ne porta gli sha-256.
 
 App 1.5.1, classifier v2 (2.0.0-draft.1), extraction-brain-v2 2.1.0-draft.1, learner local-learner/0.1.0 in modalità `LEARNING`.
 
