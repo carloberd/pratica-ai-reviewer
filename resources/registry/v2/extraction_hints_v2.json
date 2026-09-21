@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0",
+  "version": "2.0.1",
   "hints": {
     "document.title": {
       "labels": [
@@ -37,7 +37,8 @@
         "Data emissione",
         "issue date",
         "Data rilascio",
-        "Data di rilascio"
+        "Data di rilascio",
+        "Date of issue"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -66,7 +67,8 @@
         "Data scadenza",
         "expiry date",
         "Scadenza",
-        "Data di scadenza"
+        "Data di scadenza",
+        "Date of expiry"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -365,7 +367,11 @@
     "person.birth_date": {
       "labels": [
         "Data nascita",
-        "birth date"
+        "birth date",
+        "Data di nascita",
+        "Date of birth",
+        "Luogo e data di nascita",
+        "Place and date of birth"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -374,7 +380,9 @@
     "person.birth_place": {
       "labels": [
         "Luogo nascita",
-        "birth place"
+        "birth place",
+        "Luogo di nascita",
+        "Place of birth"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -2363,7 +2371,10 @@
     "identity.issuing_authority": {
       "labels": [
         "Autorità rilascio",
-        "issuing authority"
+        "issuing authority",
+        "Autorità di rilascio",
+        "Comune di",
+        "Municipality"
       ],
       "regexes": [],
       "scope": "whole_document",
