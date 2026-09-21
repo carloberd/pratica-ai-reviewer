@@ -146,6 +146,16 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
          «Fornitore»: sono etichette di campo che portano il loro valore sulla stessa
          riga, e prese per intestazione si porterebbero dentro tutte le righe sotto.
          Il lettore apre una sezione solo su una riga che è soltanto l'intestazione.
+       21/09/2026, le etichette della resa SdI di una fattura elettronica
+       (corpus del Generic Reader v3 in external/: su 8 fatture non si leggeva mai né
+       l'emittente né il destinatario):
+       - extraction_hints_v2.json passa a 2.2.0. issuer.name e recipient.name
+         «Denominazione»; issuer.vat_number e recipient.vat_number «Identificativo fiscale
+         ai fini IVA»; money.currency «Valuta importi». Le prime quattro sono ambigue fra
+         le due parti per costruzione: a separarle è la sezione (2.1.0), e dove le
+         intestazioni non ci sono i due campi restano in CONFLICT come fa già «Partita
+         IVA». «Data documento» non è stata aggiunta: arriva già dalle keyword v1 del
+         campo legacy mappato, come «Data di emissione».
        Chi aggiorna il pack riporta queste righe o le sostituisce con quelle del pack.
 note: profili EXTRACTION_SCHEMA_DRAFT salvo 15 READY_FOR_FIELD_TEST, nessuno VALIDATED.
       I 16 tipi del registry v1 senza profilo esplicito ricevono un LEGACY_FALLBACK.
