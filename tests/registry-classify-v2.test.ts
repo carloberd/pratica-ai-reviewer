@@ -236,8 +236,8 @@ describe('decisione', () => {
 describe('profili di segnali delle classi problematiche', () => {
   const classes = Object.entries(realConfig.classes)
 
-  it('il file reale ne configura 16', () => {
-    expect(classes).toHaveLength(16)
+  it('il file reale ne configura 17', () => {
+    expect(classes).toHaveLength(17)
   })
 
   it.each(classes)('%s legge i propri segnali positivi, contrari ed esclusivi', (type, profile) => {
@@ -325,6 +325,32 @@ describe('segnali presi dal pilota su documenti reali', () => {
     expect(result.candidates[0]?.documentType).toBe('identity_personal.patente_di_guida')
     expect(result.decision).toBe('UNKNOWN')
     expect(result.reason).toBe('BELOW_THRESHOLD')
+  })
+
+  it('una didascalia della carta elettronica basta a staccare la soglia', () => {
+    // L'alias da solo vale 0,727 contro una soglia di 0,74: nell'export del 21/09/2026
+    // nessuna carta d'identità si assegnava da sola. Una didascalia del modulo decide.
+    const solo = run('REPUBBLICA ITALIANA\nCARTA DI IDENTITA\nCOMUNE DI ROVIGO')
+    expect(solo.decision).toBe('UNKNOWN')
+    expect(solo.reason).toBe('BELOW_THRESHOLD')
+
+    const conDidascalie = run(
+      'REPUBBLICA ITALIANA\nCARTA DI IDENTITA\nCOMUNE DI/MUNICIPALITY ROVIGO\nSTATURA/HEIGHT 175'
+    )
+    expect(conDidascalie.decision).toBe('ASSIGN')
+    expect(conDidascalie.documentType).toBe('identity_personal.carta_identita')
+  })
+
+  it('le didascalie della carta non si attaccano agli altri documenti d’identità', () => {
+    // «cittadinanza nationality» e «repubblica italiana» sono su tutti e tre, e infatti
+    // non sono segnali: passaporto e permesso non devono prendere punti dalla carta.
+    const passaporto =
+      'REPUBBLICA ITALIANA\nPASSAPORTO / PASSPORT\nCOGNOME/SURNAME ROSSI\nCITTADINANZA/NATIONALITY ITA'
+    expect(candidateOf(passaporto, 'identity_personal.carta_identita')).toBeUndefined()
+    expect(run(passaporto).candidates[0]?.documentType).toBe('identity_personal.passaporto')
+
+    const permesso = 'PERMESSO DI SOGGIORNO\nCOGNOME/SURNAME ROSSI\nCITTADINANZA/NATIONALITY MAR'
+    expect(candidateOf(permesso, 'identity_personal.carta_identita')).toBeUndefined()
   })
 
   it('una dichiarazione di copia conforme qualunque non diventa una patente di guida', () => {

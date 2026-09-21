@@ -1,5 +1,5 @@
 {
-  "version": "2.0.1-draft.1",
+  "version": "2.0.2-draft.1",
   "defaults": {
     "auto_assign_threshold": 0.74,
     "minimum_margin": 0.08,
@@ -193,6 +193,16 @@
       "negative_phrases": [],
       "hard_negative_phrases": [],
       "notes": "Job reports may be titled Report or COMMESSA instead of rapportino."
+    },
+    "identity_personal.carta_identita": {
+      "positive_phrases": [
+        "comune di municipality",
+        "statura height",
+        "estremi del documento"
+      ],
+      "negative_phrases": [],
+      "hard_negative_phrases": [],
+      "notes": "Bilingual captions of the Italian CIE. 'comune di municipality' and 'statura height' are on the card and not on a passport or a residence permit; the alias alone scores 0.727 against a 0.74 threshold, so a single corroborating caption decides. Deliberately not 'cittadinanza nationality' or 'repubblica italiana', which the sibling identity documents share."
     }
   }
 }
