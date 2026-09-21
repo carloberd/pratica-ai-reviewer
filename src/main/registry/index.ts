@@ -22,6 +22,11 @@ interface DocumentTypeEntry {
   document_type_id?: string
   canonical_name?: string
   family?: string
+  /**
+   * Falso sui tipi che il registry ha ritirato: restano nello snapshot perché i documenti
+   * già classificati con loro conservino un'etichetta, ma non devono più concorrere.
+   */
+  classification_enabled?: boolean
 }
 
 export interface RegistryAlias {
@@ -59,10 +64,14 @@ export function createRegistry(directory: string): Registry {
 
   const labels = new Map<string, string>()
   const families = new Map<string, string>()
+  const classifiable = new Map<string, boolean>()
   for (const entry of typeEntries) {
     if (!entry.document_type_id) continue
     if (entry.canonical_name) labels.set(entry.document_type_id, entry.canonical_name)
     if (entry.family) families.set(entry.document_type_id, entry.family)
+    // Assente vuol dire abilitato: solo i tipi ritirati portano la bandiera, e uno
+    // snapshot più vecchio che non la scrive non deve perdere tutti gli alias.
+    classifiable.set(entry.document_type_id, entry.classification_enabled !== false)
   }
   for (const [documentType, entry] of Object.entries(aliasEntries)) {
     if (!labels.has(documentType) && entry.canonical_name) {
@@ -75,9 +84,18 @@ export function createRegistry(directory: string): Registry {
 
   // Un alias è utile solo se è una frase riconoscibile: le stringhe troppo corte
   // producono falsi positivi su qualunque documento.
+  //
+  // I tipi con `classification_enabled: false` non entrano: sono i 15 duplicati ritirati
+  // dal registry — `carta_identit` accanto a `carta_identita`, `fattura_elettronica`
+  // accanto a `fattura` — e i loro alias si sovrappongono a quelli del gemello vivo. In
+  // gara pareggiano, il margine crolla sotto `minimum_margin` e il classificatore chiude
+  // con UNKNOWN: col motore v2 quel documento resta senza tipo e quindi senza un solo
+  // campo precompilato. Restano invece in `types()` e in `label()`, perché un documento
+  // già chiuso su uno di questi tipi deve continuare a mostrarne il nome.
   const aliasList: RegistryAlias[] = []
   const seen = new Map<string, Set<string>>()
   for (const [documentType, entry] of Object.entries(aliasEntries)) {
+    if (classifiable.get(documentType) === false) continue
     const phrases = [entry.canonical_name, ...(entry.aliases ?? []), ...(entry.synonyms ?? [])]
     const already = seen.get(documentType) ?? new Set<string>()
     seen.set(documentType, already)

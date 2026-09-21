@@ -272,6 +272,41 @@ describe('profili di segnali delle classi problematiche', () => {
     expect(seen('negative-signal')).toEqual(profile.negative_phrases ?? [])
     expect(seen('hard-negative-signal')).toEqual(profile.hard_negative_phrases ?? [])
   })
+
+  it('non mette in gara i duplicati ritirati del registry', () => {
+    // Export del 21/09/2026: due fatture elettroniche native finivano in LOW_MARGIN perché
+    // `accounting.fattura` (0,990) e il ritirato `accounting.fattura_elettronica` (0,945)
+    // distavano meno di `minimum_margin`. Col v2 quel margine costa tutti i campi.
+    const result = matchDocumentTypeV2({
+      aliases: realAliases,
+      pages: ['FATTURA ELETTRONICA\nN. 114/2026 del 08/09/2026\nCedente prestatore'],
+      filename: 'FATTURA ELETTRONICA MRG.pdf',
+      config: realConfig
+    })
+
+    expect(result.decision).toBe('ASSIGN')
+    expect(result.documentType).toBe('accounting.fattura')
+    expect(result.candidates.some((c) => c.documentType === 'accounting.fattura_elettronica')).toBe(
+      false
+    )
+  })
+
+  it('lascia una carta d’identità sola in gara, anche se la soglia resta da superare', () => {
+    // Stesso export: `carta_identit` e `carta_identita` pareggiavano esatti (0,727 e 0,727).
+    // Tolto il ritirato il pareggio sparisce; la soglia è un problema a sé.
+    const result = matchDocumentTypeV2({
+      aliases: realAliases,
+      pages: ['REPUBBLICA ITALIANA\nCARTA DI IDENTITA\nCOMUNE DI ROVIGO'],
+      filename: "CARTA IDENTITA'.pdf",
+      config: realConfig
+    })
+
+    expect(result.candidates.map((c) => c.documentType)).toEqual([
+      'identity_personal.carta_identita'
+    ])
+    expect(result.runnerUp).toBeNull()
+    expect(result.reason).not.toBe('LOW_MARGIN')
+  })
 })
 
 describe('segnali presi dal pilota su documenti reali', () => {
