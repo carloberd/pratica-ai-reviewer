@@ -257,8 +257,8 @@ describe('decisione', () => {
 describe('profili di segnali delle classi problematiche', () => {
   const classes = Object.entries(realConfig.classes)
 
-  it('il file reale ne configura 17', () => {
-    expect(classes).toHaveLength(17)
+  it('il file reale ne configura 18', () => {
+    expect(classes).toHaveLength(18)
   })
 
   it.each(classes)('%s legge i propri segnali positivi, contrari ed esclusivi', (type, profile) => {
@@ -385,6 +385,35 @@ describe('segnali presi dal pilota su documenti reali', () => {
     expect(conDidascalie.documentType).toBe('identity_personal.carta_identita')
   })
 
+  it('le didascalie del permesso di soggiorno staccano la soglia', () => {
+    // Stessa forma della carta: l'alias da solo vale 0,730 contro 0,74.
+    const solo = run('UNIONE EUROPEA\nPERMESSO DI SOGGIORNO/RESIDENCE PERMIT\nN. IT1234567')
+    expect(solo.decision).toBe('UNKNOWN')
+    expect(solo.reason).toBe('BELOW_THRESHOLD')
+
+    const conDidascalie = run(
+      'PERMESSO DI SOGGIORNO/RESIDENCE PERMIT\nTIPO DI PERMESSO/TYPE OF PERMIT\nLAVORO SUBORDINATO\nMOTIVI DEL SOGGIORNO/REMARKS'
+    )
+    expect(conDidascalie.decision).toBe('ASSIGN')
+    expect(conDidascalie.documentType).toBe('identity_personal.permesso_di_soggiorno')
+  })
+
+  it('«permesso soggiorno» senza «di» corrobora ma non assegna da sola', () => {
+    // È la forma che producono i nomi dei file e l'OCR, e che l'alias «permesso di
+    // soggiorno» non trova a confini di parola. Come positivo vale poco, ed è giusto così.
+    const result = matchDocumentTypeV2({
+      aliases: realAliases,
+      pages: ['scansione senza testo utile'],
+      filename: 'AYAD HAMID PERMESSO SOGGIORNO 1.pdf',
+      config: realConfig
+    })
+    expect(result.decision).toBe('UNKNOWN')
+    expect(run('PERMESSO SOGGIORNO').candidates[0]?.documentType).toBe(
+      'identity_personal.permesso_di_soggiorno'
+    )
+    expect(run('PERMESSO SOGGIORNO').decision).toBe('UNKNOWN')
+  })
+
   it('le didascalie della carta non si attaccano agli altri documenti d’identità', () => {
     // «cittadinanza nationality» e «repubblica italiana» sono su tutti e tre, e infatti
     // non sono segnali: passaporto e permesso non devono prendere punti dalla carta.
@@ -395,6 +424,11 @@ describe('segnali presi dal pilota su documenti reali', () => {
 
     const permesso = 'PERMESSO DI SOGGIORNO\nCOGNOME/SURNAME ROSSI\nCITTADINANZA/NATIONALITY MAR'
     expect(candidateOf(permesso, 'identity_personal.carta_identita')).toBeUndefined()
+
+    // E viceversa: le didascalie del permesso non stanno su una carta né su un passaporto.
+    const carta = 'REPUBBLICA ITALIANA\nCARTA DI IDENTITA\nCOMUNE DI/MUNICIPALITY ROVIGO'
+    expect(candidateOf(carta, 'identity_personal.permesso_di_soggiorno')).toBeUndefined()
+    expect(candidateOf(passaporto, 'identity_personal.permesso_di_soggiorno')).toBeUndefined()
   })
 
   it('una dichiarazione di copia conforme qualunque non diventa una patente di guida', () => {

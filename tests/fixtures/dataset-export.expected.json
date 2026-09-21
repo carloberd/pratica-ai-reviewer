@@ -10,7 +10,7 @@
     "engines": {
       "classifier": "v2",
       "extraction": "v2",
-      "classifierVersion": "2.0.2-draft.1",
+      "classifierVersion": "2.0.3-draft.1",
       "extractionEngineVersion": "extraction-brain-v2/2.1.0-draft.1",
       "schemaVersion": "2.0.4"
     },
