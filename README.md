@@ -306,7 +306,11 @@ Dopo una coda bilingue il valore si legge anche sulla stessa riga senza i due pu
 (`COGNOME/SURNAME ROSSI`), che su quei moduli non arrivano mai: si ferma dove comincia la
 colonna dopo, cioè all'etichetta di un altro campo del profilo o alla prossima parola
 bilingue (`SESSO/SEX`), così una riga che l'OCR ha fuso non finisce dentro un campo solo. Un importo è negativo solo se il meno è attaccato al numero o
-alla valuta (`-1.234,56`, `€ -100,00`): `Totale - 100,00` resta positivo. I validatori
+alla valuta (`-1.234,56`, `€ -100,00`): `Totale - 100,00` resta positivo. Un importo si
+legge solo fino a dove comincia il campo accanto, e su una riga di tabella — due importi
+separati da uno stacco di colonna, come il riepilogo IVA di una fattura — non si legge
+affatto: quale colonna sia quel campo non si sa, e un numero sbagliato accettato da solo
+è peggio di un campo vuoto. I validatori
 sono quelli dell'ontologia, salvo dove il profilo del tipo li sostituisce
 (`field_validator_overrides`): sulla nota di credito un totale negativo non è un errore,
 e lo schema esportato non lo dichiara non negativo. I validatori controllano che una data
