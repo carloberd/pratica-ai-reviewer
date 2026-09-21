@@ -819,6 +819,54 @@ describe('cognome e nome distinti sui documenti d’identità', () => {
     expect(fuse.fact('identity.nationality').value).toBe('ITA')
   })
 
+  it('carta elettronica, come l’OCR la restituisce: otto campi su dodici', () => {
+    // Le stesse righe nelle due forme che arrivano davvero: ogni etichetta sulla sua riga,
+    // e le colonne fuse. Il risultato dev'essere lo stesso.
+    const righe = [
+      'REPUBBLICA ITALIANA',
+      'CARTA DI IDENTITA',
+      'COMUNE DI/MUNICIPALITY',
+      'ROVIGO',
+      'NUMERO DOCUMENTO/DOCUMENT NUMBER',
+      'CA00000AA',
+      'COGNOME/SURNAME',
+      'ROSSI',
+      'NOME/NAME',
+      'MARIO',
+      'LUOGO E DATA DI NASCITA/PLACE AND DATE OF BIRTH',
+      'ROMA (RM) 01/01/1980',
+      'CITTADINANZA/NATIONALITY',
+      'ITA',
+      'DATA DI EMISSIONE/DATE OF ISSUE',
+      '12/03/2019',
+      'DATA DI SCADENZA/DATE OF EXPIRY',
+      '01/01/2030'
+    ]
+    const fuse = [
+      'REPUBBLICA ITALIANA CARTA DI IDENTITA COMUNE DI/MUNICIPALITY ROVIGO',
+      'NUMERO DOCUMENTO/DOCUMENT NUMBER CA00000AA',
+      'COGNOME/SURNAME ROSSI NOME/NAME MARIO',
+      'LUOGO E DATA DI NASCITA/PLACE AND DATE OF BIRTH ROMA (RM) 01/01/1980',
+      'CITTADINANZA/NATIONALITY ITA SESSO/SEX M STATURA/HEIGHT 175',
+      'DATA DI EMISSIONE/DATE OF ISSUE 12/03/2019 DATA DI SCADENZA/DATE OF EXPIRY 01/01/2030'
+    ]
+    for (const lines of [righe, fuse]) {
+      const { fact } = read(CARTA, [page(lines)])
+      const letto = (id: string) => fact(id).value
+      expect(letto('person.last_name'), lines.length.toString()).toBe('ROSSI')
+      expect(letto('person.first_name'), lines.length.toString()).toBe('MARIO')
+      expect(letto('document.number'), lines.length.toString()).toBe('CA00000AA')
+      expect(letto('document.issue_date'), lines.length.toString()).toBe('2019-03-12')
+      expect(letto('document.expiry_date'), lines.length.toString()).toBe('2030-01-01')
+      expect(letto('identity.nationality'), lines.length.toString()).toBe('ITA')
+      expect(letto('person.birth_date'), lines.length.toString()).toBe('1980-01-01')
+      expect(letto('identity.issuing_authority'), lines.length.toString()).toBe('ROVIGO')
+      // Il luogo di nascita sta dentro «LUOGO E DATA DI NASCITA» insieme alla data: preso
+      // per intero sarebbe «ROMA (RM) 01/01/1980». Resta vuoto invece che sbagliato.
+      expect(letto('person.birth_place'), lines.length.toString()).toBeNull()
+    }
+  })
+
   it('una barra dentro il valore non lo taglia', () => {
     // `1/A` non è una parola bilingue: servono almeno tre lettere per lato.
     const registry = registryOf({
