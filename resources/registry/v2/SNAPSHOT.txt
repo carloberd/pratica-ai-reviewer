@@ -29,7 +29,7 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
        - vehicle.vin: vin;
        extraction_schemas_v2.generated.json allineato sugli stessi quattro campi.
        19/09/2026, codice fiscale, partita IVA e REA in campi distinti
-       (docs/exports/2026-09-18/new_fields.md, PR 1):
+       (docs/new_fields.md, PR 1):
        - field_ontology_v2.json: sette campi che il pack non ha. issuer.vat_number,
          recipient.vat_number, company.vat_number (format vat_number, vat_number_format);
          issuer.tax_code, recipient.tax_code, company.tax_code (italian_tax_code_format);
@@ -44,7 +44,7 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
          provenienza REVIEWER_ANNOTATIONS;
        extraction_schemas_v2.generated.json allineato sugli stessi due tipi.
        19/09/2026, cognome e nome distinti sui documenti d'identità
-       (docs/exports/2026-09-18/new_fields.md, PR 2):
+       (docs/new_fields.md, PR 2):
        - field_ontology_v2.json: person.last_name («Cognome») e person.first_name («Nome»),
          pii personal come person.name, che il pack non ha. person.name resta, rinominato
          «Nome e cognome». identity.issue_date e identity.expiry_date prendono valid_date:
@@ -73,7 +73,7 @@ local: 19/09/2026, prima divergenza dal pack. classifier_signals_v2.json passa a
        sono sensitive, il pii delle chiavi identity.* che sostituiscono; nell'ontologia
        restano none. extraction_schemas_v2.generated.json allineato (x-praticaai-pii).
        19/09/2026, le date e il conto di un bonifico
-       (docs/exports/2026-09-18/new_fields.md, PR 3):
+       (docs/new_fields.md, PR 3):
        - field_ontology_v2.json: quattro campi che il pack non ha. payment.entry_date
          («Data inserimento»), payment.execution_date («Data esecuzione»),
          payment.value_date («Data valuta»), tutti e tre date con valid_date;
