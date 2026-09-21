@@ -797,11 +797,35 @@ describe('cognome e nome distinti sui documenti d’identità', () => {
         reviewStatus: 'AUTO_ACCEPTED'
       })
     }
-    // Il testo libero vuole i due punti sulla stessa riga, come per ogni altro campo: una
-    // riga come questa non si legge, ma il nome non prende niente dalla riga del cognome.
+    // Il testo libero vuole i due punti sulla stessa riga, **tranne** dopo un'etichetta
+    // ripetuta in un'altra lingua: lì i due punti non arrivano mai e il valore è quello che
+    // segue. Quello che resta vietato è prendersi il campo accanto.
     const { fact } = read(CARTA, [page(['COGNOME / SURNAME ROSSI', 'NOME / NAME MARIO'])])
-    expect(fact('person.last_name').value).toBeNull()
-    expect(fact('person.first_name').value).toBeNull()
+    expect(fact('person.last_name').value).toBe('ROSSI')
+    expect(fact('person.first_name').value).toBe('MARIO')
+  })
+
+  it('con le colonne fuse ogni campo si ferma dove comincia il successivo', () => {
+    // Come l'OCR restituisce una tessera: più coppie etichetta/valore su una riga sola.
+    const { fact } = read(CARTA, [page(['COGNOME/SURNAME ROSSI NOME/NAME MARIO'])])
+    expect(fact('person.last_name').value).toBe('ROSSI')
+    expect(fact('person.first_name').value).toBe('MARIO')
+
+    // «SESSO» e «STATURA» non sono campi del profilo, ma sono scritti bilingui come tutte
+    // le intestazioni di questo modulo: la cittadinanza si ferma lì lo stesso.
+    const fuse = read(CARTA, [
+      page(['CITTADINANZA/NATIONALITY ITA SESSO/SEX M STATURA/HEIGHT 175'])
+    ])
+    expect(fuse.fact('identity.nationality').value).toBe('ITA')
+  })
+
+  it('una barra dentro il valore non lo taglia', () => {
+    // `1/A` non è una parola bilingue: servono almeno tre lettere per lato.
+    const registry = registryOf({
+      'person.address': { type: 'string', labels: ['indirizzo', 'address'] }
+    })
+    const { fact } = extract(registry, [page(['INDIRIZZO/ADDRESS VIA ROMA 1/A, ROVIGO'])])
+    expect(fact('person.address').value).toBe('VIA ROMA 1/A, ROVIGO')
   })
 
   it('una frase con «nome» e «cognome» non è né l’uno né l’altro', () => {

@@ -201,7 +201,12 @@ function labelsFor(
 // Lettori di valori, per tipo
 // ---------------------------------------------------------------------------
 
-type ReadMode = 'same-line' | 'next-line'
+/**
+ * `after-twin` è la stessa riga, ma dopo che l'etichetta è stata ripetuta in un'altra
+ * lingua: «COGNOME/SURNAME ROSSI». Lì i due punti non arrivano mai, e pretenderli
+ * lascerebbe vuoto un campo che si legge a occhio.
+ */
+type ReadMode = 'same-line' | 'next-line' | 'after-twin'
 
 /** Primo match che comincia entro `window` caratteri. */
 function within(text: string, raw: string | undefined, window: number): boolean {
@@ -370,7 +375,7 @@ function readValue(
   text: string,
   mode: ReadMode
 ): string | null {
-  const window = mode === 'same-line' ? VALUE_WINDOW : NEXT_LINE_WINDOW
+  const window = mode === 'next-line' ? NEXT_LINE_WINDOW : VALUE_WINDOW
   if (readsAsIdentifier(fieldId, spec)) return readIdentifier(text, spec.format)
   switch (spec.type) {
     case 'date':
@@ -470,6 +475,63 @@ function endsLabelLine(remainder: string, twins: ReadonlySet<string>): boolean {
   return parts.length > 0 && parts.every((part) => twins.has(fold(part)))
 }
 
+/**
+ * Dove finisce la coda dell'etichetta ripetuta in un'altra lingua, o -1 se non c'è.
+ *
+ * «COGNOME» seguito da «/SURNAME» o da «/SURNAME/NOM»: ogni pezzo dopo la barra dev'essere
+ * un'etichetta che il registry dichiara per lo stesso campo, e si consuma la più lunga che
+ * combacia, così «/GIVEN NAMES MARIO» lascia fuori il valore.
+ */
+function twinTailEnd(remainder: string, twins: ReadonlySet<string>): number {
+  let at = 0
+  let end = -1
+  for (;;) {
+    const separator = /^[\s:=.°#\-–—]*[/\\]\s*/.exec(remainder.slice(at))
+    if (!separator) return end
+    const after = at + separator[0].length
+    const folded = foldWithOrigin(remainder.slice(after))
+    let longest = -1
+    for (const twin of twins) {
+      if (twin.length <= longest) continue
+      if (folded.folded === twin || folded.folded.startsWith(`${twin} `)) longest = twin.length
+    }
+    if (longest === -1) return end
+    at = after + folded.origin[longest - 1]! + 1
+    end = at
+  }
+}
+
+/**
+ * Una parola bilingue: `SESSO/SEX`, `STATURA/HEIGHT`. Lettere da una parte e dall'altra,
+ * almeno tre per lato, così `VIA ROMA 1/A` e `01/01/1980` non lo sono.
+ */
+const BILINGUAL_WORD = /(?:^|\s)(\p{L}{3,}[/\\]\p{L}{3,})/u
+
+/**
+ * Il valore si ferma dove comincia la colonna successiva.
+ *
+ * Su una scansione l'OCR fonde le colonne in una riga sola — «COGNOME/SURNAME ROSSI
+ * NOME/NAME MARIO», «CITTADINANZA/NATIONALITY ITA SESSO/SEX M» — e senza questo taglio il
+ * primo campo si porterebbe via tutta la riga. Due cose la aprono: l'etichetta di un altro
+ * campo del profilo, e una parola bilingue, che è come questi moduli scrivono le
+ * intestazioni anche dove il profilo non ha un campo corrispondente («sesso», «statura»).
+ */
+function cutAtNextColumn(text: string, labels: ReadonlySet<string>): string {
+  const folded = foldWithOrigin(text)
+  let cut = text.length
+  for (const label of labels) {
+    for (const occurrence of labelOccurrences(folded, label)) {
+      if (occurrence.start > 0 && occurrence.start < cut) cut = occurrence.start
+    }
+  }
+  const bilingual = BILINGUAL_WORD.exec(text)
+  if (bilingual) {
+    const start = bilingual.index + bilingual[0].length - bilingual[1]!.length
+    if (start > 0 && start < cut) cut = start
+  }
+  return text.slice(0, cut)
+}
+
 /** Una lettura di un'etichetta: dove compare, e il valore che si legge dopo. */
 export interface LabelRead {
   /** Riga dell'etichetta e riga del valore, indici in `lines`. */
@@ -489,7 +551,9 @@ function readsInLines(
   label: string,
   relation: AnchorRelation | undefined,
   /** Le altre etichette dello stesso campo, ripiegate: le lingue in cui il modulo lo chiama. */
-  twins: ReadonlySet<string>
+  twins: ReadonlySet<string>,
+  /** Le etichette di tutti i campi del profilo: dove il valore di questo finisce. */
+  bareLabels: ReadonlySet<string>
 ): LabelRead[] {
   const isText = !readsAsIdentifier(fieldId, spec) && ['string', 'object'].includes(spec.type)
   const citing = readsReferences(
@@ -500,10 +564,14 @@ function readsInLines(
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index]!
     for (const { start, end, foldedStart } of labelOccurrences(folded[index]!, label)) {
-      if (isText && !startsSegment(line.text, start, end)) continue
+      const remainder = line.text.slice(end)
+      const twinEnd = twinTailEnd(remainder, twins)
+      // Un'etichetta a metà riga è quasi sempre prosa — «Codice cliente: 12» — e non conta.
+      // Ma se è ripetuta in un'altra lingua è l'intestazione della colonna accanto, che
+      // l'OCR ha fuso con la prima: «COGNOME/SURNAME ROSSI NOME/NAME MARIO».
+      if (isText && twinEnd === -1 && !startsSegment(line.text, start, end)) continue
       if (!citing && precededByReference(folded[index]!.folded, foldedStart, label)) continue
 
-      const remainder = line.text.slice(end)
       const sameLine =
         relation === 'next-line' ? null : readValue(fieldId, spec, remainder, 'same-line')
       if (sameLine !== null) {
@@ -516,6 +584,32 @@ function readsInLines(
         })
         continue
       }
+      // «COGNOME/SURNAME ROSSI»: l'etichetta è ripetuta in un'altra lingua e poi c'è il
+      // valore, senza i due punti che il testo libero pretende. Si legge quello che resta
+      // dopo la coda, fermandosi all'etichetta del campo accanto.
+      if (
+        relation !== 'next-line' &&
+        twinEnd !== -1 &&
+        remainder.slice(twinEnd).trim().length > 0
+      ) {
+        const afterTwin = readValue(
+          fieldId,
+          spec,
+          cutAtNextColumn(remainder.slice(twinEnd), bareLabels),
+          'after-twin'
+        )
+        if (afterTwin !== null) {
+          reads.push({
+            line: index,
+            valueLine: index,
+            sameLine: true,
+            labelEnd: end + twinEnd,
+            value: afterTwin
+          })
+          continue
+        }
+      }
+
       if (relation !== 'same-line' && endsLabelLine(remainder, twins) && index + 1 < lines.length) {
         const nextLine = readValue(fieldId, spec, lines[index + 1]!.text, 'next-line')
         if (nextLine !== null) {
@@ -549,7 +643,7 @@ export function readsOfLabel(
   const folded = lines.map((line) => foldWithOrigin(line.text))
   // Nessuna gemella: qui si verifica un'etichetta candidata da sola, e una lettura in più
   // aperta da un'altra lingua farebbe scartare un'ancora che invece è buona.
-  return readsInLines(fieldId, spec, lines, folded, fold(label), relation, new Set())
+  return readsInLines(fieldId, spec, lines, folded, fold(label), relation, new Set(), new Set())
 }
 
 function candidatesForField(
@@ -579,7 +673,8 @@ function candidatesForField(
         folded,
         source.label,
         source.relation,
-        twins
+        twins,
+        bareLabels
       )) {
         const { value, sameLine } = read
         // La riga sotto è l'etichetta di un altro campo: il valore di questa manca.
