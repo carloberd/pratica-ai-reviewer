@@ -24,6 +24,27 @@ describe('normalizzazione v2', () => {
     expect(normalizeClassifierTextV2('dell’iscrizione')).toBe("dell'iscrizione")
   })
 
+  it('tiene l’apostrofo dell’elisione e toglie quello dell’accento', () => {
+    // Fra due lettere è un'elisione e resta: la White List ha un hard negative che ci passa
+    // attraverso, e senza l'apostrofo non scatterebbe più.
+    expect(normalizeClassifierTextV2('dell’iscrizione')).toBe("dell'iscrizione")
+    expect(normalizeClassifierTextV2('dell’interesse a permanere')).toBe(
+      "dell'interesse a permanere"
+    )
+    expect(normalizeClassifierTextV2("L'AQUILA")).toBe("l'aquila")
+
+    // A fine parola è un accento scritto senza accento, e va tolto o la parola non combacia
+    // più con l'alias: è così che si scrive À su una tastiera italiana, ed è così che l'OCR
+    // rende più spesso un accento maiuscolo.
+    expect(normalizeClassifierTextV2("CARTA DI IDENTITA'")).toBe('carta di identita')
+    expect(normalizeClassifierTextV2('CARTA DI IDENTITÀ')).toBe('carta di identita')
+    expect(normalizeClassifierTextV2("CARTA IDENTITA'.pdf")).toBe('carta identita pdf')
+    expect(normalizeClassifierTextV2("un po' di tutto")).toBe('un po di tutto')
+
+    // A inizio parola arriva dalle virgolette curve, e nemmeno lì è un apostrofo.
+    expect(normalizeClassifierTextV2('“ALFA” S.R.L.')).toBe('alfa s r l')
+  })
+
   it('cerca le frasi a confini di parola', () => {
     expect(containsPhraseV2('Fattura n. 114', 'fattura')).toBe(true)
     expect(containsPhraseV2('Fatturato annuo', 'fattura')).toBe(false)
@@ -325,6 +346,29 @@ describe('segnali presi dal pilota su documenti reali', () => {
     expect(result.candidates[0]?.documentType).toBe('identity_personal.patente_di_guida')
     expect(result.decision).toBe('UNKNOWN')
     expect(result.reason).toBe('BELOW_THRESHOLD')
+  })
+
+  it('«IDENTITA’» con l’apostrofo finale classifica come «IDENTITÀ»', () => {
+    // Le 7 carte dell'export del 21/09/2026 chiudevano NO_SIGNAL: nessun candidato, non un
+    // candidato debole. Testo e nome del file scrivevano tutti e due «CARTA DI IDENTITA'».
+    const conApostrofo = matchDocumentTypeV2({
+      aliases: realAliases,
+      pages: ["REPUBBLICA ITALIANA\nCARTA DI IDENTITA'\nCOMUNE DI/MUNICIPALITY ROVIGO"],
+      filename: "AYAD HAMID CARTA IDENTITA'.pdf",
+      config: realConfig
+    })
+    expect(conApostrofo.decision).toBe('ASSIGN')
+    expect(conApostrofo.documentType).toBe('identity_personal.carta_identita')
+
+    // Il nome del file da solo continua a non bastare: corrobora, non assegna.
+    const soloNomeFile = matchDocumentTypeV2({
+      aliases: realAliases,
+      pages: ['scansione senza testo utile'],
+      filename: "AYAD HAMID CARTA IDENTITA'.pdf",
+      config: realConfig
+    })
+    expect(soloNomeFile.decision).toBe('UNKNOWN')
+    expect(soloNomeFile.reason).toBe('FILENAME_ONLY')
   })
 
   it('una didascalia della carta elettronica basta a staccare la soglia', () => {
