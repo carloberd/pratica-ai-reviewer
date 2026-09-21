@@ -10,7 +10,9 @@ ed è datato 20/09/2026. Dichiara come baseline il commit `5f75bae`, che è `mai
 1.8.0. È generato a macchina: i metadati del `.docx` sono quelli vuoti del template, quindi
 «verificato il 20 settembre» è un'affermazione del testo, non una prova dei metadati.
 
-Analisi scritta il 21/09/2026 su `5f75bae`.
+Analisi scritta il 21/09/2026 su `5f75bae`. Gli sha citati qui sono quelli di prima della
+bonifica del punto 0, che la sera del 21 ha riscritto la cronologia: la corrispondenza con
+i nuovi è nel punto 0, in fondo.
 
 ---
 
@@ -100,7 +102,7 @@ Senza quella separazione, ogni metrica costruita sul nostro dataset misura sé s
 Il mandato lo segnala come priorità immediata e non dichiara la bonifica eseguita.
 Verificato il 21/09:
 
-- `github.com/carloberd/pratica-ai-reviewer` è **pubblico**, ultimo push 19/09;
+- `github.com/carloberd/pratica-ai-reviewer` era **pubblico** (lo è stato dal 18 al 21/09);
 - `docs/exports/2026-09-18/praticaai-dataset-2026-09-18.json` **e** il `.xlsx` gemello sono
   tracciati da git e contengono **5 IBAN italiani distinti e 2 codici fiscali di persona
   fisica**, oltre ai nomi; sono gli unici due blob della cronologia a portarli, verificato
@@ -110,12 +112,15 @@ Verificato il 21/09:
   commit su `docs/exports/` toccano le analisi, non l'export.
 
 Conseguenze pratiche: **cancellare i file non basta**, perché il dato resta nella
-cronologia; e fork, cloni e cache di GitHub sono già fuori dal nostro controllo, quindi la
-riscrittura della history riduce l'esposizione ma non la annulla retroattivamente.
+cronologia; e cloni e cache di GitHub sono già fuori dal nostro controllo (fork nessuno,
+contati), quindi la riscrittura della history riduce l'esposizione ma non la annulla
+retroattivamente.
 
 I valori non sono riprodotti qui, né vanno riprodotti in report, fixture o issue.
 
-Finché questo punto è aperto, nessuna delle dieci PR del mandato ha senso di partire.
+Chiuso il 21/09 — repository privato, export fuori da git, cronologia riscritta: il
+resoconto è in `docs/bonifica-dati-esposti.md`, e quello che resta aperto sta lì. Finché
+non era chiuso, nessuna delle dieci PR del mandato aveva senso di partire.
 
 ---
 
@@ -222,14 +227,19 @@ Le opzioni non sono equivalenti e la scelta è tua:
   diventa un **manifest senza valori** (hash, classe, conteggi) più fixture sintetiche
   dichiarate tali.
 
-**Stato al 21/09**: la parte reversibile è fatta e sta in `docs/bonifica-dati-esposti.md`
-con la misura dell'esposizione (scansione di tutti i 1061 blob di tutti i ref: i valori
-stanno in due file soli) e i comandi già provati su un clone usa e getta. Restano da
-eseguire il passaggio a repository privato e il force push della cronologia riscritta:
-sono irreversibili e toccano la storia condivisa, quindi non li faccio da solo.
+**Eseguito il 21/09**, con il resoconto in `docs/bonifica-dati-esposti.md`: repository
+privato, export fuori da git con un manifest senza valori al loro posto (PR #54), e
+cronologia riscritta con `git filter-repo` su clone `--mirror`. La scansione di tutti i
+blob, su tutti i ref, dà zero valori reali; l'albero di `main` è rimasto identico.
 
-Nota che la riscrittura fa sparire `5f75bae`, cioè la baseline dichiarata dal mandato
-(fonte R01): sulla prova diventa `98a2d4e`.
+Due conseguenze che toccano questo documento:
+
+- **la baseline `5f75bae` non esiste più.** La fonte R01 del mandato va riscritta:
+  l'equivalente nella cronologia nuova è `98a2d4e` (tag `v1.8.0`), e `main` è `7d5cf7f`.
+  Tutti gli sha citati qui sotto e in `docs/` sono di prima della riscrittura;
+- resta da chiedere a GitHub la garbage collection degli oggetti irraggiungibili, e resta
+  nel codice di oggi il nome di un cliente reale nei test — vedi il punto 5 della bonifica.
+  Finché non è ripulito, il repository non torna pubblico.
 
 ### 1. Gap matrix (D01) — pronta
 
