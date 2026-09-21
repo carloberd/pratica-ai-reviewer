@@ -38,6 +38,21 @@ describe('snapshot del registry', () => {
   it('normalizza collassando spazi e punteggiatura', () => {
     expect(normalize('  FATTURA  n.  114 ')).toBe('fattura n 114')
   })
+
+  it('tiene i tipi ritirati fuori dagli alias, ma non dal menu né dalle etichette', () => {
+    // `carta_identit` e `fattura_elettronica` sono duplicati ritirati dei tipi vivi:
+    // con i loro alias in gara il margine sul secondo crolla e il tipo non si assegna.
+    const ritirati = ['identity_personal.carta_identit', 'accounting.fattura_elettronica']
+    for (const ritirato of ritirati) {
+      expect(aliases.some((alias) => alias.documentType === ritirato)).toBe(false)
+      expect(registry.label(ritirato)).not.toBeNull()
+      expect(registry.types().some((type) => type.id === ritirato)).toBe(true)
+    }
+    // Il gemello vivo resta, e con lui gli alias che il ritirato gli portava via.
+    expect(aliases.some((alias) => alias.documentType === 'identity_personal.carta_identita')).toBe(
+      true
+    )
+  })
 })
 
 describe('classificazione deterministica', () => {
