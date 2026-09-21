@@ -759,6 +759,29 @@ describe('cognome e nome distinti sui documenti d’identità', () => {
     expect(result.conflicts).toEqual([])
   })
 
+  it('la coda in un’altra lingua non riempie la riga: il valore sta sotto', () => {
+    // Senza spazi intorno alla barra la riga non è più l'etichetta composta che gli hint
+    // dichiarano, ed è la forma in cui l'OCR la restituisce più spesso.
+    const { fact } = read(CARTA, [
+      page(['CITTADINANZA/NATIONALITY', 'ITA', 'COGNOME/SURNAME', 'ROSSI'])
+    ])
+    expect(fact('identity.nationality')).toMatchObject({
+      value: 'ITA',
+      evidence: [{ page: 1, text: 'CITTADINANZA/NATIONALITY\nITA' }]
+    })
+    expect(fact('person.last_name').value).toBe('ROSSI')
+  })
+
+  it('una coda che non è un’altra lingua dello stesso campo resta una riga piena', () => {
+    // «Quantità» non è come questo campo si chiama in un'altra lingua: è l'intestazione
+    // della colonna accanto, e la riga sotto è il primo dato della tabella, non il valore.
+    const registry = registryOf({
+      'line_item.description': { type: 'string', labels: ['descrizione'] }
+    })
+    const { fact } = extract(registry, [page(['Descrizione / Quantità', 'Cemento 32,5 R'])])
+    expect(fact('line_item.description').value).toBeNull()
+  })
+
   it('valore accanto all’etichetta: coi due punti si legge, senza resta vuoto', () => {
     for (const lines of [
       ['Cognome: ROSSI', 'Nome: MARIO'],

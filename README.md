@@ -292,7 +292,11 @@ dicono le annotazioni, e si correggono dalla scheda «Campi da estrarre» della 
 tipo non viene assegnato a mano, e l'assegnazione rielabora subito il documento. Il
 valore si cerca dopo l'etichetta sulla stessa riga o, se la riga finisce con
 l'etichetta, sulla successiva, con un lettore per tipo (date, importi, interi, decimali,
-identificativi, testo). Un importo è negativo solo se il meno è attaccato al numero o
+identificativi, testo). La riga «finisce con l'etichetta» anche quando dopo la barra
+resta la stessa etichetta in un'altra lingua — `COGNOME/SURNAME`,
+`CITTADINANZA/NATIONALITY` — come la scrivono i documenti d'identità: ogni pezzo dopo la
+barra dev'essere un'etichetta che il registry dichiara **per quel campo**, altrimenti
+resta un'intestazione di colonna e la riga sotto è il suo primo dato, non un valore. Un importo è negativo solo se il meno è attaccato al numero o
 alla valuta (`-1.234,56`, `€ -100,00`): `Totale - 100,00` resta positivo. I validatori
 sono quelli dell'ontologia, salvo dove il profilo del tipo li sostituisce
 (`field_validator_overrides`): sulla nota di credito un totale negativo non è un errore,
