@@ -46,6 +46,7 @@ function fakeRegistry(profiles: Record<string, ClassExtractionProfile>): Extract
 
   return {
     profile: (documentType) => profiles[documentType] ?? null,
+    sections: () => [],
     baseProfile: (documentType) => profiles[documentType] ?? null,
     field,
     allFields: () =>

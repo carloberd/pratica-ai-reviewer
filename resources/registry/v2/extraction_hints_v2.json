@@ -1,5 +1,21 @@
 {
-  "version": "2.0.2",
+  "version": "2.1.0",
+  "sections": {
+    "issuer": [
+      "Cedente prestatore",
+      "Cedente prestatore (fornitore)",
+      "Dati del cedente prestatore",
+      "Dati del cedente/prestatore",
+      "Dati anagrafici del cedente prestatore"
+    ],
+    "recipient": [
+      "Cessionario committente",
+      "Cessionario committente (cliente)",
+      "Dati del cessionario committente",
+      "Dati del cessionario/committente",
+      "Dati anagrafici del cessionario committente"
+    ]
+  },
   "hints": {
     "document.title": {
       "labels": [

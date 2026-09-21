@@ -38,7 +38,8 @@ interface FieldSpec {
  */
 function registryOf(
   fields: Record<string, FieldSpec>,
-  roles: Partial<Pick<ClassExtractionProfile, 'required_fields' | 'optional_fields'>> = {}
+  roles: Partial<Pick<ClassExtractionProfile, 'required_fields' | 'optional_fields'>> = {},
+  sections: Array<{ party: string; label: string }> = []
 ): ExtractionRegistryV2 {
   const ids = Object.keys(fields)
   const required = roles.required_fields ?? []
@@ -75,6 +76,7 @@ function registryOf(
     field: (id) => (fields[id] ? entry(id, fields[id]) : null),
     allFields: () => Object.entries(fields).map(([id, spec]) => entry(id, spec)),
     hints: (id) => fields[id]?.labels ?? [],
+    sections: () => sections,
     profileSource: (type) => (type === 'test.tipo' ? 'V2_EXPLICIT' : 'MISSING'),
     legacyNames: (id) => fields[id]?.legacy ?? [],
     schemaVersion: () => 'test'
@@ -903,6 +905,95 @@ describe('cognome e nome distinti sui documenti d’identità', () => {
     // Come sulla carta: data e luogo stanno sotto un'etichetta sola, e il luogo preso per
     // intero sarebbe «01/01/1980 CASABLANCA». Resta vuoto invece che sbagliato.
     expect(fact('person.birth_place').value).toBeNull()
+  })
+
+  it('la sezione della parte decide di chi è il valore', () => {
+    // Una fattura elettronica resa dallo stilo SdI scrive «Denominazione» due volte, una
+    // per parte: la stessa parola, la stessa specificità, e senza sezione nessuno dei due
+    // campi si legge.
+    const registry = registryOf(
+      {
+        'issuer.name': { type: 'string', labels: ['denominazione'] },
+        'recipient.name': { type: 'string', labels: ['denominazione'] }
+      },
+      {},
+      [
+        { party: 'issuer', label: 'cedente prestatore fornitore' },
+        { party: 'recipient', label: 'cessionario committente cliente' }
+      ]
+    )
+    const { fact } = extract(registry, [
+      page([
+        'Cedente prestatore (fornitore)',
+        'Denominazione: ALFA S.R.L.',
+        'Cessionario committente (cliente)',
+        'Denominazione: BETA COSTRUZIONI S.P.A.'
+      ])
+    ])
+    expect(fact('issuer.name')).toMatchObject({
+      value: 'ALFA S.R.L.',
+      evidence: [{ text: 'Denominazione: ALFA S.R.L.' }]
+    })
+    expect(fact('recipient.name')).toMatchObject({
+      value: 'BETA COSTRUZIONI S.P.A.',
+      evidence: [{ text: 'Denominazione: BETA COSTRUZIONI S.P.A.' }]
+    })
+  })
+
+  it('senza intestazioni di sezione il documento si legge come prima', () => {
+    const registry = registryOf(
+      {
+        'issuer.name': { type: 'string', labels: ['emittente'] },
+        'recipient.name': { type: 'string', labels: ['destinatario'] }
+      },
+      {},
+      [{ party: 'issuer', label: 'cedente prestatore fornitore' }]
+    )
+    const { fact } = extract(registry, [
+      page(['Emittente: ALFA S.R.L.', 'Destinatario: BETA COSTRUZIONI S.P.A.'])
+    ])
+    expect(fact('issuer.name').value).toBe('ALFA S.R.L.')
+    expect(fact('recipient.name').value).toBe('BETA COSTRUZIONI S.P.A.')
+  })
+
+  it('un’intestazione con il suo valore non apre una sezione', () => {
+    // «Destinatario: Beta S.p.A.» è un'etichetta con valore. Presa per intestazione si
+    // porterebbe dentro le righe sotto, e la partita IVA dell'emittente sparirebbe.
+    const registry = registryOf(
+      {
+        'issuer.name': { type: 'string', labels: ['emittente'] },
+        'issuer.vat_number': { type: 'identifier', format: 'vat_number', labels: ['partita iva'] },
+        'recipient.name': { type: 'string', labels: ['destinatario'] }
+      },
+      {},
+      [{ party: 'recipient', label: 'destinatario' }]
+    )
+    const { fact } = extract(registry, [
+      page([
+        'Emittente: ALFA S.R.L.',
+        'Destinatario: BETA COSTRUZIONI S.P.A.',
+        'Partita IVA: 01234567890'
+      ])
+    ])
+    expect(fact('issuer.vat_number').value).toBe('01234567890')
+  })
+
+  it('due intestazioni sulla stessa riga non aprono nessuna sezione', () => {
+    // Moduli a due colonne: la parte dipende da dove cade il valore sulla riga, e il
+    // lettore le colonne non le separa. Meglio nessuna sezione che quella sbagliata.
+    const registry = registryOf(
+      { 'issuer.name': { type: 'string', labels: ['denominazione'] } },
+      {},
+      [
+        { party: 'issuer', label: 'cedente prestatore' },
+        { party: 'recipient', label: 'cessionario committente' }
+      ]
+    )
+    const { fact } = extract(registry, [
+      page(['Cedente prestatore', 'Cessionario committente', 'Denominazione: ALFA S.R.L.'])
+    ])
+    // L'ultima intestazione vista è quella del destinatario: la riga non è dell'emittente.
+    expect(fact('issuer.name').value).toBeNull()
   })
 
   it('il riepilogo IVA a colonne non diventa un importo', () => {

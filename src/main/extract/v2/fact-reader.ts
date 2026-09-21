@@ -690,13 +690,66 @@ export function readsOfLabel(
   return readsInLines(fieldId, spec, lines, folded, fold(label), relation, new Set(), new Set())
 }
 
+/**
+ * La parte di cui parla un campo: `issuer.name` è dell'emittente, `recipient.vat_number`
+ * del destinatario. Gli altri campi non hanno parte e nessuna sezione li riguarda.
+ */
+function partyOf(fieldId: string, parties: ReadonlySet<string>): string | null {
+  const dot = fieldId.indexOf('.')
+  if (dot === -1) return null
+  const prefix = fieldId.slice(0, dot)
+  return parties.has(prefix) ? prefix : null
+}
+
+/**
+ * La parte di cui parla ogni riga, propagata da un'intestazione alla successiva.
+ *
+ * Una fattura elettronica resa dallo stilo SdI scrive due volte le stesse etichette, una
+ * per parte:
+ *
+ * ```
+ * Cedente prestatore (fornitore)
+ * Denominazione: ALFA S.R.L.
+ * Cessionario committente (cliente)
+ * Denominazione: BETA S.P.A.
+ * ```
+ *
+ * «Denominazione» da sola non distingue l'emittente dal destinatario — è la stessa parola,
+ * con la stessa specificità — e senza sezione i due campi restano vuoti tutti e due. Con
+ * la sezione ognuno legge la riga che gli tocca.
+ *
+ * Una riga che apre due parti insieme — le due intestazioni affiancate, come le stampano
+ * i moduli a due colonne — non apre nessuna sezione: lì la parte dipende dalla colonna, e
+ * il lettore le colonne non le separa. Meglio nessuna sezione che quella sbagliata.
+ */
+export function sectionsOfLines(
+  folded: FoldedLine[],
+  sections: ReadonlyArray<{ party: string; label: string }>
+): Array<string | null> {
+  let current: string | null = null
+  return folded.map((line) => {
+    const opened = new Set<string>()
+    for (const section of sections) {
+      // Solo una riga che è **soltanto** l'intestazione apre la sezione. «Destinatario:
+      // Beta S.p.A.» è un'etichetta con il suo valore, non l'inizio di un blocco: presa
+      // per intestazione si porterebbe dentro tutte le righe che seguono.
+      if (line.folded === section.label) opened.add(section.party)
+    }
+    if (opened.size === 1) current = [...opened][0]!
+    else if (opened.size > 1) current = null
+    return current
+  })
+}
+
 function candidatesForField(
   fieldId: string,
   spec: FieldOntologyEntry,
   labels: LabelSource[],
   pages: ExtractedPage[],
   fromOcr: Set<number>,
-  bareLabels: ReadonlySet<string>
+  bareLabels: ReadonlySet<string>,
+  sections: ReadonlyArray<{ party: string; label: string }>,
+  parties: ReadonlySet<string>
 ): Candidate[] {
   // Per ogni riga del valore resta solo il candidato con l'etichetta più specifica.
   const best = new Map<string, Candidate>()
@@ -704,10 +757,13 @@ function candidatesForField(
   // riga che finisce con l'etichetta, non come una riga che ha già il suo valore.
   const twins = new Set(labels.map((source) => source.label))
 
+  const party = partyOf(fieldId, parties)
+
   for (const page of pages) {
     const penalty = fromOcr.has(page.page) ? OCR_PENALTY : 0
     const lines = pageLines(page)
     const folded = lines.map((line) => foldWithOrigin(line.text))
+    const lineParty = party === null ? null : sectionsOfLines(folded, sections)
 
     for (const source of labels) {
       for (const read of readsInLines(
@@ -723,6 +779,10 @@ function candidatesForField(
         const { value, sameLine } = read
         // La riga sotto è l'etichetta di un altro campo: il valore di questa manca.
         if (!sameLine && bareLabels.has(folded[read.valueLine]!.folded)) continue
+        // La riga è nella sezione di un'altra parte: quel valore non è di questo campo.
+        // Fuori da ogni sezione (`null`) il documento non dichiara le parti, e vale tutto.
+        const at = lineParty?.[read.valueLine] ?? null
+        if (at !== null && at !== party) continue
         const failed = spec.validators
           .map((validator) => runFieldValidator(validator, value))
           .filter((error): error is string => error !== null)
@@ -843,6 +903,8 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
     cardinalityOf(profile, fieldId, spec.default_cardinality)
 
   const ocrPages = new Set(input.ocrPages ?? [])
+  const sections = input.registry.sections()
+  const parties = new Set(sections.map((section) => section.party))
   const conflicts: string[] = []
   const specs = new Map<string, FieldOntologyEntry>()
   const labels = new Map<string, LabelSource[]>()
@@ -873,7 +935,16 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
   for (const [fieldId, spec] of specs) {
     candidates.set(
       fieldId,
-      candidatesForField(fieldId, spec, labels.get(fieldId)!, input.pages, ocrPages, bareLabels)
+      candidatesForField(
+        fieldId,
+        spec,
+        labels.get(fieldId)!,
+        input.pages,
+        ocrPages,
+        bareLabels,
+        sections,
+        parties
+      )
     )
   }
 
