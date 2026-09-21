@@ -1,5 +1,5 @@
 {
-  "version": "2.1.0",
+  "version": "2.2.0",
   "sections": {
     "issuer": [
       "Cedente prestatore",
@@ -149,7 +149,8 @@
     "issuer.name": {
       "labels": [
         "Emittente",
-        "name"
+        "name",
+        "Denominazione"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -170,7 +171,8 @@
         "vat number",
         "Partita IVA",
         "P.IVA",
-        "P. IVA"
+        "P. IVA",
+        "Identificativo fiscale ai fini IVA"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -200,7 +202,8 @@
     "recipient.name": {
       "labels": [
         "Destinatario",
-        "name"
+        "name",
+        "Denominazione"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -221,7 +224,8 @@
         "vat number",
         "Partita IVA",
         "P.IVA",
-        "P. IVA"
+        "P. IVA",
+        "Identificativo fiscale ai fini IVA"
       ],
       "regexes": [],
       "scope": "whole_document",
@@ -477,7 +481,8 @@
     "money.currency": {
       "labels": [
         "Valuta",
-        "currency"
+        "currency",
+        "Valuta importi"
       ],
       "regexes": [],
       "scope": "whole_document",

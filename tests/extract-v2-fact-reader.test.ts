@@ -996,6 +996,51 @@ describe('cognome e nome distinti sui documenti d’identità', () => {
     expect(fact('issuer.name').value).toBeNull()
   })
 
+  it('fattura elettronica resa dallo stilo SdI: dodici campi, nessun conflitto', () => {
+    // Righe verbatim dal corpus del Generic Reader v3, con le intestazioni di blocco che
+    // la resa SdI stampa. Prima di questi hint si leggevano 7 campi e nessuna delle parti.
+    const { result, fact } = read('accounting.fattura', [
+      page([
+        'Cedente prestatore (fornitore)',
+        'Identificativo fiscale ai fini IVA: IT01479320291',
+        'Denominazione: POLESINE MASSETTI SRLS',
+        'Cessionario committente (cliente)',
+        'Identificativo fiscale ai fini IVA: IT03994840365',
+        'Denominazione: B.C. COSTRUZIONI SRLS',
+        'Dati generali del documento',
+        'Numero documento: 1172',
+        'Data documento: 2024-11-30 (30 Novembre 2024)',
+        'Valuta importi: EUR',
+        'Importo totale documento: 18037.00',
+        'Totale imponibile/importo: 18037.00',
+        'Totale imposta: 0.00',
+        'Data scadenza pagamento: 2025-01-31 (31 Gennaio 2025)',
+        'Codice IBAN: IT05X0306963123100000000444'
+      ])
+    ])
+    expect(fact('issuer.name').value).toBe('POLESINE MASSETTI SRLS')
+    expect(fact('recipient.name').value).toBe('B.C. COSTRUZIONI SRLS')
+    expect(fact('issuer.vat_number').value).toBe('01479320291')
+    expect(fact('recipient.vat_number').value).toBe('03994840365')
+    expect(fact('money.currency').value).toBe('EUR')
+    expect(fact('document.number').value).toBe('1172')
+    expect(fact('document.issue_date').value).toBe('2024-11-30')
+    expect(fact('payment.due_date').value).toBe('2025-01-31')
+    expect(fact('bank.iban').value).toBe('IT05X0306963123100000000444')
+    // Le due parti si separano da sole: nessun campo resta in conflitto.
+    expect(result.conflicts).toEqual([])
+    expect(result.facts.filter((f) => f.value !== null)).toHaveLength(12)
+  })
+
+  it('«Denominazione» senza le intestazioni resta un conflitto, non un valore accettato', () => {
+    // Su un documento che le parti non le dichiara, «Denominazione» è di tutte e due i
+    // campi: prendono lo stesso valore e restano in CONFLICT. È come si comporta da sempre
+    // «Partita IVA», e il revisore lo vede: quello che non deve succedere è l'accettazione.
+    const { fact } = read('accounting.fattura', [page(['Denominazione: ALFA S.R.L.'])])
+    expect(fact('issuer.name').reviewStatus).toBe('CONFLICT')
+    expect(fact('recipient.name').reviewStatus).toBe('CONFLICT')
+  })
+
   it('il riepilogo IVA a colonne non diventa un importo', () => {
     // Riga verbatim da una fattura reale (corpus Generic Reader v3): l'imposta è 205,10 e
     // 2.051,00 è l'imponibile. Prendere il primo importo dopo «IVA» dava l'imponibile
