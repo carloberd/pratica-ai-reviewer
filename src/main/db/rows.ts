@@ -248,7 +248,7 @@ export function semanticTypeOf(row: Pick<FieldRow, 'name' | 'semantic_type'>): S
     : 'string'
 }
 
-const ROLES: FieldRole[] = ['required', 'core', 'optional', 'conditional']
+const ROLES: FieldRole[] = ['required', 'optional']
 const REVIEW_STATUSES: FieldReviewStatus[] = [
   'AUTO_ACCEPTED',
   'NEEDS_REVIEW',

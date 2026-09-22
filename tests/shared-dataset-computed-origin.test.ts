@@ -22,7 +22,7 @@ const expiry = (overrides: Partial<ExtractedField> = {}) =>
     confidence: 0.6,
     required: false,
     semanticType: 'date',
-    role: 'core',
+    role: 'optional',
     reviewStatus: 'NEEDS_REVIEW',
     computed: true,
     ...overrides

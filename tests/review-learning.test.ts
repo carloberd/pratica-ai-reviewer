@@ -11,13 +11,7 @@ import {
   templateFingerprint
 } from '../src/shared/template-fingerprint'
 import { createTestRepository, seedDocument } from './helpers/db'
-import {
-  fixture,
-  testClassifierConfigV2,
-  testLegacyFieldMap,
-  testRegistry,
-  testRegistryV2
-} from './helpers/registry'
+import { fixture, testExtractionRegistry } from './helpers/registry'
 
 let repo: ReturnType<typeof createTestRepository> | null = null
 
@@ -140,17 +134,12 @@ describe('una revisione salvata insegna al learner', () => {
 
 describe('dal documento vero al registro', () => {
   it('tipo scelto a mano, data selezionata sul documento, importo confermato', async () => {
-    const registry = testRegistry()
+    const registry = testExtractionRegistry()
     const db = openDatabase({ file: ':memory:' })
-    const r = createRepository(db, { requiredFields: (type) => registry.requiredFor(type) })
-    const process = createDocumentProcessor({
-      repo: r,
-      registry,
-      engines: { classifier: 'v2', extraction: 'v2' },
-      classifierConfigV2: testClassifierConfigV2(),
-      extractionRegistryV2: testRegistryV2(),
-      legacyFieldMap: testLegacyFieldMap()
+    const r = createRepository(db, {
+      requiredFields: (type) => (type ? (registry.baseProfile(type)?.required_fields ?? []) : [])
     })
+    const process = createDocumentProcessor({ repo: r, extractionRegistry: registry })
     const { id } = r.documents.upsertFromDrive({
       driveFileId: 'drive-memo',
       filename: 'promemoria-ignoto.pdf',
@@ -259,7 +248,7 @@ describe('due esemplari dello stesso modulo insegnano alla stessa regola', () =>
   it('una sola regola di template, con le prove di tutti e due: attiva', () => {
     const r = createTestRepository()
     repo = r
-    const registry = testRegistryV2()
+    const registry = testExtractionRegistry()
 
     const primo = esemplare(r, 'doc-1', TESTATA, '12/09/2026')
     // Il secondo ha una riga in più: stessa testata, altra impronta.
@@ -322,7 +311,7 @@ describe('un valore digitato insegna come uno selezionato', () => {
       action: 'SAVE',
       now: NOW,
       actor: ACTOR,
-      registry: testRegistryV2()
+      registry: testExtractionRegistry()
     })
 
     const evento = r.learning.listEvents({ documentId: id }).find((e) => e.kind === 'FIELD_VALUE')!
@@ -350,7 +339,7 @@ describe('un valore digitato insegna come uno selezionato', () => {
       action: 'SAVE',
       now: NOW,
       actor: ACTOR,
-      registry: testRegistryV2()
+      registry: testExtractionRegistry()
     })
 
     const evento = r.learning.listEvents({ documentId: id }).find((e) => e.kind === 'FIELD_VALUE')!
@@ -394,7 +383,7 @@ describe('un valore digitato insegna come uno selezionato', () => {
       action: 'SAVE',
       now: NOW,
       actor: ACTOR,
-      registry: testRegistryV2()
+      registry: testExtractionRegistry()
     })
 
     const evento = r.learning.listEvents({ documentId: id }).find((e) => e.kind === 'FIELD_VALUE')!

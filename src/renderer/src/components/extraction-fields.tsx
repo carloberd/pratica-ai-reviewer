@@ -90,8 +90,8 @@ export default function ExtractionFields({
       <div className={styles.empty} data-map="no-profile">
         <div className={styles.emptyTitle}>Nessuna mappa per questo tipo</div>
         <div>
-          Il registry non ha un profilo di estrazione per «{documentType}»: non c&apos;è una mappa
-          da correggere.
+          Il registry non dice quali campi vuole «{documentType}»: non c&apos;è una mappa da
+          correggere.
         </div>
       </div>
     )
@@ -140,7 +140,7 @@ export default function ExtractionFields({
             </span>
           ) : (
             <span className={cx(styles.badge, styles.low)} title={measure.schemaState ?? ''}>
-              {measure.profileOrigin === 'LEGACY_FALLBACK' ? 'Senza profilo' : 'Proposto'}
+              Proposto
             </span>
           )}
         </div>
@@ -365,7 +365,7 @@ function MapFieldCard({
         <FieldName field={field} />
         <select
           className={cx(styles.select, styles.mapRoleSelect)}
-          value={field.role ?? 'core'}
+          value={field.role ?? 'optional'}
           disabled={busy}
           aria-label={`Peso di ${field.label}`}
           onChange={(event) => {

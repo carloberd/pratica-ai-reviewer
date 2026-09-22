@@ -36,6 +36,11 @@ const PICKED: EvidenceItem = {
   location: { lineStart: 2, lineEnd: 2, charStart: 51, charEnd: 63 }
 }
 
+/** Le sole decisioni sui campi: il tipo ha i suoi test poco sopra. */
+function fieldDecisions(document: ReturnType<typeof reviewDocument>) {
+  return decisions(document).filter((decision) => decision.kind === 'FIELD_VALUE')
+}
+
 /** Solo le decisioni, per leggere i test senza il contesto ripetuto. */
 function decisions(document: ReturnType<typeof reviewDocument>) {
   return reviewLearningEvents(document, CONTEXT).map(
@@ -73,7 +78,8 @@ describe('il tipo del documento', () => {
     })
   })
 
-  it('senza classificazione salvata vale il tipo messo dal motore, non quello messo a mano', () => {
+  it('senza classificazione salvata la proposta si riconosce dalla confidenza', () => {
+    // Col tipo proposto dalla memoria di un modulo: confermarlo è una conferma.
     expect(
       decisions(reviewDocument({ classification: null, typeConfidence: 0.9 }))[0]
     ).toMatchObject({
@@ -81,7 +87,18 @@ describe('il tipo del documento', () => {
       outcome: 'CONFIRMED',
       predictedType: 'accounting.fattura'
     })
-    expect(decisions(reviewDocument({ classification: null, typeConfidence: null }))).toEqual([])
+    // Scelto a mano: nessuno l'aveva proposto, ed è comunque la decisione che insegna
+    // alla memoria del modulo qual è il tipo di questo stampato.
+    expect(
+      decisions(reviewDocument({ classification: null, typeConfidence: null }))[0]
+    ).toMatchObject({
+      kind: 'DOCUMENT_TYPE',
+      outcome: 'FILLED',
+      predictedType: null
+    })
+    expect(
+      decisions(reviewDocument({ classification: null, typeConfidence: null, documentType: null }))
+    ).toEqual([])
   })
 
   it('nessun tipo proposto e nessuno scelto non è una decisione', () => {
@@ -96,7 +113,7 @@ describe('i campi singoli', () => {
     reviewDocument({ classification: null, typeConfidence: null, fields, evidence })
 
   it('una proposta tenuta è una conferma, con la confidence del motore', () => {
-    expect(decisions(document([scalarField({ confidence: 0.85 })]))).toEqual([
+    expect(fieldDecisions(document([scalarField({ confidence: 0.85 })]))).toEqual([
       {
         kind: 'FIELD_VALUE',
         outcome: 'CONFIRMED',
@@ -110,9 +127,9 @@ describe('i campi singoli', () => {
   })
 
   it('riscrivere la proposta non è una correzione: resta una conferma', () => {
-    expect(decisions(document([scalarField({ correctedValue: '114/2026' })]))[0]?.outcome).toBe(
-      'CONFIRMED'
-    )
+    expect(
+      fieldDecisions(document([scalarField({ correctedValue: '114/2026' })]))[0]?.outcome
+    ).toBe('CONFIRMED')
   })
 
   it('corretto, compilato e svuotato; la selezione va con il valore del revisore', () => {
@@ -126,7 +143,7 @@ describe('i campi singoli', () => {
         [PICKED]
       ),
       CONTEXT
-    )
+    ).filter((event) => event.kind === 'FIELD_VALUE')
     expect(
       events.map(({ fieldId, outcome, engineConfidence }) => [fieldId, outcome, engineConfidence])
     ).toEqual([
@@ -144,7 +161,7 @@ describe('i campi singoli', () => {
   })
 
   it('un campo vuoto che nessuno ha toccato non dice niente', () => {
-    expect(decisions(document([scalarField({ value: '' })]))).toEqual([])
+    expect(fieldDecisions(document([scalarField({ value: '' })]))).toEqual([])
   })
 
   it('un’evidenza del motore non è una selezione', () => {
@@ -179,7 +196,7 @@ describe('i campi ripetuti', () => {
       evidence: [PICKED]
     })
     expect(
-      decisions(document).map(({ outcome, itemIndex, engineConfidence, picked }) => [
+      fieldDecisions(document).map(({ outcome, itemIndex, engineConfidence, picked }) => [
         itemIndex,
         outcome,
         engineConfidence,

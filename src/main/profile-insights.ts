@@ -9,7 +9,7 @@ import {
 } from '@shared/profile-metrics'
 import { cardinalityOf } from '@shared/profile-overlay'
 import type { Repository } from './db/repository'
-import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
+import type { ExtractionRegistry } from './extract/v2/profile-loader'
 
 /**
  * Le misure sui profili, lette dal database locale.
@@ -23,25 +23,21 @@ import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
  * motore aveva proposto su un documento buttato non dice niente sul profilo.
  */
 
-const ROLE_KEYS: Array<
-  [FieldRole, 'required_fields' | 'core_fields' | 'optional_fields' | 'conditional_fields']
-> = [
+const ROLE_KEYS: Array<[FieldRole, 'required_fields' | 'optional_fields']> = [
   ['required', 'required_fields'],
-  ['core', 'core_fields'],
-  ['optional', 'optional_fields'],
-  ['conditional', 'conditional_fields']
+  ['optional', 'optional_fields']
 ]
 
 export interface ProfileInsightsDeps {
   repo: Repository
-  registry: ExtractionRegistryV2
+  registry: ExtractionRegistry
   /** Nome leggibile del tipo (`canonical_name` del registry v1). */
   typeLabel?: (documentType: string) => string | null
 }
 
 /** I campi del profilo di un tipo, nell'ordine obbligatori → principali → opzionali. */
 export function profileFieldsOf(
-  registry: ExtractionRegistryV2,
+  registry: ExtractionRegistry,
   documentType: string
 ): ProfileFieldRef[] {
   const profile = registry.profile(documentType)
@@ -61,7 +57,7 @@ export function profileFieldsOf(
   return fields
 }
 
-function originOf(registry: ExtractionRegistryV2, documentType: string): ProfileOrigin {
+function originOf(registry: ExtractionRegistry, documentType: string): ProfileOrigin {
   return registry.profileSource(documentType)
 }
 

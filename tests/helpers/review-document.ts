@@ -39,7 +39,7 @@ export function listField(items: FieldItem[], overrides: Partial<ExtractedField>
     confidence: 0.85,
     required: false,
     cardinality: 'many',
-    role: 'core',
+    role: 'optional',
     reviewStatus: 'NEEDS_REVIEW',
     items,
     ...overrides

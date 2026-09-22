@@ -22,8 +22,23 @@ import { normalizeDateValue } from './date-value'
  * resta senza scadenza calcolata. Meglio un campo vuoto che una data inventata: il
  * revisore vede che manca, una data sbagliata la confermerebbe.
  *
- * I corsi che aspettano una riga, tutti già tipi del registry: preposto, antincendio,
- * primo soccorso, lavori in quota, spazi confinati, DPI di terza categoria, RLS.
+ * ### Perché la tabella oggi è vuota
+ *
+ * Fino al 22/09 la chiave funzionava perché ogni corso era un tipo:
+ * `hse_training.attestato_formazione_generale` e `..._specifica` avevano la loro riga, e
+ * il motore deduceva la scadenza sui documenti di quei due tipi. Il Brain MVP li ha
+ * accorpati, con altri sette, in `hse_training.attestato_formazione_sicurezza`, dove il
+ * corso è l'attributo `course_type` e non più il tipo: una riga su quella classe darebbe
+ * cinque anni anche all'antincendio e al primo soccorso, che ne valgono meno.
+ *
+ * La classe accorpata per di più non chiede `document.issue_date` — la data da cui il
+ * revisore aveva contato — ma `hse.training_date`, che è la data del corso e non quella
+ * del rilascio. Quindi la deduzione non si rimette in piedi cambiando chiave: va
+ * riscritta su `course_type`, quando quell'attributo sarà popolato davvero, e con una
+ * riga per corso scritta da chi conosce la norma.
+ *
+ * Fino ad allora `hse.training_expiry` resta un campo da compilare a mano. Meglio un
+ * campo vuoto che una data inventata.
  */
 
 /** Il campo che questa tabella riempie. */
@@ -46,20 +61,7 @@ export interface TrainingValidity {
  * tassonomia **è** il corso: `hse.training_course` è testo libero letto dal documento, e
  * una tabella che ci si appoggiasse cambierebbe risultato a ogni dicitura nuova.
  */
-export const TRAINING_VALIDITY: Record<string, TrainingValidity> = {
-  'hse_training.attestato_formazione_generale': {
-    years: 5,
-    from: 'document.issue_date',
-    reference:
-      'Accordo Stato-Regioni 21/12/2011, aggiornamento quinquennale della formazione dei lavoratori'
-  },
-  'hse_training.attestato_formazione_specifica': {
-    years: 5,
-    from: 'document.issue_date',
-    reference:
-      'Accordo Stato-Regioni 21/12/2011, aggiornamento quinquennale della formazione dei lavoratori'
-  }
-}
+export const TRAINING_VALIDITY: Record<string, TrainingValidity> = {}
 
 /**
  * La stessa data quanti anni dopo. Il 29 febbraio non esiste negli anni che non sono

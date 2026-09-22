@@ -1,5 +1,5 @@
 import type { ClassExtractionProfile, FieldOntologyEntry } from '@shared/extraction-v2'
-import type { ExtractionRegistryV2 } from './profile-loader'
+import type { ExtractionRegistry } from './profile-loader'
 
 function normalizeIban(value: string): string {
   return value.replace(/\s+/g, '').toUpperCase()
@@ -211,7 +211,7 @@ export function validationErrorsOf(
  * validatori del registry v2: quello che la revisione mostra accanto al campo.
  */
 export function validateFieldValue(
-  registry: Pick<ExtractionRegistryV2, 'profile' | 'field'> | undefined,
+  registry: Pick<ExtractionRegistry, 'profile' | 'field'> | undefined,
   documentType: string | null,
   fieldName: string,
   value: string | null

@@ -165,7 +165,7 @@ const fieldIdSchema = z
   .max(120)
   .regex(/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/, 'Un id di campo è fatto di minuscole, numeri e punti.')
 
-const fieldRoleSchema = z.enum(['required', 'core', 'optional', 'conditional'])
+const fieldRoleSchema = z.enum(['required', 'optional'])
 
 /**
  * Una correzione alla mappa «tipo ↔ dati da estrarre». Il ponte IPC è un confine: un id

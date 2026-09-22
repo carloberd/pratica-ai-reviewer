@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest'
 import { openDatabase } from '../src/main/db'
 import { createRepository } from '../src/main/db/repository'
-import { createReloadableExtractionRegistryV2 } from '../src/main/extract/v2/profile-loader'
+import { createReloadableExtractionRegistry } from '../src/main/extract/v2/profile-loader'
 import { createDocumentProcessor } from '../src/main/pipeline'
 import {
   documentFieldMap,
@@ -12,14 +12,20 @@ import {
 } from '../src/main/profile-refinement'
 
 import { submitReview } from '../src/main/review'
-import {
-  fixture,
-  REGISTRY_DIR,
-  REGISTRY_V2_DIR,
-  testClassifierConfigV2,
-  testLegacyFieldMap,
-  testRegistry
-} from './helpers/registry'
+import { fixture, REGISTRY_DIR } from './helpers/registry'
+
+/**
+ * Il tipo di una fixture, come lo sceglierebbe il revisore aprendola: senza tipo non c'è
+ * una mappa di campi, e il documento resterebbe vuoto.
+ */
+const TYPE_OF: Record<string, string> = {
+  'fattura-nativa.pdf': 'accounting.fattura',
+  'fattura-righe.pdf': 'accounting.fattura',
+  'fattura-riepilogo-iva.pdf': 'accounting.fattura',
+  'contratto-consulenza.docx': 'contracts_general.contratto_consulenza',
+  'durc-scansionato.pdf': 'payroll_contributions.durc',
+  'promemoria-ignoto.pdf': 'payments_treasury.richiesta_pagamento'
+}
 
 /**
  * La mappa corretta dal documento aperto: cosa si rielabora subito, cosa in sottofondo e
@@ -35,32 +41,22 @@ afterAll(() => {
 })
 
 async function setup() {
-  const registry = testRegistry()
   const db = openDatabase({ file: ':memory:' })
   closers.push(() => db.close())
+  let registry: ReturnType<typeof createReloadableExtractionRegistry>
   const repo = createRepository(db, {
-    requiredFields: (type) => registry.requiredFor(type),
-    typeLabel: (type) => registry.label(type)
+    requiredFields: (type) => (type ? (registry.baseProfile(type)?.required_fields ?? []) : []),
+    typeLabel: (type) => (type ? (registry.baseProfile(type)?.canonical_name ?? null) : null)
   })
-  const extractionRegistryV2 = createReloadableExtractionRegistryV2(
-    REGISTRY_V2_DIR,
-    REGISTRY_DIR,
-    () => repo.profileMap.overlay()
-  )
-  const process = createDocumentProcessor({
-    repo,
-    registry,
-    engines: { classifier: 'v2', extraction: 'v2' },
-    classifierConfigV2: testClassifierConfigV2(),
-    extractionRegistryV2,
-    legacyFieldMap: testLegacyFieldMap()
-  })
+  registry = createReloadableExtractionRegistry(REGISTRY_DIR, () => repo.profileMap.overlay())
+  const extractionRegistry = registry
+  const process = createDocumentProcessor({ repo, extractionRegistry })
 
   const deps: RefinementDeps = {
     repo,
-    registry: extractionRegistryV2,
-    registryDirectory: REGISTRY_V2_DIR,
-    typeLabel: (type) => registry.label(type),
+    registry: extractionRegistry,
+    registryDirectory: REGISTRY_DIR,
+    typeLabel: (type) => registry.baseProfile(type)?.canonical_name ?? null,
     process
   }
 
@@ -72,6 +68,7 @@ async function setup() {
       receivedAt: '2026-09-10T08:00:00.000Z'
     })
     repo.documents.setCachedPath(id, fixture(filename))
+    if (TYPE_OF[filename]) repo.documents.setType(id, TYPE_OF[filename]!, null)
     await process({ documentId: id, cachedPath: fixture(filename), mime: PDF, filename })
     return id
   }
@@ -118,7 +115,7 @@ describe('correggere la mappa dal documento', () => {
       kind: 'ADD_FIELD',
       documentType: FATTURA,
       fieldId: 'document.title',
-      role: 'core'
+      role: 'optional'
     })
     expect(added.reprocessed).toBe(true)
     expect(added.document.fields.map((entry) => entry.name)).toContain('document.title')
@@ -141,11 +138,11 @@ describe('correggere la mappa dal documento', () => {
       kind: 'ADD_FIELD',
       documentType: FATTURA,
       fieldId: 'document.title',
-      role: 'core'
+      role: 'optional'
     })
     expect(result.reprocessed).toBe(false)
     expect(result.document.fields.map((entry) => entry.name)).not.toContain('document.title')
-    expect(deps.registry.profile(FATTURA)!.core_fields).toContain('document.title')
+    expect(deps.registry.profile(FATTURA)!.optional_fields).toContain('document.title')
 
     db.close()
   })
@@ -159,7 +156,7 @@ describe('correggere la mappa dal documento', () => {
         kind: 'ADD_FIELD',
         documentType: 'hr.unilav',
         fieldId: 'document.title',
-        role: 'core'
+        role: 'optional'
       })
     ).rejects.toThrow(/solo la sua mappa/)
     expect(deps.repo.profileMap.listActions()).toEqual([])
@@ -180,7 +177,7 @@ describe('correggere la mappa dal documento', () => {
       kind: 'ADD_FIELD',
       documentType: FATTURA,
       fieldId: 'document.title',
-      role: 'core'
+      role: 'optional'
     })
     expect(result.queued).toBe(1)
 

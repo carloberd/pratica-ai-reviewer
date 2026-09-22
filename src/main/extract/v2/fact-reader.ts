@@ -16,7 +16,7 @@ import type { BoundingBox } from '@shared/types'
 import { FIELD_SPECS, findDate, findMoney, fold, OCR_PENALTY } from '../heuristics'
 import { precededByReference, readsReferences } from '../reference-context'
 import type { ExtractedPage, TextLine } from '../types'
-import type { ExtractionRegistryV2 } from './profile-loader'
+import type { ExtractionRegistry } from './profile-loader'
 import { runFieldValidator, validatorsOf } from './validators'
 
 /**
@@ -85,7 +85,7 @@ export interface LearnedLabel {
 export interface ExtractFactsInput {
   documentType: string
   pages: ExtractedPage[]
-  registry: ExtractionRegistryV2
+  registry: ExtractionRegistry
   /**
    * Pagine il cui testo viene da OCR: la confidence dei loro campi scende di 0,10 come
    * nella v1. Un allegato scansionato non declassa i campi letti dal text layer.
@@ -165,7 +165,7 @@ const TIER: Record<LearningRuleScope, number> = { CLASS: 1, TEMPLATE: 2 }
 function labelsFor(
   fieldId: string,
   spec: FieldOntologyEntry,
-  registry: ExtractionRegistryV2,
+  registry: ExtractionRegistry,
   learned: LearnedLabel[]
 ): LabelSource[] {
   const legacyKeywords = registry
@@ -867,10 +867,7 @@ function documentOrder(a: Candidate, b: Candidate): number {
 // ---------------------------------------------------------------------------
 
 function roleOf(profile: ClassExtractionProfile, fieldId: string): FieldRole {
-  if (profile.required_fields.includes(fieldId)) return 'required'
-  if (profile.core_fields.includes(fieldId)) return 'core'
-  if (profile.conditional_fields.includes(fieldId)) return 'conditional'
-  return 'optional'
+  return profile.required_fields.includes(fieldId) ? 'required' : 'optional'
 }
 
 function round(value: number): number {
@@ -888,14 +885,7 @@ export function extractFactsV2(input: ExtractFactsInput): ExtractionResultV2 {
   const profile = input.registry.profile(input.documentType)
   if (!profile) throw new Error(`Nessun profilo di estrazione per ${input.documentType}.`)
 
-  const fieldIds = [
-    ...new Set([
-      ...profile.required_fields,
-      ...profile.core_fields,
-      ...profile.optional_fields,
-      ...profile.conditional_fields
-    ])
-  ]
+  const fieldIds = [...new Set([...profile.required_fields, ...profile.optional_fields])]
 
   // Quanti valori chiede il campo su questo tipo: la decisione del revisore, se c'è,
   // altrimenti l'ontologia.

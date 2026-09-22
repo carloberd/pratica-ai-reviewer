@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest'
 import { openDatabase } from '../src/main/db'
 import { createRepository } from '../src/main/db/repository'
-import { createReloadableExtractionRegistryV2 } from '../src/main/extract/v2/profile-loader'
+import { createReloadableExtractionRegistry } from '../src/main/extract/v2/profile-loader'
 import { updateFieldValue } from '../src/main/field-edits'
 import { setRuleStatusByHand } from '../src/main/learning-workspace'
 import { createDocumentProcessor } from '../src/main/pipeline'
@@ -13,14 +13,7 @@ import {
 import { assignDocumentType } from '../src/main/reprocess'
 import { submitReview } from '../src/main/review'
 import type { LearningMode } from '../src/shared/local-learning'
-import {
-  fixture,
-  REGISTRY_DIR,
-  REGISTRY_V2_DIR,
-  testClassifierConfigV2,
-  testLegacyFieldMap,
-  testRegistry
-} from './helpers/registry'
+import { fixture, REGISTRY_DIR } from './helpers/registry'
 
 /**
  * Il giro completo dell'apprendimento, sui documenti veri: la definizione di «fatto» della
@@ -56,32 +49,21 @@ afterAll(() => {
 })
 
 function setup(mode: LearningMode = 'LEARNING') {
-  const registry = testRegistry()
   const db = openDatabase({ file: ':memory:' })
   closers.push(() => db.close())
+  let registry: ReturnType<typeof createReloadableExtractionRegistry>
   const repo = createRepository(db, {
-    requiredFields: (type) => registry.requiredFor(type),
-    typeLabel: (type) => registry.label(type)
+    requiredFields: (type) => (type ? (registry.baseProfile(type)?.required_fields ?? []) : []),
+    typeLabel: (type) => (type ? (registry.baseProfile(type)?.canonical_name ?? null) : null)
   })
   repo.learning.setMode(mode)
-  const extractionRegistryV2 = createReloadableExtractionRegistryV2(
-    REGISTRY_V2_DIR,
-    REGISTRY_DIR,
-    () => repo.profileMap.overlay()
-  )
-  const process = createDocumentProcessor({
-    repo,
-    registry,
-    engines: { classifier: 'v2', extraction: 'v2' },
-    classifierConfigV2: testClassifierConfigV2(),
-    extractionRegistryV2,
-    legacyFieldMap: testLegacyFieldMap()
-  })
+  registry = createReloadableExtractionRegistry(REGISTRY_DIR, () => repo.profileMap.overlay())
+  const process = createDocumentProcessor({ repo, extractionRegistry: registry })
   const deps: RefinementDeps = {
     repo,
-    registry: extractionRegistryV2,
-    registryDirectory: REGISTRY_V2_DIR,
-    typeLabel: (type) => registry.label(type),
+    registry,
+    registryDirectory: REGISTRY_DIR,
+    typeLabel: (type) => registry.baseProfile(type)?.canonical_name ?? null,
     process
   }
   const ids = new Map<Month, string>()
@@ -131,7 +113,7 @@ function setup(mode: LearningMode = 'LEARNING') {
       documentId: idOf(month),
       action,
       actor: ACTOR,
-      registry: extractionRegistryV2,
+      registry,
       onRulesChanged: ({ documentTypes, templateFingerprints }) => {
         for (const type of documentTypes) queued = reprocessQueueOfType(deps, type, null).done
         for (const fingerprint of templateFingerprints) {
@@ -424,13 +406,9 @@ describe('una prova per documento', () => {
 })
 
 describe('il motore impara il tipo di un modulo che ritorna', () => {
-  it('tre revisioni concordi: il promemoria in coda si classifica da sé, e si compila', async () => {
+  it('tre revisioni concordi: il promemoria in coda prende il tipo da sé, e si compila', async () => {
     const flow = setup()
     await flow.open('settembre')
-    expect(flow.classification('settembre')).toMatchObject({
-      decision: 'UNKNOWN',
-      proposedType: null
-    })
 
     // Dicembre è in coda senza tipo: nessuno sa ancora cosa sia.
     await flow.open('dicembre', { type: null })
@@ -456,15 +434,11 @@ describe('il motore impara il tipo di un modulo che ritorna', () => {
     await flow.reprocessed()
     const december = flow.repo.getReviewDocument(flow.idOf('dicembre'))!
     expect(december).toMatchObject({ documentType: TYPE, typeConfidence: 0.74 })
-    expect(december.classification).toMatchObject({ decision: 'ASSIGN', reason: 'OK' })
-    expect(december.classification!.candidates[0]!.signals).toEqual([
-      { source: 'template-memory', phrase: `modulo ${memory.templateFingerprint}`, delta: 0.74 }
-    ])
     expect(december.timeline.map((event) => event.detail)).toContainEqual(
       expect.stringContaining('dalla memoria del modulo, già revisionato con questo tipo')
     )
     expect(flow.date('dicembre').value).toBe('2026-12-05')
-    expect(flow.lastRun('dicembre').classifier.templateRuleIds).toEqual([memory.id])
+    expect(flow.lastRun('dicembre').templateRuleIds).toEqual([memory.id])
 
     // Confermare il tipo proposto dalla memoria è un'altra revisione concorde.
     flow.save('dicembre')
@@ -506,6 +480,6 @@ describe('il motore impara il tipo di un modulo che ritorna', () => {
     flow.repo.learning.setMode('BASELINE')
     await flow.open('dicembre', { type: null })
     expect(flow.repo.getReviewDocument(flow.idOf('dicembre'))!.documentType).toBeNull()
-    expect(flow.lastRun('dicembre').classifier.templateRuleIds).toEqual([])
+    expect(flow.lastRun('dicembre').templateRuleIds).toEqual([])
   })
 })

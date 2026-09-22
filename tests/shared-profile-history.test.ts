@@ -24,7 +24,7 @@ function action(overrides: Partial<ProfileAction> = {}): ProfileAction {
     documentType: 'accounting.fattura',
     fieldId: 'procurement.cig',
     label: null,
-    before: 'conditional',
+    before: 'optional',
     after: 'excluded',
     previousOverride: null,
     detail: 'CIG segnato non utile.',
@@ -55,7 +55,7 @@ describe('cosa si può annullare', () => {
       id: 'nuova',
       at: '2026-09-17T10:00:00.000Z',
       kind: 'ADD_FIELD',
-      after: 'core'
+      after: 'optional'
     })
 
     const revertable = revertableActions([newer, older])
@@ -96,7 +96,7 @@ describe('cosa si può annullare', () => {
   })
 
   it('peso e numero di valori dello stesso campo si annullano ognuno per conto suo', () => {
-    const role = action({ id: 'peso', kind: 'SET_ROLE', before: 'conditional', after: 'core' })
+    const role = action({ id: 'peso', kind: 'SET_ROLE', before: 'optional', after: 'optional' })
     const cardinality = action({
       id: 'valori',
       kind: 'SET_CARDINALITY',

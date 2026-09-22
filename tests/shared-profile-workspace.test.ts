@@ -20,7 +20,7 @@ describe('com’è andata una correzione', () => {
     documentType: 'accounting.fattura',
     fieldId: 'procurement.cig',
     label: null,
-    before: 'conditional',
+    before: 'optional',
     after: 'excluded',
     previousOverride: null,
     detail: '«CIG» (procurement.cig) segnato non utile per accounting.fattura.',

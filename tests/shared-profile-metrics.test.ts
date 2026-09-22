@@ -36,7 +36,7 @@ function type(
   return {
     documentType: 'accounting.fattura',
     label: 'fattura',
-    profileOrigin: 'V2_EXPLICIT',
+    profileOrigin: 'EXPLICIT',
     schemaState: 'EXTRACTION_SCHEMA_DRAFT',
     fieldTested: false,
     profileFields,
@@ -44,7 +44,7 @@ function type(
   }
 }
 
-const NUMBER = { fieldId: 'document.number', label: 'Numero documento', role: 'core' as const }
+const NUMBER = { fieldId: 'document.number', label: 'Numero documento', role: 'optional' as const }
 const DATE = { fieldId: 'document.issue_date', label: 'Data emissione', role: 'required' as const }
 
 describe('esito di un campo su un documento', () => {
@@ -198,7 +198,7 @@ describe('misure per tipo', () => {
     expect(measure.fields.find((field) => field.fieldId === 'bank.iban')!.signal).toBe('OK')
   })
 
-  it('i campi del profilo escono per ruolo: obbligatori, principali, opzionali', () => {
+  it('i campi del profilo escono per ruolo: prima gli obbligatori, poi gli opzionali', () => {
     const measure = measureType(
       type(
         [document('a', [])],
@@ -206,25 +206,26 @@ describe('misure per tipo', () => {
           { fieldId: 'money.total', label: 'Totale', role: 'optional' },
           NUMBER,
           DATE,
-          { fieldId: 'money.tax', label: 'Imposta', role: 'conditional' }
+          { fieldId: 'money.tax', label: 'Imposta', role: 'optional' }
         ]
       )
     )
     expect(measure.fields.map((field) => field.fieldId)).toEqual([
       'document.issue_date',
       'document.number',
-      'money.total',
-      'money.tax'
+      'money.tax',
+      'money.total'
     ])
   })
 })
 
 describe('profili verificati su documenti reali', () => {
-  it('riconosce i soli READY_FOR_FIELD_TEST', () => {
-    expect(isFieldTestedProfile({ schema_state: 'EXTRACTION_SCHEMA_READY_FOR_FIELD_TEST' })).toBe(
-      true
-    )
-    expect(isFieldTestedProfile({ schema_state: 'EXTRACTION_SCHEMA_DRAFT' })).toBe(false)
+  it('riconosce gli stati che il registry usa per «già passata su documenti veri»', () => {
+    expect(isFieldTestedProfile({ schema_state: 'PRETESTED' })).toBe(true)
+    expect(isFieldTestedProfile({ schema_state: 'TESTED' })).toBe(true)
+    expect(isFieldTestedProfile({ schema_state: 'VALIDATION_READY' })).toBe(true)
+    expect(isFieldTestedProfile({ schema_state: 'SCHEMA_READY' })).toBe(false)
+    expect(isFieldTestedProfile({ schema_state: 'PROPOSTA - NON IMPLEMENTATA' })).toBe(false)
     expect(isFieldTestedProfile(null)).toBe(false)
   })
 })

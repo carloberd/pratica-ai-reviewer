@@ -30,7 +30,7 @@ const NOI: CompanyIdentity = {
 const FATTURA = 'accounting.fattura'
 
 function party(name: string, value: string, overrides: Partial<ExtractedField> = {}) {
-  return scalarField({ id: `f-${name}`, name, label: name, value, role: 'core', ...overrides })
+  return scalarField({ id: `f-${name}`, name, label: name, value, role: 'optional', ...overrides })
 }
 
 const compute = (fields: ExtractedField[], documentType = FATTURA, company = NOI) =>

@@ -132,7 +132,7 @@ utenti di test elencati.
 | `pnpm lint` / `pnpm lint:fix` | Biome |
 | `pnpm test` | Vitest: nessuna credenziale, nessuna rete |
 | `pnpm build` | Compila main, preload e renderer in `out/` |
-| `pnpm benchmark:pilot` | Benchmark su un corpus reale fuori dal repository: vedi [Misurare su un corpus reale](#misurare-su-un-corpus-reale) |
+| `pnpm benchmark:pilot` | Benchmark dell'estrazione su un corpus reale fuori dal repository: vedi [Misurare su un corpus reale](#misurare-su-un-corpus-reale) |
 | `pnpm dist` | Pacchetti mac (dmg, zip) e Windows (nsis, zip) in `release/` |
 | `pnpm dist:mac` / `pnpm dist:win` | Solo una delle due piattaforme |
 | `node scripts/make-fixtures.mjs [nomi…]` | Rigenera le fixture di `tests/fixtures/`, o solo quelle nominate: rigenerare un PDF ne cambia lo sha-256 |
@@ -257,42 +257,24 @@ toglie la copia locale e lascia intatti dati estratti ed evidenze: il file si ri
 riaprendolo. L'elenco mostra, per ogni riga, se il file è in locale, da aggiornare o
 solo analizzato, e in testa quanto spazio occupa la cache.
 
-**Due motori, scelti da variabile d'ambiente.** `CLASSIFIER_ENGINE` ed
-`EXTRACTION_ENGINE` valgono `v2` se non impostate; `v1` riporta il comportamento di
-prima ed è la scappatoia se il v2 dà problemi. Si leggono come le credenziali: prima
-l'ambiente, poi il `.env`. Un valore diverso da `v1`/`v2` ferma l'avvio. Con entrambi a
-`v1` i JSON del registry v2 non vengono nemmeno caricati.
+**Il tipo lo sceglie il revisore.** Il registry non ha più i segnali con cui un
+classificatore tirava a indovinare dal testo: sono due file, i campi e la mappa «tipo →
+campi», e nient'altro. Un documento arriva senza tipo e resta così finché qualcuno non lo
+apre e lo assegna; l'assegnazione rielabora subito il documento.
 
-**Classificazione v2** (deterministica, nessun LLM). Combina più indizi sulle prime
-pagine (`max_pages` in `resources/registry/v2/classifier_signals_v2.json`): alias del
-registry pesati per posizione (zona del titolo o resto del testo) e specificità, segnali
-positivi, contrari ed esclusivi configurati per 17 classi che si confondono (CU, UNILAV,
-patente a crediti, carta d'identità, permesso di soggiorno…), il nome del file solo come
-conferma.
-L'apostrofo conta solo fra due lettere, dov'è un'elisione (`dell'iscrizione`): a fine
-parola è un accento scritto senza accento — `IDENTITA'` per `IDENTITÀ`, come lo scrive
-una tastiera italiana e come l'OCR rende gli accenti maiuscoli — e viene tolto, o la
-parola non combacia più con l'alias. I 15 tipi che il registry ha
-ritirato (`classification_enabled: false`: `carta_identit` accanto a `carta_identita`,
-`fattura_elettronica` accanto a `fattura`, e gli altri duplicati con l'accento troncato)
-non entrano in gara — i loro alias si sovrappongono a quelli del gemello vivo e il
-pareggio faceva perdere il margine — ma restano nel menu dei tipi e nelle etichette,
-perché un documento già chiuso su uno di loro deve continuare a mostrarne il nome.
-Assegna il tipo solo se il
-punteggio supera la soglia **e** stacca abbastanza il secondo candidato; altrimenti il
-documento resta `UNKNOWN` e la timeline dice perché (`BELOW_THRESHOLD`, `LOW_MARGIN`,
-`FILENAME_ONLY`, `HARD_NEGATIVE`, `NO_SIGNAL`) con miglior candidato, secondo e margine.
+**L'eccezione è la memoria dei moduli.** Quando lo stesso stampato è stato chiuso tre
+volte con lo stesso tipo, il learner locale attiva una regola `TEMPLATE_TYPE` e da lì in
+poi quel modulo arriva col tipo già proposto (confidenza 0,74, pesata sulla somiglianza
+della testata). Non è una classificazione dal testo: è la decisione che i revisori hanno
+già preso su quel modulo. Confermarla è un'altra revisione concorde; chiuderlo con un
+altro tipo sospende la regola e il modulo torna senza tipo.
 
-**Classificazione v1.** Phrase match di `canonical_name`, `aliases` e `synonyms` sulla
-prima pagina (0,90) e sul nome del file (0,70); sotto 0,75 il tipo resta da assegnare.
-
-**Precompilazione v2.** I campi sono quelli del profilo del tipo
-(`class_extraction_profiles_v2.json`, 500 profili su un'ontologia di 257 campi), ognuno
-col suo ruolo: obbligatorio, principale, opzionale, condizionale. I 16 tipi del registry
-senza profilo esplicito ricevono un profilo ricavato dal loro schema v1
-(`LEGACY_FALLBACK`). Quei profili sono quasi tutti bozze mai verificate: quanto valgano lo
-dicono le annotazioni, e si correggono dalla scheda «Campi da estrarre» della revisione
-(sotto).
+**Precompilazione.** I campi sono quelli che la mappa chiede per quel tipo
+(`document_fields.json`, 171 classi canoniche su un'ontologia di 454 campi), ognuno col
+suo ruolo: obbligatorio o opzionale. Un tipo che la mappa non elenca non ha campi da
+estrarre, e la timeline lo dice. Quelle mappe sono per lo più scritte a tavolino: quanto
+valgano lo dicono le annotazioni, e si correggono dalla scheda «Campi da estrarre» della
+revisione (sotto).
 **Senza tipo non si estrae niente**: la scheda resta vuota finché il
 tipo non viene assegnato a mano, e l'assegnazione rielabora subito il documento. Il
 valore si cerca dopo l'etichetta sulla stessa riga o, se la riga finisce con
@@ -304,8 +286,7 @@ barra dev'essere un'etichetta che il registry dichiara **per quel campo**, altri
 resta un'intestazione di colonna e la riga sotto è il suo primo dato, non un valore.
 Su un documento che dichiara le parti a blocchi — una fattura elettronica resa dallo
 stilo SdI scrive `Cedente prestatore (fornitore)` e `Cessionario committente (cliente)` —
-la **sezione** corrente si propaga di riga in riga (`sections` in
-`extraction_hints_v2.json`) e un campo `issuer.*` o `recipient.*` legge solo le righe
+la **sezione** corrente si propaga di riga in riga (`sections` in `fields.json`) e un campo `issuer.*` o `recipient.*` legge solo le righe
 della sua parte: `Denominazione` da sola non distingue l'emittente dal destinatario.
 Apre una sezione soltanto una riga che è **solo** l'intestazione, mai un'etichetta con il
 suo valore; due intestazioni sulla stessa riga non ne aprono nessuna, perché lì la parte
@@ -621,9 +602,11 @@ formato resta semplice e versionato (`formatVersion`, in `src/shared/dataset.ts`
 
 ### I nomi dei tipi
 
-Il reviewer parla la lingua del programmer pack (`resources/registry/v2`), pratica-ai quella
-del suo `document-registry` V5.1. Sulle 500 classi coincidono, **meno tre**: classi che i due
-progetti hanno aggiunto per conto proprio, con lo stesso nome canonico e uno slug diverso.
+Il reviewer parla la lingua del registry (`resources/registry`), pratica-ai quella del suo
+`document-registry` V5.1. Sulle classi coincidono, **meno tre**: classi che i due progetti
+hanno aggiunto per conto proprio, con lo stesso nome canonico e uno slug diverso. Dopo il
+Brain MVP quelle tre sono fuori dalle 171 canoniche, ma la traduzione resta: i documenti
+già chiusi su di loro escono comunque negli export.
 
 | Qui | In pratica-ai | |
 |---|---|---|
@@ -772,10 +755,9 @@ classificatore e profili per un dato che si calcola.
 ## Campi da estrarre
 
 Quali dati vanno estratti da ogni tipo documento è scritto in
-`resources/registry/v2/class_extraction_profiles_v2.json` e `extraction_hints_v2.json`, e
-sono per lo più bozze: **481 profili su 500 li ha proposti l'AI e nessuno li ha
-verificati**, e da lì nascono difetti come il «numero» chiesto a tipi che non lo
-prevedono. La mappa si corregge **dentro la revisione**, dalla scheda «Campi da estrarre»
+`resources/registry/document_fields.json`, e sono per lo più bozze: **135 mappe su 171
+sono `SCHEMA_READY` o proposte, scritte a tavolino e mai verificate su documenti veri**, e
+da lì nascono difetti come il «numero» chiesto a tipi che non lo prevedono. La mappa si corregge **dentro la revisione**, dalla scheda «Campi da estrarre»
 accanto a «Dati»: il revisore che sta compilando un documento e vede un campo che manca o
 che non serve lo sistema lì, il documento si rielabora con la mappa nuova, e torna a «Dati»
 per finire il lavoro. Non c'è più una schermata a parte: costringeva a salvare un documento
@@ -897,17 +879,17 @@ scrive quattro file (`@shared/profile-bundle`):
 
 | File | Cosa contiene |
 |---|---|
-| `class_extraction_profiles_v2.json` | i 500 profili, con le correzioni applicate: si sostituisce a quello del pack |
-| `extraction_hints_v2.json` | gli hint, con le etichette insegnate in coda a quelle del registry |
-| `extraction_schemas_v2.json` | uno JSON Schema per tipo, con le chiavi dell'ontologia: la forma che l'Extraction Brain v2 di pratica-ai consuma senza traduzioni |
+| `fields.json` | i campi, con le etichette insegnate in coda agli alias del registry |
+| `document_fields.json` | le 171 mappe, con le correzioni applicate: si sostituisce a quella sul disco |
+| `extraction_schemas.json` | uno JSON Schema per tipo, con le chiavi dell'ontologia: la forma che l'Extraction Brain di pratica-ai consuma senza traduzioni |
 | `changelog.json` | cosa è cambiato rispetto al registry, tipo per tipo, e ogni azione con i numeri che l'hanno motivata — annullate comprese |
 
-I profili non toccati escono identici a com'erano, e due export di fila danno gli stessi
-byte. Il generatore degli schemi è verificato al contrario:
-`tests/shared-profile-bundle.test.ts` rigenera i 500 schemi **senza nessuna correzione** e
-li confronta con `extraction_schemas_v2.generated.json` del programmer pack — devono venire
-identici. Se sbaglia una forma (una data che non diventa `format: date`, un campo `many`
-che non diventa un array) si vede lì, non mesi dopo dentro pratica-ai.
+I tipi non toccati escono identici a com'erano, e due export di fila danno gli stessi byte.
+Il generatore degli schemi è verificato al contrario:
+`tests/shared-profile-bundle.test.ts` rigenera gli schemi di tutti e 171 i tipi **senza
+nessuna correzione** e controlla che ogni proprietà abbia la forma che l'ontologia dichiara
+per quel campo. Se sbaglia una forma (una data che non diventa `format: date`, un campo
+`many` che non diventa un array) si vede lì, non mesi dopo dentro pratica-ai.
 
 Il file `extraction_schemas.json` del registry di pratica-ai è ancora quello v1, con i nomi
 campo di prima (`document_number`, `issue_date`): la traduzione all'indietro non è
@@ -1121,8 +1103,9 @@ scope template che non si attivava mai.
 
 ### Misurare su un corpus reale
 
-`tests/pilot-corpus-benchmark.test.ts` misura classificazione ed estrazione su documenti
-veri contro un manifest annotato a mano. Documenti, manifest e report stanno fuori dal
+`tests/pilot-corpus-benchmark.test.ts` misura l'estrazione su documenti veri contro un
+manifest annotato a mano. Il tipo lo dà il manifest: non c'è più un classificatore da
+misurare, e il conto dei tipi giusti è uscito dal report insieme a lui. Documenti, manifest e report stanno fuori dal
 repository e arrivano solo da variabili d'ambiente; senza, il test è saltato.
 
 ```bash
@@ -1135,10 +1118,9 @@ pnpm benchmark:pilot
 
 L'ultima è facoltativa: senza, la misura è `BASELINE` (solo registry); con un file
 «Esporta le regole», è `FROZEN`, con le regole attive del file applicate come nell'app.
-Ogni documento si misura col tipo del classificatore e col tipo vero; il report dà tipi
-giusti, astensioni e top-1, campi giusti, sbagliati e mancanti, i campi attesi assenti
-compilati lo stesso, e quanti valori arrivano `AUTO_ACCEPTED`, `NEEDS_REVIEW` o
-`CONFLICT`. Il formato del manifest e il confronto dei valori stanno in
+Ogni documento si misura col tipo che il manifest dichiara; il report dà campi giusti,
+sbagliati e mancanti, i campi attesi assenti compilati lo stesso, e quanti valori arrivano
+`AUTO_ACCEPTED`, `NEEDS_REVIEW` o `CONFLICT`. Il formato del manifest e il confronto dei valori stanno in
 [`docs/pilota_reale_todo.md`](docs/pilota_reale_todo.md#5-harness-del-benchmark-su-corpus-reale).
 
 **Una misura vale solo così:**
@@ -1280,8 +1262,8 @@ davvero, Salva e Scarta. Il guscio è poi cambiato: i menu
 stanno in una navbar orizzontale invece che in una sidebar, e in revisione il documento
 è sempre visibile accanto alle schede Dati, History ed Evidenze.
 
-I file in `resources/registry/` sono uno **snapshot** del registry PraticaAI
-(511 tipi, vedi `SNAPSHOT.txt`); quelli in `resources/registry/v2/` vengono dal pacchetto
-Classifier v2 + Extraction Brain v2 (vedi `v2/SNAPSHOT.txt`), con i profili ancora in
-stato di bozza. Il repo non dipende dal monorepo PraticaAI e non ne
-importa nulla: quei JSON sono dati, non codice.
+I file in `resources/registry/` sono due: `fields.json`, i 454 campi che il motore sa
+leggere, e `document_fields.json`, le 171 classi canoniche del Brain MVP con i campi che
+ognuna chiede. Vengono dal foglio `PraticaAI_Brain_MVP_Classi_Campi_Unificato` del
+22/09/2026, con sopra le decisioni che il pilota aveva già preso su documenti veri. Il repo
+non dipende dal monorepo PraticaAI e non ne importa nulla: quei JSON sono dati, non codice.

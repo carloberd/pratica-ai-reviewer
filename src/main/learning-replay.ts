@@ -1,6 +1,6 @@
 import { DEFAULT_LEARNING_POLICY, type LearningPolicy } from '@shared/local-learning'
 import type { Repository } from './db/repository'
-import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
+import type { ExtractionRegistry } from './extract/v2/profile-loader'
 import { learnFromReview, type RulesChange } from './review-learning'
 
 /**
@@ -43,7 +43,7 @@ export interface ReplayInput {
   repo: Repository
   /** L'account che lancia il replay: finisce come `actor` degli eventi ripassati. */
   actor: string
-  registry?: ExtractionRegistryV2 | undefined
+  registry?: ExtractionRegistry | undefined
   now?: Date
   policy?: LearningPolicy
 }

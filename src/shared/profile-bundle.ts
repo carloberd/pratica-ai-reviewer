@@ -1,7 +1,6 @@
 import { type Cardinality, type FieldOntologyEntry, type FieldPii, piiOf } from './extraction-v2'
 import type { ProfileAction } from './profile-history'
 import { countStandingEdits, isMapEdit } from './profile-history'
-import { REVIEWER_EDITED_SCHEMA_STATE } from './profile-metrics'
 import {
   applyCardinalityOverlay,
   applyHintOverlay,
@@ -21,33 +20,31 @@ import {
  *
  * Il database tiene le decisioni del revisore; qui diventano i file che pratica-ai sa
  * leggere. Nessuno di questi file viene scritto durante il lavoro: si generano quando il
- * revisore esporta, dai JSON del registry che non sono mai stati toccati più le
+ * revisore esporta, dai due JSON del registry che non sono mai stati toccati più le
  * correzioni. Ripetere l'export senza fare altro dà gli stessi byte.
  *
  * Quattro file:
  *
- * - `class_extraction_profiles_v2.json` e `extraction_hints_v2.json`, nella forma del
- *   programmer pack: si sostituiscono ai due del pack e il motore riparte da lì;
- * - `extraction_schemas_v2.json`, uno JSON Schema per tipo con le chiavi dell'ontologia,
- *   nella stessa forma di `extraction_schemas_v2.generated.json`: è quello che
- *   l'Extraction Brain v2 consuma senza traduzioni;
+ * - `fields.json` e `document_fields.json`, nella forma del registry: si sostituiscono ai
+ *   due sul disco e il motore riparte da lì. Le etichette insegnate dal revisore entrano
+ *   in `label_aliases_it`, dove il registry tiene le sue;
+ * - `extraction_schemas.json`, uno JSON Schema per tipo con le chiavi dell'ontologia: è
+ *   quello che l'Extraction Brain consuma senza traduzioni;
  * - `changelog.json`, che dice cosa è cambiato rispetto al registry e perché, con i
  *   numeri delle annotazioni che hanno motivato ogni decisione.
  *
  * Modulo puro: nessun file, nessun database. Il main gli passa quello che ha letto.
  */
 
-/** Un profilo come sta nel file: le chiavi che servono qui, più tutte le altre. */
+/** La mappa di un tipo come sta nel file: le chiavi che servono qui, più tutte le altre. */
 export interface RawProfile {
   document_type_id: string
   canonical_name: string
   family: string
+  /** Quanto il profilo è stato messo alla prova su documenti veri: lo dice il registry. */
   schema_state: string
-  evidence_basis: string
   required_fields: string[]
-  core_fields: string[]
   optional_fields: string[]
-  conditional_fields: string[]
   field_provenance?: Record<string, string>
   /** Uno o più valori per campo, dove il revisore l'ha deciso diversamente dall'ontologia. */
   field_cardinality?: Record<string, Cardinality>
@@ -60,26 +57,21 @@ export interface RawProfile {
   [key: string]: unknown
 }
 
-export interface ProfilesFile {
+export interface DocumentFieldsFile {
   version: string
-  profiles: Record<string, RawProfile>
+  document_types: Record<string, RawProfile>
   [key: string]: unknown
 }
 
-export interface RawHint {
-  labels: string[]
-  [key: string]: unknown
-}
-
-export interface HintsFile {
+export interface FieldsFile {
   version: string
-  hints: Record<string, RawHint>
+  fields: Record<string, FieldOntologyEntry>
   [key: string]: unknown
 }
 
-export const PROFILES_FILE = 'class_extraction_profiles_v2.json'
-export const HINTS_FILE = 'extraction_hints_v2.json'
-export const SCHEMAS_FILE = 'extraction_schemas_v2.json'
+export const FIELDS_FILE = 'fields.json'
+export const DOCUMENT_FIELDS_FILE = 'document_fields.json'
+export const SCHEMAS_FILE = 'extraction_schemas.json'
 export const CHANGELOG_FILE = 'changelog.json'
 
 /** Provenienza scritta sui campi che arrivano dalle annotazioni, non dall'AI. */
@@ -104,16 +96,9 @@ export interface ProfileBundleManifestInput {
 export interface ProfileBundleInput {
   manifest: ProfileBundleManifestInput
   /** I due file del registry, letti dal disco e mai modificati. */
-  profiles: ProfilesFile
-  hints: HintsFile
+  catalog: FieldsFile
+  map: DocumentFieldsFile
   overlay: ProfileOverlay
-  ontology: Record<string, FieldOntologyEntry>
-  /**
-   * Profili sintetizzati per i tipi che il file non prevede (LEGACY_FALLBACK) ma su cui
-   * il revisore ha deciso qualcosa: senza, quelle decisioni non uscirebbero da nessuna
-   * parte. Entrano nel file marcati come schemi non verificati.
-   */
-  fallbackProfiles?: Record<string, RawProfile>
   actions: ProfileAction[]
 }
 
@@ -133,15 +118,6 @@ export interface ProfileBundle {
  */
 export function serializeRegistryJson(value: unknown): string {
   return JSON.stringify(value, null, 2)
-}
-
-/** Il profilo materializzato per un tipo che il file non prevedeva. */
-function materialize(fallback: RawProfile): RawProfile {
-  return {
-    ...fallback,
-    schema_state: REVIEWER_EDITED_SCHEMA_STATE,
-    evidence_basis: 'REVIEWER_ANNOTATIONS+LEGACY_REGISTRY'
-  }
 }
 
 /** Il profilo del registry con sopra le decisioni, e la traccia di chi le ha prese. */
@@ -188,19 +164,28 @@ function overridesIn<T>(
   return kept.length > 0 ? Object.fromEntries(kept) : null
 }
 
-/** Le etichette insegnate, in coda a quelle del registry. */
-function correctedHints(hints: HintsFile, overlay: ProfileOverlay): HintsFile {
+/**
+ * Le etichette insegnate, in coda agli alias del registry.
+ *
+ * Non c'è più un file di hint separato: le etichette con cui il motore cerca un campo
+ * stanno tutte in `label_aliases_it`, e quelle che il revisore ha insegnato finiscono lì
+ * accanto alle altre. Un'etichetta insegnata su un campo che l'ontologia non ha resta
+ * fuori: il file esportato deve poter essere riletto.
+ */
+function correctedCatalog(catalog: FieldsFile, overlay: ProfileOverlay): FieldsFile {
   const taught = Object.entries(overlay.hintLabels).filter(([, labels]) => labels.length > 0)
-  if (taught.length === 0) return hints
+  if (taught.length === 0) return catalog
 
-  const next: Record<string, RawHint> = { ...hints.hints }
+  const next: Record<string, FieldOntologyEntry> = { ...catalog.fields }
   for (const [fieldId, labels] of taught) {
     const current = next[fieldId]
-    next[fieldId] = current
-      ? { ...current, labels: applyHintOverlay(current.labels, labels) }
-      : { labels: [...labels], regexes: [], scope: 'whole_document', candidate_limit: 10 }
+    if (!current) continue
+    next[fieldId] = {
+      ...current,
+      label_aliases_it: applyHintOverlay(current.label_aliases_it, labels)
+    }
   }
-  return { ...hints, hints: next }
+  return { ...catalog, fields: next }
 }
 
 // ---------------------------------------------------------------------------
@@ -244,7 +229,7 @@ function propertyFor(
   }
 }
 
-/** I campi di un profilo nell'ordine obbligatori → principali → opzionali → condizionali. */
+/** I campi di un profilo nell'ordine obbligatori → opzionali. */
 function orderedFields(profile: RawProfile): string[] {
   const ordered: string[] = []
   const seen = new Set<string>()
@@ -288,13 +273,11 @@ export function jsonSchemaFor(
   return {
     schema: {
       $schema: 'https://json-schema.org/draft/2020-12/schema',
-      $id: `schema.document.${documentType}.v2`,
+      $id: `schema.document.${documentType}`,
       type: 'object',
       properties,
       required: profile.required_fields.filter((fieldId) => ontology[fieldId]),
       additionalProperties: false,
-      'x-praticaai-schema-state': profile.schema_state,
-      'x-praticaai-evidence-basis': profile.evidence_basis,
       'x-praticaai-literal-evidence-required': profile.literal_evidence_required ?? true
     },
     unknownFields
@@ -349,7 +332,8 @@ function changesFor(
 }
 
 export function buildProfileBundle(input: ProfileBundleInput): ProfileBundle {
-  const { manifest, overlay, ontology } = input
+  const { manifest, overlay } = input
+  const ontology = input.catalog.fields
   const touched = [
     ...new Set([...Object.keys(overlay.fields), ...Object.keys(overlay.cardinality)])
   ]
@@ -364,27 +348,27 @@ export function buildProfileBundle(input: ProfileBundleInput): ProfileBundle {
     )
     .sort((a, b) => a.documentType.localeCompare(b.documentType))
 
-  const profiles: Record<string, RawProfile> = { ...input.profiles.profiles }
+  const documentTypes: Record<string, RawProfile> = { ...input.map.document_types }
   const changes: TypeChange[] = []
   let fields = 0
 
   for (const { documentType, overrides, cardinality } of touched) {
-    const explicit = input.profiles.profiles[documentType] ?? null
-    const fallback = input.fallbackProfiles?.[documentType]
-    const base = explicit ?? (fallback ? materialize(fallback) : null)
+    // Un tipo che il registry non elenca non ha una mappa da correggere: le decisioni
+    // restano nel database, e ci tornano se quel tipo rientra.
+    const base = input.map.document_types[documentType] ?? null
     if (!base) continue
 
-    profiles[documentType] = correctedProfile(base, overrides, cardinality)
-    changes.push(changesFor(documentType, explicit, overrides, cardinality, ontology))
+    documentTypes[documentType] = correctedProfile(base, overrides, cardinality)
+    changes.push(changesFor(documentType, base, overrides, cardinality, ontology))
     fields += new Set([...Object.keys(overrides), ...Object.keys(cardinality)]).size
   }
 
-  const correctedProfiles: ProfilesFile = { ...input.profiles, profiles }
-  const hints = correctedHints(input.hints, overlay)
+  const correctedMap: DocumentFieldsFile = { ...input.map, document_types: documentTypes }
+  const catalog = correctedCatalog(input.catalog, overlay)
 
   const schemas: Record<string, unknown> = {}
   const unknownByType: Record<string, string[]> = {}
-  for (const [documentType, profile] of Object.entries(profiles)) {
+  for (const [documentType, profile] of Object.entries(documentTypes)) {
     const { schema, unknownFields } = jsonSchemaFor(documentType, profile, ontology)
     schemas[documentType] = schema
     if (unknownFields.length > 0) unknownByType[documentType] = unknownFields
@@ -409,14 +393,14 @@ export function buildProfileBundle(input: ProfileBundleInput): ProfileBundle {
       ...action,
       standing: isMapEdit(action.kind) && action.revertedAt === null
     })),
-    /** Campi citati da un profilo ma assenti dall'ontologia: fuori dagli schemi. */
+    /** Campi citati da un tipo ma assenti dall'ontologia: fuori dagli schemi. */
     fieldsWithoutOntology: unknownByType
   }
 
   return {
     files: [
-      { name: PROFILES_FILE, content: serializeRegistryJson(correctedProfiles) },
-      { name: HINTS_FILE, content: serializeRegistryJson(hints) },
+      { name: FIELDS_FILE, content: serializeRegistryJson(catalog) },
+      { name: DOCUMENT_FIELDS_FILE, content: serializeRegistryJson(correctedMap) },
       { name: SCHEMAS_FILE, content: serializeRegistryJson(schemas) },
       { name: CHANGELOG_FILE, content: serializeRegistryJson(changelog) }
     ],

@@ -6,7 +6,6 @@ import type {
 import { describe, expect, it } from 'vitest'
 import type { ExtractedPage } from '../src/main/extract/types'
 import {
-  CONFIDENCE_COMPUTED,
   CONFIDENCE_NEXT_LINE,
   CONFIDENCE_SAME_LINE,
   extractFactsV2,
@@ -20,8 +19,8 @@ import {
   readNumber,
   readsOfLabel
 } from '../src/main/extract/v2/fact-reader'
-import type { ExtractionRegistryV2 } from '../src/main/extract/v2/profile-loader'
-import { testRegistryV2 } from './helpers/registry'
+import type { ExtractionRegistry } from '../src/main/extract/v2/profile-loader'
+import { testExtractionRegistry } from './helpers/registry'
 
 interface FieldSpec {
   type: ExtractionScalar
@@ -40,7 +39,7 @@ function registryOf(
   fields: Record<string, FieldSpec>,
   roles: Partial<Pick<ClassExtractionProfile, 'required_fields' | 'optional_fields'>> = {},
   sections: Array<{ party: string; label: string }> = []
-): ExtractionRegistryV2 {
+): ExtractionRegistry {
   const ids = Object.keys(fields)
   const required = roles.required_fields ?? []
   const optional = roles.optional_fields ?? []
@@ -49,11 +48,8 @@ function registryOf(
     canonical_name: 'tipo di prova',
     family: 'test',
     schema_state: 'EXTRACTION_SCHEMA_DRAFT',
-    evidence_basis: 'TEST',
     required_fields: required,
-    core_fields: ids.filter((id) => !required.includes(id) && !optional.includes(id)),
-    optional_fields: optional,
-    conditional_fields: [],
+    optional_fields: [...new Set([...ids.filter((id) => !required.includes(id)), ...optional])],
     literal_evidence_required: true,
     unknown_value_policy: 'LEAVE_EMPTY',
     review_policy: 'TEST'
@@ -77,8 +73,9 @@ function registryOf(
     allFields: () => Object.entries(fields).map(([id, spec]) => entry(id, spec)),
     hints: (id) => fields[id]?.labels ?? [],
     sections: () => sections,
-    profileSource: (type) => (type === 'test.tipo' ? 'V2_EXPLICIT' : 'MISSING'),
+    profileSource: (type) => (type === 'test.tipo' ? 'EXPLICIT' : 'MISSING'),
     legacyNames: (id) => fields[id]?.legacy ?? [],
+    documentTypes: () => [],
     schemaVersion: () => 'test'
   }
 }
@@ -87,7 +84,7 @@ function page(lines: string[], number = 1): ExtractedPage {
   return { page: number, text: lines.join('\n'), lines: lines.map((text) => ({ text })) }
 }
 
-function extract(registry: ExtractionRegistryV2, pages: ExtractedPage[], ocrPages: number[] = []) {
+function extract(registry: ExtractionRegistry, pages: ExtractedPage[], ocrPages: number[] = []) {
   const result = extractFactsV2({ documentType: 'test.tipo', pages, registry, ocrPages })
   const fact = (id: string) => result.facts.find((f) => f.fieldId === id)!
   return { result, fact }
@@ -228,7 +225,7 @@ describe('posizione del valore', () => {
     const result = extractFactsV2({
       documentType: 'accounting.fattura',
       pages: [page(['P.IVA 09876543210 DESTINATARIO', 'BETA COSTRUZIONI SRL'])],
-      registry: testRegistryV2()
+      registry: testExtractionRegistry()
     })
     expect(result.facts.find((fact) => fact.fieldId === 'recipient.name')).toMatchObject({
       value: 'BETA COSTRUZIONI SRL',
@@ -613,7 +610,7 @@ describe('partita IVA e codice fiscale in campi distinti', () => {
           'P.IVA 98765432103'
         ])
       ],
-      registry: testRegistryV2()
+      registry: testExtractionRegistry()
     })
     const fact = (id: string) => result.facts.find((f) => f.fieldId === id)!
     // Emittente e destinatario hanno le stesse etichette: il motore non indovina, segnala.
@@ -634,7 +631,7 @@ describe('partita IVA e codice fiscale in campi distinti', () => {
       const result = extractFactsV2({
         documentType: 'corporate_registry.visura_camerale',
         pages: [page(lines)],
-        registry: testRegistryV2()
+        registry: testExtractionRegistry()
       })
       return (id: string) => result.facts.find((f) => f.fieldId === id)!
     }
@@ -692,7 +689,7 @@ describe('cognome e nome distinti sui documenti d’identità', () => {
    * da un documento: l'export del 18/09 non porta il testo delle pagine.
    */
   const read = (documentType: string, pages: ExtractedPage[]) => {
-    const result = extractFactsV2({ documentType, pages, registry: testRegistryV2() })
+    const result = extractFactsV2({ documentType, pages, registry: testExtractionRegistry() })
     return { result, fact: (id: string) => result.facts.find((f) => f.fieldId === id)! }
   }
   const CARTA = 'identity_personal.carta_identita'
@@ -701,7 +698,7 @@ describe('cognome e nome distinti sui documenti d’identità', () => {
   it('«Nome» non si trova dentro «Cognome», né «Name» dentro «Surname»', () => {
     // Due regole lo tengono fuori: l'etichetta si cerca a confini di parola, e il testo
     // libero la vuole in testa al segmento. Basta una delle due; il test cade senza entrambe.
-    const spec = testRegistryV2().field('person.first_name')!
+    const spec = testExtractionRegistry().field('person.first_name')!
     expect(readsOfLabel('person.first_name', spec, [{ text: 'COGNOME: ROSSI' }], 'Nome')).toEqual(
       []
     )
@@ -1339,7 +1336,7 @@ describe('esito complessivo', () => {
   })
 
   it('usa le keyword v1 dei campi legacy mappati: «Data di emissione» non è negli hint v2', () => {
-    const registry = testRegistryV2()
+    const registry = testExtractionRegistry()
     expect(registry.hints('document.issue_date').map((h) => h.toLowerCase())).not.toContain(
       'data di emissione'
     )
@@ -1351,8 +1348,9 @@ describe('esito complessivo', () => {
     const values = Object.fromEntries(result.facts.map((f) => [f.fieldId, f.value]))
     expect(values['document.issue_date']).toBe('2026-09-01')
     expect(values['document.protocol_number']).toBe('2026/554321')
-    // Il profilo del DURC non chiede un «numero documento» distinto dal protocollo.
-    expect(values['document.number']).toBeNull()
+    // La mappa del DURC non chiede un «numero documento» distinto dal protocollo: il
+    // campo non c'è proprio, non è un campo cercato e rimasto vuoto.
+    expect(values['document.number']).toBeUndefined()
   })
 })
 
@@ -1362,7 +1360,7 @@ describe('esito complessivo', () => {
  * fattura il validatore dell'ontologia resta, e un totale negativo va rivisto.
  */
 describe('validatori decisi dal profilo del tipo', () => {
-  const registry = testRegistryV2()
+  const registry = testExtractionRegistry()
   const lines = [
     'Totale imponibile: -1.000,00',
     'Totale IVA: -220,00',
@@ -1466,7 +1464,7 @@ describe('le date e il conto di un bonifico', () => {
     const result = extractFactsV2({
       documentType: 'banking.ricevuta_bonifico',
       pages: [page(lines)],
-      registry: testRegistryV2()
+      registry: testExtractionRegistry()
     })
     return { result, fact: (id: string) => result.facts.find((f) => f.fieldId === id)! }
   }
@@ -1522,21 +1520,23 @@ describe('le date e il conto di un bonifico', () => {
   })
 })
 
-describe('la scadenza della formazione si calcola', () => {
+describe('la scadenza della formazione non si deduce più da sola', () => {
   /**
-   * Con il registry vero. Le righe sono ricostruite sul modello di un attestato di
-   * formazione generale: l'export del 18/09 non porta il testo delle pagine, ma porta i
-   * valori che il revisore ha scritto su `6ad7d267`.
+   * Fino al 22/09 i due tipi della formazione dei lavoratori avevano una riga in
+   * `TRAINING_VALIDITY`, e il motore ci contava sopra cinque anni dal rilascio. Il Brain
+   * MVP li ha accorpati in `hse_training.attestato_formazione_sicurezza`, dove il corso è
+   * un attributo e non più il tipo: la tabella è vuota, e la scadenza torna a essere un
+   * campo da compilare a mano. Il conto resta provato in `shared-training-expiry`.
    */
   const read = (documentType: string, lines: string[]) => {
     const result = extractFactsV2({
       documentType,
       pages: [page(lines)],
-      registry: testRegistryV2()
+      registry: testExtractionRegistry()
     })
     return { result, fact: (id: string) => result.facts.find((f) => f.fieldId === id)! }
   }
-  const GENERALE = 'hse_training.attestato_formazione_generale'
+  const SICUREZZA = 'hse_training.attestato_formazione_sicurezza'
 
   const ATTESTATO = [
     'ATTESTATO DI FREQUENZA',
@@ -1546,36 +1546,19 @@ describe('la scadenza della formazione si calcola', () => {
     'Data formazione: 04/05/2021'
   ]
 
-  it('il documento non la scrive: il motore la deduce, e si vede che è dedotta', () => {
-    const { fact } = read(GENERALE, ATTESTATO)
-    expect(fact('hse.training_expiry')).toMatchObject({
-      value: '2026-05-13',
-      computed: true,
-      evidence: [],
-      reviewStatus: 'NEEDS_REVIEW'
-    })
-    expect(fact('hse.training_expiry').confidence).toBe(CONFIDENCE_COMPUTED)
-    // Gli altri campi restano letti: la deduzione non tocca niente che fosse nel documento.
-    expect(fact('document.issue_date').value).toBe('2021-05-13')
-    expect(fact('document.issue_date').computed).toBeUndefined()
+  it('la scadenza resta vuota, e il documento si legge lo stesso', () => {
+    const { fact } = read(SICUREZZA, ATTESTATO)
+    expect(fact('hse.training_expiry')).toMatchObject({ value: null, reviewStatus: 'MISSING' })
+    expect(fact('hse.training_expiry').computed).toBeUndefined()
+    expect(fact('hse.training_date').value).toBe('2021-05-04')
   })
 
-  it('una scadenza scritta sul documento vince sempre', () => {
-    const { fact } = read(GENERALE, [...ATTESTATO, 'Scadenza formazione: 30/06/2026'])
+  it('una scadenza scritta sul documento si legge, come ogni altra data', () => {
+    const { fact } = read(SICUREZZA, [...ATTESTATO, 'Scadenza formazione: 30/06/2026'])
     expect(fact('hse.training_expiry')).toMatchObject({
       value: '2026-06-30',
       reviewStatus: 'AUTO_ACCEPTED'
     })
     expect(fact('hse.training_expiry').computed).toBeUndefined()
-  })
-
-  it('senza la data di rilascio non si deduce niente', () => {
-    const { fact } = read(GENERALE, ['ATTESTATO DI FREQUENZA', 'Data formazione: 04/05/2021'])
-    expect(fact('hse.training_expiry')).toMatchObject({ value: null, reviewStatus: 'MISSING' })
-  })
-
-  it('un corso che la tabella non conosce resta senza scadenza', () => {
-    const { fact } = read('hse_training.attestato_preposto', ATTESTATO)
-    expect(fact('hse.training_expiry').value).toBeNull()
   })
 })

@@ -15,13 +15,20 @@ import { createDocumentProcessor, EXTRACTION_ENGINE_V2_VERSION } from '../src/ma
 import { assignDocumentType } from '../src/main/reprocess'
 import { submitReview } from '../src/main/review'
 import { DATASET_FORMAT_VERSION, type DatasetManifestInput } from '../src/shared/dataset'
-import {
-  fixture,
-  testClassifierConfigV2,
-  testLegacyFieldMap,
-  testRegistry,
-  testRegistryV2
-} from './helpers/registry'
+import { fixture, testExtractionRegistry } from './helpers/registry'
+
+/**
+ * Il tipo di una fixture, come lo sceglierebbe il revisore aprendola: senza tipo non c'è
+ * una mappa di campi, e il documento resterebbe vuoto.
+ */
+const TYPE_OF: Record<string, string> = {
+  'fattura-nativa.pdf': 'accounting.fattura',
+  'fattura-righe.pdf': 'accounting.fattura',
+  'fattura-riepilogo-iva.pdf': 'accounting.fattura',
+  'contratto-consulenza.docx': 'contracts_general.contratto_consulenza',
+  'durc-scansionato.pdf': 'payroll_contributions.durc',
+  'promemoria-ignoto.pdf': 'payments_treasury.richiesta_pagamento'
+}
 
 /**
  * End-to-end dell'export: documenti veri elaborati dalla pipeline v2 su un database di
@@ -51,28 +58,21 @@ const MANIFEST: DatasetManifestInput = {
   exportedAt: '2026-09-16T18:00:00.000Z',
   app: { name: 'praticaai-reviewer', version: '1.1.0' },
   engines: {
-    classifier: 'v2',
-    extraction: 'v2',
-    classifierVersion: testClassifierConfigV2().version,
     extractionEngineVersion: EXTRACTION_ENGINE_V2_VERSION,
-    schemaVersion: testRegistryV2().schemaVersion()
+    schemaVersion: testExtractionRegistry().schemaVersion()
   }
 }
 
 function setup() {
-  const registry = testRegistry()
+  const registry = testExtractionRegistry()
   const db = openDatabase({ file: ':memory:' })
   const repo = createRepository(db, {
-    requiredFields: (type) => registry.requiredFor(type),
-    typeLabel: (type) => registry.label(type)
+    requiredFields: (type) => (type ? (registry.baseProfile(type)?.required_fields ?? []) : []),
+    typeLabel: (type) => (type ? (registry.baseProfile(type)?.canonical_name ?? null) : null)
   })
   const processDocument = createDocumentProcessor({
     repo,
-    registry,
-    engines: { classifier: 'v2', extraction: 'v2' },
-    classifierConfigV2: testClassifierConfigV2(),
-    extractionRegistryV2: testRegistryV2(),
-    legacyFieldMap: testLegacyFieldMap()
+    extractionRegistry: registry
   })
 
   async function open(filename: string, mime: string) {
@@ -83,6 +83,7 @@ function setup() {
       receivedAt: '2026-09-10T08:00:00.000Z'
     })
     repo.documents.setCachedPath(id, fixture(filename))
+    if (TYPE_OF[filename]) repo.documents.setType(id, TYPE_OF[filename]!, null)
     const input = { documentId: id, cachedPath: fixture(filename), mime, filename }
     await processDocument(input)
     return { id, rerun: () => processDocument(input) }
@@ -140,7 +141,6 @@ describe('export del dataset annotato', () => {
     // 2. Documento non riconosciuto: il revisore sceglie il tipo e compila a mano.
     vi.setSystemTime(new Date('2026-09-16T11:00:00.000Z'))
     const memo = await open('promemoria-ignoto.pdf', PDF)
-    expect(repo.getReviewDocument(memo.id)!.documentType).toBeNull()
     await assignDocumentType({
       repo,
       documentId: memo.id,

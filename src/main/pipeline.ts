@@ -1,37 +1,34 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
-import { averageConfidence, bandOf } from '@shared/confidence'
-import type { RegistryFieldName } from '@shared/fields'
-import { fieldLabel, sortFieldNames, UNIVERSAL_FIELDS } from '@shared/fields'
+import { bandOf } from '@shared/confidence'
 import { appliesRules, LEARNER_VERSION, type LearningMode } from '@shared/local-learning'
-import { TYPE_MATCH_REASON_LABELS } from '@shared/review-workspace'
 import {
   firstPageLines,
   normalizedTemplateSignature,
   templateFingerprint
 } from '@shared/template-fingerprint'
-import type { EngineSelection } from './config'
 import type { EvidenceInput } from './db/dao/evidence'
 import type { ExtractionRunInput } from './db/dao/extraction-runs'
 import type { FieldInput } from './db/dao/fields'
 import type { PageInput } from './db/dao/pages'
 import type { Repository } from './db/repository'
-import { prefillFields } from './extract/heuristics'
+import { LEGACY_FIELD_MAP } from './extract/legacy-field-map'
 import type { OcrService } from './extract/ocr'
 import { extractText } from './extract/text'
 import type { ExtractedText } from './extract/types'
 import { extractFactsV2, type LearnedLabel } from './extract/v2/fact-reader'
-import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
+import type { ExtractionRegistry } from './extract/v2/profile-loader'
 import { learnedLabelsFor } from './learning-anchors'
 import { templateMemoryFor } from './learning-templates'
-import type { Registry } from './registry'
-import type { TypeMatchV2 } from './registry/v2/classify-v2'
-import type { ClassifierConfigV2 } from './registry/v2/config'
-import { type Classification, classifyWithSelectedEngine } from './registry/v2/engine'
-import { toTypeClassification } from './registry/v2/type-classification'
 
-/** Versione del motore v2 registrata in `extraction_runs.engine_version`. */
-export const EXTRACTION_ENGINE_V2_VERSION = 'extraction-brain-v2/2.1.0-draft.1'
+/**
+ * Quanto vale un tipo proposto dalla memoria di un modulo. È il punteggio che il vecchio
+ * classificatore dava a quella stessa prova: una proposta da confermare, non una certezza.
+ */
+const TEMPLATE_TYPE_SCORE = 0.74
+
+/** Versione del motore registrata in `extraction_runs.engine_version`. */
+export const EXTRACTION_ENGINE_V2_VERSION = 'extraction-brain/3.0.0'
 
 export interface ProcessDocumentInput {
   documentId: string
@@ -42,15 +39,8 @@ export interface ProcessDocumentInput {
 
 export interface ProcessorDeps {
   repo: Repository
-  registry: Registry
   ocr?: OcrService | undefined
-  engines: EngineSelection
-  /** Obbligatoria con `CLASSIFIER_ENGINE=v2`. */
-  classifierConfigV2?: ClassifierConfigV2 | undefined
-  /** Obbligatorio con `EXTRACTION_ENGINE=v2`. */
-  extractionRegistryV2?: ExtractionRegistryV2 | undefined
-  /** Nomi campo v1 -> id dell'ontologia: le correzioni si ritrovano cambiando motore. */
-  legacyFieldMap?: Record<string, string> | undefined
+  extractionRegistry: ExtractionRegistry
 }
 
 export interface ProcessOutcome {
@@ -75,26 +65,20 @@ interface PreparedExtraction {
 }
 
 /**
- * Classificazione e precompilazione di un documento.
+ * Precompilazione di un documento.
  *
- * Tutte le scritture (tipo, campi, evidenze, righe FTS, eventi) stanno in una sola
- * transazione: un'estrazione interrotta a metà lascerebbe un documento con evidenze
- * che non corrispondono ai campi, ed è lo stato peggiore possibile per chi revisiona.
+ * Tutte le scritture (campi, evidenze, righe FTS, eventi) stanno in una sola transazione:
+ * un'estrazione interrotta a metà lascerebbe un documento con evidenze che non
+ * corrispondono ai campi, ed è lo stato peggiore possibile per chi revisiona.
  *
- * Il motore di classificazione e quello di estrazione si scelgono separatamente. Col v2
- * un tipo non riconosciuto non produce campi: senza tipo non c'è un profilo, e i 4
- * campi universali della v1 chiedevano valori che molti tipi non hanno.
+ * Il tipo non si indovina: lo sceglie il revisore. Il registry è la mappa «tipo → campi»
+ * e non ha più i segnali con cui un classificatore tirava a indovinare; finché il tipo
+ * non c'è, non c'è una mappa, e non si precompila niente.
  */
 export function createDocumentProcessor(deps: ProcessorDeps) {
-  const { repo, registry, engines } = deps
-
-  if (engines.classifier === 'v2' && !deps.classifierConfigV2) {
-    throw new Error('CLASSIFIER_ENGINE=v2 richiede classifier_signals_v2.json.')
-  }
-  if (engines.extraction === 'v2' && !deps.extractionRegistryV2) {
-    throw new Error('EXTRACTION_ENGINE=v2 richiede i profili di estrazione v2.')
-  }
-  const correctionAliases = aliasesFromLegacyMap(deps.legacyFieldMap ?? {})
+  const { repo } = deps
+  const registry = deps.extractionRegistry
+  const correctionAliases = aliasesFromLegacyMap(LEGACY_FIELD_MAP)
 
   return async function processDocument(input: ProcessDocumentInput): Promise<ProcessOutcome> {
     const startedAt = new Date().toISOString()
@@ -114,43 +98,34 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
     const rules = appliesRules(learningMode) ? repo.learning.activeRules() : []
     const templateMemory = templateMemoryFor(rules, fingerprint, templateSignature)
 
-    const classification = classifyWithSelectedEngine({
-      engine: engines.classifier,
-      aliases: registry.aliases(),
-      pages: extracted.pages.map((page) => page.text),
-      filename: input.filename,
-      configV2: deps.classifierConfigV2,
-      templateMemory
-    })
-
-    // Un tipo assegnato a mano dal revisore non va sovrascritto da un match automatico.
+    // Il tipo lo sceglie il revisore, e niente lo sovrascrive. L'unica eccezione è la
+    // memoria dei moduli: quando lo stesso stampato è già stato chiuso più volte con lo
+    // stesso tipo, quel tipo è una decisione dei revisori, non un'ipotesi sul testo. Si
+    // propone con la sua somiglianza, così la scheda distingue una proposta dalla scelta.
     const existing = repo.documents.get(input.documentId)
     const manualType =
       existing?.document_type && existing.type_confidence === null ? existing.document_type : null
-
-    const documentType = manualType ?? classification.documentType
-    const typeConfidence = manualType ? null : classification.confidence
+    const fromTemplate = manualType ? null : (templateMemory[0] ?? null)
+    const documentType = manualType ?? fromTemplate?.documentType ?? null
+    const typeConfidence = fromTemplate
+      ? round(fromTemplate.similarity * TEMPLATE_TYPE_SCORE)
+      : null
 
     const learnedLabels = documentType
       ? learnedLabelsFor(rules, documentType, fingerprint, templateSignature)
       : []
 
-    const prepared =
-      engines.extraction === 'v2'
-        ? prepareV2({
-            registry: deps.extractionRegistryV2!,
-            documentType,
-            extracted,
-            classification,
-            manualType: manualType !== null,
-            startedAt,
-            learning: {
-              mode: learningMode,
-              labels: learnedLabels,
-              templateRuleIds: templateMemory.map((memory) => memory.ruleId)
-            }
-          })
-        : prepareV1(registry, documentType, extracted)
+    const prepared = prepareV2({
+      registry,
+      documentType,
+      extracted,
+      startedAt,
+      learning: {
+        mode: learningMode,
+        labels: learnedLabels,
+        templateRuleIds: templateMemory.map((memory) => memory.ruleId)
+      }
+    })
 
     const band = bandOf(prepared.confidence)
 
@@ -169,21 +144,11 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
         confidenceBand: band,
         textSource: extracted.source
       })
-      // Anche con un tipo scelto a mano: è la proposta del motore, e l'export la mette
-      // accanto alla scelta del revisore.
-      repo.documents.setClassification(
-        input.documentId,
-        toTypeClassification({
-          classification,
-          pages: extracted.pages,
-          config: deps.classifierConfigV2
-        })
-      )
       // L'ordine conta: le evidenze prima, perché i campi ci puntano.
       repo.evidence.replaceForDocument(input.documentId, prepared.evidence)
       repo.fields.replaceForDocument(input.documentId, prepared.fields, {
         correctionAliases,
-        keepUnmatchedCorrections: engines.extraction === 'v2'
+        keepUnmatchedCorrections: true
       })
       // Una correzione che il nuovo run ha assorbito si porta via la sua selezione.
       repo.evidence.pruneReviewer(input.documentId)
@@ -213,11 +178,15 @@ export function createDocumentProcessor(deps: ProcessorDeps) {
         repo.events.add(
           input.documentId,
           'Tipo confermato',
-          `Mantenuto il tipo «${manualType}» assegnato a mano dal revisore.`
+          `Mantenuto il tipo «${manualType}» assegnato dal revisore.`
         )
-      } else {
-        const { title, detail } = describeClassification(classification, deps.classifierConfigV2)
-        repo.events.add(input.documentId, title, detail)
+      } else if (fromTemplate) {
+        repo.events.add(
+          input.documentId,
+          'Tipo proposto',
+          `${fromTemplate.documentType} dalla memoria del modulo, già revisionato con questo tipo` +
+            `${fromTemplate.similarity < 1 ? ` (testata simile al ${percent(fromTemplate.similarity)})` : ''}.`
+        )
       }
 
       repo.events.add(input.documentId, prepared.event.title, prepared.event.detail)
@@ -291,76 +260,13 @@ export function firstPageTemplateSignature(extracted: ExtractedText) {
 }
 
 // ---------------------------------------------------------------------------
-// v1: i campi dello schema del registry, i 4 universali senza tipo
-// ---------------------------------------------------------------------------
-
-function prepareV1(
-  registry: Registry,
-  documentType: string | null,
-  extracted: ExtractedText
-): PreparedExtraction {
-  // Solo i campi dichiarati dallo schema del tipo. Senza tipo restano i 4 universali,
-  // dichiarati da tutti e 511 gli schemi del registry.
-  const declared = documentType ? registry.fieldsFor(documentType) : []
-  const names = (declared.length > 0 ? declared : UNIVERSAL_FIELDS) as RegistryFieldName[]
-  const ordered = sortFieldNames(names) as RegistryFieldName[]
-
-  const candidates = prefillFields({
-    fields: ordered,
-    pages: extracted.pages,
-    ocrPages: extracted.ocrPages
-  })
-  const byName = new Map(candidates.map((candidate) => [candidate.name, candidate]))
-
-  const evidence: EvidenceInput[] = []
-  const fields: FieldInput[] = []
-
-  for (const name of ordered) {
-    const candidate = byName.get(name)
-    if (!candidate) {
-      fields.push({ name, label: fieldLabel(name), value: null, confidence: 0 })
-      continue
-    }
-    const evidenceId = randomUUID()
-    evidence.push({
-      id: evidenceId,
-      page: candidate.evidence.page,
-      text: candidate.evidence.text,
-      bbox: candidate.evidence.bbox ?? null,
-      confidence: candidate.confidence
-    })
-    fields.push({
-      name,
-      label: fieldLabel(name),
-      value: candidate.value,
-      confidence: candidate.confidence,
-      evidenceId
-    })
-  }
-
-  return {
-    evidence,
-    fields,
-    confidence: averageConfidence(candidates.map((candidate) => candidate.confidence)),
-    filled: candidates.length,
-    total: ordered.length,
-    event: {
-      title: 'Campi precompilati',
-      detail: `${candidates.length} campi su ${ordered.length} con evidenza verbatim.`
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// v2: il profilo del tipo, niente campi senza tipo
+// La mappa del tipo: niente campi senza tipo
 // ---------------------------------------------------------------------------
 
 function prepareV2(input: {
-  registry: ExtractionRegistryV2
+  registry: ExtractionRegistry
   documentType: string | null
   extracted: ExtractedText
-  classification: Classification
-  manualType: boolean
   startedAt: string
   /** Modalità del learner, etichette e memorie dei moduli attive per questo documento. */
   learning: { mode: LearningMode; labels: LearnedLabel[]; templateRuleIds: string[] }
@@ -385,14 +291,10 @@ function prepareV2(input: {
     metrics: {
       textSource: extracted.source,
       ...(ocrFailed ? { ocrFailedPages: extracted.ocrFailedPages } : {}),
-      classifier:
-        input.classification.engine === 'v2'
-          ? {
-              ...classifierAudit(input.classification, input.manualType),
-              // Le memorie dei moduli offerte al classificatore, anche se non hanno deciso.
-              templateRuleIds: input.learning.templateRuleIds
-            }
-          : classifierAudit(input.classification, input.manualType),
+      // Le memorie dei moduli che hanno proposto il tipo di questo documento, anche
+      // quando il revisore ne aveva già scelto un altro: un benchmark dichiara così su
+      // cosa ha lavorato.
+      templateRuleIds: input.learning.templateRuleIds,
       ...extra.metrics
     }
   })
@@ -408,7 +310,7 @@ function prepareV2(input: {
 
   if (!documentType) {
     return skipped(
-      'Tipo non riconosciuto: senza tipo non c’è un profilo di campi da cercare. I campi si precompilano quando il tipo viene assegnato a mano.',
+      'Senza tipo non c’è una mappa di campi da cercare. I campi si precompilano quando il revisore assegna il tipo.',
       'SKIPPED_UNKNOWN_TYPE'
     )
   }
@@ -416,7 +318,7 @@ function prepareV2(input: {
   const profileSource = registry.profileSource(documentType)
   if (profileSource === 'MISSING') {
     return skipped(
-      `Nessun profilo di estrazione per «${documentType}»: il tipo non ha un profilo v2 né uno schema nel registry.`,
+      `Il registry non dice quali campi vuole «${documentType}»: il tipo è fuori dalle 171 classi della mappa.`,
       'SKIPPED_NO_PROFILE'
     )
   }
@@ -495,12 +397,8 @@ function prepareV2(input: {
   const filled = result.facts.filter((fact) => fact.value !== null).length
   const deduced = result.facts.filter((fact) => fact.computed === true)
   const labelOf = (fieldId: string) => registry.field(fieldId)?.label_it ?? fieldId
-  const profile =
-    profileSource === 'LEGACY_FALLBACK'
-      ? 'profilo ricavato dallo schema v1 (LEGACY_FALLBACK)'
-      : `profilo v2 ${result.schemaState}`
   const parts = [
-    `${filled - deduced.length} campi su ${result.facts.length} con evidenza verbatim, ${profile}.`
+    `${filled - deduced.length} campi su ${result.facts.length} con evidenza verbatim, mappa ${result.schemaState}.`
   ]
   if (deduced.length > 0) {
     // Dedotto non è letto: va detto qui, o il conto qui sopra sembrerebbe sbagliato.
@@ -557,104 +455,16 @@ function prepareV2(input: {
 }
 
 // ---------------------------------------------------------------------------
-// Timeline e audit
+// Audit
 // ---------------------------------------------------------------------------
 
-const REASONS = TYPE_MATCH_REASON_LABELS
+/** Due decimali: la confidenza si legge, non si stampa con sedici cifre. */
+function round(value: number): number {
+  return Math.round(value * 100) / 100
+}
 
 function percent(value: number): string {
   return `${Math.round(value * 100)}%`
-}
-
-function decimal(value: number): string {
-  return value.toFixed(2).replace('.', ',')
-}
-
-export function describeClassification(
-  classification: Classification,
-  config?: ClassifierConfigV2
-): { title: string; detail: string } {
-  if (classification.engine === 'v1') {
-    const match = classification.match
-    if (!match) {
-      return {
-        title: 'Tipo non riconosciuto',
-        detail: 'Nessun alias del registry supera la soglia di 0,75: il tipo va assegnato a mano.'
-      }
-    }
-    return {
-      title: 'Tipo riconosciuto',
-      detail: `${match.documentType} al ${Math.round(match.confidence * 100)}% da «${match.phrase}» ${
-        match.source === 'first-page' ? 'in prima pagina' : 'nel nome del file'
-      }.`
-    }
-  }
-
-  const match = classification.match
-  const top = match.candidates[0]
-  const runnerUp = match.runnerUp
-    ? `secondo candidato ${match.runnerUp.documentType} al ${percent(match.runnerUp.confidence)}`
-    : 'nessun altro candidato'
-
-  if (match.decision === 'ASSIGN') {
-    const phrases = match.evidence
-      .filter(
-        (item) =>
-          item.delta > 0 && item.phrase !== '__corroboration__' && item.source !== 'template-memory'
-      )
-      .map((item) => `«${item.phrase}»`)
-    const unique = [...new Set(phrases)].slice(0, 3).join(', ')
-    const sources = [
-      unique ? `da ${unique}` : null,
-      match.evidence.some((item) => item.source === 'template-memory')
-        ? 'dalla memoria del modulo, già revisionato con questo tipo'
-        : null
-    ].filter((part) => part !== null)
-    return {
-      title: 'Tipo riconosciuto',
-      detail: `${match.documentType} al ${percent(match.confidence)} col classificatore v2 ${sources.join(' e ')}; ${runnerUp}, margine ${decimal(match.margin)}.`
-    }
-  }
-
-  const reason = match.reason as Exclude<TypeMatchV2['reason'], 'OK'>
-  const thresholds = config
-    ? ` Soglia ${decimal(config.defaults.auto_assign_threshold)}, margine minimo ${decimal(config.defaults.minimum_margin)}.`
-    : ''
-  const candidates = top
-    ? ` Miglior candidato ${top.documentType} al ${percent(top.score)}; ${runnerUp}, margine ${decimal(match.margin)}.`
-    : ''
-  return {
-    title: 'Tipo non riconosciuto',
-    detail: `Classificatore v2: ${REASONS[reason]} (${reason}).${candidates}${top ? thresholds : ''} Il tipo va assegnato a mano.`
-  }
-}
-
-function classifierAudit(
-  classification: Classification,
-  manualType: boolean
-): Record<string, unknown> {
-  if (classification.engine === 'v1') {
-    return {
-      engine: 'v1',
-      manualType,
-      documentType: classification.match?.documentType ?? null,
-      confidence: classification.match?.confidence ?? null,
-      phrase: classification.match?.phrase ?? null,
-      source: classification.match?.source ?? null
-    }
-  }
-  const match = classification.match
-  return {
-    engine: 'v2',
-    manualType,
-    decision: match.decision,
-    reason: match.reason,
-    top: match.candidates[0]
-      ? { documentType: match.candidates[0].documentType, score: match.candidates[0].score }
-      : null,
-    runnerUp: match.runnerUp,
-    margin: match.margin
-  }
 }
 
 function countBy(values: string[]): Record<string, number> {

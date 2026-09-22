@@ -8,11 +8,8 @@
       "version": "1.1.0"
     },
     "engines": {
-      "classifier": "v2",
-      "extraction": "v2",
-      "classifierVersion": "2.0.3-draft.1",
-      "extractionEngineVersion": "extraction-brain-v2/2.1.0-draft.1",
-      "schemaVersion": "2.0.4"
+      "extractionEngineVersion": "extraction-brain/3.0.0",
+      "schemaVersion": "3.0.0"
     },
     "counts": {
       "documents": 3,
@@ -41,34 +38,27 @@
         "label": "contratto consulenza",
         "registry": {
           "id": "contracts_general.contratto_consulenza",
-          "proposed": "contracts_general.contratto_consulenza"
+          "proposed": null
         },
-        "chosenBy": "ENGINE",
-        "proposed": "contracts_general.contratto_consulenza",
-        "proposedConfidence": 0.945,
-        "corrected": false,
-        "decision": "ASSIGN",
-        "reason": "OK",
-        "margin": 0.945,
-        "threshold": 0.74,
-        "minimumMargin": 0.08,
-        "candidates": [
-          {
-            "documentType": "contracts_general.contratto_consulenza",
-            "registryId": "contracts_general.contratto_consulenza",
-            "score": 0.945,
-            "rank": 1
-          }
-        ],
+        "chosenBy": "REVIEWER",
+        "proposed": null,
+        "proposedConfidence": null,
+        "corrected": true,
+        "decision": null,
+        "reason": null,
+        "margin": null,
+        "threshold": null,
+        "minimumMargin": null,
+        "candidates": [],
         "chosen": {
-          "rank": 1,
-          "score": 0.945
+          "rank": null,
+          "score": null
         }
       },
       "direction": null,
       "extraction": {
-        "engineVersion": "extraction-brain-v2/2.1.0-draft.1",
-        "schemaVersion": "2.0.4",
+        "engineVersion": "extraction-brain/3.0.0",
+        "schemaVersion": "3.0.0",
         "status": "COMPLETED",
         "completedAt": "2026-09-16T12:00:00.000Z"
       },
@@ -88,28 +78,21 @@
         "label": "fattura",
         "registry": {
           "id": "accounting.fattura",
-          "proposed": "accounting.fattura"
+          "proposed": null
         },
-        "chosenBy": "ENGINE",
-        "proposed": "accounting.fattura",
-        "proposedConfidence": 0.8267,
-        "corrected": false,
-        "decision": "ASSIGN",
-        "reason": "OK",
-        "margin": 0.8267,
-        "threshold": 0.74,
-        "minimumMargin": 0.08,
-        "candidates": [
-          {
-            "documentType": "accounting.fattura",
-            "registryId": "accounting.fattura",
-            "score": 0.8267,
-            "rank": 1
-          }
-        ],
+        "chosenBy": "REVIEWER",
+        "proposed": null,
+        "proposedConfidence": null,
+        "corrected": true,
+        "decision": null,
+        "reason": null,
+        "margin": null,
+        "threshold": null,
+        "minimumMargin": null,
+        "candidates": [],
         "chosen": {
-          "rank": 1,
-          "score": 0.8267
+          "rank": null,
+          "score": null
         }
       },
       "direction": {
@@ -120,19 +103,49 @@
         "choice": null
       },
       "extraction": {
-        "engineVersion": "extraction-brain-v2/2.1.0-draft.1",
-        "schemaVersion": "2.0.4",
+        "engineVersion": "extraction-brain/3.0.0",
+        "schemaVersion": "3.0.0",
         "status": "COMPLETED",
         "completedAt": "2026-09-16T10:00:00.000Z"
       },
       "fields": [
         {
-          "name": "document.number",
-          "label": "Numero documento",
+          "name": "bank.iban",
+          "label": "IBAN",
           "role": "required",
           "cardinality": "one",
-          "value": "27/2026/B",
-          "origin": "REVIEWER",
+          "value": null,
+          "origin": null,
+          "evidence": null,
+          "pick": null
+        },
+        {
+          "name": "counterparty.role",
+          "label": "Ruolo controparte",
+          "role": "required",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null,
+          "pick": null
+        },
+        {
+          "name": "document.direction",
+          "label": "Direzione documento",
+          "role": "required",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null,
+          "pick": null
+        },
+        {
+          "name": "document.issue_date",
+          "label": "Data emissione",
+          "role": "required",
+          "cardinality": "one",
+          "value": "2026-09-14",
+          "origin": "ENGINE",
           "evidence": {
             "page": 1,
             "text": "FATTURA n. 27/2026 del 14/09/2026",
@@ -146,12 +159,12 @@
           "pick": null
         },
         {
-          "name": "document.issue_date",
-          "label": "Data emissione",
+          "name": "document.number",
+          "label": "Numero documento",
           "role": "required",
           "cardinality": "one",
-          "value": "2026-09-14",
-          "origin": "ENGINE",
+          "value": "27/2026/B",
+          "origin": "REVIEWER",
           "evidence": {
             "page": 1,
             "text": "FATTURA n. 27/2026 del 14/09/2026",
@@ -184,19 +197,39 @@
           "pick": null
         },
         {
-          "name": "recipient.name",
-          "label": "Destinatario",
+          "name": "issuer.tax_code",
+          "label": "Codice fiscale emittente",
           "role": "required",
           "cardinality": "one",
-          "value": "Gamma Immobiliare S.r.l.",
-          "origin": "ENGINE",
+          "value": null,
+          "origin": null,
+          "evidence": null,
+          "pick": null
+        },
+        {
+          "name": "issuer.vat_number",
+          "label": "Partita IVA emittente",
+          "role": "required",
+          "cardinality": "one",
+          "value": "09876543210",
+          "origin": "REVIEWER",
+          "evidence": null,
+          "pick": null
+        },
+        {
+          "name": "money.currency",
+          "label": "Valuta",
+          "role": "required",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
           "evidence": {
             "page": 1,
-            "text": "Destinatario: Gamma Immobiliare S.r.l.",
+            "text": "Valuta: EUR",
             "bbox": {
               "x": 56,
-              "y": 151,
-              "w": 189.49,
+              "y": 171,
+              "w": 60.52,
               "h": 11
             }
           },
@@ -222,19 +255,38 @@
           "pick": null
         },
         {
-          "name": "issuer.vat_number",
-          "label": "Partita IVA emittente",
-          "role": "core",
+          "name": "payment.due_date",
+          "label": "Scadenza pagamento",
+          "role": "required",
           "cardinality": "one",
-          "value": "09876543210",
-          "origin": "REVIEWER",
+          "value": null,
+          "origin": null,
           "evidence": null,
           "pick": null
         },
         {
-          "name": "issuer.tax_code",
-          "label": "Codice fiscale emittente",
-          "role": "core",
+          "name": "recipient.name",
+          "label": "Destinatario",
+          "role": "required",
+          "cardinality": "one",
+          "value": "Gamma Immobiliare S.r.l.",
+          "origin": "ENGINE",
+          "evidence": {
+            "page": 1,
+            "text": "Destinatario: Gamma Immobiliare S.r.l.",
+            "bbox": {
+              "x": 56,
+              "y": 151,
+              "w": 189.49,
+              "h": 11
+            }
+          },
+          "pick": null
+        },
+        {
+          "name": "recipient.tax_code",
+          "label": "Codice fiscale destinatario",
+          "role": "required",
           "cardinality": "one",
           "value": null,
           "origin": null,
@@ -244,7 +296,7 @@
         {
           "name": "recipient.vat_number",
           "label": "Partita IVA destinatario",
-          "role": "core",
+          "role": "required",
           "cardinality": "one",
           "value": null,
           "origin": null,
@@ -252,76 +304,18 @@
           "pick": null
         },
         {
-          "name": "recipient.tax_code",
-          "label": "Codice fiscale destinatario",
-          "role": "core",
-          "cardinality": "one",
-          "value": null,
+          "name": "document.references",
+          "label": "Riferimenti ad altri documenti collegati",
+          "role": "optional",
+          "cardinality": "many",
+          "value": [],
           "origin": null,
-          "evidence": null,
-          "pick": null
+          "items": []
         },
         {
-          "name": "money.taxable",
-          "label": "Imponibile",
-          "role": "core",
-          "cardinality": "one",
-          "value": "5500.00",
-          "origin": "ENGINE",
-          "evidence": {
-            "page": 1,
-            "text": "Totale imponibile EUR 5.500,00",
-            "bbox": {
-              "x": 56,
-              "y": 291,
-              "w": 158.34,
-              "h": 11
-            }
-          },
-          "pick": null
-        },
-        {
-          "name": "money.tax",
-          "label": "Imposta/IVA",
-          "role": "core",
-          "cardinality": "one",
-          "value": "1210.00",
-          "origin": "ENGINE",
-          "evidence": {
-            "page": 1,
-            "text": "IVA 22% EUR 1.210,00",
-            "bbox": {
-              "x": 56,
-              "y": 311,
-              "w": 148.59,
-              "h": 11
-            }
-          },
-          "pick": null
-        },
-        {
-          "name": "money.currency",
-          "label": "Valuta",
-          "role": "core",
-          "cardinality": "one",
-          "value": null,
-          "origin": null,
-          "evidence": {
-            "page": 1,
-            "text": "Valuta: EUR",
-            "bbox": {
-              "x": 56,
-              "y": 171,
-              "w": 60.52,
-              "h": 11
-            }
-          },
-          "pick": null
-        },
-        {
-          "name": "payment.due_date",
-          "label": "Scadenza pagamento",
-          "role": "core",
+          "name": "invoice.type_code",
+          "label": "Tipo documento/fattura (es. TDxx quando presente)",
+          "role": "optional",
           "cardinality": "one",
           "value": null,
           "origin": null,
@@ -331,7 +325,7 @@
         {
           "name": "line_items",
           "label": "Righe documento",
-          "role": "core",
+          "role": "optional",
           "cardinality": "many",
           "value": [
             "Demolizione tramezzi - EUR 3.200,00",
@@ -379,19 +373,47 @@
           ]
         },
         {
-          "name": "bank.iban",
-          "label": "IBAN",
-          "role": "conditional",
+          "name": "money.tax",
+          "label": "Imposta/IVA",
+          "role": "optional",
           "cardinality": "one",
-          "value": null,
-          "origin": null,
-          "evidence": null,
+          "value": "1210.00",
+          "origin": "ENGINE",
+          "evidence": {
+            "page": 1,
+            "text": "IVA 22% EUR 1.210,00",
+            "bbox": {
+              "x": 56,
+              "y": 311,
+              "w": 148.59,
+              "h": 11
+            }
+          },
+          "pick": null
+        },
+        {
+          "name": "money.taxable",
+          "label": "Imponibile",
+          "role": "optional",
+          "cardinality": "one",
+          "value": "5500.00",
+          "origin": "ENGINE",
+          "evidence": {
+            "page": 1,
+            "text": "Totale imponibile EUR 5.500,00",
+            "bbox": {
+              "x": 56,
+              "y": 291,
+              "w": 158.34,
+              "h": 11
+            }
+          },
           "pick": null
         },
         {
           "name": "procurement.cig",
           "label": "CIG",
-          "role": "conditional",
+          "role": "optional",
           "cardinality": "one",
           "value": null,
           "origin": null,
@@ -401,12 +423,21 @@
         {
           "name": "procurement.cup",
           "label": "CUP",
-          "role": "conditional",
+          "role": "optional",
           "cardinality": "one",
           "value": null,
           "origin": null,
           "evidence": null,
           "pick": null
+        },
+        {
+          "name": "tax.vat_summary",
+          "label": "Riepilogo IVA per aliquota/natura",
+          "role": "optional",
+          "cardinality": "many",
+          "value": [],
+          "origin": null,
+          "items": []
         }
       ],
       "corrections": [
@@ -485,11 +516,11 @@
         "proposed": null,
         "proposedConfidence": null,
         "corrected": true,
-        "decision": "UNKNOWN",
-        "reason": "NO_SIGNAL",
-        "margin": 0,
-        "threshold": 0.74,
-        "minimumMargin": 0.08,
+        "decision": null,
+        "reason": null,
+        "margin": null,
+        "threshold": null,
+        "minimumMargin": null,
         "candidates": [],
         "chosen": {
           "rank": null,
@@ -498,16 +529,26 @@
       },
       "direction": null,
       "extraction": {
-        "engineVersion": "extraction-brain-v2/2.1.0-draft.1",
-        "schemaVersion": "2.0.4",
+        "engineVersion": "extraction-brain/3.0.0",
+        "schemaVersion": "3.0.0",
         "status": "COMPLETED",
         "completedAt": "2026-09-16T11:00:00.000Z"
       },
       "fields": [
         {
+          "name": "bank.iban",
+          "label": "IBAN",
+          "role": "required",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null,
+          "pick": null
+        },
+        {
           "name": "document.issue_date",
           "label": "Data emissione",
-          "role": "core",
+          "role": "required",
           "cardinality": "one",
           "value": "2026-09-12",
           "origin": "REVIEWER",
@@ -532,39 +573,9 @@
           }
         },
         {
-          "name": "payment.date",
-          "label": "Data pagamento",
-          "role": "core",
-          "cardinality": "one",
-          "value": null,
-          "origin": null,
-          "evidence": null,
-          "pick": null
-        },
-        {
-          "name": "payment.reference",
-          "label": "Riferimento pagamento",
-          "role": "core",
-          "cardinality": "one",
-          "value": null,
-          "origin": null,
-          "evidence": null,
-          "pick": null
-        },
-        {
-          "name": "payment.method",
-          "label": "Metodo pagamento",
-          "role": "core",
-          "cardinality": "one",
-          "value": null,
-          "origin": null,
-          "evidence": null,
-          "pick": null
-        },
-        {
           "name": "money.amount",
           "label": "Importo",
-          "role": "core",
+          "role": "required",
           "cardinality": "one",
           "value": "1250.00",
           "origin": "ENGINE",
@@ -583,7 +594,7 @@
         {
           "name": "money.currency",
           "label": "Valuta",
-          "role": "core",
+          "role": "required",
           "cardinality": "one",
           "value": null,
           "origin": null,
@@ -591,9 +602,9 @@
           "pick": null
         },
         {
-          "name": "bank.iban",
-          "label": "IBAN",
-          "role": "core",
+          "name": "payment.date",
+          "label": "Data pagamento",
+          "role": "required",
           "cardinality": "one",
           "value": null,
           "origin": null,
@@ -601,9 +612,9 @@
           "pick": null
         },
         {
-          "name": "document.number",
-          "label": "Numero documento",
-          "role": "core",
+          "name": "payment.due_date",
+          "label": "Scadenza pagamento",
+          "role": "required",
           "cardinality": "one",
           "value": null,
           "origin": null,
@@ -611,8 +622,37 @@
           "pick": null
         },
         {
-          "name": "issuer.name",
-          "label": "Emittente",
+          "name": "payment.method",
+          "label": "Metodo pagamento",
+          "role": "required",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null,
+          "pick": null
+        },
+        {
+          "name": "payment.reference",
+          "label": "Riferimento pagamento",
+          "role": "required",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null,
+          "pick": null
+        },
+        {
+          "name": "document.references",
+          "label": "Riferimenti ad altri documenti collegati",
+          "role": "optional",
+          "cardinality": "many",
+          "value": [],
+          "origin": null,
+          "items": []
+        },
+        {
+          "name": "payment.payee",
+          "label": "Beneficiario",
           "role": "optional",
           "cardinality": "one",
           "value": null,
@@ -621,8 +661,28 @@
           "pick": null
         },
         {
-          "name": "recipient.name",
-          "label": "Destinatario",
+          "name": "payment.payer",
+          "label": "Pagatore",
+          "role": "optional",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null,
+          "pick": null
+        },
+        {
+          "name": "payment.status",
+          "label": "Stato pagamento",
+          "role": "optional",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null,
+          "pick": null
+        },
+        {
+          "name": "payment.transaction_id",
+          "label": "ID transazione",
           "role": "optional",
           "cardinality": "one",
           "value": null,

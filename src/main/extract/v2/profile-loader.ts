@@ -3,6 +3,7 @@ import {
   FIELD_PII,
   type FieldOntologyEntry
 } from '@shared/extraction-v2'
+import { DOCUMENT_FIELDS_FILE, FIELDS_FILE } from '@shared/profile-bundle'
 import {
   applyCardinalityOverlay,
   applyHintOverlay,
@@ -11,14 +12,13 @@ import {
   type ProfileOverlay
 } from '@shared/profile-overlay'
 import { z } from 'zod'
-import { readRegistryJson } from '../../registry/v2/read-json'
+import { readRegistryJson } from '../../registry/read-json'
 import { fold } from '../heuristics'
+import { LEGACY_FIELD_MAP } from '../legacy-field-map'
 
-export const LEGACY_FIELD_MAP_FILE = 'legacy_field_map_v2.json'
+export type ProfileSource = 'EXPLICIT' | 'MISSING'
 
-export type ProfileSource = 'V2_EXPLICIT' | 'LEGACY_FALLBACK' | 'MISSING'
-
-export interface ExtractionRegistryV2 {
+export interface ExtractionRegistry {
   /** Il profilo che il motore deve usare: registry più le correzioni del revisore. */
   profile(documentType: string): ClassExtractionProfile | null
   /** Il profilo come sta nel registry, senza correzioni: serve all'export e ai numeri. */
@@ -26,6 +26,7 @@ export interface ExtractionRegistryV2 {
   field(fieldId: string): FieldOntologyEntry | null
   /** Tutti i campi dell'ontologia, in ordine di etichetta: il menu che li elenca tutti. */
   allFields(): FieldOntologyEntry[]
+  /** Le etichette con cui cercare un campo nel testo: la sua e i suoi alias. */
   hints(fieldId: string): string[]
   /**
    * Le intestazioni che aprono la sezione di una parte, ripiegate, per parte: su una
@@ -33,42 +34,40 @@ export interface ExtractionRegistryV2 {
    */
   sections(): Array<{ party: string; label: string }>
   profileSource(documentType: string): ProfileSource
-  /** Nomi campo v1 che la mappa legacy porta su questo id dell'ontologia. */
+  /** Nomi campo v1 che la tabella di migrazione porta su questo id dell'ontologia. */
   legacyNames(fieldId: string): string[]
-  /** Versione dei profili: finisce in `extraction_runs.schema_version`. */
+  /** I tipi che il registry conosce, per il menu della revisione. */
+  documentTypes(): Array<{ id: string; label: string; family: string }>
+  /** Versione del registry: finisce in `extraction_runs.schema_version`. */
   schemaVersion(): string
 }
 
 const stringList = z.array(z.string())
 const piiSchema = z.enum(FIELD_PII)
 
-// Solo le chiavi che il motore legge: le altre (provenienza, confusables, note)
-// restano nel file per chi lo cura, ma qui non devono far fallire l'avvio.
-const profileSchema = z.looseObject({
+// Solo le chiavi che il motore legge: le altre restano nel file per chi lo cura, ma qui
+// non devono far fallire l'avvio.
+const documentTypeSchema = z.looseObject({
   document_type_id: z.string(),
   canonical_name: z.string(),
   family: z.string(),
   schema_state: z.string(),
-  evidence_basis: z.string(),
   required_fields: stringList,
-  core_fields: stringList,
   optional_fields: stringList,
-  conditional_fields: stringList,
   field_validator_overrides: z.record(z.string(), stringList).optional(),
   field_pii_overrides: z.record(z.string(), piiSchema).optional(),
-  field_description_overrides: z.record(z.string(), z.string()).optional(),
-  literal_evidence_required: z.boolean(),
-  unknown_value_policy: z.literal('LEAVE_EMPTY'),
-  review_policy: z.string()
+  field_description_overrides: z.record(z.string(), z.string()).optional()
 })
 
-const profilesSchema = z.object({
+const documentFieldsSchema = z.object({
   version: z.string(),
-  profiles: z.record(z.string(), profileSchema)
+  document_types: z.record(z.string(), documentTypeSchema)
 })
 
-const ontologySchema = z.object({
+const fieldsSchema = z.object({
   version: z.string(),
+  // Le intestazioni che aprono il blocco di una parte, per parte.
+  sections: z.record(z.string(), stringList).optional(),
   fields: z.record(
     z.string(),
     z.looseObject({
@@ -95,160 +94,101 @@ const ontologySchema = z.object({
   )
 })
 
-const hintsSchema = z.object({
-  version: z.string(),
-  // Assente negli snapshot più vecchi: senza, il lettore non conosce sezioni e si
-  // comporta come prima.
-  sections: z.record(z.string(), stringList).optional(),
-  hints: z.record(z.string(), z.looseObject({ labels: stringList }))
-})
-
-const legacyMapSchema = z.object({
-  version: z.string(),
-  map: z.record(z.string(), z.string())
-})
-
-const legacySchemasSchema = z.record(
-  z.string(),
-  z.looseObject({
-    properties: z.record(z.string(), z.unknown()).optional(),
-    required: stringList.optional()
-  })
-)
-
-/** Mappa nomi campo v1 -> id dell'ontologia v2. Serve anche senza il motore v2. */
-export function loadLegacyFieldMap(v2Directory: string): Record<string, string> {
-  return readRegistryJson(v2Directory, LEGACY_FIELD_MAP_FILE, legacyMapSchema).map
-}
-
-const ROLE_KEYS = [
-  'required_fields',
-  'core_fields',
-  'optional_fields',
-  'conditional_fields'
-] as const
+const ROLE_KEYS = ['required_fields', 'optional_fields'] as const
 
 /**
- * Carica i profili v2 espliciti e il registry v1 corrente.
+ * Carica i due file del registry: i campi e, per ogni tipo, quali vuole.
  *
- * Il registry del reviewer ha 511 tipi, mentre i profili espliciti vengono dal
- * checkpoint Document Brain a 496 classi: un tipo senza profilo esplicito non deve
- * far saltare l'estrazione né sparire in silenzio. Se il tipo esiste in
- * `extraction_schemas.json`, si sintetizza un profilo conservativo LEGACY_FALLBACK con i
- * campi v1 portati sull'ontologia. Non vale quanto un profilo v2: è marcato come tale.
+ * Un tipo che il registry non elenca non ha profilo e non ha campi da estrarre: dopo il
+ * Brain MVP i tipi sono 171, quelli che valgono la pena di leggere, e per gli altri non
+ * si inventa una mappa che nessuno ha guardato.
  *
- * Ogni riferimento incrociato (campi dei profili, eccezioni ai validatori, destinazioni
- * della mappa legacy) è controllato qui: un profilo che cita un campo inesistente è un
+ * Ogni riferimento incrociato — i campi di un tipo, le eccezioni ai validatori, al `pii`
+ * e alle descrizioni — è controllato qui: un tipo che cita un campo inesistente è un
  * errore d'avvio, non un campo che manca in silenzio a ogni documento di quel tipo.
  */
-export function createExtractionRegistryV2(
-  v2Directory: string,
-  legacyRegistryDirectory: string,
+export function createExtractionRegistry(
+  registryDirectory: string,
   overlay: () => ProfileOverlay = () => EMPTY_OVERLAY
-): ExtractionRegistryV2 {
-  const profiles = readRegistryJson(
-    v2Directory,
-    'class_extraction_profiles_v2.json',
-    profilesSchema
-  )
-  const ontology = readRegistryJson(v2Directory, 'field_ontology_v2.json', ontologySchema)
-  const hints = readRegistryJson(v2Directory, 'extraction_hints_v2.json', hintsSchema)
-  const legacyMap = loadLegacyFieldMap(v2Directory)
-  const legacySchemas = readRegistryJson(
-    legacyRegistryDirectory,
-    'extraction_schemas.json',
-    legacySchemasSchema
-  )
+): ExtractionRegistry {
+  const catalog = readRegistryJson(registryDirectory, FIELDS_FILE, fieldsSchema)
+  const map = readRegistryJson(registryDirectory, DOCUMENT_FIELDS_FILE, documentFieldsSchema)
 
   // Le intestazioni di sezione, dalla più lunga: «Cedente prestatore (fornitore)» prima di
   // «Cedente prestatore», così una riga che le contiene tutte e due non conta due volte.
-  const sectionLabels = Object.entries(hints.sections ?? {})
+  const sectionLabels = Object.entries(catalog.sections ?? {})
     .flatMap(([party, labels]) => labels.map((label) => ({ party, label: fold(label) })))
     .filter((entry) => entry.label.length > 0)
     .sort((a, b) => b.label.length - a.label.length)
 
   const unknownRefs: string[] = []
-  for (const [documentType, profile] of Object.entries(profiles.profiles)) {
+  for (const [documentType, entry] of Object.entries(map.document_types)) {
     for (const key of ROLE_KEYS) {
-      for (const fieldId of profile[key]) {
-        if (!ontology.fields[fieldId]) unknownRefs.push(`${documentType}.${key}: ${fieldId}`)
+      for (const fieldId of entry[key]) {
+        if (!catalog.fields[fieldId]) unknownRefs.push(`${documentType}.${key}: ${fieldId}`)
       }
     }
     // Un'eccezione ai validatori, al `pii` o alla descrizione vale per un campo che il tipo
-    // chiede: su un campo fuori profilo non cambierebbe niente, e dice che il profilo o
-    // l'eccezione sono sbagliati.
+    // chiede: su un campo fuori mappa non cambierebbe niente, e dice che la mappa o
+    // l'eccezione sono sbagliate.
     for (const overrides of [
       'field_validator_overrides',
       'field_pii_overrides',
       'field_description_overrides'
     ] as const) {
-      for (const fieldId of Object.keys(profile[overrides] ?? {})) {
-        if (!ontology.fields[fieldId] || !ROLE_KEYS.some((key) => profile[key].includes(fieldId))) {
+      for (const fieldId of Object.keys(entry[overrides] ?? {})) {
+        if (!catalog.fields[fieldId] || !ROLE_KEYS.some((key) => entry[key].includes(fieldId))) {
           unknownRefs.push(`${documentType}.${overrides}: ${fieldId}`)
         }
       }
     }
   }
-  for (const [legacy, fieldId] of Object.entries(legacyMap)) {
-    if (!ontology.fields[fieldId])
-      unknownRefs.push(`${LEGACY_FIELD_MAP_FILE}: ${legacy} -> ${fieldId}`)
+  for (const [legacy, fieldId] of Object.entries(LEGACY_FIELD_MAP)) {
+    if (!catalog.fields[fieldId]) unknownRefs.push(`legacy-field-map: ${legacy} -> ${fieldId}`)
   }
   if (unknownRefs.length > 0) {
     throw new Error(
-      `Registry v2: ${unknownRefs.length} riferimenti a campi assenti da field_ontology_v2.json ` +
-        `o dal profilo che li cita, in ${v2Directory} (primo: ${unknownRefs[0]}).`
+      `Registry: ${unknownRefs.length} riferimenti a campi assenti da ${FIELDS_FILE} ` +
+        `o dal tipo che li cita, in ${registryDirectory} (primo: ${unknownRefs[0]}).`
     )
   }
 
   const legacyByField = new Map<string, string[]>()
-  for (const [legacy, fieldId] of Object.entries(legacyMap)) {
+  for (const [legacy, fieldId] of Object.entries(LEGACY_FIELD_MAP)) {
     legacyByField.set(fieldId, [...(legacyByField.get(fieldId) ?? []), legacy])
   }
 
-  const synthesized = new Map<string, ClassExtractionProfile>()
-
-  function fallbackProfile(documentType: string): ClassExtractionProfile | null {
-    const cached = synthesized.get(documentType)
-    if (cached) return cached
-
-    const schema = legacySchemas[documentType]
-    if (!schema) return null
-
-    const toFieldId = (legacy: string): string | null => legacyMap[legacy] ?? null
-    const rawFields = Object.keys(schema.properties ?? {})
-    const requiredLegacy = new Set(schema.required ?? [])
-
-    const requiredFields = unique(
-      rawFields.filter((legacy) => requiredLegacy.has(legacy)).map(toFieldId)
-    )
-    const coreFields = unique(rawFields.map(toFieldId)).filter(
-      (fieldId) => !requiredFields.includes(fieldId)
-    )
-
-    const profile: ClassExtractionProfile = {
-      document_type_id: documentType,
-      canonical_name: documentType,
-      family: documentType.split('.')[0] ?? '',
-      schema_state: 'EXTRACTION_SCHEMA_LEGACY_FALLBACK',
-      evidence_basis: 'CURRENT_REVIEWER_V1_1_0_REGISTRY',
-      required_fields: requiredFields,
-      core_fields: coreFields,
-      optional_fields: [],
-      conditional_fields: [],
-      literal_evidence_required: true,
-      unknown_value_policy: 'LEAVE_EMPTY',
-      review_policy: 'REVIEW_LOW_CONFIDENCE_MISSING_REQUIRED_CONFLICTS_ONLY'
-    }
-    synthesized.set(documentType, profile)
-    return profile
-  }
-
-  const sortedFields = Object.values(ontology.fields).sort((a, b) =>
+  const sortedFields = Object.values(catalog.fields).sort((a, b) =>
     a.label_it.localeCompare(b.label_it, 'it')
   )
 
+  const types = Object.values(map.document_types)
+    .map((entry) => ({
+      id: entry.document_type_id,
+      label: entry.canonical_name,
+      family: entry.family
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'it'))
+
+  /** La mappa del tipo nella forma che il motore usa. */
+  const profiles = new Map<string, ClassExtractionProfile>()
+  for (const [documentType, entry] of Object.entries(map.document_types)) {
+    profiles.set(documentType, {
+      ...entry,
+      document_type_id: entry.document_type_id,
+      canonical_name: entry.canonical_name,
+      family: entry.family,
+      schema_state: entry.schema_state,
+      required_fields: entry.required_fields,
+      optional_fields: entry.optional_fields,
+      literal_evidence_required: true,
+      unknown_value_policy: 'LEAVE_EMPTY',
+      review_policy: 'REVIEW_LOW_CONFIDENCE_MISSING_REQUIRED_CONFLICTS_ONLY'
+    })
+  }
+
   function baseProfile(documentType: string): ClassExtractionProfile | null {
-    return profiles.profiles[documentType] ?? fallbackProfile(documentType)
+    return profiles.get(documentType) ?? null
   }
 
   return {
@@ -264,47 +204,42 @@ export function createExtractionRegistryV2(
       )
     },
     baseProfile,
-    field: (fieldId) => ontology.fields[fieldId] ?? null,
+    field: (fieldId) => catalog.fields[fieldId] ?? null,
     allFields: () => sortedFields,
-    hints: (fieldId) =>
-      applyHintOverlay(hints.hints[fieldId]?.labels ?? [], overlay().hintLabels[fieldId]),
-    sections: () => sectionLabels,
-    profileSource(documentType) {
-      if (profiles.profiles[documentType]) return 'V2_EXPLICIT'
-      if (legacySchemas[documentType]) return 'LEGACY_FALLBACK'
-      return 'MISSING'
+    hints: (fieldId) => {
+      const spec = catalog.fields[fieldId]
+      const base = spec ? [spec.label_it, ...spec.label_aliases_it] : []
+      return applyHintOverlay(base, overlay().hintLabels[fieldId])
     },
+    sections: () => sectionLabels,
+    profileSource: (documentType) => (profiles.has(documentType) ? 'EXPLICIT' : 'MISSING'),
     legacyNames: (fieldId) => legacyByField.get(fieldId) ?? [],
-    schemaVersion: () => profiles.version
+    documentTypes: () => types,
+    schemaVersion: () => map.version
   }
 }
 
-function unique(values: Array<string | null>): string[] {
-  return [...new Set(values.filter((value): value is string => value !== null))]
-}
-
-export interface ReloadableExtractionRegistryV2 extends ExtractionRegistryV2 {
+export interface ReloadableExtractionRegistry extends ExtractionRegistry {
   /**
-   * Rilegge i JSON dei profili dal disco. Le correzioni del revisore non passano più di
-   * qui — stanno nel database e si applicano a ogni lettura — ma il registry sul disco
-   * può cambiare sotto (un pack aggiornato), e questo lo rilegge senza riavviare.
+   * Rilegge i JSON del registry dal disco. Le correzioni del revisore non passano di qui
+   * — stanno nel database e si applicano a ogni lettura — ma il registry sul disco può
+   * cambiare sotto, e questo lo rilegge senza riavviare.
    *
    * Se i nuovi file non sono validi l'errore risale al chiamante e resta in uso il
-   * registry di prima: un JSON scritto male non deve lasciare l'app senza profili.
+   * registry di prima: un JSON scritto male non deve lasciare l'app senza mappa.
    */
   reload(): void
 }
 
 /**
- * Il registry v2 dietro un riferimento sostituibile. La pipeline lo tiene per tutta la
- * vita del processo, quindi non può essere l'istanza: deve poter cambiare sotto.
+ * Il registry dietro un riferimento sostituibile. La pipeline lo tiene per tutta la vita
+ * del processo, quindi non può essere l'istanza: deve poter cambiare sotto.
  */
-export function createReloadableExtractionRegistryV2(
-  v2Directory: string,
-  legacyRegistryDirectory: string,
+export function createReloadableExtractionRegistry(
+  registryDirectory: string,
   overlay: () => ProfileOverlay = () => EMPTY_OVERLAY
-): ReloadableExtractionRegistryV2 {
-  let current = createExtractionRegistryV2(v2Directory, legacyRegistryDirectory, overlay)
+): ReloadableExtractionRegistry {
+  let current = createExtractionRegistry(registryDirectory, overlay)
 
   return {
     profile: (documentType) => current.profile(documentType),
@@ -315,9 +250,10 @@ export function createReloadableExtractionRegistryV2(
     sections: () => current.sections(),
     profileSource: (documentType) => current.profileSource(documentType),
     legacyNames: (fieldId) => current.legacyNames(fieldId),
+    documentTypes: () => current.documentTypes(),
     schemaVersion: () => current.schemaVersion(),
     reload() {
-      current = createExtractionRegistryV2(v2Directory, legacyRegistryDirectory, overlay)
+      current = createExtractionRegistry(registryDirectory, overlay)
     }
   }
 }

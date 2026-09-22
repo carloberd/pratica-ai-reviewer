@@ -9,7 +9,7 @@ export type ExtractionScalar =
   | 'object'
 
 export type Cardinality = 'one' | 'many'
-export type FieldRole = 'required' | 'core' | 'optional' | 'conditional'
+export type FieldRole = 'required' | 'optional'
 export type FieldReviewStatus = 'AUTO_ACCEPTED' | 'NEEDS_REVIEW' | 'MISSING' | 'CONFLICT'
 
 /** Quanto è personale il dato di un campo: i valori del pack, dal meno al più delicato. */
@@ -34,11 +34,8 @@ export interface ClassExtractionProfile {
   canonical_name: string
   family: string
   schema_state: string
-  evidence_basis: string
   required_fields: string[]
-  core_fields: string[]
   optional_fields: string[]
-  conditional_fields: string[]
   literal_evidence_required: boolean
   unknown_value_policy: 'LEAVE_EMPTY'
   review_policy: string

@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { openDatabase } from '../src/main/db'
 import { createRepository } from '../src/main/db/repository'
-import { createReloadableExtractionRegistryV2 } from '../src/main/extract/v2/profile-loader'
+import { createReloadableExtractionRegistry } from '../src/main/extract/v2/profile-loader'
 import { updateFieldValue } from '../src/main/field-edits'
 import { createDocumentProcessor } from '../src/main/pipeline'
 import { collectTypeMeasure } from '../src/main/profile-insights'
@@ -18,20 +18,26 @@ import { editMapFromDocument, type RefinementDeps } from '../src/main/profile-re
 import { submitReview } from '../src/main/review'
 import {
   CHANGELOG_FILE,
-  HINTS_FILE,
-  type HintsFile,
-  PROFILES_FILE,
-  type ProfilesFile,
+  DOCUMENT_FIELDS_FILE,
+  type DocumentFieldsFile,
+  FIELDS_FILE,
+  type FieldsFile,
   SCHEMAS_FILE
 } from '../src/shared/profile-bundle'
-import {
-  fixture,
-  REGISTRY_DIR,
-  REGISTRY_V2_DIR,
-  testClassifierConfigV2,
-  testLegacyFieldMap,
-  testRegistry
-} from './helpers/registry'
+import { fixture, REGISTRY_DIR } from './helpers/registry'
+
+/**
+ * Il tipo di una fixture, come lo sceglierebbe il revisore aprendola: senza tipo non c'è
+ * una mappa di campi, e il documento resterebbe vuoto.
+ */
+const TYPE_OF: Record<string, string> = {
+  'fattura-nativa.pdf': 'accounting.fattura',
+  'fattura-righe.pdf': 'accounting.fattura',
+  'fattura-riepilogo-iva.pdf': 'accounting.fattura',
+  'contratto-consulenza.docx': 'contracts_general.contratto_consulenza',
+  'durc-scansionato.pdf': 'payroll_contributions.durc',
+  'promemoria-ignoto.pdf': 'payments_treasury.richiesta_pagamento'
+}
 
 /**
  * Il ciclo intero su documenti veri: si annota, si misura, si corregge la mappa dal
@@ -58,31 +64,21 @@ function tempDir(): string {
 }
 
 async function setup() {
-  const registry = testRegistry()
   const db = openDatabase({ file: ':memory:' })
+  let registry: ReturnType<typeof createReloadableExtractionRegistry>
   const repo = createRepository(db, {
-    requiredFields: (type) => registry.requiredFor(type),
-    typeLabel: (type) => registry.label(type)
+    requiredFields: (type) => (type ? (registry.baseProfile(type)?.required_fields ?? []) : []),
+    typeLabel: (type) => (type ? (registry.baseProfile(type)?.canonical_name ?? null) : null)
   })
-  const extractionRegistryV2 = createReloadableExtractionRegistryV2(
-    REGISTRY_V2_DIR,
-    REGISTRY_DIR,
-    () => repo.profileMap.overlay()
-  )
-  const process = createDocumentProcessor({
-    repo,
-    registry,
-    engines: { classifier: 'v2', extraction: 'v2' },
-    classifierConfigV2: testClassifierConfigV2(),
-    extractionRegistryV2,
-    legacyFieldMap: testLegacyFieldMap()
-  })
+  registry = createReloadableExtractionRegistry(REGISTRY_DIR, () => repo.profileMap.overlay())
+  const extractionRegistry = registry
+  const process = createDocumentProcessor({ repo, extractionRegistry })
 
   const deps: RefinementDeps = {
     repo,
-    registry: extractionRegistryV2,
-    registryDirectory: REGISTRY_V2_DIR,
-    typeLabel: (type) => registry.label(type),
+    registry: extractionRegistry,
+    registryDirectory: REGISTRY_DIR,
+    typeLabel: (type) => registry.baseProfile(type)?.canonical_name ?? null,
     process
   }
 
@@ -95,6 +91,7 @@ async function setup() {
       receivedAt: '2026-09-10T08:00:00.000Z'
     })
     repo.documents.setCachedPath(id, fixture(filename))
+    if (TYPE_OF[filename]) repo.documents.setType(id, TYPE_OF[filename]!, null)
     await process({ documentId: id, cachedPath: fixture(filename), mime: PDF, filename })
     return id
   }
@@ -145,10 +142,10 @@ describe('segnare non utile un campo che quel tipo non ha', () => {
       signal: 'NEVER_USED',
       documents: 2,
       filled: 0,
-      role: 'conditional'
+      role: 'optional'
     })
 
-    const before = readFileSync(join(REGISTRY_V2_DIR, PROFILES_FILE), 'utf8')
+    const before = readFileSync(join(REGISTRY_DIR, DOCUMENT_FIELDS_FILE), 'utf8')
 
     const action = editProfileMap(deps, {
       kind: 'REMOVE_FIELD',
@@ -162,12 +159,12 @@ describe('segnare non utile un campo che quel tipo non ha', () => {
     expect(action.reason).toMatchObject({ documents: 2, confirmed: 0, corrected: 0, manual: 0 })
 
     // Il file del registry non è stato toccato: la decisione sta nel database.
-    expect(readFileSync(join(REGISTRY_V2_DIR, PROFILES_FILE), 'utf8')).toBe(before)
+    expect(readFileSync(join(REGISTRY_DIR, DOCUMENT_FIELDS_FILE), 'utf8')).toBe(before)
     expect(repo.profileMap.forType(FATTURA)).toEqual({ 'procurement.cig': 'excluded' })
 
     // Ma il motore vede già la mappa corretta, senza rileggere niente.
-    expect(deps.registry.profile(FATTURA)!.conditional_fields).not.toContain('procurement.cig')
-    expect(deps.registry.baseProfile(FATTURA)!.conditional_fields).toContain('procurement.cig')
+    expect(deps.registry.profile(FATTURA)!.optional_fields).not.toContain('procurement.cig')
+    expect(deps.registry.baseProfile(FATTURA)!.optional_fields).toContain('procurement.cig')
 
     // E il campo resta in elenco come decisione presa, non sparisce.
     expect(measured('procurement.cig')).toMatchObject({
@@ -214,7 +211,7 @@ describe('aggiungere un campo che nessun documento ha mai portato', () => {
         kind: 'ADD_FIELD',
         documentType: FATTURA,
         fieldId: 'campo.inventato',
-        role: 'core'
+        role: 'optional'
       })
     ).toThrow(/non è un campo dell'ontologia/)
     expect(deps.repo.profileMap.listActions()).toEqual([])
@@ -353,12 +350,12 @@ describe('uno o più valori', () => {
       kind: 'SET_ROLE',
       documentType: FATTURA,
       fieldId: 'bank.iban',
-      role: 'core'
+      role: 'optional'
     })
 
     revertProfileAction(deps, cardinality.id)
     expect(repo.profileMap.cardinalityForType(FATTURA)).toEqual({})
-    expect(repo.profileMap.forType(FATTURA)).toEqual({ 'bank.iban': 'core' })
+    expect(repo.profileMap.forType(FATTURA)).toEqual({ 'bank.iban': 'optional' })
 
     db.close()
   })
@@ -394,8 +391,8 @@ describe('annullare una correzione', () => {
     expect(revert.kind).toBe('REVERT')
     expect(revert.revertsId).toBe(removed.id)
     expect(repo.profileMap.forType(FATTURA)).toEqual({})
-    expect(deps.registry.profile(FATTURA)!.conditional_fields).toContain('procurement.cig')
-    expect(measured('procurement.cig')).toMatchObject({ role: 'conditional', decision: null })
+    expect(deps.registry.profile(FATTURA)!.optional_fields).toContain('procurement.cig')
+    expect(measured('procurement.cig')).toMatchObject({ role: 'optional', decision: null })
 
     // L'azione annullata resta in cronologia, marcata.
     expect(repo.profileMap.getAction(removed.id)!.revertedAt).not.toBeNull()
@@ -410,15 +407,15 @@ describe('annullare una correzione', () => {
     const first = editProfileMap(deps, {
       kind: 'SET_ROLE',
       documentType: FATTURA,
-      fieldId: 'issuer.vat_number',
+      fieldId: 'money.taxable',
       role: 'required'
     })
-    expect(deps.registry.profile(FATTURA)!.required_fields).toContain('issuer.vat_number')
+    expect(deps.registry.profile(FATTURA)!.required_fields).toContain('money.taxable')
 
     revertProfileAction(deps, first.id)
 
     expect(repo.profileMap.forType(FATTURA)).toEqual({})
-    expect(deps.registry.profile(FATTURA)!.core_fields).toContain('issuer.vat_number')
+    expect(deps.registry.profile(FATTURA)!.optional_fields).toContain('money.taxable')
 
     db.close()
   })
@@ -443,7 +440,7 @@ describe('annullare una correzione', () => {
       kind: 'ADD_FIELD',
       documentType: FATTURA,
       fieldId: 'procurement.cup',
-      role: 'core'
+      role: 'optional'
     })
     expect(() => revertProfileAction(deps, older.id)).toThrow(/decisione più recente/)
 
@@ -482,7 +479,7 @@ describe('la cronologia', () => {
 describe('l’export della mappa corretta', () => {
   it('scrive i quattro file nella cartella scelta e lascia intatto il registry', async () => {
     const { deps, db } = await annotated()
-    const before = readFileSync(join(REGISTRY_V2_DIR, HINTS_FILE), 'utf8')
+    const before = readFileSync(join(REGISTRY_DIR, FIELDS_FILE), 'utf8')
 
     editProfileMap(deps, {
       kind: 'REMOVE_FIELD',
@@ -511,14 +508,14 @@ describe('l’export della mappa corretta', () => {
     expect(bundle.types).toBe(1)
     expect(bundle.edits).toBe(2)
 
-    const profiles = JSON.parse(
-      readFileSync(join(directory, PROFILES_FILE), 'utf8')
-    ) as ProfilesFile
-    expect(profiles.profiles[FATTURA]!.conditional_fields).not.toContain('procurement.cig')
-    expect(profiles.profiles[FATTURA]!.x_reviewer_excluded_fields).toEqual(['procurement.cig'])
+    const map = JSON.parse(
+      readFileSync(join(directory, DOCUMENT_FIELDS_FILE), 'utf8')
+    ) as DocumentFieldsFile
+    expect(map.document_types[FATTURA]!.optional_fields).not.toContain('procurement.cig')
+    expect(map.document_types[FATTURA]!.x_reviewer_excluded_fields).toEqual(['procurement.cig'])
 
-    const hints = JSON.parse(readFileSync(join(directory, HINTS_FILE), 'utf8')) as HintsFile
-    expect(hints.hints['issuer.tax_code']!.labels).toContain('Partita IVA')
+    const catalog = JSON.parse(readFileSync(join(directory, FIELDS_FILE), 'utf8')) as FieldsFile
+    expect(catalog.fields['issuer.tax_code']!.label_aliases_it).toContain('Partita IVA')
 
     const schemas = JSON.parse(readFileSync(join(directory, SCHEMAS_FILE), 'utf8')) as Record<
       string,
@@ -543,7 +540,7 @@ describe('l’export della mappa corretta', () => {
     expect(changelog.actions.map((entry) => entry.kind)).toEqual(['REMOVE_FIELD', 'ADD_HINT_LABEL'])
 
     // Il registry del repo non è stato toccato, e l'export è finito in cronologia.
-    expect(readFileSync(join(REGISTRY_V2_DIR, HINTS_FILE), 'utf8')).toBe(before)
+    expect(readFileSync(join(REGISTRY_DIR, FIELDS_FILE), 'utf8')).toBe(before)
     expect(deps.repo.profileMap.listActions()[0]!.kind).toBe('EXPORT')
 
     db.close()

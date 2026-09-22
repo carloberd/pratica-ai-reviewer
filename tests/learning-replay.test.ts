@@ -1,20 +1,13 @@
 import { afterAll, describe, expect, it } from 'vitest'
 import { openDatabase } from '../src/main/db'
 import { createRepository } from '../src/main/db/repository'
-import { createReloadableExtractionRegistryV2 } from '../src/main/extract/v2/profile-loader'
+import { createReloadableExtractionRegistry } from '../src/main/extract/v2/profile-loader'
 import { updateFieldValue } from '../src/main/field-edits'
 import { replayReviews } from '../src/main/learning-replay'
 import { createDocumentProcessor } from '../src/main/pipeline'
 import { assignDocumentType } from '../src/main/reprocess'
 import { submitReview } from '../src/main/review'
-import {
-  fixture,
-  REGISTRY_DIR,
-  REGISTRY_V2_DIR,
-  testClassifierConfigV2,
-  testLegacyFieldMap,
-  testRegistry
-} from './helpers/registry'
+import { fixture, REGISTRY_DIR } from './helpers/registry'
 
 /**
  * Il ripasso delle revisioni già chiuse.
@@ -43,26 +36,16 @@ afterAll(() => {
 })
 
 function setup() {
-  const registry = testRegistry()
   const db = openDatabase({ file: ':memory:' })
   closers.push(() => db.close())
+  let registry: ReturnType<typeof createReloadableExtractionRegistry>
   const repo = createRepository(db, {
-    requiredFields: (type) => registry.requiredFor(type),
-    typeLabel: (type) => registry.label(type)
+    requiredFields: (type) => (type ? (registry.baseProfile(type)?.required_fields ?? []) : []),
+    typeLabel: (type) => (type ? (registry.baseProfile(type)?.canonical_name ?? null) : null)
   })
-  const extractionRegistryV2 = createReloadableExtractionRegistryV2(
-    REGISTRY_V2_DIR,
-    REGISTRY_DIR,
-    () => repo.profileMap.overlay()
-  )
-  const process = createDocumentProcessor({
-    repo,
-    registry,
-    engines: { classifier: 'v2', extraction: 'v2' },
-    classifierConfigV2: testClassifierConfigV2(),
-    extractionRegistryV2,
-    legacyFieldMap: testLegacyFieldMap()
-  })
+  registry = createReloadableExtractionRegistry(REGISTRY_DIR, () => repo.profileMap.overlay())
+  const extractionRegistry = registry
+  const process = createDocumentProcessor({ repo, extractionRegistry })
   const ids = new Map<Month, string>()
 
   async function open(month: Month) {
@@ -99,14 +82,14 @@ function setup() {
       action: 'SAVE',
       actor: ACTOR,
       now,
-      registry: extractionRegistryV2
+      registry: extractionRegistry
     })
   }
 
   const replay = (now: Date) =>
-    replayReviews({ repo, actor: CHI_RIPASSA, registry: extractionRegistryV2, now })
+    replayReviews({ repo, actor: CHI_RIPASSA, registry: extractionRegistry, now })
 
-  return { repo, open, idOf, reviewAndSave, replay, extractionRegistryV2 }
+  return { repo, open, idOf, reviewAndSave, replay, extractionRegistry }
 }
 
 const NOW = new Date('2026-09-18T09:00:00.000Z')

@@ -9,7 +9,18 @@ import {
   type NormalizedTemplateSignature,
   templateSignatureSimilarity
 } from '@shared/template-fingerprint'
-import type { TemplateMemoryV2 } from './registry/v2/classify-v2'
+
+/**
+ * Un modulo riconosciuto, col tipo con cui le revisioni l'hanno chiuso. Era quello che il
+ * classificatore leggeva per decidere; ora nessuno decide il tipo al posto del revisore, e
+ * resta l'audit: il run dice quali moduli erano già passati di qui.
+ */
+export interface TemplateMemory {
+  documentType: string
+  templateFingerprint: string
+  /** 1 se l'impronta è identica, altrimenti quanto le testate si somigliano. */
+  similarity: number
+}
 
 /**
  * La memoria dei moduli: un template che le revisioni hanno chiuso sempre con lo stesso tipo.
@@ -57,7 +68,7 @@ export function templateMemoryFor(
   rules: LearningRule[],
   templateFingerprint: string | null,
   templateSignature?: NormalizedTemplateSignature | null
-): Array<TemplateMemoryV2 & { ruleId: string }> {
+): Array<TemplateMemory & { ruleId: string }> {
   if (!templateFingerprint && !templateSignature) return []
   return rules.flatMap((rule) => {
     if (rule.kind !== 'TEMPLATE_TYPE' || rule.status !== 'ACTIVE') return []

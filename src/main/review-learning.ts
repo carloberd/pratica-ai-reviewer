@@ -25,7 +25,7 @@ import type { ReviewAction, ReviewDocument } from '@shared/types'
 import type { LearningWriter } from './db/dao/learning'
 import type { PageInput } from './db/dao/pages'
 import type { Repository } from './db/repository'
-import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
+import type { ExtractionRegistry } from './extract/v2/profile-loader'
 import { inferExactValuePick } from './inferred-pick'
 import { anchorRuleInputs, deriveAnchor, documentEntityWords } from './learning-anchors'
 import { templateTypeRuleInput } from './learning-templates'
@@ -62,7 +62,7 @@ export interface LearnFromReviewInput {
   /** Chi ha salvato: l'account collegato. `null` se non si sa, e allora non si registra. */
   actor: string | null
   /** Senza registry v2 non si ricavano etichette: gli eventi si registrano lo stesso. */
-  registry?: ExtractionRegistryV2 | undefined
+  registry?: ExtractionRegistry | undefined
   policy?: LearningPolicy
   /**
    * La revisione si ripassa invece di chiuderla adesso: `at` resta il momento in cui il

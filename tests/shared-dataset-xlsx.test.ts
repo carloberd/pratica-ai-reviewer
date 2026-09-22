@@ -291,7 +291,7 @@ describe('righe dell’export XLSX', () => {
         document_id: 'doc-1',
         field_name: 'line_items',
         label: 'Righe documento',
-        role: 'core',
+        role: 'optional',
         cardinality: 'many',
         item_index: null,
         value_predicted: null,

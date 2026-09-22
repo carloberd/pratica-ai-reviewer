@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { type Db, migrate, openDatabase } from '../src/main/db'
 import { MIGRATIONS } from '../src/main/db/migrations'
 import { databaseAt } from './helpers/db'
-import { REGISTRY_V2_DIR, testLegacyFieldMap } from './helpers/registry'
+import { REGISTRY_DIR, testLegacyFieldMap } from './helpers/registry'
 
 describe('migrazioni', () => {
   it('carica i file .sql numerati in ordine', () => {
@@ -167,7 +167,8 @@ describe('migrazioni', () => {
       '0016',
       '0017',
       '0018',
-      '0019'
+      '0019',
+      '0020'
     ])
 
     expect(
@@ -204,7 +205,8 @@ describe('migrazioni', () => {
       '0016',
       '0017',
       '0018',
-      '0019'
+      '0019',
+      '0020'
     ])
 
     // NULL = da calcolare al primo export, non «documento senza impronta».
@@ -233,7 +235,8 @@ describe('migrazioni', () => {
       '0016',
       '0017',
       '0018',
-      '0019'
+      '0019',
+      '0020'
     ])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_overrides').get()).toEqual({ n: 0 })
@@ -269,7 +272,8 @@ describe('migrazioni', () => {
       '0016',
       '0017',
       '0018',
-      '0019'
+      '0019',
+      '0020'
     ])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_cardinality_overrides').get()).toEqual({
@@ -312,7 +316,8 @@ describe('migrazioni', () => {
       '0016',
       '0017',
       '0018',
-      '0019'
+      '0019',
+      '0020'
     ])
 
     expect(db.prepare('SELECT origin, method, line_start, char_start FROM evidence').get()).toEqual(
@@ -349,7 +354,8 @@ describe('migrazioni', () => {
       '0016',
       '0017',
       '0018',
-      '0019'
+      '0019',
+      '0020'
     ])
 
     expect(db.prepare('SELECT id, mode FROM learning_state').all()).toEqual([
@@ -377,7 +383,17 @@ describe('migrazioni', () => {
 
   it('la 0012 lega evidenze ed eventi alle regole, e conta una prova per documento', () => {
     const db = databaseAt('0011')
-    expect(migrate(db)).toEqual(['0012', '0013', '0014', '0015', '0016', '0017', '0018', '0019'])
+    expect(migrate(db)).toEqual([
+      '0012',
+      '0013',
+      '0014',
+      '0015',
+      '0016',
+      '0017',
+      '0018',
+      '0019',
+      '0020'
+    ])
     const columns = (table: string) =>
       (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map(
         (c) => c.name
@@ -423,7 +439,7 @@ describe('migrazioni', () => {
     rule('template-attiva', 'TEMPLATE', 'ACTIVE', 'aabbccdd11223344')
     rule('classe', 'CLASS', 'CANDIDATE', null)
 
-    expect(migrate(db)).toEqual(['0013', '0014', '0015', '0016', '0017', '0018', '0019'])
+    expect(migrate(db)).toEqual(['0013', '0014', '0015', '0016', '0017', '0018', '0019', '0020'])
 
     // Le impronte del vecchio algoritmo spariscono: l'elaborazione e l'export le rifanno.
     expect(db.prepare('SELECT template_fingerprint FROM documents').get()).toEqual({
@@ -468,7 +484,7 @@ describe('migrazioni', () => {
       "INSERT INTO learning_events (id, at, actor, document_id, kind, outcome, learner_version) VALUES ('e', '2026-09-15', 'chi@esempio.it', 'd', 'FIELD_VALUE', 'FILLED', 'v')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0014', '0015', '0016', '0017', '0018', '0019'])
+    expect(migrate(db)).toEqual(['0014', '0015', '0016', '0017', '0018', '0019', '0020'])
 
     // Gli eventi di prima sono stati registrati sul momento: non hanno una data di ripasso.
     expect(db.prepare('SELECT at, replayed_at FROM learning_events').get()).toEqual({
@@ -487,7 +503,7 @@ describe('migrazioni', () => {
       "INSERT INTO evidence (id, document_id, page, text, confidence, origin, method) VALUES ('e', 'd', 1, '29 O7 2026', 1, 'REVIEWER', 'AREA_OCR')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0015', '0016', '0017', '0018', '0019'])
+    expect(migrate(db)).toEqual(['0015', '0016', '0017', '0018', '0019', '0020'])
 
     // Una selezione registrata prima di questa versione era per forza il valore salvato:
     // il testo non era stato sistemato, o la selezione non sarebbe qui.
@@ -508,7 +524,7 @@ describe('migrazioni', () => {
        VALUES ('e', '2026-01-01', 'chi', 'd', 'DOCUMENT_TYPE', 'CONFIRMED', 'local-learner/0.1.0', 'abc123')`
     ).run()
 
-    expect(migrate(db)).toEqual(['0016', '0017', '0018', '0019'])
+    expect(migrate(db)).toEqual(['0016', '0017', '0018', '0019', '0020'])
 
     // L'impronta esatta non si tocca: le regole scritte prima continuano a valere per
     // confronto esatto, e la firma manca semplicemente su quello che c'era già.
@@ -537,7 +553,7 @@ describe('migrazioni', () => {
       "INSERT INTO evidence (id, document_id, page, text, confidence, origin, method) VALUES ('revisore', 'd', 1, '12/09/2026', 1, 'REVIEWER', 'TEXT_SELECTION')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0017', '0018', '0019'])
+    expect(migrate(db)).toEqual(['0017', '0018', '0019', '0020'])
 
     // Come sia stato letto un valore prima di qui non è ricostruibile: la colonna resta
     // vuota, e vuota vuol dire «non registrato», non «letto in nessun modo».
@@ -604,7 +620,8 @@ describe('migrazioni', () => {
       '0016',
       '0017',
       '0018',
-      '0019'
+      '0019',
+      '0020'
     ])
 
     // Chi ha chiuso un documento prima di questa versione non ha una nota da recuperare:
@@ -679,7 +696,8 @@ describe('migrazione 0004 su un database esistente', () => {
       '0016',
       '0017',
       '0018',
-      '0019'
+      '0019',
+      '0020'
     ])
 
     const rows = db
@@ -767,23 +785,45 @@ describe('migrazione 0004 su un database esistente', () => {
     db.close()
   })
 
-  it('le UPDATE della migrazione coprono esattamente la mappa legacy', () => {
-    const sql = MIGRATIONS.find((m) => m.version === '0004')!.sql
-    const renames = Object.fromEntries(
-      [
-        ...sql.matchAll(
-          /UPDATE fields SET name = '([^']+)', label = '(?:[^']|'')*' WHERE name = '([^']+)'/g
-        )
-      ].map((match) => [match[2], match[1]])
-    )
-    expect(renames).toEqual(testLegacyFieldMap())
+  it('le UPDATE delle migrazioni portano i nomi v1 dove li porta la mappa legacy', () => {
+    const renamesIn = (version: string): Record<string, string> =>
+      Object.fromEntries(
+        [
+          ...MIGRATIONS.find((m) => m.version === version)!.sql.matchAll(
+            /UPDATE fields SET name = '([^']+)', label = '(?:[^']|'')*' WHERE name = '([^']+)'/g
+          )
+        ].map((match) => [match[2], match[1]])
+      )
 
-    // Le etichette sono quelle dell'ontologia.
-    const ontology = JSON.parse(
-      readFileSync(join(REGISTRY_V2_DIR, 'field_ontology_v2.json'), 'utf8')
-    ).fields as Record<string, { label_it: string }>
-    for (const match of sql.matchAll(/SET name = '([^']+)', label = '((?:[^']|'')*)'/g)) {
-      expect(match[2]!.replace(/''/g, "'")).toBe(ontology[match[1]!]!.label_it)
+    // La 0004 ha portato i nomi v1 sugli id di allora; la 0020 ha spostato quelli che il
+    // Brain MVP ha rinominato. Il risultato delle due è la mappa legacy di oggi.
+    const first = renamesIn('0004')
+    const then = renamesIn('0020')
+    const settled = Object.fromEntries(
+      Object.entries(first).map(([legacy, id]) => [legacy, then[id] ?? id])
+    )
+    expect(settled).toEqual(testLegacyFieldMap())
+
+    // Le etichette sono quelle dell'ontologia di adesso, o di un campo che non c'è più
+    // perché la 0020 lo ha spostato.
+    const ontology = (
+      JSON.parse(readFileSync(join(REGISTRY_DIR, 'fields.json'), 'utf8')) as {
+        fields: Record<string, { label_it: string }>
+      }
+    ).fields
+    for (const version of ['0004', '0020']) {
+      const sql = MIGRATIONS.find((m) => m.version === version)!.sql
+      for (const match of sql.matchAll(/SET name = '([^']+)', label = '((?:[^']|'')*)'/g)) {
+        const field = ontology[match[1]!]
+        if (!field) {
+          expect(
+            then[match[1] as string],
+            `${match[1]} non è nell'ontologia e la 0020 non lo sposta`
+          ).toBeTruthy()
+          continue
+        }
+        expect(match[2]!.replace(/''/g, "'")).toBe(field.label_it)
+      }
     }
   })
 })
