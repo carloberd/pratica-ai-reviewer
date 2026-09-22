@@ -1,18 +1,13 @@
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import type { ProfileOverlay } from '@shared/profile-overlay'
 import { app, BrowserWindow, dialog } from 'electron'
 import { createAuthService } from './auth/service'
-import { type EngineSelection, loadEngines } from './config'
 import { openDatabase } from './db'
 import { createRepository } from './db/repository'
 import { logError } from './errors'
+import { LEGACY_FIELD_MAP } from './extract/legacy-field-map'
 import { createOcrService } from './extract/ocr'
-import {
-  createReloadableExtractionRegistryV2,
-  loadLegacyFieldMap,
-  type ReloadableExtractionRegistryV2
-} from './extract/v2/profile-loader'
+import { createReloadableExtractionRegistry } from './extract/v2/profile-loader'
 import { validateFieldValue } from './extract/v2/validators'
 import { registerIpcHandlers } from './ipc'
 import {
@@ -20,13 +15,10 @@ import {
   databaseFile,
   ocrWorkerPath,
   registryDir,
-  registryV2Dir,
   tessdataCacheDir,
   tessdataDir
 } from './paths'
 import { createDocumentProcessor, EXTRACTION_ENGINE_V2_VERSION } from './pipeline'
-import { createRegistry } from './registry'
-import { loadClassifierConfigV2 } from './registry/v2/config'
 import { needsV2Extraction, reprocessCachedDocuments } from './reprocess'
 import { createMainWindow } from './window'
 
@@ -45,23 +37,24 @@ function start(): void {
 
   mkdirSync(cacheDir(), { recursive: true })
 
-  const engines = loadEngines()
-  const registry = createRegistry(registryDir())
   const db = openDatabase({ file: databaseFile() })
   teardown.push(() => db.close())
 
   const repo = createRepository(db, {
-    requiredFields: (documentType) => registry.requiredFor(documentType),
-    typeLabel: (documentType) => registry.label(documentType),
-    // `v2` si legge solo quando la revisione apre un documento, dopo l'avvio.
+    requiredFields: (documentType) =>
+      documentType ? (registry.baseProfile(documentType)?.required_fields ?? []) : [],
+    typeLabel: (documentType) =>
+      documentType ? (registry.baseProfile(documentType)?.canonical_name ?? null) : null,
     validateField: (documentType, fieldName, value) =>
-      validateFieldValue(v2.extractionRegistryV2, documentType, fieldName, value)
+      validateFieldValue(registry, documentType, fieldName, value)
   })
 
-  // Il registry v2 arriva dopo il database perché le correzioni del revisore stanno lì:
-  // i profili del pack restano quelli, e quello che il motore legge è il pack con sopra
-  // le decisioni prese dalla scheda «Campi da estrarre» della revisione.
-  const v2 = loadRegistryV2(engines, () => repo.profileMap.overlay())
+  // Il registry arriva dopo il database perché le correzioni del revisore stanno lì: i
+  // due file restano quelli, e quello che il motore legge è il registry con sopra le
+  // decisioni prese dalla scheda «Campi da estrarre» della revisione.
+  const registry = createReloadableExtractionRegistry(registryDir(), () =>
+    repo.profileMap.overlay()
+  )
 
   mkdirSync(tessdataCacheDir(), { recursive: true })
   const ocr = createOcrService({
@@ -71,12 +64,12 @@ function start(): void {
   })
   teardown.push(() => ocr.dispose())
 
-  const processDocument = createDocumentProcessor({ repo, registry, ocr, engines, ...v2 })
+  const processDocument = createDocumentProcessor({ repo, ocr, extractionRegistry: registry })
 
   registerIpcHandlers({
     repo,
     auth: createAuthService(),
-    registryTypes: () => registry.types(),
+    registryTypes: () => registry.documentTypes(),
     process: processDocument,
     ocr,
     sender: () => mainWindow?.webContents ?? null,
@@ -84,91 +77,47 @@ function start(): void {
       manifest: () => ({
         app: { name: app.getName(), version: app.getVersion() },
         engines: {
-          classifier: engines.classifier,
-          extraction: engines.extraction,
-          classifierVersion: v2.classifierConfigV2?.version ?? null,
-          extractionEngineVersion:
-            engines.extraction === 'v2' ? EXTRACTION_ENGINE_V2_VERSION : null,
-          schemaVersion: v2.extractionRegistryV2?.schemaVersion() ?? null
+          extractionEngineVersion: EXTRACTION_ENGINE_V2_VERSION,
+          schemaVersion: registry.schemaVersion()
         }
       }),
       choosePath: (defaultName) => chooseSavePath('Esporta il dataset annotato', defaultName),
       chooseXlsxPath: (defaultName) =>
         chooseSavePath('Esporta il dataset annotato in Excel', defaultName)
     },
-    learning: { legacyFieldMap: v2.legacyFieldMap ?? {} },
-    // Senza profili v2 non c'è una mappa da correggere: la scheda resta, e i canali
-    // rispondono che non è disponibile su questa istanza.
-    ...(v2.extractionRegistryV2
-      ? {
-          profiles: {
-            refinement: {
-              registry: v2.extractionRegistryV2,
-              registryDirectory: registryV2Dir(),
-              typeLabel: (documentType: string) => registry.label(documentType)
-            },
-            manifest: () => ({
-              app: { name: app.getName(), version: app.getVersion() },
-              schemaVersion: v2.extractionRegistryV2?.schemaVersion() ?? null
-            }),
-            chooseDirectory: (defaultName: string) =>
-              chooseExportFolder('Dove salvare la mappa corretta', defaultName)
-          }
-        }
-      : {})
+    learning: { legacyFieldMap: LEGACY_FIELD_MAP },
+    profiles: {
+      refinement: {
+        registry,
+        registryDirectory: registryDir(),
+        typeLabel: (documentType: string) =>
+          registry.baseProfile(documentType)?.canonical_name ?? null
+      },
+      manifest: () => ({
+        app: { name: app.getName(), version: app.getVersion() },
+        schemaVersion: registry.schemaVersion()
+      }),
+      chooseDirectory: (defaultName: string) =>
+        chooseExportFolder('Dove salvare la mappa corretta', defaultName)
+    }
   })
 
   mainWindow = createMainWindow()
 
-  // I documenti in cache estratti prima del v2 si rielaborano in sottofondo, uno per
-  // volta: la finestra è già utilizzabile e i dati si aggiornano man mano.
-  if (v2.extractionRegistryV2) {
-    void reprocessCachedDocuments({
-      repo,
-      process: processDocument,
-      isStale: needsV2Extraction(repo, v2.extractionRegistryV2)
-    }).catch((error) => logError('app.reprocess', error))
-  }
+  // I documenti in cache estratti con una versione precedente del motore si rielaborano
+  // in sottofondo, uno per volta: la finestra è già utilizzabile e i dati si aggiornano
+  // man mano.
+  void reprocessCachedDocuments({
+    repo,
+    process: processDocument,
+    isStale: needsV2Extraction(repo, registry)
+  }).catch((error) => logError('app.reprocess', error))
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = createMainWindow()
     }
   })
-}
-
-/**
- * Carica solo quello che i motori scelti usano: con `v1` su entrambi l'app parte anche
- * se i JSON v2 sono assenti o rotti, ed è proprio lo scopo della scappatoia. La mappa dei
- * nomi legacy serve comunque a ritrovare le correzioni cambiando motore, ma col v1 un
- * file illeggibile non deve impedire l'avvio.
- */
-function loadRegistryV2(
-  engines: EngineSelection,
-  overlay: () => ProfileOverlay
-): {
-  classifierConfigV2: ReturnType<typeof loadClassifierConfigV2> | undefined
-  extractionRegistryV2: ReloadableExtractionRegistryV2 | undefined
-  legacyFieldMap: Record<string, string>
-} {
-  const usesV2 = engines.classifier === 'v2' || engines.extraction === 'v2'
-  let legacyFieldMap: Record<string, string> = {}
-  try {
-    legacyFieldMap = loadLegacyFieldMap(registryV2Dir())
-  } catch (error) {
-    if (usesV2) throw error
-    logError('app.start', error)
-  }
-
-  return {
-    classifierConfigV2:
-      engines.classifier === 'v2' ? loadClassifierConfigV2(registryV2Dir()) : undefined,
-    extractionRegistryV2:
-      engines.extraction === 'v2'
-        ? createReloadableExtractionRegistryV2(registryV2Dir(), registryDir(), overlay)
-        : undefined,
-    legacyFieldMap
-  }
 }
 
 /**

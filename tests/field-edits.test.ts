@@ -37,7 +37,7 @@ function fieldsFor(lines: string[], evidence: string[] = []): FieldInput[] {
       value: null,
       confidence: 0.85,
       cardinality: 'many',
-      role: 'core',
+      role: 'optional',
       items: lines.map((value, itemIndex) => ({
         itemIndex,
         value,
@@ -478,7 +478,7 @@ describe('un valore dedotto, dal database alla revisione', () => {
     value: '2026-05-13',
     confidence: 0.6,
     semanticType: 'date',
-    role: 'core',
+    role: 'optional',
     reviewStatus: 'NEEDS_REVIEW',
     computed: true
   }

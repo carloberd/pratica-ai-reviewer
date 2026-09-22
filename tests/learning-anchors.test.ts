@@ -18,10 +18,10 @@ import {
 import { type PageLine, pageText } from '../src/shared/pick-locate'
 import { normalizedTemplateSignature } from '../src/shared/template-fingerprint'
 import type { PickLocation } from '../src/shared/types'
-import { testRegistryV2 } from './helpers/registry'
+import { testExtractionRegistry } from './helpers/registry'
 import { item, listField, reviewDocument, scalarField } from './helpers/review-document'
 
-const registry = testRegistryV2()
+const registry = testExtractionRegistry()
 const spec = (fieldId: string) => registry.field(fieldId)!
 
 /** La posizione di `value` sulla riga `line`, come la salverebbe una selezione. */

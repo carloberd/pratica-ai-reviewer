@@ -10,13 +10,20 @@ import { createDocumentProcessor } from '../src/main/pipeline'
 import { submitReview } from '../src/main/review'
 import { collectXlsxRows, writeXlsxFile } from '../src/main/xlsx-export'
 import { XLSX_DOCUMENT_COLUMNS, XLSX_FIELD_COLUMNS } from '../src/shared/dataset-xlsx'
-import {
-  fixture,
-  testClassifierConfigV2,
-  testLegacyFieldMap,
-  testRegistry,
-  testRegistryV2
-} from './helpers/registry'
+import { fixture, testExtractionRegistry } from './helpers/registry'
+
+/**
+ * Il tipo di una fixture, come lo sceglierebbe il revisore aprendola: senza tipo non c'è
+ * una mappa di campi, e il documento resterebbe vuoto.
+ */
+const TYPE_OF: Record<string, string> = {
+  'fattura-nativa.pdf': 'accounting.fattura',
+  'fattura-righe.pdf': 'accounting.fattura',
+  'fattura-riepilogo-iva.pdf': 'accounting.fattura',
+  'contratto-consulenza.docx': 'contracts_general.contratto_consulenza',
+  'durc-scansionato.pdf': 'payroll_contributions.durc',
+  'promemoria-ignoto.pdf': 'payments_treasury.richiesta_pagamento'
+}
 
 /**
  * End-to-end dell'export XLSX: documenti veri elaborati dalla pipeline su un database di
@@ -29,27 +36,13 @@ const workdir = mkdtempSync(join(tmpdir(), 'reviewer-xlsx-'))
 afterAll(() => rmSync(workdir, { recursive: true, force: true }))
 
 function setup() {
-  const registry = testRegistry()
+  const registry = testExtractionRegistry()
   const db = openDatabase({ file: ':memory:' })
   const repo = createRepository(db, {
-    requiredFields: (type) => registry.requiredFor(type),
-    typeLabel: (type) => registry.label(type)
+    requiredFields: (type) => (type ? (registry.baseProfile(type)?.required_fields ?? []) : []),
+    typeLabel: (type) => (type ? (registry.baseProfile(type)?.canonical_name ?? null) : null)
   })
-  const v2 = createDocumentProcessor({
-    repo,
-    registry,
-    engines: { classifier: 'v2', extraction: 'v2' },
-    classifierConfigV2: testClassifierConfigV2(),
-    extractionRegistryV2: testRegistryV2(),
-    legacyFieldMap: testLegacyFieldMap()
-  })
-  // Il motore vecchio non calcola né secondo candidato né margine: serve un documento
-  // che ci sia passato per provare che le due colonne restano vuote.
-  const v1 = createDocumentProcessor({
-    repo,
-    registry,
-    engines: { classifier: 'v1', extraction: 'v1' }
-  })
+  const v2 = createDocumentProcessor({ repo, extractionRegistry: testExtractionRegistry() })
 
   async function open(
     filename: string,
@@ -63,6 +56,7 @@ function setup() {
       receivedAt: '2026-09-10T08:00:00.000Z'
     })
     repo.documents.setCachedPath(id, path)
+    if (TYPE_OF[filename]) repo.documents.setType(id, TYPE_OF[filename]!, null)
     const input = { documentId: id, cachedPath: path, mime: PDF, filename }
     await (options.process ?? v2)(input)
     return { id, rerun: () => (options.process ?? v2)(input) }
@@ -71,7 +65,7 @@ function setup() {
   const field = (id: string, name: string) =>
     repo.getReviewDocument(id)!.fields.find((candidate) => candidate.name === name)!
 
-  return { db, repo, open, field, v1 }
+  return { db, repo, open, field }
 }
 
 /** Le righe di un foglio come oggetti `colonna -> valore`, senza l'intestazione. */
@@ -94,7 +88,7 @@ async function readWorkbook(path: string) {
 
 describe('export XLSX del dataset annotato', () => {
   it('scrive un file che si riapre, con i due fogli e le colonne richieste', async () => {
-    const { db, repo, open, field, v1 } = setup()
+    const { db, repo, open, field } = setup()
 
     // 1. Fattura con righe ripetute: si corregge una riga, se ne toglie un'altra, e si
     // cambia un campo singolo.
@@ -146,8 +140,9 @@ describe('export XLSX del dataset annotato', () => {
     })
     submitReview(repo, { documentId: twin.id, action: 'SAVE' })
 
-    // 3. Documento passato dal motore v1: niente run, quindi niente runner-up né margine.
-    const { id: legacyId } = await open('fattura-nativa.pdf', { process: v1 })
+    // 3. Documento elaborato prima che ci fossero i run: niente runner-up né margine.
+    const { id: legacyId } = await open('fattura-nativa.pdf')
+    db.prepare('DELETE FROM extraction_runs WHERE document_id = ?').run(legacyId)
     submitReview(repo, { documentId: legacyId, action: 'SAVE' })
 
     // 4. Documento la cui copia locale non c'è più: esce senza impronta, non in errore.
@@ -199,13 +194,11 @@ describe('export XLSX del dataset annotato', () => {
     expect(fields.filter((row) => row.document_id === gone.id)).toEqual([])
     expect(documents.filter((row) => row.review_status === 'REVIEWED')).toHaveLength(3)
 
-    // Classificatore v2: confidence e margine restano numeri, non testo. Il secondo
-    // candidato qui non c'è — il registry di prova ha un solo tipo che segnala.
+    // Il tipo lo sceglie il revisore: la colonna del tipo proposto resta vuota, e con lei
+    // quelle del classificatore, finché non c'è una proposta della memoria di un modulo.
     const invoiceRow = byId(invoice.id)
     expect(invoiceRow.document_type_final).toBe('accounting.fattura')
-    expect(invoiceRow.document_type_predicted).toBe('accounting.fattura')
-    expect(typeof invoiceRow.classifier_confidence).toBe('number')
-    expect(typeof invoiceRow.margin).toBe('number')
+    expect(invoiceRow.document_type_predicted).toBeNull()
     expect(invoiceRow.runner_up).toBeNull()
     expect(invoiceRow.review_note).toBe('importi verificati col cliente')
     // Chi ha chiuso il documento senza scrivere niente lascia la cella vuota.
@@ -217,7 +210,7 @@ describe('export XLSX del dataset annotato', () => {
       margin: 0.31
     })
 
-    // Col v1 le due colonne restano vuote: il motore vecchio non le calcola.
+    // Senza run le due colonne restano vuote: non c'è da dove prenderle.
     expect(byId(legacyId)).toMatchObject({ runner_up: null, margin: null })
 
     // Stesso stampato, stessa impronta; un altro documento, un'altra.

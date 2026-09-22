@@ -55,36 +55,32 @@ export type FieldSignal =
   | 'EXCLUDED'
 
 /**
- * I 15 profili costruiti su documenti reali. Sono la cornice del lavoro: si possono
- * correggere, ma non per sbaglio, e la schermata li marca.
+ * Gli stati che dicono «questa mappa è già passata su documenti veri». Sono la cornice
+ * del lavoro: si possono correggere, ma non per sbaglio, e la schermata li marca. Gli
+ * altri stati — `SCHEMA_READY`, e la proposta delle canoniche nuove — sono mappe scritte
+ * a tavolino, e correggerle non chiede conferma.
  */
-export const FIELD_TESTED_SCHEMA_STATE = 'EXTRACTION_SCHEMA_READY_FOR_FIELD_TEST'
-
-/** Schema scritto qui a partire da un LEGACY_FALLBACK: corretto, ma non verificato. */
-export const REVIEWER_EDITED_SCHEMA_STATE = 'EXTRACTION_SCHEMA_DRAFT_FROM_LEGACY_FALLBACK'
+export const FIELD_TESTED_SCHEMA_STATES = ['PRETESTED', 'TESTED', 'VALIDATION_READY']
 
 export function isFieldTestedProfile(
   profile: Pick<ClassExtractionProfile, 'schema_state'> | null
 ): boolean {
-  return profile?.schema_state === FIELD_TESTED_SCHEMA_STATE
+  return profile !== null && FIELD_TESTED_SCHEMA_STATES.includes(profile.schema_state)
 }
 
-/** Da dove viene il profilo di un tipo. Ricalca `ProfileSource` del caricatore v2. */
-export type ProfileOrigin = 'V2_EXPLICIT' | 'LEGACY_FALLBACK' | 'MISSING'
+/** Da dove viene il profilo di un tipo. Ricalca `ProfileSource` del caricatore. */
+export type ProfileOrigin = 'EXPLICIT' | 'MISSING'
 
 /** Il peso di un campo nel profilo, come lo legge chi non ha scritto il codice. */
 export const FIELD_ROLE_LABELS: Record<FieldRole, string> = {
   required: 'obbligatorio',
-  core: 'principale',
-  optional: 'opzionale',
-  conditional: 'condizionale'
+  optional: 'opzionale'
 }
 
 /** Da dove viene il profilo, in una frase. */
 export const PROFILE_ORIGIN_LABELS: Record<ProfileOrigin, string> = {
-  V2_EXPLICIT: 'profilo di estrazione v2',
-  LEGACY_FALLBACK: 'nessun profilo esplicito: campi ricavati dallo schema v1',
-  MISSING: 'nessun profilo e nessuno schema: il motore non estrae niente'
+  EXPLICIT: 'mappa dei campi del registry',
+  MISSING: 'nessuna mappa per questo tipo: il motore non estrae niente'
 }
 
 export interface ProfileFieldRef {
@@ -109,7 +105,7 @@ export interface MeasuredTypeInput {
   schemaState: string | null
   /** Profilo costruito su documenti reali: modificarlo chiede conferma. */
   fieldTested: boolean
-  /** Campi del profilo attuale, nell'ordine required → core → optional → conditional. */
+  /** Campi del profilo attuale, nell'ordine required → optional. */
   profileFields: ProfileFieldRef[]
   /** Le decisioni del revisore su questo tipo: campo per campo, ruolo o «non utile». */
   decisions?: Record<string, FieldState>
@@ -231,7 +227,7 @@ interface Tally {
   manual: number
 }
 
-const ROLE_ORDER: FieldRole[] = ['required', 'core', 'optional', 'conditional']
+const ROLE_ORDER: FieldRole[] = ['required', 'optional']
 
 function rate(count: number, total: number): number {
   if (total === 0) return 0

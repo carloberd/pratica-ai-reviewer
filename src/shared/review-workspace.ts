@@ -22,7 +22,7 @@ export function isFieldEmpty(field: ExtractedField): boolean {
   return currentFieldValue(field) === null
 }
 
-const ROLE_RANK: Record<FieldRole, number> = { required: 0, core: 1, conditional: 2, optional: 3 }
+const ROLE_RANK: Record<FieldRole, number> = { required: 0, optional: 1 }
 
 function roleRank(field: ExtractedField): number {
   if (field.role) return ROLE_RANK[field.role]

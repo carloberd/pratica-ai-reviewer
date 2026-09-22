@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { bandOf } from '@shared/confidence'
 import {
   FIELD_LABELS,
@@ -10,28 +8,15 @@ import {
 } from '@shared/fields'
 import { describe, expect, it } from 'vitest'
 
-const REGISTRY = resolve(__dirname, '../resources/registry/extraction_schemas.json')
-
-type Schema = { properties?: Record<string, unknown>; required?: string[] }
-
-function loadSchemas(): Record<string, Schema> {
-  return JSON.parse(readFileSync(REGISTRY, 'utf8')) as Record<string, Schema>
-}
-
-describe('closed set dei campi del registry', () => {
-  const schemas = loadSchemas()
-
-  it('lo snapshot contiene i 511 tipi documentali', () => {
-    expect(Object.keys(schemas)).toHaveLength(511)
-  })
-
-  it('i campi dichiarati dal registry sono esattamente i 40 del closed set', () => {
-    const fromRegistry = new Set<string>()
-    for (const schema of Object.values(schemas)) {
-      for (const name of Object.keys(schema.properties ?? {})) fromRegistry.add(name)
-    }
-    expect([...fromRegistry].sort()).toEqual(Object.keys(FIELD_SEMANTIC_TYPES).sort())
-    expect(fromRegistry.size).toBe(40)
+/**
+ * Il closed set dei 40 nomi campo del motore v1. Lo snapshot da cui venivano non è più nel
+ * repository — il registry adesso sono due file con gli id dell'ontologia — ma i nomi
+ * restano: nel database ci sono documenti revisionati quando i campi si chiamavano così,
+ * e la scheda deve saperli ancora leggere.
+ */
+describe('closed set dei campi del motore v1', () => {
+  it('sono quaranta, e non ne entrano altri senza passare di qui', () => {
+    expect(Object.keys(FIELD_SEMANTIC_TYPES)).toHaveLength(40)
   })
 
   it('ogni campo ha un etichetta italiana', () => {
@@ -41,12 +26,9 @@ describe('closed set dei campi del registry', () => {
     }
   })
 
-  it('i 4 campi universali sono dichiarati da tutti i tipi', () => {
-    for (const [type, schema] of Object.entries(schemas)) {
-      const props = Object.keys(schema.properties ?? {})
-      for (const universal of UNIVERSAL_FIELDS) {
-        expect(props, `${type} deve dichiarare ${universal}`).toContain(universal)
-      }
+  it('i 4 campi universali stanno nel closed set', () => {
+    for (const universal of UNIVERSAL_FIELDS) {
+      expect(Object.keys(FIELD_SEMANTIC_TYPES), universal).toContain(universal)
     }
   })
 

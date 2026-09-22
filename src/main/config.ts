@@ -102,58 +102,6 @@ export function loadGoogleCredentials(): GoogleCredentials | null {
   return resolveCredentials({ env: process.env, envFiles, baked: bakedCredentials() })
 }
 
-/**
- * Motore di classificazione e di estrazione. `v2` è il percorso normale; `v1` resta
- * selezionabile come scappatoia, con il comportamento di prima.
- */
-export type EngineVersion = 'v1' | 'v2'
-
-export interface EngineSelection {
-  classifier: EngineVersion
-  extraction: EngineVersion
-}
-
-const ENGINE_VARIABLES = {
-  classifier: 'CLASSIFIER_ENGINE',
-  extraction: 'EXTRACTION_ENGINE'
-} as const
-
-/**
- * Un valore scritto male non ripiega in silenzio su un motore: chi imposta
- * `EXTRACTION_ENGINE=V1 ` per tornare indietro deve ottenere il v1, e chi scrive
- * `v3` deve saperlo all'avvio invece di scoprirlo dai campi.
- */
-export function parseEngine(variable: string, value: string | undefined): EngineVersion {
-  const normalized = value?.trim().toLowerCase() ?? ''
-  if (normalized === '') return 'v2'
-  if (normalized === 'v1' || normalized === 'v2') return normalized
-  throw new Error(`${variable}=${value} non è valido: i valori ammessi sono v1 e v2.`)
-}
-
-/** Stessa precedenza delle credenziali: variabili d'ambiente, poi i file `.env` in ordine. */
-export function resolveEngines(sources: {
-  env: Record<string, string | undefined>
-  envFiles: Array<Record<string, string>>
-}): EngineSelection {
-  const pick = (variable: string): string | undefined => {
-    const fromEnv = sources.env[variable]
-    if (fromEnv !== undefined && fromEnv.trim() !== '') return fromEnv
-    return sources.envFiles.map((values) => values[variable]).find((value) => value?.trim())
-  }
-  return {
-    classifier: parseEngine(ENGINE_VARIABLES.classifier, pick(ENGINE_VARIABLES.classifier)),
-    extraction: parseEngine(ENGINE_VARIABLES.extraction, pick(ENGINE_VARIABLES.extraction))
-  }
-}
-
-export function loadEngines(): EngineSelection {
-  const envFiles = envFileCandidates()
-    .filter((candidate) => existsSync(candidate))
-    .map((candidate) => parseEnvFile(readFileSync(candidate, 'utf8')))
-
-  return resolveEngines({ env: process.env, envFiles })
-}
-
 export function setupHint(): string {
   const paths = envFileCandidates()
   return [

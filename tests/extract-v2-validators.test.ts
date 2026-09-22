@@ -15,10 +15,10 @@ import {
   validatorsOf
 } from '../src/main/extract/v2/validators'
 import { validationMessage } from '../src/shared/validation-messages'
-import { REGISTRY_V2_DIR } from './helpers/registry'
+import { REGISTRY_DIR } from './helpers/registry'
 
 const readRegistry = <T>(file: string): T =>
-  JSON.parse(readFileSync(join(REGISTRY_V2_DIR, file), 'utf8')) as T
+  JSON.parse(readFileSync(join(REGISTRY_DIR, file), 'utf8')) as T
 
 describe('validatori dell’ontologia v2', () => {
   it('date ISO che esistono davvero', () => {
@@ -139,17 +139,15 @@ describe('validatori dell’ontologia v2', () => {
     // Un nome sconosciuto non blocca: senza questo controllo un validatore dichiarato
     // resterebbe muto, come targa e telaio finché il pack non li assegnava a nessun campo.
     const known = new Set<string>(FIELD_VALIDATORS)
-    const { validators } = readRegistry<{ validators: Record<string, unknown> }>(
-      'validators_v2.json'
-    )
     const { fields } = readRegistry<{ fields: Record<string, { validators: string[] }> }>(
-      'field_ontology_v2.json'
+      'fields.json'
     )
     const used = Object.values(fields).flatMap((field) => field.validators)
 
-    expect(Object.keys(validators).filter((name) => !known.has(name))).toEqual([])
     expect(used.filter((name) => !known.has(name))).toEqual([])
-    expect(new Set(used)).toEqual(known)
+    // `non_empty` non lo assegna più nessun campo: che un obbligatorio ci sia lo dice già
+    // il suo ruolo, e ripeterlo in un validatore non aggiungeva niente.
+    expect(new Set(used)).toEqual(new Set([...known].filter((name) => name !== 'non_empty')))
   })
 
   it('i validatori del profilo prendono il posto di quelli dell’ontologia', () => {

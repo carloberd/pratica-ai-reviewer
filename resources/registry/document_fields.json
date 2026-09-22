@@ -1,0 +1,3785 @@
+{
+  "version": "3.0.0",
+  "source": "PraticaAI_Brain_MVP_Classi_Campi_Unificato_2026-09-22.xlsx",
+  "document_types": {
+    "accounting.autofattura": {
+      "document_type_id": "accounting.autofattura",
+      "canonical_name": "autofattura",
+      "family": "accounting",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "document.issue_date",
+        "document.number",
+        "invoice.type_code",
+        "issuer.name",
+        "issuer.tax_code",
+        "issuer.vat_number",
+        "money.currency",
+        "money.total",
+        "payment.due_date",
+        "recipient.name",
+        "recipient.tax_code",
+        "recipient.vat_number"
+      ],
+      "optional_fields": [
+        "document.reason",
+        "document.references",
+        "invoice.related_documents",
+        "line_items",
+        "money.tax",
+        "money.taxable",
+        "procurement.cig",
+        "procurement.cup",
+        "tax.vat_nature",
+        "tax.vat_summary"
+      ]
+    },
+    "accounting.bilancio_esercizio": {
+      "document_type_id": "accounting.bilancio_esercizio",
+      "canonical_name": "bilancio esercizio",
+      "family": "accounting",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "accounting.entries",
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "money.currency",
+        "period.end",
+        "period.start"
+      ],
+      "optional_fields": [
+        "accounting.balance",
+        "document.issue_date",
+        "document.number",
+        "document.references",
+        "issuer.name",
+        "money.total"
+      ]
+    },
+    "accounting.documento_commerciale": {
+      "document_type_id": "accounting.documento_commerciale",
+      "canonical_name": "documento commerciale",
+      "family": "accounting",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "document.number",
+        "issuer.name",
+        "issuer.tax_code",
+        "issuer.vat_number",
+        "money.currency",
+        "money.total"
+      ],
+      "optional_fields": [
+        "line_items",
+        "money.tax",
+        "money.taxable",
+        "payment.method",
+        "recipient.name",
+        "recipient.tax_code",
+        "recipient.vat_number",
+        "tax.vat_summary"
+      ]
+    },
+    "accounting.fattura": {
+      "document_type_id": "accounting.fattura",
+      "canonical_name": "fattura",
+      "family": "accounting",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "bank.iban",
+        "counterparty.role",
+        "document.direction",
+        "document.issue_date",
+        "document.number",
+        "issuer.name",
+        "issuer.tax_code",
+        "issuer.vat_number",
+        "money.currency",
+        "money.total",
+        "payment.due_date",
+        "recipient.name",
+        "recipient.tax_code",
+        "recipient.vat_number"
+      ],
+      "optional_fields": [
+        "document.references",
+        "invoice.type_code",
+        "line_items",
+        "money.tax",
+        "money.taxable",
+        "procurement.cig",
+        "procurement.cup",
+        "tax.vat_summary"
+      ]
+    },
+    "accounting.fattura_proforma": {
+      "document_type_id": "accounting.fattura_proforma",
+      "canonical_name": "fattura proforma",
+      "family": "accounting",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "bank.iban",
+        "counterparty.role",
+        "document.direction",
+        "document.issue_date",
+        "document.number",
+        "issuer.name",
+        "issuer.tax_code",
+        "issuer.vat_number",
+        "money.currency",
+        "money.total",
+        "payment.due_date",
+        "recipient.name",
+        "recipient.tax_code",
+        "recipient.vat_number"
+      ],
+      "optional_fields": [
+        "document.references",
+        "line_items",
+        "money.tax",
+        "money.taxable",
+        "procurement.cig",
+        "procurement.cup",
+        "tax.vat_summary"
+      ]
+    },
+    "accounting.nota_di_credito": {
+      "document_type_id": "accounting.nota_di_credito",
+      "canonical_name": "nota di credito",
+      "family": "accounting",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "counterparty.role",
+        "document.direction",
+        "document.issue_date",
+        "document.number",
+        "document.reason",
+        "invoice.related_documents",
+        "issuer.name",
+        "issuer.tax_code",
+        "issuer.vat_number",
+        "money.currency",
+        "money.total",
+        "payment.due_date",
+        "recipient.name",
+        "recipient.tax_code",
+        "recipient.vat_number"
+      ],
+      "optional_fields": [
+        "document.references",
+        "invoice.type_code",
+        "line_items",
+        "money.tax",
+        "money.taxable",
+        "procurement.cig",
+        "procurement.cup",
+        "tax.vat_summary"
+      ],
+      "field_validator_overrides": {
+        "money.total": [],
+        "money.taxable": [],
+        "money.tax": []
+      }
+    },
+    "accounting.nota_di_debito": {
+      "document_type_id": "accounting.nota_di_debito",
+      "canonical_name": "nota di debito",
+      "family": "accounting",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "counterparty.role",
+        "document.direction",
+        "document.issue_date",
+        "document.number",
+        "document.reason",
+        "invoice.related_documents",
+        "issuer.name",
+        "issuer.tax_code",
+        "issuer.vat_number",
+        "money.currency",
+        "money.total",
+        "payment.due_date",
+        "recipient.name",
+        "recipient.tax_code",
+        "recipient.vat_number"
+      ],
+      "optional_fields": [
+        "document.references",
+        "invoice.type_code",
+        "line_items",
+        "money.tax",
+        "money.taxable",
+        "procurement.cig",
+        "procurement.cup",
+        "tax.vat_summary"
+      ]
+    },
+    "accounting.parcella_professionale": {
+      "document_type_id": "accounting.parcella_professionale",
+      "canonical_name": "parcella professionale",
+      "family": "accounting",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "document.issue_date",
+        "document.number",
+        "invoice.withholding_amount",
+        "issuer.name",
+        "issuer.tax_code",
+        "issuer.vat_number",
+        "money.currency",
+        "money.total",
+        "payment.due_date",
+        "recipient.name",
+        "recipient.tax_code",
+        "recipient.vat_number"
+      ],
+      "optional_fields": [
+        "document.references",
+        "invoice.social_security_amount",
+        "invoice.stamp_duty",
+        "invoice.type_code",
+        "invoice.withholding_rate",
+        "line_items",
+        "money.tax",
+        "money.taxable",
+        "procurement.cig",
+        "procurement.cup",
+        "tax.vat_summary"
+      ]
+    },
+    "accounting.scheda_contabile_controparte": {
+      "document_type_id": "accounting.scheda_contabile_controparte",
+      "canonical_name": "scheda contabile controparte",
+      "family": "accounting",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "accounting.balance_closing",
+        "accounting.balance_opening",
+        "accounting.entries",
+        "company.name",
+        "counterparty.name",
+        "counterparty.role",
+        "counterparty.tax_id",
+        "payment.due_date",
+        "period.end",
+        "period.start"
+      ],
+      "optional_fields": [
+        "document.references",
+        "document.status",
+        "money.amount"
+      ]
+    },
+    "assets_maintenance.contratto_manutenzione": {
+      "document_type_id": "assets_maintenance.contratto_manutenzione",
+      "canonical_name": "contratto manutenzione",
+      "family": "assets_maintenance",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.start_date",
+        "contract.subject",
+        "document.issue_date",
+        "document.number"
+      ],
+      "optional_fields": [
+        "asset.id",
+        "contract.obligations",
+        "contract.payment_terms",
+        "contract.renewal_terms",
+        "contract.termination_terms",
+        "contract.value",
+        "issuer.name",
+        "maintenance.frequency",
+        "recipient.name"
+      ]
+    },
+    "assets_maintenance.ordine_lavoro_manutenzione": {
+      "document_type_id": "assets_maintenance.ordine_lavoro_manutenzione",
+      "canonical_name": "ordine di lavoro manutenzione",
+      "family": "assets_maintenance",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "asset.id",
+        "asset.serial_number",
+        "document.issue_date",
+        "document.number",
+        "document.status",
+        "maintenance.scheduled_date",
+        "maintenance.type"
+      ],
+      "optional_fields": [
+        "asset.location",
+        "document.references",
+        "maintenance.activities",
+        "maintenance.technician"
+      ]
+    },
+    "assets_maintenance.rapporto_assistenza_tecnica": {
+      "document_type_id": "assets_maintenance.rapporto_assistenza_tecnica",
+      "canonical_name": "rapporto assistenza tecnica",
+      "family": "assets_maintenance",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "asset.id",
+        "asset.serial_number",
+        "document.issue_date",
+        "maintenance.activities",
+        "maintenance.execution_date",
+        "maintenance.next_due_date",
+        "maintenance.outcome"
+      ],
+      "optional_fields": [
+        "asset.location",
+        "document.references",
+        "maintenance.parts",
+        "maintenance.technician"
+      ]
+    },
+    "assets_maintenance.registro_verifiche_periodiche": {
+      "document_type_id": "assets_maintenance.registro_verifiche_periodiche",
+      "canonical_name": "registro verifiche periodiche",
+      "family": "assets_maintenance",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "asset.id",
+        "company.name",
+        "line_items",
+        "maintenance.execution_date",
+        "maintenance.next_due_date",
+        "maintenance.outcome"
+      ],
+      "optional_fields": [
+        "asset.serial_number",
+        "document.references",
+        "maintenance.technician"
+      ]
+    },
+    "banking.contabile_bancaria": {
+      "document_type_id": "banking.contabile_bancaria",
+      "canonical_name": "contabile bancaria",
+      "family": "banking",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.counterparty_iban",
+        "bank.iban",
+        "bank.transaction_id",
+        "document.issue_date",
+        "money.amount",
+        "money.currency",
+        "payment.date",
+        "payment.payee",
+        "payment.payer",
+        "payment.reference",
+        "payment.status"
+      ],
+      "optional_fields": [
+        "bank.causal",
+        "document.number",
+        "document.references",
+        "payment.method"
+      ]
+    },
+    "banking.disposizione_bonifico": {
+      "document_type_id": "banking.disposizione_bonifico",
+      "canonical_name": "disposizione bonifico",
+      "family": "banking",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.counterparty_iban",
+        "bank.iban",
+        "bank.transaction_id",
+        "document.issue_date",
+        "money.amount",
+        "money.currency",
+        "payment.date",
+        "payment.payee",
+        "payment.payer",
+        "payment.reference",
+        "payment.status"
+      ],
+      "optional_fields": [
+        "bank.causal",
+        "document.number",
+        "document.references",
+        "payment.method"
+      ]
+    },
+    "banking.estratto_conto_bancario": {
+      "document_type_id": "banking.estratto_conto_bancario",
+      "canonical_name": "estratto conto bancario",
+      "family": "banking",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "bank.account_holder",
+        "bank.iban",
+        "bank.transactions",
+        "document.issue_date",
+        "money.currency",
+        "period.end",
+        "period.start"
+      ],
+      "optional_fields": [
+        "bank.balance_accounting",
+        "bank.balance_available",
+        "finance.balance_closing",
+        "finance.balance_opening"
+      ]
+    },
+    "banking.lista_movimenti_bancari": {
+      "document_type_id": "banking.lista_movimenti_bancari",
+      "canonical_name": "lista movimenti bancari",
+      "family": "banking",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.account_holder",
+        "bank.iban",
+        "bank.transactions",
+        "document.issue_date",
+        "money.currency",
+        "period.end",
+        "period.start"
+      ],
+      "optional_fields": [
+        "bank.balance_accounting",
+        "bank.balance_available",
+        "finance.balance_closing",
+        "finance.balance_opening"
+      ]
+    },
+    "banking.mandato_sdd": {
+      "document_type_id": "banking.mandato_sdd",
+      "canonical_name": "mandato SDD",
+      "family": "banking",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "document.issue_date",
+        "document.number",
+        "payment.payee",
+        "payment.payer",
+        "payment.reference"
+      ],
+      "optional_fields": [
+        "bank.bic",
+        "document.effective_date",
+        "document.status"
+      ]
+    },
+    "banking.quietanza_pagamento": {
+      "document_type_id": "banking.quietanza_pagamento",
+      "canonical_name": "quietanza pagamento",
+      "family": "banking",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.counterparty_iban",
+        "bank.iban",
+        "bank.transaction_id",
+        "document.issue_date",
+        "money.amount",
+        "money.currency",
+        "payment.date",
+        "payment.payee",
+        "payment.payer",
+        "payment.reference",
+        "payment.status"
+      ],
+      "optional_fields": [
+        "bank.causal",
+        "document.number",
+        "document.references",
+        "payment.method"
+      ]
+    },
+    "banking.ricevuta_bonifico": {
+      "document_type_id": "banking.ricevuta_bonifico",
+      "canonical_name": "ricevuta bonifico",
+      "family": "banking",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.counterparty_iban",
+        "bank.iban",
+        "bank.transaction_id",
+        "document.issue_date",
+        "money.amount",
+        "money.currency",
+        "payment.date",
+        "payment.payee",
+        "payment.payer",
+        "payment.reference",
+        "payment.status"
+      ],
+      "optional_fields": [
+        "bank.causal",
+        "document.number",
+        "document.references",
+        "payment.debit_account",
+        "payment.entry_date",
+        "payment.execution_date",
+        "payment.method",
+        "payment.value_date"
+      ],
+      "field_description_overrides": {
+        "bank.iban": "IBAN del beneficiario, non il conto da cui parte il bonifico."
+      }
+    },
+    "certifications_licenses.certificato_antimafia": {
+      "document_type_id": "certifications_licenses.certificato_antimafia",
+      "canonical_name": "certificato antimafia",
+      "family": "certifications_licenses",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.expiry_date",
+        "document.issue_date",
+        "license.authority",
+        "license.status",
+        "person.name"
+      ],
+      "optional_fields": [
+        "document.number",
+        "document.outcome",
+        "document.references",
+        "issuer.name",
+        "license.scope",
+        "recipient.name"
+      ]
+    },
+    "certifications_licenses.certificato_soa": {
+      "document_type_id": "certifications_licenses.certificato_soa",
+      "canonical_name": "certificato SOA",
+      "family": "certifications_licenses",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.expiry_date",
+        "document.issue_date",
+        "license.authority",
+        "license.expiry_date",
+        "license.issue_date",
+        "license.number",
+        "license.scope",
+        "license.status"
+      ],
+      "optional_fields": [
+        "certification.scope",
+        "document.number",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "certifications_licenses.patente_a_crediti": {
+      "document_type_id": "certifications_licenses.patente_a_crediti",
+      "canonical_name": "patente a crediti",
+      "family": "certifications_licenses",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.expiry_date",
+        "document.issue_date",
+        "license.authority",
+        "license.expiry_date",
+        "license.issue_date",
+        "license.number",
+        "license.status"
+      ],
+      "optional_fields": [
+        "document.number",
+        "document.outcome",
+        "issuer.name",
+        "license.scope",
+        "recipient.name"
+      ]
+    },
+    "certifications_licenses.scia_impresa": {
+      "document_type_id": "certifications_licenses.scia_impresa",
+      "canonical_name": "SCIA impresa",
+      "family": "certifications_licenses",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.declaration_date",
+        "document.expiry_date",
+        "document.issue_date",
+        "document.protocol_number",
+        "license.authority",
+        "license.status"
+      ],
+      "optional_fields": [
+        "document.number",
+        "document.references",
+        "issuer.name",
+        "license.scope",
+        "recipient.name"
+      ]
+    },
+    "certifications_licenses.white_list_prefettura": {
+      "document_type_id": "certifications_licenses.white_list_prefettura",
+      "canonical_name": "white list prefettura",
+      "family": "certifications_licenses",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.expiry_date",
+        "document.issue_date",
+        "license.authority",
+        "license.scope",
+        "license.status"
+      ],
+      "optional_fields": [
+        "document.number",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "commercial.claim": {
+      "document_type_id": "commercial.claim",
+      "canonical_name": "claim",
+      "family": "commercial",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "counterparty.role",
+        "document.deadline",
+        "document.direction",
+        "document.issue_date",
+        "document.references",
+        "procurement.supplier",
+        "sales.customer",
+        "sales.issue"
+      ],
+      "optional_fields": [
+        "money.amount",
+        "sales.resolution"
+      ]
+    },
+    "commercial.offer": {
+      "document_type_id": "commercial.offer",
+      "canonical_name": "offer",
+      "family": "commercial",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "document.direction",
+        "document.expiry_date",
+        "document.issue_date",
+        "document.number",
+        "document.variant",
+        "issuer.name",
+        "payment.due_date",
+        "procurement.items",
+        "recipient.name",
+        "sales.customer",
+        "sales.items"
+      ],
+      "optional_fields": [
+        "commercial.quote_number",
+        "money.currency",
+        "money.total",
+        "procurement.delivery_date",
+        "sales.amount"
+      ]
+    },
+    "commercial.order": {
+      "document_type_id": "commercial.order",
+      "canonical_name": "order",
+      "family": "commercial",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "counterparty.role",
+        "document.direction",
+        "document.issue_date",
+        "document.number",
+        "money.currency",
+        "money.total",
+        "payment.due_date",
+        "procurement.buyer",
+        "procurement.items",
+        "procurement.supplier",
+        "sales.amount",
+        "sales.customer",
+        "sales.items"
+      ],
+      "optional_fields": [
+        "commercial.order_number",
+        "commercial.quote_number",
+        "document.references",
+        "procurement.delivery_date",
+        "procurement.delivery_place"
+      ]
+    },
+    "commercial.order_confirmation": {
+      "document_type_id": "commercial.order_confirmation",
+      "canonical_name": "order confirmation",
+      "family": "commercial",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "counterparty.role",
+        "document.direction",
+        "document.issue_date",
+        "document.number",
+        "money.currency",
+        "money.total",
+        "payment.due_date",
+        "procurement.buyer",
+        "procurement.items",
+        "procurement.supplier",
+        "sales.amount",
+        "sales.customer",
+        "sales.items"
+      ],
+      "optional_fields": [
+        "commercial.order_number",
+        "commercial.quote_number",
+        "document.references",
+        "procurement.delivery_date",
+        "procurement.delivery_place"
+      ]
+    },
+    "commercial.price_list": {
+      "document_type_id": "commercial.price_list",
+      "canonical_name": "price list",
+      "family": "commercial",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "counterparty.role",
+        "document.expiry_date",
+        "document.issue_date",
+        "procurement.items",
+        "procurement.supplier",
+        "sales.customer",
+        "sales.items"
+      ],
+      "optional_fields": [
+        "money.currency",
+        "sales.amount"
+      ]
+    },
+    "communications.comunicazione_controparte": {
+      "document_type_id": "communications.comunicazione_controparte",
+      "canonical_name": "comunicazione controparte",
+      "family": "communications",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "communication.response_deadline",
+        "communication.subject",
+        "counterparty.role",
+        "document.direction",
+        "document.issue_date",
+        "issuer.name",
+        "recipient.name"
+      ],
+      "optional_fields": [
+        "communication.action_required",
+        "communication.reference",
+        "document.attachments",
+        "document.number"
+      ]
+    },
+    "communications.notifica_sdi": {
+      "document_type_id": "communications.notifica_sdi",
+      "canonical_name": "notifica SDI",
+      "family": "communications",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "communication.delivery_status",
+        "communication.message_id",
+        "communication.response_deadline",
+        "communication.subject",
+        "document.issue_date",
+        "document.references",
+        "issuer.name",
+        "recipient.name"
+      ],
+      "optional_fields": [
+        "communication.action_required",
+        "communication.reference",
+        "document.attachments",
+        "document.number"
+      ]
+    },
+    "communications.ricevuta_pec": {
+      "document_type_id": "communications.ricevuta_pec",
+      "canonical_name": "ricevuta pec",
+      "family": "communications",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "communication.delivery_status",
+        "communication.message_id",
+        "communication.response_deadline",
+        "communication.subject",
+        "document.issue_date",
+        "issuer.name",
+        "receipt_type",
+        "recipient.name"
+      ],
+      "optional_fields": [
+        "communication.action_required",
+        "communication.reference",
+        "document.attachments",
+        "document.number",
+        "document.protocol_number"
+      ]
+    },
+    "communications.richiesta_documenti_ente": {
+      "document_type_id": "communications.richiesta_documenti_ente",
+      "canonical_name": "richiesta documenti da ente",
+      "family": "communications",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "communication.action_required",
+        "communication.response_deadline",
+        "communication.subject",
+        "document.issue_date",
+        "issuer.name",
+        "recipient.name"
+      ],
+      "optional_fields": [
+        "communication.reference",
+        "document.attachments",
+        "document.number"
+      ]
+    },
+    "construction_site.certificato_pagamento": {
+      "document_type_id": "construction_site.certificato_pagamento",
+      "canonical_name": "certificato pagamento",
+      "family": "construction_site",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "construction.contract",
+        "construction.project",
+        "document.issue_date",
+        "document.references",
+        "hse.site",
+        "money.amount",
+        "money.currency",
+        "payment.due_date"
+      ],
+      "optional_fields": [
+        "construction.amount_progressive",
+        "document.number",
+        "issuer.name",
+        "procurement.cig",
+        "procurement.cup",
+        "recipient.name"
+      ]
+    },
+    "construction_site.computo_metrico_estimativo": {
+      "document_type_id": "construction_site.computo_metrico_estimativo",
+      "canonical_name": "computo metrico estimativo",
+      "family": "construction_site",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "company.name",
+        "construction.contract",
+        "construction.measurements",
+        "construction.project",
+        "document.issue_date",
+        "hse.site",
+        "money.currency",
+        "money.total"
+      ],
+      "optional_fields": [
+        "document.number",
+        "document.references",
+        "issuer.name",
+        "line_items",
+        "procurement.cig",
+        "procurement.cup",
+        "recipient.name"
+      ]
+    },
+    "construction_site.giornale_lavori": {
+      "document_type_id": "construction_site.giornale_lavori",
+      "canonical_name": "giornale lavori",
+      "family": "construction_site",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "construction.contract",
+        "construction.entries",
+        "construction.project",
+        "document.issue_date",
+        "hse.site",
+        "period.end",
+        "period.start"
+      ],
+      "optional_fields": [
+        "construction.measurements",
+        "document.number",
+        "document.references",
+        "issuer.name",
+        "procurement.cig",
+        "procurement.cup",
+        "recipient.name"
+      ]
+    },
+    "construction_site.libretto_misure": {
+      "document_type_id": "construction_site.libretto_misure",
+      "canonical_name": "libretto misure",
+      "family": "construction_site",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "construction.contract",
+        "construction.measurements",
+        "construction.project",
+        "document.issue_date",
+        "hse.site"
+      ],
+      "optional_fields": [
+        "document.number",
+        "document.references",
+        "issuer.name",
+        "period.end",
+        "period.start",
+        "procurement.cig",
+        "procurement.cup",
+        "recipient.name"
+      ]
+    },
+    "construction_site.registro_contabilita_lavori": {
+      "document_type_id": "construction_site.registro_contabilita_lavori",
+      "canonical_name": "registro contabilità lavori",
+      "family": "construction_site",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "construction.contract",
+        "construction.entries",
+        "construction.project",
+        "document.issue_date",
+        "hse.site",
+        "period.end",
+        "period.start"
+      ],
+      "optional_fields": [
+        "construction.measurements",
+        "document.number",
+        "document.references",
+        "issuer.name",
+        "procurement.cig",
+        "procurement.cup",
+        "recipient.name"
+      ]
+    },
+    "construction_site.sal": {
+      "document_type_id": "construction_site.sal",
+      "canonical_name": "SAL",
+      "family": "construction_site",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "construction.amount_period",
+        "construction.amount_progressive",
+        "construction.contract",
+        "construction.progress_percent",
+        "construction.project",
+        "document.issue_date",
+        "hse.site",
+        "money.currency",
+        "period.end",
+        "period.start"
+      ],
+      "optional_fields": [
+        "construction.measurements",
+        "document.number",
+        "document.references",
+        "issuer.name",
+        "procurement.cig",
+        "procurement.cup",
+        "recipient.name"
+      ]
+    },
+    "contracts_general.addendum_contrattuale": {
+      "document_type_id": "contracts_general.addendum_contrattuale",
+      "canonical_name": "addendum contrattuale",
+      "family": "contracts_general",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.references",
+        "contract.start_date",
+        "contract.subject",
+        "document.effective_date",
+        "document.issue_date",
+        "document.number"
+      ],
+      "optional_fields": [
+        "contract.notice_period",
+        "contract.obligations",
+        "contract.payment_terms",
+        "contract.renewal_terms",
+        "contract.termination_terms",
+        "contract.value",
+        "document.reason",
+        "document.references",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "contracts_general.contratto_consulenza": {
+      "document_type_id": "contracts_general.contratto_consulenza",
+      "canonical_name": "contratto consulenza",
+      "family": "contracts_general",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.start_date",
+        "contract.subject",
+        "document.issue_date",
+        "document.number"
+      ],
+      "optional_fields": [
+        "contract.notice_period",
+        "contract.obligations",
+        "contract.payment_terms",
+        "contract.renewal_terms",
+        "contract.termination_terms",
+        "contract.value",
+        "document.references",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "contracts_general.contratto_fornitura": {
+      "document_type_id": "contracts_general.contratto_fornitura",
+      "canonical_name": "contratto fornitura",
+      "family": "contracts_general",
+      "schema_state": "TESTED",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.start_date",
+        "contract.subject",
+        "document.issue_date",
+        "document.number"
+      ],
+      "optional_fields": [
+        "contract.notice_period",
+        "contract.obligations",
+        "contract.payment_terms",
+        "contract.renewal_terms",
+        "contract.termination_terms",
+        "contract.value",
+        "document.references",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "contracts_general.contratto_servizi": {
+      "document_type_id": "contracts_general.contratto_servizi",
+      "canonical_name": "contratto servizi",
+      "family": "contracts_general",
+      "schema_state": "VALIDATION_READY",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.start_date",
+        "contract.subject",
+        "document.issue_date",
+        "document.number"
+      ],
+      "optional_fields": [
+        "contract.notice_period",
+        "contract.obligations",
+        "contract.payment_terms",
+        "contract.renewal_terms",
+        "contract.termination_terms",
+        "contract.value",
+        "document.references",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "contracts_general.contratto_subappalto": {
+      "document_type_id": "contracts_general.contratto_subappalto",
+      "canonical_name": "contratto di subappalto",
+      "family": "contracts_general",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.start_date",
+        "contract.subject",
+        "document.issue_date",
+        "document.number",
+        "hse.site",
+        "procurement.cig",
+        "procurement.cup"
+      ],
+      "optional_fields": [
+        "construction.work_category",
+        "contract.notice_period",
+        "contract.obligations",
+        "contract.payment_terms",
+        "contract.penalties",
+        "contract.renewal_terms",
+        "contract.termination_terms",
+        "contract.value",
+        "document.references",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "contracts_general.recesso_contratto": {
+      "document_type_id": "contracts_general.recesso_contratto",
+      "canonical_name": "recesso contratto",
+      "family": "contracts_general",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.references",
+        "contract.start_date",
+        "contract.subject",
+        "document.effective_date",
+        "document.issue_date",
+        "document.number",
+        "document.reason"
+      ],
+      "optional_fields": [
+        "contract.notice_period",
+        "contract.obligations",
+        "contract.payment_terms",
+        "contract.renewal_terms",
+        "contract.termination_terms",
+        "contract.value",
+        "document.references",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "contracts_general.rinnovo_contratto": {
+      "document_type_id": "contracts_general.rinnovo_contratto",
+      "canonical_name": "rinnovo contratto",
+      "family": "contracts_general",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.references",
+        "contract.start_date",
+        "contract.subject",
+        "document.issue_date",
+        "document.number"
+      ],
+      "optional_fields": [
+        "contract.auto_renewal",
+        "contract.notice_period",
+        "contract.obligations",
+        "contract.payment_terms",
+        "contract.renewal_terms",
+        "contract.termination_terms",
+        "contract.value",
+        "document.references",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "contracts_general.risoluzione_contratto": {
+      "document_type_id": "contracts_general.risoluzione_contratto",
+      "canonical_name": "risoluzione contratto",
+      "family": "contracts_general",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.references",
+        "contract.start_date",
+        "contract.subject",
+        "document.effective_date",
+        "document.issue_date",
+        "document.number",
+        "document.reason"
+      ],
+      "optional_fields": [
+        "contract.notice_period",
+        "contract.obligations",
+        "contract.payment_terms",
+        "contract.renewal_terms",
+        "contract.termination_terms",
+        "contract.value",
+        "document.references",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "corporate_registry.certificato_vigenza": {
+      "document_type_id": "corporate_registry.certificato_vigenza",
+      "canonical_name": "certificato di vigenza",
+      "family": "corporate_registry",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.rea_number",
+        "company.register_office",
+        "company.tax_code",
+        "company.vat_number",
+        "document.issue_date"
+      ],
+      "optional_fields": [
+        "company.ateco",
+        "company.legal_form",
+        "company.officers",
+        "company.pec",
+        "company.share_capital",
+        "company.shareholders",
+        "company.status",
+        "document.number",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "corporate_registry.comunicazione_titolare_effettivo": {
+      "document_type_id": "corporate_registry.comunicazione_titolare_effettivo",
+      "canonical_name": "comunicazione titolare effettivo",
+      "family": "corporate_registry",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "compliance.beneficial_owners",
+        "document.declaration_date"
+      ],
+      "optional_fields": [
+        "document.protocol_number",
+        "document.references"
+      ]
+    },
+    "corporate_registry.statuto_societario": {
+      "document_type_id": "corporate_registry.statuto_societario",
+      "canonical_name": "statuto societario",
+      "family": "corporate_registry",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.incorporation_date",
+        "company.legal_form",
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.issue_date"
+      ],
+      "optional_fields": [
+        "company.officers",
+        "company.share_capital",
+        "company.shareholders",
+        "document.legal_basis",
+        "document.version"
+      ]
+    },
+    "corporate_registry.visura_camerale": {
+      "document_type_id": "corporate_registry.visura_camerale",
+      "canonical_name": "visura camerale",
+      "family": "corporate_registry",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "company.name",
+        "company.rea_number",
+        "company.register_office",
+        "company.tax_code",
+        "company.vat_number",
+        "document.issue_date"
+      ],
+      "optional_fields": [
+        "company.ateco",
+        "company.legal_form",
+        "company.officers",
+        "company.pec",
+        "company.share_capital",
+        "company.shareholders",
+        "company.status",
+        "document.number",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "credit_collections.aging_crediti": {
+      "document_type_id": "credit_collections.aging_crediti",
+      "canonical_name": "aging crediti",
+      "family": "credit_collections",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "counterparty.name",
+        "credit.invoice_refs",
+        "credit.outstanding_amount",
+        "credit.overdue_amount",
+        "payment.due_date",
+        "period.end",
+        "period.start"
+      ],
+      "optional_fields": [
+        "credit.days_overdue",
+        "credit.status",
+        "money.currency"
+      ]
+    },
+    "credit_collections.piano_rientro": {
+      "document_type_id": "credit_collections.piano_rientro",
+      "canonical_name": "piano di rientro",
+      "family": "credit_collections",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "credit.installments",
+        "credit.status",
+        "document.issue_date",
+        "legal.parties",
+        "money.amount",
+        "payment.due_date"
+      ],
+      "optional_fields": [
+        "credit.invoice_refs",
+        "document.references"
+      ]
+    },
+    "credit_collections.sollecito_pagamento": {
+      "document_type_id": "credit_collections.sollecito_pagamento",
+      "canonical_name": "sollecito di pagamento",
+      "family": "credit_collections",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "credit.invoice_refs",
+        "document.issue_date",
+        "issuer.name",
+        "money.amount",
+        "payment.due_date",
+        "recipient.name"
+      ],
+      "optional_fields": [
+        "credit.promise_date",
+        "credit.status",
+        "document.references"
+      ]
+    },
+    "customs_trade.dichiarazione_doganale_dau": {
+      "document_type_id": "customs_trade.dichiarazione_doganale_dau",
+      "canonical_name": "dichiarazione doganale DAU",
+      "family": "customs_trade",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "customs.mrn",
+        "customs.office",
+        "customs.procedure",
+        "document.issue_date",
+        "document.number",
+        "issuer.name",
+        "logistics.goods",
+        "money.currency",
+        "recipient.name"
+      ],
+      "optional_fields": [
+        "customs.destination_country",
+        "customs.duties",
+        "customs.origin_country",
+        "customs.tariff_code",
+        "customs.vat",
+        "document.references",
+        "money.amount"
+      ]
+    },
+    "environment.fir_formulario_rifiuti": {
+      "document_type_id": "environment.fir_formulario_rifiuti",
+      "canonical_name": "FIR formulario rifiuti",
+      "family": "environment",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "document.number",
+        "environment.destination_plant",
+        "environment.producer",
+        "environment.quantity",
+        "environment.transporter",
+        "environment.unit",
+        "environment.waste_code"
+      ],
+      "optional_fields": [
+        "document.references",
+        "environment.material"
+      ]
+    },
+    "environment.registro_rifiuti": {
+      "document_type_id": "environment.registro_rifiuti",
+      "canonical_name": "registro rifiuti",
+      "family": "environment",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "environment.waste_entries",
+        "period.end",
+        "period.start"
+      ],
+      "optional_fields": [
+        "document.references",
+        "environment.quantity",
+        "environment.unit",
+        "environment.waste_code"
+      ]
+    },
+    "environment.ricevuta_iscrizione_rentri": {
+      "document_type_id": "environment.ricevuta_iscrizione_rentri",
+      "canonical_name": "ricevuta iscrizione RENTRI",
+      "family": "environment",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.issue_date",
+        "document.protocol_number",
+        "document.status"
+      ],
+      "optional_fields": [
+        "document.references"
+      ]
+    },
+    "environment.scheda_sicurezza_sds": {
+      "document_type_id": "environment.scheda_sicurezza_sds",
+      "canonical_name": "scheda sicurezza SDS",
+      "family": "environment",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "document.issue_date",
+        "document.version",
+        "product.composition",
+        "product.name"
+      ],
+      "optional_fields": [
+        "document.legal_basis",
+        "issuer.name",
+        "product.certifications"
+      ]
+    },
+    "fiscal_tax.avviso_bonario": {
+      "document_type_id": "fiscal_tax.avviso_bonario",
+      "canonical_name": "avviso bonario",
+      "family": "fiscal_tax",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.issue_date",
+        "payment.due_date",
+        "tax.amount_due",
+        "tax.assessment_period"
+      ],
+      "optional_fields": [
+        "document.action_required",
+        "document.number",
+        "document.protocol_number",
+        "document.reason",
+        "tax.interest",
+        "tax.penalties"
+      ]
+    },
+    "fiscal_tax.cartella_di_pagamento": {
+      "document_type_id": "fiscal_tax.cartella_di_pagamento",
+      "canonical_name": "cartella di pagamento",
+      "family": "fiscal_tax",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.issue_date",
+        "payment.due_date",
+        "tax.amount_due",
+        "tax.assessment_period"
+      ],
+      "optional_fields": [
+        "document.action_required",
+        "document.number",
+        "document.protocol_number",
+        "document.reason",
+        "tax.interest",
+        "tax.penalties"
+      ]
+    },
+    "fiscal_tax.certificazione_unica": {
+      "document_type_id": "fiscal_tax.certificazione_unica",
+      "canonical_name": "certificazione unica",
+      "family": "fiscal_tax",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "tax.period",
+        "tax.return_lines",
+        "tax.year"
+      ],
+      "optional_fields": [
+        "document.declaration_date",
+        "document.protocol_number",
+        "money.amount",
+        "money.tax",
+        "tax.credit",
+        "tax.debit"
+      ]
+    },
+    "fiscal_tax.comunicazione_irregolarita": {
+      "document_type_id": "fiscal_tax.comunicazione_irregolarita",
+      "canonical_name": "comunicazione di irregolarità",
+      "family": "fiscal_tax",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.issue_date",
+        "payment.due_date",
+        "tax.amount_due",
+        "tax.assessment_period"
+      ],
+      "optional_fields": [
+        "document.action_required",
+        "document.number",
+        "document.protocol_number",
+        "document.reason",
+        "tax.interest",
+        "tax.penalties"
+      ]
+    },
+    "fiscal_tax.modello_f24": {
+      "document_type_id": "fiscal_tax.modello_f24",
+      "canonical_name": "modello F24",
+      "family": "fiscal_tax",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "bank.iban",
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "money.amount",
+        "money.currency",
+        "tax.period",
+        "tax.return_lines",
+        "tax.year"
+      ],
+      "optional_fields": [
+        "document.number",
+        "payment.date"
+      ]
+    },
+    "fiscal_tax.quietanza_versamento": {
+      "document_type_id": "fiscal_tax.quietanza_versamento",
+      "canonical_name": "quietanza di versamento tributario",
+      "family": "fiscal_tax",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "bank.iban",
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.issue_date",
+        "money.amount",
+        "tax.payment_date",
+        "tax.payment_status",
+        "tax.protocol_id"
+      ],
+      "optional_fields": [
+        "document.references",
+        "tax.period",
+        "tax.year"
+      ]
+    },
+    "fiscal_tax.ricevuta_presa_in_carico_f24": {
+      "document_type_id": "fiscal_tax.ricevuta_presa_in_carico_f24",
+      "canonical_name": "ricevuta presa in carico F24",
+      "family": "fiscal_tax",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "bank.iban",
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.issue_date",
+        "money.amount",
+        "tax.payment_date",
+        "tax.payment_status",
+        "tax.protocol_id"
+      ],
+      "optional_fields": [
+        "document.references",
+        "tax.period",
+        "tax.year"
+      ]
+    },
+    "governance_compliance.codice_etico": {
+      "document_type_id": "governance_compliance.codice_etico",
+      "canonical_name": "codice etico",
+      "family": "governance_compliance",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "company.name",
+        "document.effective_date",
+        "document.status",
+        "document.title",
+        "document.version"
+      ],
+      "optional_fields": [
+        "document.approver",
+        "document.legal_basis",
+        "document.next_review_date",
+        "document.owner"
+      ]
+    },
+    "governance_compliance.modello_231": {
+      "document_type_id": "governance_compliance.modello_231",
+      "canonical_name": "modello 231",
+      "family": "governance_compliance",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "document.effective_date",
+        "document.status",
+        "document.title",
+        "document.version"
+      ],
+      "optional_fields": [
+        "document.approver",
+        "document.legal_basis",
+        "document.next_review_date",
+        "document.owner"
+      ]
+    },
+    "governance_compliance.policy_anticorruzione": {
+      "document_type_id": "governance_compliance.policy_anticorruzione",
+      "canonical_name": "policy anticorruzione",
+      "family": "governance_compliance",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "company.name",
+        "document.effective_date",
+        "document.status",
+        "document.title",
+        "document.version"
+      ],
+      "optional_fields": [
+        "document.approver",
+        "document.legal_basis",
+        "document.next_review_date",
+        "document.owner"
+      ]
+    },
+    "grants_incentives.bando_contributi": {
+      "document_type_id": "grants_incentives.bando_contributi",
+      "canonical_name": "bando contributi",
+      "family": "grants_incentives",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "grant.deadline",
+        "grant.program",
+        "grant.project"
+      ],
+      "optional_fields": [
+        "grant.amount_granted",
+        "grant.amount_requested",
+        "grant.application_number",
+        "grant.eligible_cost",
+        "grant.status",
+        "issuer.name",
+        "procurement.selection_criteria",
+        "recipient.name"
+      ]
+    },
+    "grants_incentives.decreto_concessione_contributo": {
+      "document_type_id": "grants_incentives.decreto_concessione_contributo",
+      "canonical_name": "decreto concessione contributo",
+      "family": "grants_incentives",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "grant.amount_granted",
+        "grant.application_number",
+        "grant.deadline",
+        "grant.program",
+        "grant.project",
+        "grant.status"
+      ],
+      "optional_fields": [
+        "grant.amount_requested",
+        "grant.eligible_cost",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "grants_incentives.domanda_contributo": {
+      "document_type_id": "grants_incentives.domanda_contributo",
+      "canonical_name": "domanda di contributo",
+      "family": "grants_incentives",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.declaration_date",
+        "document.issue_date",
+        "grant.amount_requested",
+        "grant.application_number",
+        "grant.deadline",
+        "grant.program",
+        "grant.project"
+      ],
+      "optional_fields": [
+        "grant.amount_granted",
+        "grant.status",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "grants_incentives.rendiconto_contributo": {
+      "document_type_id": "grants_incentives.rendiconto_contributo",
+      "canonical_name": "rendiconto contributo",
+      "family": "grants_incentives",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "grant.amount_paid",
+        "grant.application_number",
+        "grant.deadline",
+        "grant.expense_items",
+        "grant.program",
+        "grant.project"
+      ],
+      "optional_fields": [
+        "grant.amount_granted",
+        "grant.amount_requested",
+        "grant.eligible_cost",
+        "grant.status",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "hr_employment.cedolino_paga": {
+      "document_type_id": "hr_employment.cedolino_paga",
+      "canonical_name": "cedolino paga",
+      "family": "hr_employment",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "bank.iban",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "employment.employer_name",
+        "employment.employer_tax_id",
+        "money.gross",
+        "payroll.contributions",
+        "payroll.deductions",
+        "payroll.net_pay",
+        "payroll.period"
+      ],
+      "optional_fields": [
+        "line_items",
+        "payroll.leave_balances",
+        "payroll.tfr"
+      ]
+    },
+    "hr_employment.contestazione_disciplinare": {
+      "document_type_id": "hr_employment.contestazione_disciplinare",
+      "canonical_name": "contestazione disciplinare",
+      "family": "hr_employment",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "employment.disciplinary_deadline",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "employment.reason"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.references",
+        "legal.request"
+      ]
+    },
+    "hr_employment.contratto_lavoro": {
+      "document_type_id": "hr_employment.contratto_lavoro",
+      "canonical_name": "contratto lavoro",
+      "family": "hr_employment",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "employment.ccnl",
+        "employment.contract_type",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "employment.employer_name",
+        "employment.employer_tax_id",
+        "employment.job_title",
+        "employment.level",
+        "employment.start_date",
+        "employment.weekly_hours"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.issue_date",
+        "employment.probation_end",
+        "employment.salary_gross",
+        "employment.workplace"
+      ]
+    },
+    "hr_employment.dimissioni_volontarie": {
+      "document_type_id": "hr_employment.dimissioni_volontarie",
+      "canonical_name": "dimissioni volontarie",
+      "family": "hr_employment",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "employment.end_date",
+        "employment.termination_reason"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.references"
+      ]
+    },
+    "hr_employment.lettera_assunzione": {
+      "document_type_id": "hr_employment.lettera_assunzione",
+      "canonical_name": "lettera assunzione",
+      "family": "hr_employment",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "employment.ccnl",
+        "employment.contract_type",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "employment.employer_name",
+        "employment.employer_tax_id",
+        "employment.job_title",
+        "employment.level",
+        "employment.start_date",
+        "employment.weekly_hours"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.issue_date",
+        "employment.probation_end",
+        "employment.salary_gross",
+        "employment.workplace"
+      ]
+    },
+    "hr_employment.lettera_licenziamento": {
+      "document_type_id": "hr_employment.lettera_licenziamento",
+      "canonical_name": "lettera di licenziamento",
+      "family": "hr_employment",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "employment.end_date",
+        "employment.termination_reason"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.references"
+      ]
+    },
+    "hr_employment.unilav": {
+      "document_type_id": "hr_employment.unilav",
+      "canonical_name": "unilav",
+      "family": "hr_employment",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "employment.employer_name",
+        "employment.employer_tax_id",
+        "employment.end_date",
+        "employment.extension_end_date",
+        "employment.protocol",
+        "employment.submission_date",
+        "employment.unilav_communication_id",
+        "employment.unilav_event_date",
+        "event_type"
+      ],
+      "optional_fields": [
+        "employment.contract_type",
+        "employment.job_title",
+        "employment.start_date",
+        "employment.workplace"
+      ]
+    },
+    "hr_payroll.prospetto_costo_del_personale": {
+      "document_type_id": "hr_payroll.prospetto_costo_del_personale",
+      "canonical_name": "prospetto costo del personale",
+      "family": "hr_payroll",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "money.gross",
+        "payroll.contributions",
+        "payroll.employee_count",
+        "payroll.employer_cost",
+        "payroll.net_pay",
+        "payroll.period"
+      ],
+      "optional_fields": [
+        "payroll.employees",
+        "payroll.leave_balances",
+        "payroll.tfr"
+      ]
+    },
+    "hr_personnel.cambio_iban_dipendente": {
+      "document_type_id": "hr_personnel.cambio_iban_dipendente",
+      "canonical_name": "cambio IBAN dipendente",
+      "family": "hr_personnel",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "document.effective_date",
+        "document.issue_date",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "employment.employer_name"
+      ],
+      "optional_fields": [
+        "document.number",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "hr_personnel.foglio_presenze": {
+      "document_type_id": "hr_personnel.foglio_presenze",
+      "canonical_name": "foglio presenze",
+      "family": "hr_personnel",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "employment.employer_name",
+        "hr.days",
+        "hr.hours",
+        "line_items",
+        "period.end",
+        "period.start"
+      ],
+      "optional_fields": [
+        "document.number",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "hr_personnel.nota_spese": {
+      "document_type_id": "hr_personnel.nota_spese",
+      "canonical_name": "nota spese",
+      "family": "hr_personnel",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "employment.employer_name",
+        "hr.expense_items",
+        "hr.reimbursement_amount",
+        "money.currency"
+      ],
+      "optional_fields": [
+        "document.number",
+        "hr.destination",
+        "issuer.name",
+        "period.end",
+        "period.start",
+        "recipient.name"
+      ]
+    },
+    "hr_personnel.richiesta_assenza": {
+      "document_type_id": "hr_personnel.richiesta_assenza",
+      "canonical_name": "richiesta assenza",
+      "family": "hr_personnel",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "absence_type",
+        "document.issue_date",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "employment.employer_name",
+        "hr.absence_end",
+        "hr.absence_start",
+        "hr.absence_type"
+      ],
+      "optional_fields": [
+        "document.number",
+        "document.status",
+        "hr.days",
+        "hr.hours",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "hr_personnel.scelta_destinazione_tfr": {
+      "document_type_id": "hr_personnel.scelta_destinazione_tfr",
+      "canonical_name": "scelta destinazione TFR",
+      "family": "hr_personnel",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.declaration_date",
+        "document.effective_date",
+        "document.issue_date",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "employment.employer_name"
+      ],
+      "optional_fields": [
+        "counterparty.name",
+        "document.number",
+        "issuer.name",
+        "payroll.tfr",
+        "recipient.name"
+      ]
+    },
+    "hr_recruiting.curriculum_vitae": {
+      "document_type_id": "hr_recruiting.curriculum_vitae",
+      "canonical_name": "curriculum vitae",
+      "family": "hr_recruiting",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "employment.job_title",
+        "person.name"
+      ],
+      "optional_fields": [
+        "document.number",
+        "issuer.name",
+        "person.address",
+        "person.education",
+        "person.email",
+        "person.experience",
+        "person.phone",
+        "person.skills",
+        "person.tax_code",
+        "recipient.name"
+      ]
+    },
+    "hr_training.piano_formativo_individuale": {
+      "document_type_id": "hr_training.piano_formativo_individuale",
+      "canonical_name": "piano formativo individuale",
+      "family": "hr_training",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "hse.training_course",
+        "hse.training_date",
+        "hse.training_expiry"
+      ],
+      "optional_fields": [
+        "hse.training_hours",
+        "hse.training_provider",
+        "hse.training_topics"
+      ]
+    },
+    "hse_health.certificato_malattia": {
+      "document_type_id": "hse_health.certificato_malattia",
+      "canonical_name": "certificato malattia",
+      "family": "hse_health",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "hr.absence_end",
+        "hr.absence_start"
+      ],
+      "optional_fields": [
+        "document.protocol_number",
+        "hse.prognosis_days"
+      ]
+    },
+    "hse_health.denuncia_infortunio_inail": {
+      "document_type_id": "hse_health.denuncia_infortunio_inail",
+      "canonical_name": "denuncia infortunio INAIL",
+      "family": "hse_health",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "hse.event_date",
+        "hse.event_location",
+        "hse.injury_description"
+      ],
+      "optional_fields": [
+        "company.name",
+        "document.protocol_number",
+        "hse.prognosis_days",
+        "hse.site"
+      ]
+    },
+    "hse_health.giudizio_idoneita": {
+      "document_type_id": "hse_health.giudizio_idoneita",
+      "canonical_name": "giudizio idoneità",
+      "family": "hse_health",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "document.issue_date",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "hse.fitness_result"
+      ],
+      "optional_fields": [
+        "employment.job_title",
+        "hse.fitness_limitations",
+        "hse.next_medical_due"
+      ]
+    },
+    "hse_risk.accettazione_psc": {
+      "document_type_id": "hse_risk.accettazione_psc",
+      "canonical_name": "accettazione PSC",
+      "family": "hse_risk",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "document.declaration_date",
+        "document.references",
+        "hse.site"
+      ],
+      "optional_fields": [
+        "document.signer",
+        "procurement.cig",
+        "procurement.cup"
+      ]
+    },
+    "hse_risk.duvri": {
+      "document_type_id": "hse_risk.duvri",
+      "canonical_name": "DUVRI",
+      "family": "hse_risk",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "document.issue_date",
+        "hse.preventive_measures",
+        "hse.risk_result",
+        "hse.risk_type",
+        "hse.site"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.next_review_date",
+        "document.references",
+        "document.version",
+        "hse.assessment_date",
+        "hse.legal_basis",
+        "hse.measurements",
+        "hse.worker_groups",
+        "procurement.cig",
+        "procurement.cup"
+      ]
+    },
+    "hse_risk.dvr": {
+      "document_type_id": "hse_risk.dvr",
+      "canonical_name": "DVR",
+      "family": "hse_risk",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "document.issue_date",
+        "hse.preventive_measures",
+        "hse.risk_result",
+        "hse.risk_type",
+        "hse.site"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.next_review_date",
+        "document.version",
+        "hse.assessment_date",
+        "hse.legal_basis",
+        "hse.measurements",
+        "hse.worker_groups"
+      ]
+    },
+    "hse_risk.nomina_preposto": {
+      "document_type_id": "hse_risk.nomina_preposto",
+      "canonical_name": "nomina preposto",
+      "family": "hse_risk",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "document.expiry_date",
+        "hse.appointed_person",
+        "hse.appointment_date",
+        "hse.appointment_role"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.legal_basis"
+      ]
+    },
+    "hse_risk.nomina_rls": {
+      "document_type_id": "hse_risk.nomina_rls",
+      "canonical_name": "nomina o elezione RLS",
+      "family": "hse_risk",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "document.expiry_date",
+        "hse.appointed_person",
+        "hse.appointment_date",
+        "hse.appointment_role"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.legal_basis"
+      ]
+    },
+    "hse_risk.nomina_rspp": {
+      "document_type_id": "hse_risk.nomina_rspp",
+      "canonical_name": "nomina RSPP",
+      "family": "hse_risk",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "document.expiry_date",
+        "hse.appointed_person",
+        "hse.appointment_date",
+        "hse.appointment_role"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.legal_basis"
+      ]
+    },
+    "hse_risk.piano_emergenza_evacuazione": {
+      "document_type_id": "hse_risk.piano_emergenza_evacuazione",
+      "canonical_name": "piano di emergenza ed evacuazione",
+      "family": "hse_risk",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "company.name",
+        "document.effective_date",
+        "document.version",
+        "hse.emergency_roles",
+        "hse.site"
+      ],
+      "optional_fields": [
+        "document.next_review_date",
+        "hse.preventive_measures"
+      ]
+    },
+    "hse_risk.pos": {
+      "document_type_id": "hse_risk.pos",
+      "canonical_name": "POS",
+      "family": "hse_risk",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "company.name",
+        "document.issue_date",
+        "hse.preventive_measures",
+        "hse.risk_result",
+        "hse.risk_type",
+        "hse.site"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.next_review_date",
+        "document.references",
+        "document.version",
+        "hse.assessment_date",
+        "hse.legal_basis",
+        "hse.measurements",
+        "hse.worker_groups",
+        "procurement.cig",
+        "procurement.cup"
+      ]
+    },
+    "hse_risk.psc": {
+      "document_type_id": "hse_risk.psc",
+      "canonical_name": "PSC",
+      "family": "hse_risk",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "company.name",
+        "document.issue_date",
+        "hse.preventive_measures",
+        "hse.risk_result",
+        "hse.risk_type",
+        "hse.site"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.next_review_date",
+        "document.references",
+        "document.version",
+        "hse.assessment_date",
+        "hse.legal_basis",
+        "hse.measurements",
+        "hse.worker_groups",
+        "procurement.cig",
+        "procurement.cup"
+      ]
+    },
+    "hse_risk.valutazione_rischio_specifico": {
+      "document_type_id": "hse_risk.valutazione_rischio_specifico",
+      "canonical_name": "valutazione rischio specifico",
+      "family": "hse_risk",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "company.name",
+        "document.issue_date",
+        "hse.preventive_measures",
+        "hse.risk_result",
+        "hse.risk_type",
+        "hse.site",
+        "risk_type"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.next_review_date",
+        "document.version",
+        "hse.assessment_date",
+        "hse.legal_basis",
+        "hse.measurements",
+        "hse.worker_groups"
+      ]
+    },
+    "hse_training.attestato_formazione_sicurezza": {
+      "document_type_id": "hse_training.attestato_formazione_sicurezza",
+      "canonical_name": "attestato formazione sicurezza",
+      "family": "hse_training",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "course_type",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "hse.training_course",
+        "hse.training_date",
+        "hse.training_expiry"
+      ],
+      "optional_fields": [
+        "document.number",
+        "hse.training_hours",
+        "hse.training_provider",
+        "hse.training_topics",
+        "recipient.name"
+      ]
+    },
+    "hse_training.nomina_addetto_antincendio": {
+      "document_type_id": "hse_training.nomina_addetto_antincendio",
+      "canonical_name": "nomina addetto antincendio",
+      "family": "hse_training",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "employment.employee_name",
+        "employment.employee_tax_code",
+        "hse.appointment_date",
+        "hse.appointment_role"
+      ],
+      "optional_fields": [
+        "document.effective_date",
+        "document.legal_basis"
+      ]
+    },
+    "hse_training.registro_formazione": {
+      "document_type_id": "hse_training.registro_formazione",
+      "canonical_name": "registro formazione",
+      "family": "hse_training",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "hse.training_expiry",
+        "line_items",
+        "period.end",
+        "period.start"
+      ],
+      "optional_fields": [
+        "employment.employee_name",
+        "hse.training_course",
+        "hse.training_date"
+      ]
+    },
+    "identity_personal.carta_identita": {
+      "document_type_id": "identity_personal.carta_identita",
+      "canonical_name": "carta di identità",
+      "family": "identity_personal",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.expiry_date",
+        "document.issue_date",
+        "document.number",
+        "identity.document_type",
+        "person.birth_date",
+        "person.birth_place",
+        "person.first_name",
+        "person.last_name"
+      ],
+      "optional_fields": [
+        "identity.issuing_authority",
+        "identity.nationality",
+        "issuer.name",
+        "person.address",
+        "person.tax_code",
+        "recipient.name"
+      ],
+      "field_pii_overrides": {
+        "document.number": "sensitive",
+        "document.issue_date": "sensitive",
+        "document.expiry_date": "sensitive"
+      }
+    },
+    "identity_personal.codice_fiscale": {
+      "document_type_id": "identity_personal.codice_fiscale",
+      "canonical_name": "codice fiscale",
+      "family": "identity_personal",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "identity.document_type",
+        "identity.variant",
+        "person.first_name",
+        "person.last_name",
+        "person.tax_code"
+      ],
+      "optional_fields": [
+        "document.issue_date",
+        "document.number",
+        "identity.issuing_authority",
+        "identity.nationality",
+        "issuer.name",
+        "person.address",
+        "recipient.name"
+      ],
+      "field_pii_overrides": {
+        "document.number": "sensitive",
+        "document.issue_date": "sensitive"
+      }
+    },
+    "identity_personal.patente_di_guida": {
+      "document_type_id": "identity_personal.patente_di_guida",
+      "canonical_name": "patente di guida",
+      "family": "identity_personal",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.expiry_date",
+        "document.issue_date",
+        "document.number",
+        "identity.document_type",
+        "person.birth_date",
+        "person.birth_place",
+        "person.first_name",
+        "person.last_name"
+      ],
+      "optional_fields": [
+        "identity.categories",
+        "identity.issuing_authority",
+        "identity.nationality",
+        "issuer.name",
+        "person.address",
+        "person.tax_code",
+        "recipient.name"
+      ],
+      "field_pii_overrides": {
+        "document.number": "sensitive",
+        "document.issue_date": "sensitive",
+        "document.expiry_date": "sensitive"
+      }
+    },
+    "identity_personal.permesso_di_soggiorno": {
+      "document_type_id": "identity_personal.permesso_di_soggiorno",
+      "canonical_name": "permesso di soggiorno",
+      "family": "identity_personal",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.expiry_date",
+        "document.issue_date",
+        "document.number",
+        "identity.document_type",
+        "identity.permit_type",
+        "person.birth_date",
+        "person.birth_place",
+        "person.first_name",
+        "person.last_name"
+      ],
+      "optional_fields": [
+        "identity.issuing_authority",
+        "identity.nationality",
+        "issuer.name",
+        "person.address",
+        "person.tax_code",
+        "recipient.name"
+      ],
+      "field_pii_overrides": {
+        "document.number": "sensitive",
+        "document.issue_date": "sensitive",
+        "document.expiry_date": "sensitive"
+      }
+    },
+    "insurance.certificato_assicurativo": {
+      "document_type_id": "insurance.certificato_assicurativo",
+      "canonical_name": "certificato assicurativo",
+      "family": "insurance",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "insurance.coverage_end",
+        "insurance.coverage_start",
+        "insurance.insured",
+        "insurance.policy_number",
+        "insurance.policyholder"
+      ],
+      "optional_fields": [
+        "insurance.coverages",
+        "insurance.deductible",
+        "insurance.limit",
+        "insurance.premium",
+        "issuer.name",
+        "money.currency"
+      ]
+    },
+    "insurance.denuncia_sinistro": {
+      "document_type_id": "insurance.denuncia_sinistro",
+      "canonical_name": "denuncia di sinistro",
+      "family": "insurance",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "insurance.claim_date",
+        "insurance.claim_number",
+        "insurance.claim_status",
+        "insurance.policy_number"
+      ],
+      "optional_fields": [
+        "document.references",
+        "insurance.claim_amount",
+        "insurance.claim_cause",
+        "insurance.damage_description",
+        "insurance.insured",
+        "insurance.settlement_amount"
+      ]
+    },
+    "insurance.polizza_assicurativa": {
+      "document_type_id": "insurance.polizza_assicurativa",
+      "canonical_name": "polizza assicurativa",
+      "family": "insurance",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "insurance.coverage_end",
+        "insurance.coverage_start",
+        "insurance.insured",
+        "insurance.policy_number",
+        "insurance.policyholder",
+        "insurance.vehicle_plate",
+        "policy_type",
+        "realestate.address",
+        "vehicle.plate"
+      ],
+      "optional_fields": [
+        "insurance.coverages",
+        "insurance.deductible",
+        "insurance.limit",
+        "insurance.premium",
+        "issuer.name",
+        "money.currency"
+      ]
+    },
+    "insurance.quietanza_premio_assicurativo": {
+      "document_type_id": "insurance.quietanza_premio_assicurativo",
+      "canonical_name": "quietanza premio assicurativo",
+      "family": "insurance",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "insurance.policy_number",
+        "money.amount",
+        "money.currency",
+        "payment.date",
+        "payment.status"
+      ],
+      "optional_fields": [
+        "document.references",
+        "insurance.coverage_end",
+        "insurance.coverage_start"
+      ]
+    },
+    "legal_corporate.accordo_riservatezza": {
+      "document_type_id": "legal_corporate.accordo_riservatezza",
+      "canonical_name": "accordo riservatezza",
+      "family": "legal_corporate",
+      "schema_state": "VALIDATION_READY",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.start_date",
+        "contract.subject",
+        "document.issue_date"
+      ],
+      "optional_fields": [
+        "contract.obligations",
+        "contract.penalties",
+        "document.legal_basis",
+        "document.references"
+      ]
+    },
+    "legal_corporate.cessione_credito": {
+      "document_type_id": "legal_corporate.cessione_credito",
+      "canonical_name": "cessione credito",
+      "family": "legal_corporate",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.subject",
+        "credit.invoice_refs",
+        "document.effective_date",
+        "document.issue_date",
+        "money.amount"
+      ],
+      "optional_fields": [
+        "contract.start_date",
+        "counterparty.name",
+        "document.legal_basis",
+        "document.references"
+      ]
+    },
+    "legal_corporate.riconoscimento_debito": {
+      "document_type_id": "legal_corporate.riconoscimento_debito",
+      "canonical_name": "riconoscimento debito",
+      "family": "legal_corporate",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.subject",
+        "credit.invoice_refs",
+        "document.issue_date",
+        "money.amount",
+        "payment.due_date"
+      ],
+      "optional_fields": [
+        "contract.start_date",
+        "credit.installments",
+        "document.legal_basis",
+        "document.references"
+      ]
+    },
+    "legal_disputes.decreto_ingiuntivo": {
+      "document_type_id": "legal_disputes.decreto_ingiuntivo",
+      "canonical_name": "decreto ingiuntivo",
+      "family": "legal_disputes",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "legal.case_number",
+        "legal.court",
+        "legal.deadline",
+        "legal.parties",
+        "legal.request"
+      ],
+      "optional_fields": [
+        "document.references",
+        "legal.claim_amount",
+        "legal.hearing_date",
+        "legal.lawyer",
+        "legal.opponent",
+        "legal.outcome",
+        "legal.status"
+      ]
+    },
+    "legal_disputes.diffida": {
+      "document_type_id": "legal_disputes.diffida",
+      "canonical_name": "diffida",
+      "family": "legal_disputes",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "legal.deadline",
+        "legal.parties",
+        "legal.request"
+      ],
+      "optional_fields": [
+        "credit.invoice_refs",
+        "document.references",
+        "legal.case_number",
+        "legal.claim_amount",
+        "legal.court",
+        "legal.outcome",
+        "legal.status",
+        "money.amount"
+      ]
+    },
+    "legal_disputes.messa_in_mora": {
+      "document_type_id": "legal_disputes.messa_in_mora",
+      "canonical_name": "messa in mora",
+      "family": "legal_disputes",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "legal.deadline",
+        "legal.parties",
+        "legal.request"
+      ],
+      "optional_fields": [
+        "credit.invoice_refs",
+        "document.references",
+        "legal.case_number",
+        "legal.claim_amount",
+        "legal.court",
+        "legal.outcome",
+        "legal.status",
+        "money.amount"
+      ]
+    },
+    "logistics_warehouse.packing_list": {
+      "document_type_id": "logistics_warehouse.packing_list",
+      "canonical_name": "packing list",
+      "family": "logistics_warehouse",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.number",
+        "logistics.carrier",
+        "logistics.destination",
+        "logistics.goods",
+        "logistics.origin",
+        "logistics.shipment_date"
+      ],
+      "optional_fields": [
+        "document.references",
+        "line_items",
+        "logistics.package_count",
+        "logistics.weight"
+      ]
+    },
+    "logistics_warehouse.prova_consegna_pod": {
+      "document_type_id": "logistics_warehouse.prova_consegna_pod",
+      "canonical_name": "prova di consegna POD",
+      "family": "logistics_warehouse",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.declaration_date",
+        "document.number",
+        "document.outcome",
+        "logistics.carrier",
+        "logistics.destination",
+        "logistics.goods",
+        "logistics.origin",
+        "logistics.shipment_date",
+        "recipient.name"
+      ],
+      "optional_fields": [
+        "document.references",
+        "line_items",
+        "logistics.package_count",
+        "logistics.weight"
+      ]
+    },
+    "master_data.dati_fatturazione": {
+      "document_type_id": "master_data.dati_fatturazione",
+      "canonical_name": "dati di fatturazione",
+      "family": "master_data",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "bank.iban",
+        "company.address",
+        "company.name",
+        "company.tax_code",
+        "company.vat_number"
+      ],
+      "optional_fields": [
+        "company.legal_form",
+        "company.pec",
+        "company.rea_number",
+        "document.issue_date",
+        "document.number",
+        "issuer.name",
+        "recipient.name"
+      ]
+    },
+    "payments_treasury.distinta_bonifici": {
+      "document_type_id": "payments_treasury.distinta_bonifici",
+      "canonical_name": "distinta bonifici",
+      "family": "payments_treasury",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "document.issue_date",
+        "money.currency",
+        "payment.items"
+      ],
+      "optional_fields": [
+        "money.amount",
+        "payment.status",
+        "period.end",
+        "period.start"
+      ]
+    },
+    "payments_treasury.ordine_pagamento": {
+      "document_type_id": "payments_treasury.ordine_pagamento",
+      "canonical_name": "ordine pagamento",
+      "family": "payments_treasury",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "document.issue_date",
+        "money.amount",
+        "money.currency",
+        "payment.date",
+        "payment.method",
+        "payment.reference"
+      ],
+      "optional_fields": [
+        "document.references",
+        "payment.payee",
+        "payment.payer",
+        "payment.status",
+        "payment.transaction_id"
+      ]
+    },
+    "payments_treasury.richiesta_pagamento": {
+      "document_type_id": "payments_treasury.richiesta_pagamento",
+      "canonical_name": "richiesta pagamento",
+      "family": "payments_treasury",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "document.issue_date",
+        "money.amount",
+        "money.currency",
+        "payment.date",
+        "payment.due_date",
+        "payment.method",
+        "payment.reference"
+      ],
+      "optional_fields": [
+        "document.references",
+        "payment.payee",
+        "payment.payer",
+        "payment.status",
+        "payment.transaction_id"
+      ]
+    },
+    "payments_treasury.riconciliazione_pagamento": {
+      "document_type_id": "payments_treasury.riconciliazione_pagamento",
+      "canonical_name": "riconciliazione pagamento",
+      "family": "payments_treasury",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "document.issue_date",
+        "document.references",
+        "money.amount",
+        "money.currency",
+        "payment.date",
+        "payment.method",
+        "payment.reference"
+      ],
+      "optional_fields": [
+        "payment.payee",
+        "payment.payer",
+        "payment.status",
+        "payment.transaction_id"
+      ]
+    },
+    "payments_treasury.scadenziario_fornitori": {
+      "document_type_id": "payments_treasury.scadenziario_fornitori",
+      "canonical_name": "scadenziario fornitori",
+      "family": "payments_treasury",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "counterparty.name",
+        "credit.outstanding_amount",
+        "document.issue_date",
+        "money.currency",
+        "payment.due_date",
+        "payment.items"
+      ],
+      "optional_fields": [
+        "money.amount",
+        "payment.status",
+        "period.end",
+        "period.start"
+      ]
+    },
+    "payroll_contributions.denuncia_uniemens": {
+      "document_type_id": "payroll_contributions.denuncia_uniemens",
+      "canonical_name": "denuncia UNIEMENS",
+      "family": "payroll_contributions",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "money.amount",
+        "payroll.contributions",
+        "payroll.period"
+      ],
+      "optional_fields": [
+        "line_items",
+        "payroll.inail_position",
+        "payroll.inps_position",
+        "payroll.social_security_base"
+      ]
+    },
+    "payroll_contributions.distinta_stipendi": {
+      "document_type_id": "payroll_contributions.distinta_stipendi",
+      "canonical_name": "distinta stipendi",
+      "family": "payroll_contributions",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "company.name",
+        "money.amount",
+        "money.currency",
+        "payroll.employees",
+        "payroll.period"
+      ],
+      "optional_fields": [
+        "payment.date",
+        "payment.status"
+      ]
+    },
+    "payroll_contributions.durc": {
+      "document_type_id": "payroll_contributions.durc",
+      "canonical_name": "DURC",
+      "family": "payroll_contributions",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.expiry_date",
+        "document.issue_date",
+        "document.outcome"
+      ],
+      "optional_fields": [
+        "document.protocol_number",
+        "issuer.name"
+      ]
+    },
+    "payroll_contributions.prospetto_contributivo": {
+      "document_type_id": "payroll_contributions.prospetto_contributivo",
+      "canonical_name": "prospetto contributivo",
+      "family": "payroll_contributions",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "money.amount",
+        "payroll.contributions",
+        "payroll.period"
+      ],
+      "optional_fields": [
+        "line_items",
+        "payroll.inail_position",
+        "payroll.inps_position",
+        "payroll.social_security_base"
+      ]
+    },
+    "payroll_contributions.prospetto_tfr": {
+      "document_type_id": "payroll_contributions.prospetto_tfr",
+      "canonical_name": "prospetto TFR",
+      "family": "payroll_contributions",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "payroll.employees",
+        "payroll.period",
+        "payroll.tfr"
+      ],
+      "optional_fields": [
+        "employment.employee_name",
+        "money.amount"
+      ]
+    },
+    "pnrr_esg.dichiarazione_dnsh": {
+      "document_type_id": "pnrr_esg.dichiarazione_dnsh",
+      "canonical_name": "dichiarazione DNSH",
+      "family": "pnrr_esg",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.declaration_date",
+        "document.issue_date",
+        "document.outcome"
+      ],
+      "optional_fields": [
+        "document.legal_basis",
+        "document.number",
+        "document.references",
+        "issuer.name",
+        "procurement.cig",
+        "procurement.cup"
+      ]
+    },
+    "pnrr_esg.dichiarazione_titolare_effettivo": {
+      "document_type_id": "pnrr_esg.dichiarazione_titolare_effettivo",
+      "canonical_name": "dichiarazione titolare effettivo",
+      "family": "pnrr_esg",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "compliance.beneficial_owners",
+        "document.declaration_date",
+        "document.issue_date",
+        "document.outcome"
+      ],
+      "optional_fields": [
+        "document.legal_basis",
+        "document.number",
+        "document.references",
+        "issuer.name",
+        "procurement.cig",
+        "procurement.cup"
+      ]
+    },
+    "pnrr_esg.relazione_cam": {
+      "document_type_id": "pnrr_esg.relazione_cam",
+      "canonical_name": "relazione CAM",
+      "family": "pnrr_esg",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.issue_date",
+        "document.outcome",
+        "environment.criteria"
+      ],
+      "optional_fields": [
+        "document.declaration_date",
+        "document.number",
+        "issuer.name",
+        "procurement.cig",
+        "procurement.cup",
+        "product.certifications",
+        "product.name"
+      ]
+    },
+    "privacy_gdpr.data_breach_report": {
+      "document_type_id": "privacy_gdpr.data_breach_report",
+      "canonical_name": "data breach report",
+      "family": "privacy_gdpr",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.outcome",
+        "privacy.breach_date",
+        "privacy.breach_impact",
+        "privacy.controller"
+      ],
+      "optional_fields": [
+        "document.protocol_number",
+        "governance.actions",
+        "privacy.data_categories",
+        "privacy.data_subjects"
+      ]
+    },
+    "privacy_gdpr.informativa_privacy": {
+      "document_type_id": "privacy_gdpr.informativa_privacy",
+      "canonical_name": "informativa privacy",
+      "family": "privacy_gdpr",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "privacy.controller",
+        "privacy.data_categories",
+        "privacy.data_subjects",
+        "privacy.legal_basis",
+        "privacy.processing_purpose"
+      ],
+      "optional_fields": [
+        "document.issue_date",
+        "document.version",
+        "privacy.dpo",
+        "privacy.processor",
+        "privacy.recipients",
+        "privacy.retention",
+        "privacy.rights"
+      ]
+    },
+    "privacy_gdpr.nomina_responsabile_trattamento": {
+      "document_type_id": "privacy_gdpr.nomina_responsabile_trattamento",
+      "canonical_name": "nomina responsabile trattamento",
+      "family": "privacy_gdpr",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "privacy.controller",
+        "privacy.data_categories",
+        "privacy.data_subjects",
+        "privacy.legal_basis",
+        "privacy.processing_purpose"
+      ],
+      "optional_fields": [
+        "document.issue_date",
+        "document.version",
+        "privacy.dpo",
+        "privacy.processor",
+        "privacy.recipients",
+        "privacy.retention",
+        "privacy.rights"
+      ]
+    },
+    "privacy_gdpr.registro_trattamenti": {
+      "document_type_id": "privacy_gdpr.registro_trattamenti",
+      "canonical_name": "registro trattamenti",
+      "family": "privacy_gdpr",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "privacy.controller",
+        "privacy.processing_entries"
+      ],
+      "optional_fields": [
+        "privacy.dpo",
+        "privacy.processor"
+      ]
+    },
+    "procurement.anagrafica_fornitore": {
+      "document_type_id": "procurement.anagrafica_fornitore",
+      "canonical_name": "anagrafica fornitore",
+      "family": "procurement",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "bank.iban",
+        "company.address",
+        "company.tax_code",
+        "company.vat_number",
+        "procurement.supplier"
+      ],
+      "optional_fields": [
+        "company.pec",
+        "company.rea_number",
+        "document.status"
+      ]
+    },
+    "procurement.ddt": {
+      "document_type_id": "procurement.ddt",
+      "canonical_name": "DDT",
+      "family": "procurement",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "document.number",
+        "issuer.name",
+        "procurement.items",
+        "recipient.name"
+      ],
+      "optional_fields": [
+        "commercial.order_number",
+        "logistics.carrier",
+        "logistics.destination",
+        "logistics.origin",
+        "logistics.shipment_date"
+      ]
+    },
+    "procurement.questionario_qualifica_fornitore": {
+      "document_type_id": "procurement.questionario_qualifica_fornitore",
+      "canonical_name": "questionario qualifica fornitore",
+      "family": "procurement",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "procurement.evaluation_items",
+        "procurement.supplier",
+        "procurement.supplier_score"
+      ],
+      "optional_fields": [
+        "document.issue_date",
+        "document.status",
+        "governance.findings"
+      ]
+    },
+    "procurement.richiesta_acquisto": {
+      "document_type_id": "procurement.richiesta_acquisto",
+      "canonical_name": "richiesta di acquisto",
+      "family": "procurement",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.deadline",
+        "document.issue_date",
+        "procurement.buyer",
+        "procurement.items"
+      ],
+      "optional_fields": [
+        "document.status",
+        "money.total"
+      ]
+    },
+    "procurement.richiesta_offerta": {
+      "document_type_id": "procurement.richiesta_offerta",
+      "canonical_name": "richiesta offerta",
+      "family": "procurement",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.deadline",
+        "document.issue_date",
+        "document.number",
+        "issuer.name",
+        "payment.due_date",
+        "procurement.items",
+        "recipient.name"
+      ],
+      "optional_fields": [
+        "commercial.quote_number",
+        "money.currency",
+        "money.total",
+        "procurement.delivery_date"
+      ]
+    },
+    "public_contracts.certificato_regolare_esecuzione": {
+      "document_type_id": "public_contracts.certificato_regolare_esecuzione",
+      "canonical_name": "certificato regolare esecuzione",
+      "family": "public_contracts",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "construction.completion_date",
+        "contract.subject",
+        "document.issue_date",
+        "document.number",
+        "document.outcome",
+        "procurement.cig",
+        "procurement.contracting_authority"
+      ],
+      "optional_fields": [
+        "contract.value",
+        "document.references",
+        "issuer.name",
+        "money.amount",
+        "procurement.cup",
+        "recipient.name"
+      ]
+    },
+    "public_contracts.certificato_ultimazione_lavori": {
+      "document_type_id": "public_contracts.certificato_ultimazione_lavori",
+      "canonical_name": "certificato ultimazione lavori",
+      "family": "public_contracts",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "construction.completion_date",
+        "contract.subject",
+        "document.issue_date",
+        "document.number",
+        "document.outcome",
+        "procurement.cig",
+        "procurement.contracting_authority"
+      ],
+      "optional_fields": [
+        "contract.value",
+        "document.references",
+        "issuer.name",
+        "procurement.cup",
+        "recipient.name"
+      ]
+    },
+    "public_contracts.contratto_appalto_pubblico": {
+      "document_type_id": "public_contracts.contratto_appalto_pubblico",
+      "canonical_name": "contratto appalto pubblico",
+      "family": "public_contracts",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.payment_terms",
+        "contract.start_date",
+        "contract.subject",
+        "document.issue_date",
+        "document.number",
+        "procurement.cig",
+        "procurement.contracting_authority"
+      ],
+      "optional_fields": [
+        "contract.value",
+        "document.references",
+        "issuer.name",
+        "procurement.cup",
+        "recipient.name"
+      ]
+    },
+    "public_procurement.bando_gara": {
+      "document_type_id": "public_procurement.bando_gara",
+      "canonical_name": "bando gara",
+      "family": "public_procurement",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "document.issue_date",
+        "procurement.contracting_authority",
+        "procurement.deadline",
+        "procurement.procedure_title",
+        "procurement.tender_amount"
+      ],
+      "optional_fields": [
+        "document.number",
+        "procurement.cig",
+        "procurement.cup",
+        "procurement.lot",
+        "procurement.procedure_number",
+        "procurement.selection_criteria"
+      ]
+    },
+    "public_procurement.capitolato_speciale_appalto": {
+      "document_type_id": "public_procurement.capitolato_speciale_appalto",
+      "canonical_name": "capitolato speciale appalto",
+      "family": "public_procurement",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "contract.subject",
+        "document.issue_date",
+        "procurement.contracting_authority",
+        "procurement.deadline",
+        "procurement.procedure_title"
+      ],
+      "optional_fields": [
+        "contract.obligations",
+        "contract.payment_terms",
+        "contract.penalties",
+        "document.number",
+        "procurement.cig",
+        "procurement.cup",
+        "procurement.procedure_number"
+      ]
+    },
+    "public_procurement.dgue": {
+      "document_type_id": "public_procurement.dgue",
+      "canonical_name": "DGUE",
+      "family": "public_procurement",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "company.name",
+        "company.tax_code",
+        "company.vat_number",
+        "document.issue_date",
+        "procurement.contracting_authority",
+        "procurement.deadline",
+        "procurement.exclusion_grounds",
+        "procurement.procedure_title",
+        "procurement.selection_criteria"
+      ],
+      "optional_fields": [
+        "document.declaration_date",
+        "document.number",
+        "person.name",
+        "procurement.cig",
+        "procurement.cup",
+        "procurement.declaration_scope",
+        "procurement.procedure_number"
+      ]
+    },
+    "public_procurement.offerta_economica_gara": {
+      "document_type_id": "public_procurement.offerta_economica_gara",
+      "canonical_name": "offerta economica gara",
+      "family": "public_procurement",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "document.issue_date",
+        "money.currency",
+        "money.total",
+        "procurement.contracting_authority",
+        "procurement.deadline",
+        "procurement.procedure_title"
+      ],
+      "optional_fields": [
+        "document.number",
+        "line_items",
+        "procurement.cig",
+        "procurement.cup",
+        "procurement.lot",
+        "procurement.procedure_number"
+      ]
+    },
+    "public_procurement.offerta_tecnica_gara": {
+      "document_type_id": "public_procurement.offerta_tecnica_gara",
+      "canonical_name": "offerta tecnica gara",
+      "family": "public_procurement",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "company.name",
+        "document.issue_date",
+        "procurement.contracting_authority",
+        "procurement.deadline",
+        "procurement.procedure_title",
+        "procurement.selection_criteria"
+      ],
+      "optional_fields": [
+        "document.number",
+        "document.outcome",
+        "line_items",
+        "procurement.cig",
+        "procurement.cup",
+        "procurement.procedure_number"
+      ]
+    },
+    "quality_iso.azione_correttiva": {
+      "document_type_id": "quality_iso.azione_correttiva",
+      "canonical_name": "azione correttiva",
+      "family": "quality_iso",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "quality.actions",
+        "quality.due_date",
+        "quality.findings",
+        "quality.nonconformity_id"
+      ],
+      "optional_fields": [
+        "quality.root_cause",
+        "quality.verification_result"
+      ]
+    },
+    "quality_iso.certificato_iso": {
+      "document_type_id": "quality_iso.certificato_iso",
+      "canonical_name": "certificato iso",
+      "family": "quality_iso",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "company.name",
+        "quality.certificate_number",
+        "quality.scope",
+        "quality.standard",
+        "quality.valid_from",
+        "quality.valid_to",
+        "standard"
+      ],
+      "optional_fields": [
+        "document.issue_date",
+        "issuer.name"
+      ]
+    },
+    "quality_iso.rapporto_non_conformita": {
+      "document_type_id": "quality_iso.rapporto_non_conformita",
+      "canonical_name": "rapporto non conformità",
+      "family": "quality_iso",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "quality.actions",
+        "quality.due_date",
+        "quality.findings",
+        "quality.nonconformity_id"
+      ],
+      "optional_fields": [
+        "quality.root_cause",
+        "quality.verification_result"
+      ]
+    },
+    "real_estate.ape": {
+      "document_type_id": "real_estate.ape",
+      "canonical_name": "APE",
+      "family": "real_estate",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.expiry_date",
+        "document.issue_date",
+        "realestate.address",
+        "realestate.energy_class"
+      ],
+      "optional_fields": [
+        "company.name",
+        "document.outcome",
+        "person.name",
+        "realestate.area",
+        "realestate.cadastral_data",
+        "realestate.property_id"
+      ]
+    },
+    "real_estate.contratto_locazione": {
+      "document_type_id": "real_estate.contratto_locazione",
+      "canonical_name": "contratto locazione",
+      "family": "real_estate",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.start_date",
+        "realestate.address"
+      ],
+      "optional_fields": [
+        "company.name",
+        "contract.payment_terms",
+        "contract.value",
+        "document.issue_date",
+        "person.name",
+        "realestate.cadastral_data",
+        "realestate.deposit",
+        "realestate.property_id",
+        "realestate.rent"
+      ]
+    },
+    "real_estate.verbale_movimentazione_immobile": {
+      "document_type_id": "real_estate.verbale_movimentazione_immobile",
+      "canonical_name": "verbale movimentazione immobile",
+      "family": "real_estate",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "contract.parties",
+        "document.issue_date",
+        "document.outcome",
+        "event_type",
+        "realestate.address"
+      ],
+      "optional_fields": [
+        "company.name",
+        "document.references",
+        "line_items",
+        "person.name",
+        "realestate.cadastral_data",
+        "realestate.property_id"
+      ]
+    },
+    "real_estate.visura_catastale": {
+      "document_type_id": "real_estate.visura_catastale",
+      "canonical_name": "visura catastale",
+      "family": "real_estate",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "realestate.address",
+        "realestate.cadastral_data",
+        "realestate.owner",
+        "realestate.parcel"
+      ],
+      "optional_fields": [
+        "company.name",
+        "document.issue_date",
+        "person.name",
+        "realestate.area",
+        "realestate.cadastral_income",
+        "realestate.property_id"
+      ]
+    },
+    "rentals.contratto_noleggio_operativo": {
+      "document_type_id": "rentals.contratto_noleggio_operativo",
+      "canonical_name": "contratto noleggio operativo",
+      "family": "rentals",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.start_date",
+        "document.issue_date",
+        "document.number",
+        "product.name"
+      ],
+      "optional_fields": [
+        "asset.id",
+        "asset.serial_number",
+        "contract.payment_terms",
+        "contract.renewal_terms",
+        "contract.termination_terms",
+        "contract.value"
+      ]
+    },
+    "sales_customers.contratto_vendita": {
+      "document_type_id": "sales_customers.contratto_vendita",
+      "canonical_name": "contratto vendita",
+      "family": "sales_customers",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "contract.end_date",
+        "contract.parties",
+        "contract.start_date",
+        "contract.subject",
+        "contract.value"
+      ],
+      "optional_fields": [
+        "contract.payment_terms",
+        "sales.items"
+      ]
+    },
+    "sales_customers.rapportino_intervento": {
+      "document_type_id": "sales_customers.rapportino_intervento",
+      "canonical_name": "rapporto d’intervento",
+      "family": "sales_customers",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "document.issue_date",
+        "document.outcome",
+        "sales.activities",
+        "sales.customer",
+        "sales.intervention_date"
+      ],
+      "optional_fields": [
+        "document.references",
+        "hse.site",
+        "line_items"
+      ]
+    },
+    "sales_customers.reso_cliente": {
+      "document_type_id": "sales_customers.reso_cliente",
+      "canonical_name": "reso cliente",
+      "family": "sales_customers",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "document.reason",
+        "sales.customer",
+        "sales.items"
+      ],
+      "optional_fields": [
+        "document.references",
+        "money.amount"
+      ]
+    },
+    "sales_customers.verbale_accettazione_cliente": {
+      "document_type_id": "sales_customers.verbale_accettazione_cliente",
+      "canonical_name": "verbale accettazione cliente",
+      "family": "sales_customers",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.issue_date",
+        "document.outcome",
+        "sales.customer"
+      ],
+      "optional_fields": [
+        "document.references",
+        "meeting.attendees"
+      ]
+    },
+    "technical_products.dichiarazione_cam": {
+      "document_type_id": "technical_products.dichiarazione_cam",
+      "canonical_name": "dichiarazione CAM prodotto/materiale",
+      "family": "technical_products",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "environment.criteria",
+        "issuer.name",
+        "product.name"
+      ],
+      "optional_fields": [
+        "document.issue_date",
+        "product.batch",
+        "product.certifications",
+        "product.code",
+        "product.composition",
+        "product.standard"
+      ]
+    },
+    "technical_products.dichiarazione_prestazione_dop": {
+      "document_type_id": "technical_products.dichiarazione_prestazione_dop",
+      "canonical_name": "dichiarazione di prestazione DoP",
+      "family": "technical_products",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "issuer.name",
+        "product.declared_performance",
+        "product.name",
+        "product.standard"
+      ],
+      "optional_fields": [
+        "document.issue_date",
+        "product.batch",
+        "product.certifications",
+        "product.code",
+        "product.composition",
+        "product.performance"
+      ]
+    },
+    "technical_products.scheda_tecnica_prodotto": {
+      "document_type_id": "technical_products.scheda_tecnica_prodotto",
+      "canonical_name": "scheda tecnica prodotto",
+      "family": "technical_products",
+      "schema_state": "PRETESTED",
+      "required_fields": [
+        "issuer.name",
+        "product.name",
+        "product.performance"
+      ],
+      "optional_fields": [
+        "document.issue_date",
+        "product.batch",
+        "product.certifications",
+        "product.code",
+        "product.composition",
+        "product.standard"
+      ]
+    },
+    "utilities_subscriptions.bolletta_utenza": {
+      "document_type_id": "utilities_subscriptions.bolletta_utenza",
+      "canonical_name": "bolletta utenza",
+      "family": "utilities_subscriptions",
+      "schema_state": "PROPOSTA - NON IMPLEMENTATA",
+      "required_fields": [
+        "company.name",
+        "document.issue_date",
+        "document.number",
+        "money.currency",
+        "money.total",
+        "payment.due_date",
+        "period.end",
+        "period.start",
+        "utility.account_id",
+        "utility.consumption",
+        "utility.due_date",
+        "utility.unit",
+        "utility_type"
+      ],
+      "optional_fields": [
+        "environment.quantity",
+        "environment.unit",
+        "issuer.name",
+        "line_items",
+        "utility.meter_id",
+        "utility.pdr",
+        "utility.pod",
+        "utility.readings",
+        "utility.tariff"
+      ]
+    },
+    "vehicles_transport.carta_circolazione": {
+      "document_type_id": "vehicles_transport.carta_circolazione",
+      "canonical_name": "carta circolazione",
+      "family": "vehicles_transport",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "vehicle.make",
+        "vehicle.model",
+        "vehicle.plate",
+        "vehicle.vin"
+      ],
+      "optional_fields": [
+        "document.issue_date",
+        "document.number",
+        "vehicle.owner",
+        "vehicle.registration_date"
+      ]
+    },
+    "vehicles_transport.revisione_veicolo": {
+      "document_type_id": "vehicles_transport.revisione_veicolo",
+      "canonical_name": "revisione veicolo",
+      "family": "vehicles_transport",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "document.outcome",
+        "vehicle.plate",
+        "vehicle.revision_date",
+        "vehicle.revision_expiry",
+        "vehicle.vin"
+      ],
+      "optional_fields": [
+        "vehicle.odometer"
+      ]
+    },
+    "vehicles_transport.scheda_tachigrafica": {
+      "document_type_id": "vehicles_transport.scheda_tachigrafica",
+      "canonical_name": "scheda tachigrafica",
+      "family": "vehicles_transport",
+      "schema_state": "SCHEMA_READY",
+      "required_fields": [
+        "period.end",
+        "period.start",
+        "vehicle.driver",
+        "vehicle.tachograph_entries"
+      ],
+      "optional_fields": [
+        "vehicle.plate"
+      ]
+    }
+  }
+}

@@ -26,11 +26,8 @@ function profile(overrides: Partial<ClassExtractionProfile> = {}): ClassExtracti
     canonical_name: 'fattura',
     family: 'accounting',
     schema_state: 'EXTRACTION_SCHEMA_DRAFT',
-    evidence_basis: 'AI_PROPOSED',
     required_fields: ['document.number'],
-    core_fields: ['issuer.name'],
-    optional_fields: [],
-    conditional_fields: ['procurement.cig'],
+    optional_fields: ['issuer.name', 'procurement.cig'],
     literal_evidence_required: true,
     unknown_value_policy: 'LEAVE_EMPTY',
     review_policy: 'REVIEW_LOW_CONFIDENCE_MISSING_REQUIRED_CONFLICTS_ONLY',
@@ -58,7 +55,7 @@ describe('segnare un campo non utile', () => {
 
     expect(result.after).toBe('excluded')
     expect(result.override).toBe('excluded')
-    expect(result.before).toBe('conditional')
+    expect(result.before).toBe('optional')
     expect(result.previousOverride).toBeNull()
     expect(result.detail).toContain('segnato non utile')
     expect(result.detail).toContain('4 documenti annotati')
@@ -108,7 +105,7 @@ describe('aggiungere un campo', () => {
 
   it('quando il revisore lo compilava a mano, il perché lo dice la frase', () => {
     const result = plan(
-      { kind: 'ADD_FIELD', documentType: TYPE, fieldId: 'bank.iban', role: 'core' },
+      { kind: 'ADD_FIELD', documentType: TYPE, fieldId: 'bank.iban', role: 'optional' },
       { reason: { documents: 4, confirmed: 0, corrected: 0, manual: 3 } }
     )
 
@@ -118,7 +115,7 @@ describe('aggiungere un campo', () => {
   it('un campo già scartato rientra, e la frase dice da dove viene', () => {
     const overrides: TypeOverrides = { 'procurement.cig': 'excluded' }
     const result = plan(
-      { kind: 'ADD_FIELD', documentType: TYPE, fieldId: 'procurement.cig', role: 'core' },
+      { kind: 'ADD_FIELD', documentType: TYPE, fieldId: 'procurement.cig', role: 'optional' },
       { overrides }
     )
 
@@ -129,14 +126,14 @@ describe('aggiungere un campo', () => {
 
   it('un campo che la mappa già chiede non si aggiunge due volte', () => {
     expect(() =>
-      plan({ kind: 'ADD_FIELD', documentType: TYPE, fieldId: 'issuer.name', role: 'core' })
+      plan({ kind: 'ADD_FIELD', documentType: TYPE, fieldId: 'issuer.name', role: 'optional' })
     ).toThrowError(/prevede già/)
   })
 
   it('un id che l’ontologia non conosce si ferma qui', () => {
     expect(() =>
       plan(
-        { kind: 'ADD_FIELD', documentType: TYPE, fieldId: 'campo.inventato', role: 'core' },
+        { kind: 'ADD_FIELD', documentType: TYPE, fieldId: 'campo.inventato', role: 'optional' },
         { field: null }
       )
     ).toThrowError(/non è un campo dell'ontologia/)
@@ -152,15 +149,15 @@ describe('cambiare peso', () => {
       role: 'required'
     })
 
-    expect(result.before).toBe('core')
+    expect(result.before).toBe('optional')
     expect(result.after).toBe('required')
-    expect(result.detail).toContain('da principale a obbligatorio')
+    expect(result.detail).toContain('da opzionale a obbligatorio')
   })
 
   it('allo stesso peso non è una correzione', () => {
     expect(() =>
-      plan({ kind: 'SET_ROLE', documentType: TYPE, fieldId: 'issuer.name', role: 'core' })
-    ).toThrowError(/è già principale/)
+      plan({ kind: 'SET_ROLE', documentType: TYPE, fieldId: 'issuer.name', role: 'optional' })
+    ).toThrowError(/è già opzionale/)
   })
 })
 
@@ -172,7 +169,7 @@ describe('ripristinare quello che dice il registry', () => {
     )
 
     expect(result.override).toBeNull()
-    expect(result.after).toBe('core')
+    expect(result.after).toBe('optional')
     expect(result.previousOverride).toBe('required')
     expect(result.detail).toContain('come dice il registry')
   })
@@ -255,7 +252,7 @@ describe('uno o più valori', () => {
         fieldId: 'bank.iban',
         cardinality: 'many'
       },
-      { profile: profile({ conditional_fields: ['bank.iban'] }), field: iban }
+      { profile: profile({ optional_fields: ['bank.iban'] }), field: iban }
     )
 
     expect(result.before).toBe('one')
@@ -276,7 +273,7 @@ describe('uno o più valori', () => {
         cardinality: 'one'
       },
       {
-        profile: profile({ conditional_fields: ['bank.iban'] }),
+        profile: profile({ optional_fields: ['bank.iban'] }),
         field: iban,
         cardinality: { 'bank.iban': 'many' }
       }
@@ -297,7 +294,7 @@ describe('uno o più valori', () => {
           fieldId: 'bank.iban',
           cardinality: 'one'
         },
-        { profile: profile({ conditional_fields: ['bank.iban'] }), field: iban }
+        { profile: profile({ optional_fields: ['bank.iban'] }), field: iban }
       )
     ).toThrow(/chiede già un solo valore/)
   })

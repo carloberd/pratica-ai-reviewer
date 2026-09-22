@@ -4,8 +4,7 @@ import type { Cardinality } from '@shared/extraction-v2'
 import {
   buildProfileBundle,
   type ProfileBundle,
-  type ProfileBundleManifestInput,
-  type RawProfile
+  type ProfileBundleManifestInput
 } from '@shared/profile-bundle'
 import {
   type ProfileEdit,
@@ -41,7 +40,7 @@ import { readRegistrySourceFiles } from './registry-source'
  */
 
 export interface ProfileMapDeps extends ProfileInsightsDeps {
-  /** La cartella del registry v2, letta e mai scritta. */
+  /** La cartella del registry, letta e mai scritta. */
   registryDirectory: string
 }
 
@@ -270,28 +269,15 @@ export async function exportProfileBundle(
   manifest: ProfileBundleManifestInput,
   directory: string
 ): Promise<ProfileBundleResult> {
-  const { repo, registry } = deps
+  const { repo } = deps
   const source = readRegistrySourceFiles(deps.registryDirectory)
   const overlay: ProfileOverlay = repo.profileMap.overlay()
 
-  // I tipi corretti che il file dei profili non prevede: senza il profilo sintetizzato
-  // le loro correzioni non uscirebbero da nessuna parte.
-  const fallbackProfiles: Record<string, RawProfile> = {}
-  for (const documentType of repo.profileMap.touchedTypes()) {
-    if (source.profiles.profiles[documentType]) continue
-    const base = registry.baseProfile(documentType)
-    if (base) fallbackProfiles[documentType] = base as unknown as RawProfile
-  }
-
-  const ontology = Object.fromEntries(registry.allFields().map((field) => [field.id, field]))
-
   const bundle = buildProfileBundle({
     manifest,
-    profiles: source.profiles,
-    hints: source.hints,
+    catalog: source.catalog,
+    map: source.map,
     overlay,
-    ontology,
-    fallbackProfiles,
     actions: repo.profileMap.allActions()
   })
 

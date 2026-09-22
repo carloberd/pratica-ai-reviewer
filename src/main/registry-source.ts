@@ -1,17 +1,17 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  HINTS_FILE,
-  type HintsFile,
-  PROFILES_FILE,
-  type ProfilesFile
+  DOCUMENT_FIELDS_FILE,
+  type DocumentFieldsFile,
+  FIELDS_FILE,
+  type FieldsFile
 } from '@shared/profile-bundle'
 
 /**
- * I JSON del registry, letti dal disco.
+ * I due JSON del registry, letti dal disco.
  *
- * Sola lettura, sempre: i file del programmer pack sono la base da cui si parte e
- * nessuna correzione li tocca. Quello che il revisore decide sta nel database
+ * Sola lettura, sempre: `fields.json` e `document_fields.json` sono la base da cui si
+ * parte e nessuna correzione li tocca. Quello che il revisore decide sta nel database
  * (migrazione 0008) e diventa un file solo quando esporta — in una cartella che sceglie
  * lui, non qui dentro. Così l'app impacchettata, che legge il registry da
  * `process.resourcesPath` di sola lettura, si comporta esattamente come quella di
@@ -20,12 +20,12 @@ import {
 
 function readJsonFile(directory: string, file: string): unknown {
   const path = join(directory, file)
-  if (!existsSync(path)) throw new Error(`Registry v2: manca ${file} in ${directory}.`)
+  if (!existsSync(path)) throw new Error(`Registry: manca ${file} in ${directory}.`)
   try {
     return JSON.parse(readFileSync(path, 'utf8'))
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error)
-    throw new Error(`Registry v2: ${file} non è JSON valido (${detail}).`)
+    throw new Error(`Registry: ${file} non è JSON valido (${detail}).`)
   }
 }
 
@@ -45,45 +45,46 @@ function isStringList(value: unknown): value is string[] {
  * l'oggetto resta quello uscito da `JSON.parse` e si verifica solo che le liste dei
  * ruoli ci siano e siano liste di stringhe.
  */
-export function parseProfilesFile(raw: unknown, file = PROFILES_FILE): ProfilesFile {
-  if (!isRecord(raw) || typeof raw.version !== 'string' || !isRecord(raw.profiles)) {
-    throw new Error(`Registry v2: ${file} non ha «version» e «profiles».`)
+export function parseDocumentFieldsFile(
+  raw: unknown,
+  file = DOCUMENT_FIELDS_FILE
+): DocumentFieldsFile {
+  if (!isRecord(raw) || typeof raw.version !== 'string' || !isRecord(raw.document_types)) {
+    throw new Error(`Registry: ${file} non ha «version» e «document_types».`)
   }
-  for (const [documentType, profile] of Object.entries(raw.profiles)) {
-    if (!isRecord(profile)) {
-      throw new Error(`Registry v2: il profilo di «${documentType}» in ${file} non è un oggetto.`)
+  for (const [documentType, entry] of Object.entries(raw.document_types)) {
+    if (!isRecord(entry)) {
+      throw new Error(`Registry: la mappa di «${documentType}» in ${file} non è un oggetto.`)
     }
-    for (const key of ['required_fields', 'core_fields', 'optional_fields', 'conditional_fields']) {
-      if (!isStringList(profile[key])) {
-        throw new Error(
-          `Registry v2: «${documentType}.${key}» in ${file} non è una lista di campi.`
-        )
+    for (const key of ['required_fields', 'optional_fields']) {
+      if (!isStringList(entry[key])) {
+        throw new Error(`Registry: «${documentType}.${key}» in ${file} non è una lista di campi.`)
       }
     }
   }
-  return raw as unknown as ProfilesFile
+  return raw as unknown as DocumentFieldsFile
 }
 
-export function parseHintsFile(raw: unknown, file = HINTS_FILE): HintsFile {
-  if (!isRecord(raw) || typeof raw.version !== 'string' || !isRecord(raw.hints)) {
-    throw new Error(`Registry v2: ${file} non ha «version» e «hints».`)
+export function parseFieldsFile(raw: unknown, file = FIELDS_FILE): FieldsFile {
+  if (!isRecord(raw) || typeof raw.version !== 'string' || !isRecord(raw.fields)) {
+    throw new Error(`Registry: ${file} non ha «version» e «fields».`)
   }
-  for (const [fieldId, hint] of Object.entries(raw.hints)) {
-    if (!isRecord(hint) || !isStringList(hint.labels)) {
-      throw new Error(`Registry v2: gli hint di «${fieldId}» in ${file} non hanno «labels».`)
+  for (const [fieldId, field] of Object.entries(raw.fields)) {
+    if (!isRecord(field) || !isStringList(field.label_aliases_it)) {
+      throw new Error(`Registry: il campo «${fieldId}» in ${file} non ha «label_aliases_it».`)
     }
   }
-  return raw as unknown as HintsFile
+  return raw as unknown as FieldsFile
 }
 
 export interface RegistrySourceFiles {
-  profiles: ProfilesFile
-  hints: HintsFile
+  catalog: FieldsFile
+  map: DocumentFieldsFile
 }
 
 export function readRegistrySourceFiles(directory: string): RegistrySourceFiles {
   return {
-    profiles: parseProfilesFile(readJsonFile(directory, PROFILES_FILE)),
-    hints: parseHintsFile(readJsonFile(directory, HINTS_FILE))
+    catalog: parseFieldsFile(readJsonFile(directory, FIELDS_FILE)),
+    map: parseDocumentFieldsFile(readJsonFile(directory, DOCUMENT_FIELDS_FILE))
   }
 }

@@ -41,18 +41,13 @@ import type {
 export const DATASET_FORMAT = 'praticaai-reviewer/annotated-dataset'
 export const DATASET_FORMAT_VERSION = '1.9.0'
 
-export type EngineVersion = 'v1' | 'v2'
-
 export interface DatasetManifest {
   format: typeof DATASET_FORMAT
   formatVersion: typeof DATASET_FORMAT_VERSION
   exportedAt: string
   app: { name: string; version: string }
-  /** Motori e versioni con cui girava l'app al momento dell'export. */
+  /** Versioni del motore e del registry con cui girava l'app al momento dell'export. */
   engines: {
-    classifier: EngineVersion
-    extraction: EngineVersion
-    classifierVersion: string | null
     extractionEngineVersion: string | null
     schemaVersion: string | null
   }
@@ -390,8 +385,12 @@ function toDatasetField(field: ExtractedField, byId: Map<string, EvidenceItem>):
 
 function toDocumentType(document: ReviewDocument): DatasetDocumentType {
   const classification = document.classification
-  const proposed = classification?.proposedType ?? null
-  const known = classification !== null
+  // Cosa aveva proposto il motore: la classificazione salvata sui documenti chiusi prima,
+  // e oggi il tipo che porta una confidenza — quello della memoria di un modulo. Un tipo
+  // senza confidenza l'ha scelto il revisore, e vuol dire che il motore non proponeva niente.
+  const proposed =
+    classification?.proposedType ??
+    (document.typeConfidence !== null ? document.documentType : null)
   const chosenBy = !document.documentType
     ? null
     : document.typeConfidence === null
@@ -422,7 +421,7 @@ function toDocumentType(document: ReviewDocument): DatasetDocumentType {
     chosenBy,
     proposed,
     proposedConfidence: proposed ? (classification?.confidence ?? null) : null,
-    corrected: known ? document.documentType !== proposed : null,
+    corrected: document.documentType !== proposed,
     decision: classification?.decision ?? null,
     reason: classification?.reason ?? null,
     margin: classification?.margin ?? null,

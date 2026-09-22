@@ -6,10 +6,10 @@ import {
   praticaaiTypeIdOrNull,
   reviewerTypeId
 } from '../src/shared/registry-alignment'
-import { testRegistryV2 } from './helpers/registry'
+import { testExtractionRegistry } from './helpers/registry'
 import { reviewDocument } from './helpers/review-document'
 
-const registry = testRegistryV2()
+const registry = testExtractionRegistry()
 
 describe('gli id dei tipi fra reviewer e pratica-ai', () => {
   it('le tre classi con slug diverso si traducono nei due sensi', () => {
@@ -51,11 +51,12 @@ describe('gli id dei tipi fra reviewer e pratica-ai', () => {
     })
   })
 
-  it('ogni alias parla di una classe che questo registry ha davvero, e di una che non ha', () => {
+  it('nessuno slug di pratica-ai è un tipo di questo registry', () => {
+    // Le tre classi con lo slug diverso sono fuori dalle 171 del Brain MVP: la traduzione
+    // resta perché i documenti già chiusi su di loro escono comunque negli export. Quello
+    // che non deve succedere è che lo slug di pratica-ai diventi un tipo di qui: allora
+    // l'alias andrebbe tolto, non tradotto.
     for (const alias of PRATICAAI_TYPE_ALIASES) {
-      expect(registry.profile(alias.reviewer), alias.reviewer).not.toBeNull()
-      // Lo slug di pratica-ai non è un tipo di questo pacchetto: se lo diventasse, l'alias
-      // andrebbe togliato invece che tradotto.
       expect(registry.profile(alias.praticaai), alias.praticaai).toBeNull()
     }
   })

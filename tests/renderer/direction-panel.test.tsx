@@ -25,7 +25,7 @@ const nostra = scalarField({
   name: 'issuer.vat_number',
   label: 'Partita IVA emittente',
   value: '01479320291',
-  role: 'core'
+  role: 'optional'
 })
 
 describe('DirectionPanel', () => {

@@ -76,13 +76,22 @@ const decision = (
   ...rest
 })
 
-/** Il tipo: confermato, cambiato, scelto dove il motore non ne aveva, o tolto. */
+/**
+ * Il tipo: confermato, cambiato, scelto dove il motore non ne aveva, o tolto.
+ *
+ * La proposta del motore è quella della memoria dei moduli, che si riconosce dalla
+ * confidenza: un tipo con `typeConfidence` è stato proposto, uno senza l'ha scelto il
+ * revisore. Sui documenti chiusi prima c'è ancora la classificazione salvata, e lì la
+ * proposta si legge da quella. Un tipo scelto a mano vale come decisione anche senza
+ * nessuna proposta prima: è quello che insegna alla memoria del modulo.
+ */
 function typeDecision(document: ReviewDocument): Decision | null {
   const { classification, documentType } = document
-  // Senza classificazione salvata la proposta si conosce solo se il tipo l'ha messo il motore.
-  const known = classification !== null || document.typeConfidence !== null
-  if (!known) return null
-  const proposed = classification ? classification.proposedType : documentType
+  const proposed = classification
+    ? classification.proposedType
+    : document.typeConfidence !== null
+      ? documentType
+      : null
   const confidence = classification ? classification.confidence : document.typeConfidence
   if (proposed === null && documentType === null) return null
 

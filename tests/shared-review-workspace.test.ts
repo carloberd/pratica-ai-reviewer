@@ -11,8 +11,8 @@ import { item, listField, reviewDocument, scalarField } from './helpers/review-d
 describe('campi da compilare a mano', () => {
   const fields = [
     scalarField({ id: 'number', value: '114/2026' }),
-    scalarField({ id: 'iban', value: '', role: 'conditional', required: false }),
-    scalarField({ id: 'tax', value: '', role: 'core', required: false }),
+    scalarField({ id: 'iban', value: '', role: 'optional', required: false }),
+    scalarField({ id: 'tax', value: '', role: 'optional', required: false }),
     scalarField({ id: 'total', value: '', role: 'required', correctedValue: '86420.00' }),
     listField([], { id: 'lines' }),
     listField([item()], { id: 'lines-proposed' })
@@ -30,7 +30,7 @@ describe('campi da compilare a mano', () => {
 
   it('in cima gli obbligatori, col contatore di quelli ancora vuoti; nessun campo sparisce', () => {
     const groups = groupFieldsForReview(fields)
-    expect(groups.toFill.map((field) => field.id)).toEqual(['total', 'tax', 'lines', 'iban'])
+    expect(groups.toFill.map((field) => field.id)).toEqual(['total', 'iban', 'tax', 'lines'])
     expect(groups.proposed.map((field) => field.id)).toEqual(['number', 'lines-proposed'])
     expect(groups.stillEmpty).toBe(3)
     expect(groups.toFill.length + groups.proposed.length).toBe(fields.length)

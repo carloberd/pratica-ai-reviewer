@@ -23,7 +23,7 @@ describe('FieldsPanel', () => {
       name: 'bank.iban',
       label: 'IBAN',
       value: '',
-      role: 'conditional',
+      role: 'optional',
       required: false,
       correctedValue: 'IT60X0542811101000000123456'
     }),

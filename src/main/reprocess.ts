@@ -5,7 +5,7 @@ import type { Repository } from './db/repository'
 import type { DocumentRow } from './db/rows'
 import type { DocumentProcessor } from './drive/fetch'
 import { logError, ReviewerError } from './errors'
-import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
+import type { ExtractionRegistry } from './extract/v2/profile-loader'
 import { EXTRACTION_ENGINE_V2_VERSION } from './pipeline'
 
 /**
@@ -71,12 +71,11 @@ export async function assignDocumentType(input: {
  */
 export function needsV2Extraction(
   repo: Repository,
-  registry: ExtractionRegistryV2
+  registry: ExtractionRegistry
 ): (row: DocumentRow) => boolean {
   return (row) =>
     row.status === 'NEEDS_REVIEW' &&
-    (row.classification_json === null ||
-      !repo.extractionRuns.hasRun(row.id, EXTRACTION_ENGINE_V2_VERSION, registry.schemaVersion()))
+    !repo.extractionRuns.hasRun(row.id, EXTRACTION_ENGINE_V2_VERSION, registry.schemaVersion())
 }
 
 /**

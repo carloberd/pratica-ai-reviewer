@@ -3,14 +3,13 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import type { EngineSelection } from '../src/main/config'
 import { migrate } from '../src/main/db'
 import { createRepository } from '../src/main/db/repository'
 import type { OcrService } from '../src/main/extract/ocr'
 import { createOcrEngine } from '../src/main/extract/ocr-engine'
 import { extractText } from '../src/main/extract/text'
 import type { ExtractedText } from '../src/main/extract/types'
-import type { ExtractionRegistryV2 } from '../src/main/extract/v2/profile-loader'
+import type { ExtractionRegistry } from '../src/main/extract/v2/profile-loader'
 import { updateFieldValue } from '../src/main/field-edits'
 import {
   createDocumentProcessor,
@@ -20,16 +19,7 @@ import {
 } from '../src/main/pipeline'
 import { templateFingerprint } from '../src/shared/template-fingerprint'
 import { createTestRepository, databaseAt } from './helpers/db'
-import {
-  fixture,
-  TESSDATA_DIR,
-  testClassifierConfigV2,
-  testLegacyFieldMap,
-  testRegistry,
-  testRegistryV2
-} from './helpers/registry'
-
-const registry = testRegistry()
+import { fixture, TESSDATA_DIR, testExtractionRegistry } from './helpers/registry'
 
 /**
  * OCR reale, in-process: stesso motore del worker, stessi modelli `ita`+`eng`
@@ -51,298 +41,83 @@ afterAll(async () => {
 
 type TestRepository = ReturnType<typeof createRepository>
 
-const V1: EngineSelection = { classifier: 'v1', extraction: 'v1' }
-const V2: EngineSelection = { classifier: 'v2', extraction: 'v2' }
-
-/** Le dipendenze v2 ci sono sempre, come nell'app: il flag decide quale motore gira. */
-function processorFor(
-  repo: TestRepository,
-  engines: EngineSelection,
-  options: { withOcr?: boolean } = {}
-) {
+function processorFor(repo: TestRepository, options: { withOcr?: boolean } = {}) {
   return createDocumentProcessor({
     repo,
-    registry,
     ocr: options.withOcr === false ? undefined : ocr,
-    engines,
-    classifierConfigV2: testClassifierConfigV2(),
-    extractionRegistryV2: testRegistryV2(),
-    legacyFieldMap: testLegacyFieldMap()
+    extractionRegistry: testExtractionRegistry()
   })
 }
 
-function seed(repo: TestRepository, filename: string, mime: string): string {
-  return repo.documents.upsertFromDrive({
+/**
+ * Un documento con il suo tipo già scelto: il tipo lo assegna il revisore, e senza di lui
+ * non c'è una mappa di campi da cercare.
+ */
+function seed(
+  repo: TestRepository,
+  filename: string,
+  mime: string,
+  documentType: string | null = null
+): string {
+  const { id } = repo.documents.upsertFromDrive({
     driveFileId: `drive-${filename}`,
     filename,
     mime,
     receivedAt: '2026-09-10T08:00:00.000Z'
-  }).id
+  })
+  if (documentType) repo.documents.setType(id, documentType, null)
+  return id
 }
 
 function inputFor(id: string, filename: string, mime: string) {
   return { documentId: id, cachedPath: fixture(filename), mime, filename }
 }
 
+const FATTURA = 'accounting.fattura'
+const CONTRATTO = 'contracts_general.contratto_consulenza'
+const DURC = 'payroll_contributions.durc'
+
 const PDF = 'application/pdf'
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
-describe('dipendenze del processore', () => {
-  it('un motore v2 senza i suoi dati è un errore alla creazione, non al primo documento', () => {
+describe('PDF con testo nativo', () => {
+  it('precompila la fattura con la mappa del suo tipo', async () => {
     const repo = createTestRepository()
-    expect(() =>
-      createDocumentProcessor({ repo, registry, engines: { classifier: 'v2', extraction: 'v1' } })
-    ).toThrow('CLASSIFIER_ENGINE=v2')
-    expect(() =>
-      createDocumentProcessor({ repo, registry, engines: { classifier: 'v1', extraction: 'v2' } })
-    ).toThrow('EXTRACTION_ENGINE=v2')
-    expect(() => createDocumentProcessor({ repo, registry, engines: V1 })).not.toThrow()
-    repo.close()
-  })
-})
+    const id = seed(repo, 'fattura-nativa.pdf', PDF, FATTURA)
 
-// ---------------------------------------------------------------------------
-// v1: la scappatoia deve comportarsi esattamente come prima
-// ---------------------------------------------------------------------------
-
-describe('motore v1 — PDF con testo nativo', () => {
-  it('classifica, precompila e indicizza una fattura', async () => {
-    const repo = createTestRepository()
-    const id = seed(repo, 'fattura-nativa.pdf', PDF)
-
-    const outcome = await processorFor(repo, V1)(inputFor(id, 'fattura-nativa.pdf', PDF))
-
-    expect(outcome.textSource).toBe('NATIVE_TEXT')
-    expect(outcome.documentType).toBe('accounting.fattura')
-    expect(outcome.typeConfidence).toBe(0.9)
-
-    const document = repo.getReviewDocument(id)!
-    const values = Object.fromEntries(document.fields.map((f) => [f.name, f.value]))
-
-    // Solo gli 8 campi dichiarati dallo schema di accounting.fattura.
-    expect(document.fields).toHaveLength(8)
-    expect(values).toMatchObject({
-      document_number: '114/2026',
-      issue_date: '2026-09-08',
-      issuer_name: 'Alfa S.r.l.',
-      recipient_name: 'Beta Costruzioni S.p.A.',
-      taxable_amount: '70836.07',
-      tax_amount: '15583.93',
-      total_amount: '86420.00',
-      currency: 'EUR'
-    })
-
-    // Ogni valore ha la sua evidenza verbatim, con coordinate dal text layer.
-    for (const field of document.fields) {
-      expect(field.evidenceId, `${field.name} senza evidenza`).toBeTruthy()
-      const evidence = document.evidence.find((item) => item.id === field.evidenceId)!
-      expect(evidence.text).toContain(evidence.text.trim())
-      expect(evidence.bbox?.w).toBeGreaterThan(0)
-    }
-
-    expect(document.confidenceBand).toBe('MEDIUM')
-    expect(document.confidence).toBeCloseTo(0.85, 4)
-    expect(document.warnings).toEqual([])
-
-    // La ricerca full-text vede il contenuto delle pagine.
-    expect(repo.search.matchingDocumentIds('costruzioni')).toEqual([id])
-
-    expect(repo.events.listForDocument(id).map((e) => [e.title, e.detail])).toEqual([
-      ['Tipo riconosciuto', 'accounting.fattura al 90% da «fattura» in prima pagina.'],
-      ['Campi precompilati', '8 campi su 8 con evidenza verbatim.']
-    ])
-
-    // Il v1 non scrive i metadati v2 né lo storico dei run.
-    expect(
-      repo.fields.listForDocument(id).every((f) => f.role === null && f.review_status === null)
-    ).toBe(true)
-    expect(repo.extractionRuns.listForDocument(id)).toEqual([])
-    repo.close()
-  })
-})
-
-describe('motore v1 — DOCX', () => {
-  it('estrae il testo con mammoth e precompila i campi del tipo', async () => {
-    const repo = createTestRepository()
-    const id = seed(repo, 'contratto-consulenza.docx', DOCX)
-
-    const outcome = await processorFor(repo, V1)(inputFor(id, 'contratto-consulenza.docx', DOCX))
-
-    expect(outcome.textSource).toBe('DOCX')
-    expect(outcome.documentType).toBe('contracts_general.contratto_consulenza')
-
-    const document = repo.getReviewDocument(id)!
-    const values = Object.fromEntries(document.fields.map((f) => [f.name, f.value]))
-    expect(values).toMatchObject({
-      document_number: 'CC-2026-018',
-      issue_date: '2026-09-15',
-      issuer_name: 'Gamma Consulting S.r.l.',
-      recipient_name: 'Alfa S.r.l.'
-    })
-
-    // D4: senza resa di pagina non ci sono coordinate, quindi niente bbox.
-    expect(document.evidence.every((item) => item.bbox === undefined)).toBe(true)
-    repo.close()
-  })
-})
-
-describe('motore v1 — PDF scansionato', () => {
-  it('passa da OCR quando manca il text layer', async () => {
-    const repo = createTestRepository()
-    const id = seed(repo, 'durc-scansionato.pdf', PDF)
-
-    const outcome = await processorFor(repo, V1)(inputFor(id, 'durc-scansionato.pdf', PDF))
-
-    expect(outcome.textSource).toBe('OCR')
-    expect(outcome.ocrPages).toEqual([1])
-    expect(outcome.documentType).toBe('payroll_contributions.durc')
-
-    const document = repo.getReviewDocument(id)!
-    const values = Object.fromEntries(document.fields.map((f) => [f.name, f.value]))
-    expect(values.issue_date).toBe('2026-09-01')
-    expect(values.issuer_name).toContain('INPS')
-
-    // La confidence dei campi da OCR scende di 0,10.
-    const issueDate = document.fields.find((f) => f.name === 'issue_date')!
-    expect(issueDate.confidence).toBeCloseTo(0.75, 4)
-
-    expect(document.warnings).toContain(
-      'Pagine lette con OCR: la confidence dei campi che vengono da quelle pagine è ridotta di 0,10.'
-    )
-    expect(repo.events.listForDocument(id).map((e) => e.title)).toContain('OCR eseguito')
-    repo.close()
-  }, 180_000)
-
-  it('riconosce quali pagine hanno bisogno di OCR', async () => {
-    const nativeText = await extractText({ filePath: fixture('fattura-nativa.pdf'), mime: PDF })
-    expect(nativeText.source).toBe('NATIVE_TEXT')
-    expect(nativeText.ocrPages).toEqual([])
-    expect(nativeText.ocrFailedPages).toEqual([])
-
-    // Senza servizio OCR la scansione resta senza testo: l'estrazione non fallisce, ma il
-    // documento non può dirsi letto dal text layer.
-    const scanned = await extractText({ filePath: fixture('durc-scansionato.pdf'), mime: PDF })
-    expect(scanned.source).toBe('OCR_FAILED')
-    expect(scanned.ocrFailedPages).toEqual([1])
-    expect(scanned.ocrError).toBe('Servizio OCR non disponibile in questo ambiente.')
-    expect(scanned.pages[0]?.text).toBe('')
-  })
-
-  it('un OCR che fallisce non passa per testo nativo', async () => {
-    const failing = {
-      recognize: () => Promise.reject(new Error('worker OCR non avviato')),
-      recognizeImage: () => Promise.reject(new Error('worker OCR non avviato')),
-      dispose: () => Promise.resolve()
-    }
-    const scanned = await extractText({
-      filePath: fixture('durc-scansionato.pdf'),
-      mime: PDF,
-      ocr: failing
-    })
-    expect(scanned.source).toBe('OCR_FAILED')
-    expect(scanned.ocrPages).toEqual([])
-    expect(scanned.ocrFailedPages).toEqual([1])
-    expect(scanned.ocrError).toBe('worker OCR non avviato')
-  })
-})
-
-describe('motore v1 — documento non classificabile', () => {
-  it('lascia il tipo da assegnare e chiede solo i 4 campi universali', async () => {
-    const repo = createTestRepository()
-    const id = seed(repo, 'promemoria-ignoto.pdf', PDF)
-
-    const outcome = await processorFor(repo, V1, { withOcr: false })(
-      inputFor(id, 'promemoria-ignoto.pdf', PDF)
-    )
-
-    expect(outcome.documentType).toBeNull()
-    expect(outcome.typeConfidence).toBeNull()
-
-    const document = repo.getReviewDocument(id)!
-    expect(document.fields.map((f) => f.name)).toEqual([
-      'document_number',
-      'issue_date',
-      'issuer_name',
-      'recipient_name'
-    ])
-    expect(document.warnings).toContain(
-      'Tipo da assegnare a mano: nessun alias del registry supera la soglia.'
-    )
-    expect(repo.events.listForDocument(id).map((e) => [e.title, e.detail])).toContainEqual([
-      'Tipo non riconosciuto',
-      'Nessun alias del registry supera la soglia di 0,75: il tipo va assegnato a mano.'
-    ])
-    repo.close()
-  })
-})
-
-describe('motore v1 — transazione per documento', () => {
-  it('rielaborare un documento non duplica campi ed evidenze', async () => {
-    const repo = createTestRepository()
-    const id = seed(repo, 'fattura-nativa.pdf', PDF)
-    const process = processorFor(repo, V1)
-    const input = inputFor(id, 'fattura-nativa.pdf', PDF)
-
-    await process(input)
-    await process(input)
-
-    const document = repo.getReviewDocument(id)!
-    expect(document.fields).toHaveLength(8)
-    expect(document.evidence).toHaveLength(8)
-    expect(repo.search.matchingDocumentIds('costruzioni')).toEqual([id])
-    repo.close()
-  })
-
-  it('un tipo assegnato a mano sopravvive alla rielaborazione', async () => {
-    const repo = createTestRepository()
-    const id = seed(repo, 'fattura-nativa.pdf', PDF)
-    repo.documents.setType(id, 'accounting.nota_di_credito', null)
-
-    const outcome = await processorFor(repo, V1)(inputFor(id, 'fattura-nativa.pdf', PDF))
-
-    expect(outcome.documentType).toBe('accounting.nota_di_credito')
-    expect(outcome.typeConfidence).toBeNull()
-    expect(repo.events.listForDocument(id).map((e) => e.title)).toContain('Tipo confermato')
-    repo.close()
-  })
-})
-
-// ---------------------------------------------------------------------------
-// v2: il percorso normale
-// ---------------------------------------------------------------------------
-
-describe('motore v2 — PDF con testo nativo', () => {
-  it('riconosce la fattura e precompila il profilo del tipo', async () => {
-    const repo = createTestRepository()
-    const id = seed(repo, 'fattura-nativa.pdf', PDF)
-
-    const outcome = await processorFor(repo, V2)(inputFor(id, 'fattura-nativa.pdf', PDF))
+    const outcome = await processorFor(repo)(inputFor(id, 'fattura-nativa.pdf', PDF))
 
     expect(outcome.documentType).toBe('accounting.fattura')
-    expect(outcome.typeConfidence).toBeGreaterThanOrEqual(0.74)
-    expect(outcome).toMatchObject({ filledFields: 10, totalFields: 17, confidence: 0.814 })
+    // Il tipo lo ha scelto il revisore: non c'è una confidenza da mostrare.
+    expect(outcome.typeConfidence).toBeNull()
+    expect(outcome).toMatchObject({ filledFields: 10, totalFields: 22, confidence: 0.814 })
 
     const rows = repo.fields.listForDocument(id)
     expect(rows.map((f) => [f.name, f.role, f.review_status, f.value])).toEqual([
-      ['document.number', 'required', 'AUTO_ACCEPTED', '114/2026'],
+      ['bank.iban', 'required', 'MISSING', null],
+      ['counterparty.role', 'required', 'MISSING', null],
+      ['document.direction', 'required', 'MISSING', null],
       ['document.issue_date', 'required', 'AUTO_ACCEPTED', '2026-09-08'],
+      ['document.number', 'required', 'AUTO_ACCEPTED', '114/2026'],
       ['issuer.name', 'required', 'AUTO_ACCEPTED', 'Alfa S.r.l.'],
-      ['recipient.name', 'required', 'AUTO_ACCEPTED', 'Beta Costruzioni S.p.A.'],
-      ['money.total', 'required', 'AUTO_ACCEPTED', '86420.00'],
+      ['issuer.tax_code', 'required', 'MISSING', null],
       // Una partita IVA sola, e l'etichetta non dice di chi è: le due parti la leggono
       // entrambe e vanno in conflitto, invece di indovinare.
-      ['issuer.vat_number', 'core', 'CONFLICT', '01234567890'],
-      ['issuer.tax_code', 'core', 'MISSING', null],
-      ['recipient.vat_number', 'core', 'CONFLICT', '01234567890'],
-      ['recipient.tax_code', 'core', 'MISSING', null],
-      ['money.taxable', 'core', 'AUTO_ACCEPTED', '70836.07'],
-      ['money.tax', 'core', 'AUTO_ACCEPTED', '15583.93'],
-      ['money.currency', 'core', 'AUTO_ACCEPTED', 'EUR'],
-      ['payment.due_date', 'core', 'MISSING', null],
-      ['line_items', 'core', 'MISSING', null],
-      ['bank.iban', 'conditional', 'MISSING', null],
-      ['procurement.cig', 'conditional', 'MISSING', null],
-      ['procurement.cup', 'conditional', 'MISSING', null]
+      ['issuer.vat_number', 'required', 'CONFLICT', '01234567890'],
+      ['money.currency', 'required', 'AUTO_ACCEPTED', 'EUR'],
+      ['money.total', 'required', 'AUTO_ACCEPTED', '86420.00'],
+      ['payment.due_date', 'required', 'MISSING', null],
+      ['recipient.name', 'required', 'AUTO_ACCEPTED', 'Beta Costruzioni S.p.A.'],
+      ['recipient.tax_code', 'required', 'MISSING', null],
+      ['recipient.vat_number', 'required', 'CONFLICT', '01234567890'],
+      ['document.references', 'optional', 'MISSING', null],
+      ['invoice.type_code', 'optional', 'MISSING', null],
+      ['line_items', 'optional', 'MISSING', null],
+      ['money.tax', 'optional', 'AUTO_ACCEPTED', '15583.93'],
+      ['money.taxable', 'optional', 'AUTO_ACCEPTED', '70836.07'],
+      ['procurement.cig', 'optional', 'MISSING', null],
+      ['procurement.cup', 'optional', 'MISSING', null],
+      ['tax.vat_summary', 'optional', 'MISSING', null]
     ])
     expect(rows.find((f) => f.name === 'line_items')?.cardinality).toBe('many')
     expect(rows.find((f) => f.name === 'money.total')?.semantic_type).toBe('money')
@@ -363,75 +138,44 @@ describe('motore v2 — PDF con testo nativo', () => {
       expect(evidence?.bbox?.w, `${field.name} senza evidenza`).toBeGreaterThan(0)
     }
     expect(document.evidence).toHaveLength(10)
-    expect(document.warnings).toEqual([])
+    // Sei obbligatori che questa fattura non scrive: il Brain MVP li chiede tutti «ORA»,
+    // e il documento va in revisione invece di passare come completo.
+    expect(document.warnings).toEqual([
+      'Campi obbligatori senza evidenza: IBAN, Ruolo controparte, Direzione documento, Codice fiscale emittente, Scadenza pagamento, Codice fiscale destinatario.'
+    ])
     expect(repo.search.matchingDocumentIds('costruzioni')).toEqual([id])
 
     const events = repo.events.listForDocument(id)
-    expect(events.map((e) => e.title)).toEqual(['Tipo riconosciuto', 'Campi precompilati'])
-    expect(events[0]?.detail).toMatch(
-      /^accounting\.fattura al 83% col classificatore v2 da «fattura»; nessun altro candidato, margine 0,83\.$/
-    )
-    expect(events[1]?.detail).toBe(
-      '10 campi su 17 con evidenza verbatim, profilo v2 EXTRACTION_SCHEMA_READY_FOR_FIELD_TEST. Un conflitto fra candidati da verificare.'
+    expect(events.map((e) => e.title)).toEqual(['Tipo confermato', 'Campi precompilati'])
+    expect(events[0]?.detail).toBe('Mantenuto il tipo «accounting.fattura» assegnato dal revisore.')
+    expect(events[1]?.detail).toMatch(
+      /^10 campi su 22 con evidenza verbatim, mappa PRETESTED\. Obbligatori senza evidenza: .*Un conflitto fra candidati da verificare\.$/
     )
 
     const [run] = repo.extractionRuns.listForDocument(id)
     expect(run).toMatchObject({
       engine_version: EXTRACTION_ENGINE_V2_VERSION,
-      schema_version: '2.0.4',
+      schema_version: '3.0.0',
       document_type: 'accounting.fattura',
       status: 'COMPLETED',
-      missing_required_json: '[]',
       conflicts_json: '["SHARED_EVIDENCE:issuer.vat_number|recipient.vat_number"]'
     })
-    // La proposta del classificatore resta sul documento, con la riga da cui viene.
-    expect(document.classification).toMatchObject({
-      engine: 'v2',
-      decision: 'ASSIGN',
-      reason: 'OK',
-      proposedType: 'accounting.fattura',
-      minimumMargin: 0.08,
-      candidates: [
-        {
-          documentType: 'accounting.fattura',
-          label: 'fattura',
-          signals: [
-            {
-              source: 'title-zone',
-              phrase: 'fattura',
-              location: { page: 1, text: 'FATTURA n. 114/2026 del 08/09/2026' }
-            },
-            // Il nome del file (fixture «fattura-nativa.pdf») conferma, ma non ha una riga.
-            { source: 'filename', phrase: 'fattura' }
-          ]
-        }
-      ]
-    })
-    expect(document.classification?.candidates[0]?.signals[0]?.location?.bbox?.w).toBeGreaterThan(0)
-
-    expect(JSON.parse(run!.metrics_json!)).toMatchObject({
-      profileSource: 'V2_EXPLICIT',
-      coverage: 0.59,
-      filledFields: 10,
-      totalFields: 17,
-      textSource: 'NATIVE_TEXT',
-      reviewStatus: { AUTO_ACCEPTED: 8, CONFLICT: 2, MISSING: 7 },
-      classifier: {
-        engine: 'v2',
-        decision: 'ASSIGN',
-        reason: 'OK',
-        top: { documentType: 'accounting.fattura' },
-        runnerUp: null
-      }
-    })
+    expect(JSON.parse(run!.missing_required_json!)).toEqual([
+      'bank.iban',
+      'counterparty.role',
+      'document.direction',
+      'issuer.tax_code',
+      'payment.due_date',
+      'recipient.tax_code'
+    ])
     repo.close()
   })
 })
 
-describe('motore v2 — un campo del profilo che l’ontologia non descrive', () => {
+describe('un campo del profilo che l’ontologia non descrive', () => {
   /** Lo stesso registry, col profilo della fattura che chiede un campo inesistente. */
-  function registryWithGhostField(): ExtractionRegistryV2 {
-    const base = testRegistryV2()
+  function registryWithGhostField(): ExtractionRegistry {
+    const base = testExtractionRegistry()
     const withGhost = (documentType: string) => {
       const profile = base.profile(documentType)
       if (!profile || documentType !== 'accounting.fattura') return profile
@@ -442,14 +186,11 @@ describe('motore v2 — un campo del profilo che l’ontologia non descrive', ()
 
   it('resta nel run, vuoto e fra gli obbligatori mancanti', async () => {
     const repo = createTestRepository()
-    const id = seed(repo, 'fattura-nativa.pdf', PDF)
+    const id = seed(repo, 'fattura-nativa.pdf', PDF, FATTURA)
     const process = createDocumentProcessor({
       repo,
-      registry,
-      engines: V2,
-      classifierConfigV2: testClassifierConfigV2(),
-      extractionRegistryV2: registryWithGhostField(),
-      legacyFieldMap: testLegacyFieldMap()
+      ocr,
+      extractionRegistry: registryWithGhostField()
     })
 
     await process(inputFor(id, 'fattura-nativa.pdf', PDF))
@@ -458,26 +199,24 @@ describe('motore v2 — un campo del profilo che l’ontologia non descrive', ()
     expect(ghost).toMatchObject({ value: null, review_status: 'MISSING', role: 'required' })
 
     const [run] = repo.extractionRuns.listForDocument(id)
-    expect(JSON.parse(run!.missing_required_json!)).toEqual(['ghost.field'])
+    expect(JSON.parse(run!.missing_required_json!)).toContain('ghost.field')
     expect(JSON.parse(run!.conflicts_json!)).toEqual([
       'UNKNOWN_FIELD:ghost.field',
       'SHARED_EVIDENCE:issuer.vat_number|recipient.vat_number'
     ])
-    // Prima il campo spariva dal run: copertura 1,0 su un obbligatorio mai cercato.
-    expect(JSON.parse(run!.metrics_json!)).toMatchObject({ coverage: 0.56, totalFields: 18 })
-    expect(repo.getReviewDocument(id)!.warnings).toContain(
-      'Campo obbligatorio senza evidenza: ghost.field.'
-    )
+    // Prima il campo spariva dal run: copertura piena su un obbligatorio mai cercato.
+    expect(JSON.parse(run!.metrics_json!)).toMatchObject({ coverage: 0.43, totalFields: 23 })
+    expect(repo.getReviewDocument(id)!.warnings[0]).toContain('ghost.field')
     repo.close()
   })
 })
 
-describe('motore v2 — DOCX', () => {
+describe('DOCX', () => {
   it('precompila il contratto col suo profilo, senza numero richiesto', async () => {
     const repo = createTestRepository()
-    const id = seed(repo, 'contratto-consulenza.docx', DOCX)
+    const id = seed(repo, 'contratto-consulenza.docx', DOCX, CONTRATTO)
 
-    const outcome = await processorFor(repo, V2)(inputFor(id, 'contratto-consulenza.docx', DOCX))
+    const outcome = await processorFor(repo)(inputFor(id, 'contratto-consulenza.docx', DOCX))
 
     expect(outcome.documentType).toBe('contracts_general.contratto_consulenza')
     const rows = repo.fields.listForDocument(id)
@@ -489,20 +228,18 @@ describe('motore v2 — DOCX', () => {
       'recipient.name': 'Alfa S.r.l.',
       'contract.parties': null
     })
-    // Profilo DRAFT: nessun campo obbligatorio, quindi nessun avviso per i vuoti.
-    expect(rows.every((f) => f.role !== 'required')).toBe(true)
-    expect(repo.getReviewDocument(id)!.warnings).toEqual([])
+    // Un DOCX non ha coordinate: l'evidenza è la riga, senza riquadro.
     expect(repo.getReviewDocument(id)!.evidence.every((item) => item.bbox === undefined)).toBe(true)
     repo.close()
   })
 })
 
-describe('motore v2 — PDF scansionato', () => {
+describe('PDF scansionato', () => {
   it('estrae da OCR, manda i valori in revisione e segnala gli obbligatori mancanti', async () => {
     const repo = createTestRepository()
-    const id = seed(repo, 'durc-scansionato.pdf', PDF)
+    const id = seed(repo, 'durc-scansionato.pdf', PDF, DURC)
 
-    const outcome = await processorFor(repo, V2)(inputFor(id, 'durc-scansionato.pdf', PDF))
+    const outcome = await processorFor(repo)(inputFor(id, 'durc-scansionato.pdf', PDF))
 
     expect(outcome.textSource).toBe('OCR')
     expect(outcome.documentType).toBe('payroll_contributions.durc')
@@ -516,35 +253,36 @@ describe('motore v2 — PDF scansionato', () => {
     })
     expect(byName['document.issue_date']?.value).toBe('2026-09-01')
     expect(byName['issuer.name']?.value).toContain('INPS')
-    // Il protocollo non si duplica nel numero documento.
-    expect(byName['document.number']?.value).toBeNull()
+    // Il protocollo non si duplica nel numero documento: la mappa del DURC non lo chiede.
+    expect(byName['document.number']).toBeUndefined()
 
     const document = repo.getReviewDocument(id)!
-    expect(document.warnings).toEqual([
-      'Pagine lette con OCR: la confidence dei campi che vengono da quelle pagine è ridotta di 0,10.',
-      'Campi obbligatori senza evidenza: Impresa/società, CF/P.IVA impresa, Data scadenza, Stato/esito.'
-    ])
+    expect(document.warnings[0]).toBe(
+      'Pagine lette con OCR: la confidence dei campi che vengono da quelle pagine è ridotta di 0,10.'
+    )
+    expect(document.warnings[1]).toContain('Campi obbligatori senza evidenza:')
     expect(repo.events.listForDocument(id).map((e) => e.title)).toEqual([
       'OCR eseguito',
-      'Tipo riconosciuto',
+      'Tipo confermato',
       'Campi precompilati'
     ])
     expect(JSON.parse(repo.extractionRuns.listForDocument(id)[0]!.missing_required_json!)).toEqual([
       'company.name',
-      'company.tax_id',
+      'company.tax_code',
+      'company.vat_number',
       'document.expiry_date',
-      'license.status'
+      'document.outcome'
     ])
     repo.close()
   }, 180_000)
 })
 
-describe('motore v2 — pagine scansionate che l’OCR non ha letto', () => {
+describe('pagine scansionate che l’OCR non ha letto', () => {
   it('non passa per letto: run FAILED_OCR, avviso in scheda e evento', async () => {
     const repo = createTestRepository()
-    const id = seed(repo, 'durc-scansionato.pdf', PDF)
+    const id = seed(repo, 'durc-scansionato.pdf', PDF, DURC)
 
-    const outcome = await processorFor(repo, V2, { withOcr: false })(
+    const outcome = await processorFor(repo, { withOcr: false })(
       inputFor(id, 'durc-scansionato.pdf', PDF)
     )
 
@@ -568,12 +306,12 @@ describe('motore v2 — pagine scansionate che l’OCR non ha letto', () => {
   })
 })
 
-describe('motore v2 — documento non classificabile', () => {
-  it('resta UNKNOWN senza campi, senza evidenze e col motivo nella timeline', async () => {
+describe('documento senza tipo', () => {
+  it('resta senza campi, senza evidenze e col motivo nella timeline', async () => {
     const repo = createTestRepository()
     const id = seed(repo, 'promemoria-ignoto.pdf', PDF)
 
-    const outcome = await processorFor(repo, V2)(inputFor(id, 'promemoria-ignoto.pdf', PDF))
+    const outcome = await processorFor(repo)(inputFor(id, 'promemoria-ignoto.pdf', PDF))
 
     expect(outcome).toMatchObject({
       documentType: null,
@@ -591,12 +329,8 @@ describe('motore v2 — documento non classificabile', () => {
     ])
     expect(repo.events.listForDocument(id).map((e) => [e.title, e.detail])).toEqual([
       [
-        'Tipo non riconosciuto',
-        'Classificatore v2: nessun alias o segnale del registry compare nel testo (NO_SIGNAL). Il tipo va assegnato a mano.'
-      ],
-      [
         'Campi non estratti',
-        'Tipo non riconosciuto: senza tipo non c’è un profilo di campi da cercare. I campi si precompilano quando il tipo viene assegnato a mano.'
+        'Senza tipo non c’è una mappa di campi da cercare. I campi si precompilano quando il revisore assegna il tipo.'
       ]
     ])
     expect(repo.extractionRuns.listForDocument(id)).toMatchObject([
@@ -605,10 +339,10 @@ describe('motore v2 — documento non classificabile', () => {
     repo.close()
   })
 
-  it('assegnato il tipo a mano, si precompila col profilo di quel tipo', async () => {
+  it('assegnato il tipo, si precompila con la mappa di quel tipo', async () => {
     const repo = createTestRepository()
     const id = seed(repo, 'promemoria-ignoto.pdf', PDF)
-    const process = processorFor(repo, V2)
+    const process = processorFor(repo)
     await process(inputFor(id, 'promemoria-ignoto.pdf', PDF))
 
     repo.documents.setType(id, 'payments_treasury.richiesta_pagamento', null)
@@ -618,89 +352,43 @@ describe('motore v2 — documento non classificabile', () => {
       documentType: 'payments_treasury.richiesta_pagamento',
       typeConfidence: null,
       filledFields: 1,
-      totalFields: 10
+      totalFields: 13
     })
     const values = Object.fromEntries(repo.fields.listForDocument(id).map((f) => [f.name, f.value]))
     expect(values['money.amount']).toBe('1250.00')
     expect(repo.events.listForDocument(id).map((e) => e.title)).toContain('Tipo confermato')
-    expect(JSON.parse(repo.extractionRuns.listForDocument(id)[0]!.metrics_json!)).toMatchObject({
-      classifier: { manualType: true, reason: 'NO_SIGNAL' }
-    })
-    // Il tipo è del revisore, la proposta del motore resta quella: nessuna.
-    expect(repo.getReviewDocument(id)!.classification).toMatchObject({
-      decision: 'UNKNOWN',
-      reason: 'NO_SIGNAL',
-      proposedType: null,
-      candidates: []
-    })
     repo.close()
   })
 
-  it('un tipo assegnato a mano che nessun profilo conosce non fa fallire la rielaborazione', async () => {
+  it('un tipo che il registry non elenca non fa fallire la rielaborazione', async () => {
     const repo = createTestRepository()
     const id = seed(repo, 'promemoria-ignoto.pdf', PDF)
     repo.documents.setType(id, 'promemoria_interno', null)
 
-    const outcome = await processorFor(repo, V2)(inputFor(id, 'promemoria-ignoto.pdf', PDF))
+    const outcome = await processorFor(repo)(inputFor(id, 'promemoria-ignoto.pdf', PDF))
 
     expect(outcome).toMatchObject({ documentType: 'promemoria_interno', totalFields: 0 })
     expect(repo.fields.listForDocument(id)).toEqual([])
     expect(repo.events.listForDocument(id).at(-1)?.detail).toBe(
-      'Nessun profilo di estrazione per «promemoria_interno»: il tipo non ha un profilo v2 né uno schema nel registry.'
+      'Il registry non dice quali campi vuole «promemoria_interno»: il tipo è fuori dalle 171 classi della mappa.'
     )
     expect(repo.extractionRuns.listForDocument(id)[0]?.status).toBe('SKIPPED_NO_PROFILE')
     repo.close()
   })
 })
 
-describe('motori combinati', () => {
-  it('classificatore v2 con estrazione v1: senza tipo tornano i 4 universali', async () => {
-    const repo = createTestRepository()
-    const id = seed(repo, 'promemoria-ignoto.pdf', PDF)
-    await processorFor(repo, { classifier: 'v2', extraction: 'v1' })(
-      inputFor(id, 'promemoria-ignoto.pdf', PDF)
-    )
-    expect(repo.fields.listForDocument(id)).toHaveLength(4)
-    expect(repo.extractionRuns.listForDocument(id)).toEqual([])
-    repo.close()
-  })
-
-  it('classificatore v1 con estrazione v2: il profilo del tipo trovato dal v1', async () => {
-    const repo = createTestRepository()
-    const id = seed(repo, 'fattura-nativa.pdf', PDF)
-    const outcome = await processorFor(repo, { classifier: 'v1', extraction: 'v2' })(
-      inputFor(id, 'fattura-nativa.pdf', PDF)
-    )
-    expect(outcome).toMatchObject({ typeConfidence: 0.9, totalFields: 17 })
-    expect(repo.events.listForDocument(id)[0]?.detail).toBe(
-      'accounting.fattura al 90% da «fattura» in prima pagina.'
-    )
-    expect(
-      JSON.parse(repo.extractionRuns.listForDocument(id)[0]!.metrics_json!).classifier
-    ).toEqual({
-      engine: 'v1',
-      manualType: false,
-      documentType: 'accounting.fattura',
-      confidence: 0.9,
-      phrase: 'fattura',
-      source: 'first-page'
-    })
-    repo.close()
-  })
-})
-
-describe('motore v2 — rielaborazione e correzioni', () => {
+describe('rielaborazione e correzioni', () => {
   it('rielaborare non duplica campi ed evidenze, e accumula lo storico dei run', async () => {
     const repo = createTestRepository()
-    const id = seed(repo, 'fattura-nativa.pdf', PDF)
-    const process = processorFor(repo, V2)
+    const id = seed(repo, 'fattura-nativa.pdf', PDF, FATTURA)
+    const process = processorFor(repo)
     const input = inputFor(id, 'fattura-nativa.pdf', PDF)
 
     await process(input)
     await process(input)
 
     const document = repo.getReviewDocument(id)!
-    expect(document.fields).toHaveLength(17)
+    expect(document.fields).toHaveLength(22)
     expect(document.evidence).toHaveLength(10)
     expect(repo.extractionRuns.listForDocument(id)).toHaveLength(2)
     repo.close()
@@ -708,30 +396,29 @@ describe('motore v2 — rielaborazione e correzioni', () => {
 
   it('una correzione sopravvive al re-run, anche su un campo che il profilo non ha più', async () => {
     const repo = createTestRepository()
-    const id = seed(repo, 'fattura-nativa.pdf', PDF)
-    const process = processorFor(repo, V2)
+    const id = seed(repo, 'fattura-nativa.pdf', PDF, FATTURA)
+    const process = processorFor(repo)
     const input = inputFor(id, 'fattura-nativa.pdf', PDF)
     await process(input)
 
     const number = repo.fields.listForDocument(id).find((f) => f.name === 'document.number')!
     repo.fields.setCorrectedValue(number.id, '114/2026-bis')
 
-    // Il revisore cambia tipo: il profilo della nota di credito non ha i campi CIG/CUP,
-    // ma una correzione fatta lì non deve sparire.
+    // Il revisore cambia tipo: la mappa della visura non ha i campi CIG/CUP, ma una
+    // correzione fatta lì non deve sparire.
     const cig = repo.fields.listForDocument(id).find((f) => f.name === 'procurement.cig')!
     repo.fields.setCorrectedValue(cig.id, 'Z123456789')
-    repo.documents.setType(id, 'accounting.nota_di_credito', null)
+    repo.documents.setType(id, 'corporate_registry.visura_camerale', null)
     await process(input)
 
     const rows = repo.fields.listForDocument(id)
     expect(rows.find((f) => f.name === 'document.number')).toMatchObject({
       value: '114/2026',
       corrected_value: '114/2026-bis',
-      role: 'core'
+      role: 'optional'
     })
     expect(rows.find((f) => f.name === 'procurement.cig')).toMatchObject({
-      corrected_value: 'Z123456789',
-      review_status: 'NEEDS_REVIEW'
+      corrected_value: 'Z123456789'
     })
     repo.close()
   })
@@ -752,7 +439,7 @@ describe('motore v2 — rielaborazione e correzioni', () => {
 
     migrate(db)
     const repo = createRepository(db)
-    await processorFor(repo, V2)(inputFor('doc', 'fattura-nativa.pdf', PDF))
+    await processorFor(repo)(inputFor('doc', 'fattura-nativa.pdf', PDF))
 
     const rows = Object.fromEntries(repo.fields.listForDocument('doc').map((f) => [f.name, f]))
     expect(rows['document.number']).toMatchObject({
@@ -761,34 +448,19 @@ describe('motore v2 — rielaborazione e correzioni', () => {
       updated_at: '2026-09-11'
     })
     expect(rows['money.total']).toMatchObject({ value: '86420.00', corrected_value: '86420.50' })
-    // `tax_code` diventa `company.tax_id`, che la fattura v2 non chiede: resta a sé.
-    expect(rows['company.tax_id']).toMatchObject({ corrected_value: '01234567890' })
+    // `tax_code` diventa `company.tax_code` (0004 più 0020), che la fattura non chiede:
+    // resta a sé, con la correzione addosso.
+    expect(rows['company.tax_code']).toMatchObject({ corrected_value: '01234567890' })
     expect(rows.document_number).toBeUndefined()
     db.close()
-  })
-
-  it('tornando al v1 le correzioni fatte col v2 si ritrovano', async () => {
-    const repo = createTestRepository()
-    const id = seed(repo, 'fattura-nativa.pdf', PDF)
-    const input = inputFor(id, 'fattura-nativa.pdf', PDF)
-    await processorFor(repo, V2)(input)
-    const total = repo.fields.listForDocument(id).find((f) => f.name === 'money.total')!
-    repo.fields.setCorrectedValue(total.id, '86420.50')
-
-    await processorFor(repo, V1)(input)
-
-    const rows = repo.fields.listForDocument(id)
-    expect(rows).toHaveLength(8)
-    expect(rows.find((f) => f.name === 'total_amount')?.corrected_value).toBe('86420.50')
-    repo.close()
   })
 })
 
 describe('il testo su cui si ritrovano le selezioni', () => {
   it('salva hash del file, righe con coordinate e impronta della prima pagina', async () => {
     const repo = createTestRepository()
-    const id = seed(repo, 'fattura-nativa.pdf', PDF)
-    await processorFor(repo, V2)(inputFor(id, 'fattura-nativa.pdf', PDF))
+    const id = seed(repo, 'fattura-nativa.pdf', PDF, FATTURA)
+    await processorFor(repo)(inputFor(id, 'fattura-nativa.pdf', PDF))
 
     const extracted = await extractText({ filePath: fixture('fattura-nativa.pdf'), mime: PDF })
     const lines = repo.pages.lines(id, 1)
@@ -812,8 +484,8 @@ describe('il testo su cui si ritrovano le selezioni', () => {
 
   it('un DOCX ha una pagina sola, di righe senza coordinate', async () => {
     const repo = createTestRepository()
-    const id = seed(repo, 'contratto-consulenza.docx', DOCX)
-    await processorFor(repo, V2)(inputFor(id, 'contratto-consulenza.docx', DOCX))
+    const id = seed(repo, 'contratto-consulenza.docx', DOCX, CONTRATTO)
+    await processorFor(repo)(inputFor(id, 'contratto-consulenza.docx', DOCX))
 
     const lines = repo.pages.lines(id, 1)
     expect(lines.length).toBeGreaterThan(0)
@@ -869,8 +541,8 @@ describe('il testo su cui si ritrovano le selezioni', () => {
 
   it('una selezione resta alla rielaborazione, con la sua posizione', async () => {
     const repo = createTestRepository()
-    const id = seed(repo, 'fattura-nativa.pdf', PDF)
-    const process = processorFor(repo, V2)
+    const id = seed(repo, 'fattura-nativa.pdf', PDF, FATTURA)
+    const process = processorFor(repo)
     const input = inputFor(id, 'fattura-nativa.pdf', PDF)
     await process(input)
 

@@ -9,7 +9,7 @@ import type {
 } from '@shared/types'
 import type { Repository } from './db/repository'
 import { ReviewerError } from './errors'
-import type { ExtractionRegistryV2 } from './extract/v2/profile-loader'
+import type { ExtractionRegistry } from './extract/v2/profile-loader'
 import { learnFromReview, type RulesChange } from './review-learning'
 
 /** Lo stato in cui l'azione lascia il documento, cioè se entrerà nel dataset o no. */
@@ -116,7 +116,7 @@ export function submitReview(
     /** L'account che salva; senza, la revisione non si registra per il learner. */
     actor?: string | null
     /** Il registry v2, per ricavare le etichette dai valori selezionati. */
-    registry?: ExtractionRegistryV2 | undefined
+    registry?: ExtractionRegistry | undefined
     onRulesChanged?: (change: RulesChange) => void
   }
 ): ReviewDocument {

@@ -5,7 +5,7 @@ import type { MapEditResult, TypeFieldMap } from '@shared/profile-workspace'
 import type { DocumentRow } from './db/rows'
 import type { DocumentProcessor } from './drive/fetch'
 import { logError, ReviewerError } from './errors'
-import type { ReloadableExtractionRegistryV2 } from './extract/v2/profile-loader'
+import type { ReloadableExtractionRegistry } from './extract/v2/profile-loader'
 import { collectTypeMap } from './profile-insights'
 import { editProfileMap, type ProfileMapDeps, revertProfileAction } from './profile-map'
 import { reprocessCachedDocuments } from './reprocess'
@@ -21,7 +21,7 @@ import { reprocessCachedDocuments } from './reprocess'
  */
 
 export interface RefinementDeps extends ProfileMapDeps {
-  registry: ReloadableExtractionRegistryV2
+  registry: ReloadableExtractionRegistry
   /** Classificazione e precompilazione: senza, la correzione vale dal prossimo documento. */
   process?: DocumentProcessor | undefined
   fileExists?: (path: string) => boolean

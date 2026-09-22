@@ -1,5 +1,0 @@
-ecb354ec88a881099f5baef15759de77b8757c04 2026-09-15
-source: pratica-ai/packages/document-registry/registry
-copied: 2026-09-15T19:57:39Z
-files: extraction_schemas.json, aliases.json, document_types.json
-note: snapshot di sola lettura. Il repo praticaai-reviewer non dipende dal monorepo PraticaAI.

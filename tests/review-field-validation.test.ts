@@ -3,7 +3,7 @@ import type { FieldInput } from '../src/main/db/dao/fields'
 import { validateFieldValue } from '../src/main/extract/v2/validators'
 import { addFieldItem, updateFieldItem, updateFieldValue } from '../src/main/field-edits'
 import { createTestRepository, seedDocument } from './helpers/db'
-import { testRegistryV2 } from './helpers/registry'
+import { testExtractionRegistry } from './helpers/registry'
 
 let repo: ReturnType<typeof createTestRepository> | null = null
 
@@ -20,7 +20,8 @@ function setup(documentType: string, fields: FieldInput[]) {
   const r = createTestRepository(
     {},
     {
-      validateField: (type, name, value) => validateFieldValue(testRegistryV2(), type, name, value)
+      validateField: (type, name, value) =>
+        validateFieldValue(testExtractionRegistry(), type, name, value)
     }
   )
   repo = r
@@ -42,24 +43,24 @@ describe('la revisione valida il valore che si vede', () => {
   it('la proposta del motore porta i suoi errori, una proposta giusta nessuno', () => {
     const { field } = setup('accounting.fattura', [
       one('bank.iban', BAD_IBAN),
-      one('issuer.tax_id', '12345678903'),
-      one('recipient.tax_id', null)
+      one('issuer.vat_number', '12345678903'),
+      one('recipient.vat_number', null)
     ])
     expect(field('bank.iban').validationErrors).toEqual(['INVALID_IBAN'])
-    expect(field('issuer.tax_id')).not.toHaveProperty('validationErrors')
-    expect(field('recipient.tax_id')).not.toHaveProperty('validationErrors')
+    expect(field('issuer.vat_number')).not.toHaveProperty('validationErrors')
+    expect(field('recipient.vat_number')).not.toHaveProperty('validationErrors')
   })
 
   it('quello che scrive chi rivede si controlla appena salvato', () => {
     const { r, id, field } = setup('accounting.fattura', [
       one('bank.iban', BAD_IBAN),
-      one('issuer.tax_id', null)
+      one('issuer.vat_number', null)
     ])
 
     // Due cifre scambiate, e un'etichetta finita dentro il valore.
     updateFieldValue(r, {
       documentId: id,
-      fieldId: field('issuer.tax_id').id,
+      fieldId: field('issuer.vat_number').id,
       correctedValue: '12345678930'
     })
     updateFieldValue(r, {
@@ -67,7 +68,7 @@ describe('la revisione valida il valore che si vede', () => {
       fieldId: field('bank.iban').id,
       correctedValue: `IBAN: ${VALID_IBAN}`
     })
-    expect(field('issuer.tax_id').validationErrors).toEqual(['INVALID_TAX_ID_CHECKSUM'])
+    expect(field('issuer.vat_number').validationErrors).toEqual(['INVALID_VAT_CHECKSUM'])
     expect(field('bank.iban').validationErrors).toEqual(['INVALID_IBAN'])
 
     // Corretto: l'avviso sparisce, anche se la proposta sbagliata resta accanto.
@@ -133,7 +134,8 @@ describe('la revisione valida il valore che si vede', () => {
       one('issuer.tax_code', cf),
       one('recipient.vat_number', 'IT12345678903'),
       one('recipient.tax_code', '12345678903'),
-      // Una fattura elaborata prima tiene le chiavi di allora, coi validatori di allora.
+      // Una fattura elaborata prima tiene la chiave di allora: uscita dall'ontologia, non
+      // ha più validatori e non blocca niente.
       one('issuer.tax_id', cf)
     ])
     expect(field('issuer.vat_number').validationErrors).toEqual(['INVALID_VAT_FORMAT'])
@@ -148,20 +150,23 @@ describe('la revisione valida il valore che si vede', () => {
       one('document.expiry_date', 'COMUNE DI ROVIGO'),
       one('document.issue_date', '2022-07-05'),
       one('person.last_name', 'AYAD'),
-      // La carta del 18/09 tiene la chiave di allora: il validatore la raggiunge lo stesso.
+      // La carta del 18/09 tiene la chiave di allora, che l'ontologia non ha più: la
+      // migrazione 0020 la sposta, e finché non passa di lì non si valida.
       one('identity.expiry_date', 'COMUNE DI ROVIGO')
     ])
     expect(field('document.expiry_date').validationErrors).toEqual(['INVALID_DATE'])
-    expect(field('identity.expiry_date').validationErrors).toEqual(['INVALID_DATE'])
+    expect(field('identity.expiry_date')).not.toHaveProperty('validationErrors')
     expect(field('document.issue_date')).not.toHaveProperty('validationErrors')
     expect(field('person.last_name')).not.toHaveProperty('validationErrors')
   })
 
   it('senza registry v2, o su un nome del motore v1, non si valida niente', () => {
     expect(validateFieldValue(undefined, 'accounting.fattura', 'bank.iban', BAD_IBAN)).toEqual([])
-    expect(validateFieldValue(testRegistryV2(), 'accounting.fattura', 'iban', BAD_IBAN)).toEqual([])
+    expect(
+      validateFieldValue(testExtractionRegistry(), 'accounting.fattura', 'iban', BAD_IBAN)
+    ).toEqual([])
     // Senza tipo valgono quelli dell'ontologia.
-    expect(validateFieldValue(testRegistryV2(), null, 'bank.iban', BAD_IBAN)).toEqual([
+    expect(validateFieldValue(testExtractionRegistry(), null, 'bank.iban', BAD_IBAN)).toEqual([
       'INVALID_IBAN'
     ])
   })

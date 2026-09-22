@@ -17,14 +17,12 @@ import type { Cardinality, FieldRole } from './extraction-v2'
 export type FieldState = FieldRole | 'excluded'
 
 /**
- * Le quattro liste di campi: il profilo del motore le ha, e le ha anche il profilo
- * grezzo del file JSON con tutte le sue chiavi in più. L'overlay lavora su entrambi.
+ * Le due liste di campi: il profilo del motore le ha, e le ha anche il profilo grezzo del
+ * file JSON con tutte le sue chiavi in più. L'overlay lavora su entrambi.
  */
 export interface ProfileRoleLists {
   required_fields: string[]
-  core_fields: string[]
   optional_fields: string[]
-  conditional_fields: string[]
 }
 
 /** Lo stato deciso, campo per campo, per un tipo solo. */
@@ -60,17 +58,12 @@ export const CARDINALITY_LABELS: Record<Cardinality, string> = {
   many: 'più valori'
 }
 
-export const ROLE_KEYS: Record<
-  FieldRole,
-  'required_fields' | 'core_fields' | 'optional_fields' | 'conditional_fields'
-> = {
+export const ROLE_KEYS: Record<FieldRole, 'required_fields' | 'optional_fields'> = {
   required: 'required_fields',
-  core: 'core_fields',
-  optional: 'optional_fields',
-  conditional: 'conditional_fields'
+  optional: 'optional_fields'
 }
 
-export const ROLES: FieldRole[] = ['required', 'core', 'optional', 'conditional']
+export const ROLES: FieldRole[] = ['required', 'optional']
 
 /** Il ruolo di un campo in un profilo, `null` se il profilo non lo chiede. */
 export function roleIn<T extends ProfileRoleLists>(
@@ -104,22 +97,12 @@ export function applyOverlay<T extends ProfileRoleLists>(
 ): T {
   if (!overrides || Object.keys(overrides).length === 0) return profile
 
-  const added: Record<FieldRole, string[]> = {
-    required: [],
-    core: [],
-    optional: [],
-    conditional: []
-  }
+  const added: Record<FieldRole, string[]> = { required: [], optional: [] }
   for (const [fieldId, state] of Object.entries(overrides)) {
     if (state !== 'excluded') added[state].push(fieldId)
   }
 
-  const lists: ProfileRoleLists = {
-    required_fields: [],
-    core_fields: [],
-    optional_fields: [],
-    conditional_fields: []
-  }
+  const lists: ProfileRoleLists = { required_fields: [], optional_fields: [] }
   for (const role of ROLES) {
     const key = ROLE_KEYS[role]
     // Un campo con una decisione sopra esce da tutte le liste del registry: se il

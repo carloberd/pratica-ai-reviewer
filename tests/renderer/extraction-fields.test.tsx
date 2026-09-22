@@ -38,7 +38,7 @@ function fieldMeasure(overrides: Partial<ProfileFieldMeasure> = {}): ProfileFiel
 const NEVER_USED = fieldMeasure({
   fieldId: 'document.number',
   label: 'Numero documento',
-  role: 'core',
+  role: 'optional',
   confirmed: 0,
   filled: 0,
   empty: 12,
@@ -64,7 +64,7 @@ function measure(overrides: Partial<ProfileTypeMeasure> = {}): ProfileTypeMeasur
   return {
     documentType: 'accounting.fattura',
     label: 'fattura',
-    profileOrigin: 'V2_EXPLICIT',
+    profileOrigin: 'EXPLICIT',
     schemaState: 'EXTRACTION_SCHEMA_DRAFT',
     fieldTested: false,
     totals: {
@@ -129,7 +129,7 @@ describe('scheda «Campi da estrarre»', () => {
     const iban = fieldMeasure({
       fieldId: 'bank.iban',
       label: 'IBAN',
-      role: 'core',
+      role: 'optional',
       note: 'IBAN del beneficiario, non il conto da cui parte il bonifico'
     })
     const view = text(
@@ -159,7 +159,7 @@ describe('scheda «Campi da estrarre»', () => {
     const many = fieldMeasure({
       fieldId: 'bank.iban',
       label: 'IBAN',
-      role: 'conditional',
+      role: 'optional',
       cardinality: 'many',
       cardinalityDecision: 'many'
     })

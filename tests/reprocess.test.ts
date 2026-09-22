@@ -7,13 +7,7 @@ import {
   reprocessCachedDocuments
 } from '../src/main/reprocess'
 import { createTestRepository, seedDocument } from './helpers/db'
-import {
-  fixture,
-  testClassifierConfigV2,
-  testLegacyFieldMap,
-  testRegistry,
-  testRegistryV2
-} from './helpers/registry'
+import { fixture, testExtractionRegistry } from './helpers/registry'
 
 let repo: ReturnType<typeof createTestRepository> | null = null
 
@@ -29,14 +23,7 @@ afterEach(() => {
 })
 
 function v2Processor(r: ReturnType<typeof createTestRepository>) {
-  return createDocumentProcessor({
-    repo: r,
-    registry: testRegistry(),
-    engines: { classifier: 'v2', extraction: 'v2' },
-    classifierConfigV2: testClassifierConfigV2(),
-    extractionRegistryV2: testRegistryV2(),
-    legacyFieldMap: testLegacyFieldMap()
-  })
+  return createDocumentProcessor({ repo: r, extractionRegistry: testExtractionRegistry() })
 }
 
 /** Documento in coda con la copia locale in cache, come dopo il primo doppio clic. */
@@ -70,7 +57,6 @@ describe('assegnazione manuale del tipo', () => {
     expect(document.typeConfidence).toBeNull()
     expect(document.fields.find((f) => f.name === 'money.amount')?.value).toBe('1250.00')
     expect(document.timeline.map((item) => item.title)).toEqual([
-      'Tipo non riconosciuto',
       'Campi non estratti',
       'Tipo assegnato a mano',
       'Tipo confermato',
@@ -143,7 +129,7 @@ describe('assegnazione manuale del tipo', () => {
 describe('documenti da rielaborare col motore v2', () => {
   it('in coda e mai passati da questa versione del motore con questi profili', async () => {
     const r = makeRepo()
-    const isStale = needsV2Extraction(r, testRegistryV2())
+    const isStale = needsV2Extraction(r, testExtractionRegistry())
     const id = cachedDocument(r, 'fattura-nativa.pdf')
     expect(isStale(r.documents.get(id)!)).toBe(true)
 
@@ -156,17 +142,13 @@ describe('documenti da rielaborare col motore v2', () => {
     expect(isStale(r.documents.get(id)!)).toBe(false)
 
     // Profili aggiornati: di nuovo da rielaborare.
-    const newer = { ...testRegistryV2(), schemaVersion: () => '2.1.0' }
+    const newer = { ...testExtractionRegistry(), schemaVersion: () => '2.1.0' }
     expect(needsV2Extraction(r, newer)(r.documents.get(id)!)).toBe(true)
-
-    // Elaborato prima che la classificazione si salvasse: senza candidati da proporre.
-    r.documents.setClassification(id, null)
-    expect(isStale(r.documents.get(id)!)).toBe(true)
   })
 
   it('un passaggio su un testo incompleto per l’OCR non conta', async () => {
     const r = makeRepo()
-    const isStale = needsV2Extraction(r, testRegistryV2())
+    const isStale = needsV2Extraction(r, testExtractionRegistry())
     const id = cachedDocument(r, 'durc-scansionato.pdf')
 
     // `v2Processor` non ha un servizio OCR: la pagina scansionata resta senza testo.
@@ -185,7 +167,7 @@ describe('documenti da rielaborare col motore v2', () => {
 
   it('i documenti revisionati o scartati non si toccano', () => {
     const r = makeRepo()
-    const isStale = needsV2Extraction(r, testRegistryV2())
+    const isStale = needsV2Extraction(r, testExtractionRegistry())
     const id = cachedDocument(r, 'fattura-nativa.pdf')
     r.documents.setStatus(id, 'REVIEWED')
     expect(isStale(r.documents.get(id)!)).toBe(false)

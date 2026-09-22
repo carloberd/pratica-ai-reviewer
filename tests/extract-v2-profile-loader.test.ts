@@ -2,22 +2,19 @@ import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:f
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import {
-  createExtractionRegistryV2,
-  loadLegacyFieldMap
-} from '../src/main/extract/v2/profile-loader'
+import { createExtractionRegistry } from '../src/main/extract/v2/profile-loader'
 import { descriptionOf, piiOf } from '../src/shared/extraction-v2'
-import { REGISTRY_DIR, REGISTRY_V2_DIR, testRegistry, testRegistryV2 } from './helpers/registry'
+import { REGISTRY_DIR, testExtractionRegistry } from './helpers/registry'
 
-const registry = testRegistryV2()
+const registry = testExtractionRegistry()
 
 const dirs: string[] = []
 
-/** Copia del registry v2 reale da modificare in un test. */
+/** Copia del registry reale da modificare in un test. */
 function registryCopy(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'registry-v2-'))
+  const dir = mkdtempSync(join(tmpdir(), 'registry-'))
   dirs.push(dir)
-  cpSync(REGISTRY_V2_DIR, dir, { recursive: true })
+  cpSync(REGISTRY_DIR, dir, { recursive: true })
   return dir
 }
 
@@ -33,18 +30,24 @@ afterEach(() => {
 })
 
 describe('profili espliciti', () => {
-  it('restituisce il profilo v2 del tipo con i suoi ruoli', () => {
-    expect(registry.profileSource('accounting.fattura')).toBe('V2_EXPLICIT')
+  it('restituisce la mappa del tipo con i suoi due ruoli', () => {
+    expect(registry.profileSource('accounting.fattura')).toBe('EXPLICIT')
     const profile = registry.profile('accounting.fattura')!
-    expect(profile.schema_state).toBe('EXTRACTION_SCHEMA_READY_FOR_FIELD_TEST')
-    expect(profile.required_fields).toEqual([
-      'document.number',
-      'document.issue_date',
-      'issuer.name',
-      'recipient.name',
-      'money.total'
-    ])
-    expect(profile.core_fields).toContain('line_items')
+    expect(profile.schema_state).toBe('PRETESTED')
+    expect(profile.required_fields).toEqual(
+      expect.arrayContaining([
+        'document.number',
+        'document.issue_date',
+        'issuer.name',
+        'recipient.name',
+        'money.total'
+      ])
+    )
+    expect(profile.optional_fields).toContain('line_items')
+    // I due ruoli non si sovrappongono: un campo obbligatorio non è anche opzionale.
+    for (const fieldId of profile.required_fields) {
+      expect(profile.optional_fields, fieldId).not.toContain(fieldId)
+    }
   })
 
   it('espone ontologia, hint e versione dei profili', () => {
@@ -54,26 +57,35 @@ describe('profili espliciti', () => {
     })
     expect(registry.field('non.esiste')).toBeNull()
     expect(registry.hints('money.total')).toContain('totale documento')
+    // L'etichetta del campo apre sempre la lista: gli alias vengono dopo.
+    expect(registry.hints('money.total')[0]).toBe('Totale')
     expect(registry.hints('non.esiste')).toEqual([])
-    expect(registry.schemaVersion()).toBe('2.0.4')
+    expect(registry.schemaVersion()).toBe('3.0.0')
   })
 
   it('la descrizione di un campo su un tipo la scrive il profilo, non l’ontologia', () => {
     const bonifico = registry.profile('banking.ricevuta_bonifico')!
     expect(descriptionOf(bonifico, 'bank.iban', registry.field('bank.iban'))).toBe(
-      'IBAN del beneficiario, non il conto da cui parte il bonifico'
+      'IBAN del beneficiario, non il conto da cui parte il bonifico.'
     )
-    // Le 257 descrizioni del pack ripetono l'etichetta: senza eccezione non c'è niente da
-    // leggere, né qui né sugli altri 40 tipi che chiedono l'IBAN.
-    expect(registry.field('bank.iban')?.description).toBe('IBAN')
-    expect(descriptionOf(bonifico, 'document.number', registry.field('document.number'))).toBeNull()
+    // Adesso la descrizione dell'ontologia dice già qualcosa: l'eccezione del tipo la
+    // precisa, non la sostituisce a un campo muto.
+    expect(registry.field('bank.iban')?.description).not.toBe('IBAN')
+    // Senza eccezione si legge la descrizione dell'ontologia, che adesso c'è su tutti.
+    expect(descriptionOf(bonifico, 'document.number', registry.field('document.number'))).toBe(
+      registry.field('document.number')!.description
+    )
     expect(
       descriptionOf(
         registry.profile('accounting.fattura'),
         'bank.iban',
         registry.field('bank.iban')
       )
-    ).toBeNull()
+    ).toBe(registry.field('bank.iban')!.description)
+    // Nessuna descrizione ripete la sua etichetta: nel template sarebbe un'istruzione vuota.
+    for (const field of registry.allFields()) {
+      expect(field.description, field.id).not.toBe(field.label_it)
+    }
   })
 
   it('legge le eccezioni ai validatori solo sul tipo che le dichiara', () => {
@@ -88,7 +100,7 @@ describe('profili espliciti', () => {
   })
 
   it('le correzioni del revisore non perdono le eccezioni ai validatori', () => {
-    const corrected = createExtractionRegistryV2(REGISTRY_V2_DIR, REGISTRY_DIR, () => ({
+    const corrected = createExtractionRegistry(REGISTRY_DIR, () => ({
       fields: { 'accounting.nota_di_credito': { 'money.total': 'required' } },
       hintLabels: {},
       cardinality: { 'accounting.nota_di_credito': { 'money.total': 'many' } }
@@ -101,7 +113,7 @@ describe('profili espliciti', () => {
   it('fattura e visura chiedono partita IVA e codice fiscale distinti, gli altri tipi no', () => {
     const fields = (type: string) => {
       const profile = registry.profile(type)!
-      return [...profile.required_fields, ...profile.core_fields, ...profile.optional_fields]
+      return [...profile.required_fields, ...profile.optional_fields, ...profile.optional_fields]
     }
     expect(fields('accounting.fattura')).toEqual(
       expect.arrayContaining([
@@ -118,79 +130,85 @@ describe('profili espliciti', () => {
     )
     expect(visura).not.toContain('company.tax_id')
     expect(visura).not.toContain('company.registration_number')
-    // `*.tax_id` resta col suo significato dove c'era.
-    expect(fields('accounting.nota_di_credito')).toContain('issuer.tax_id')
-    expect(fields('payroll_contributions.durc')).toContain('company.tax_id')
+    // La distinzione vale ovunque adesso, non solo sui due tipi del pilota: `*.tax_id` è
+    // uscito dall'ontologia e nessun tipo lo chiede più.
+    expect(fields('accounting.nota_di_credito')).toEqual(
+      expect.arrayContaining(['issuer.vat_number', 'issuer.tax_code'])
+    )
+    expect(fields('payroll_contributions.durc')).toEqual(
+      expect.arrayContaining(['company.vat_number', 'company.tax_code'])
+    )
+    expect(registry.field('issuer.tax_id')).toBeNull()
+    expect(registry.field('company.tax_id')).toBeNull()
   })
 
   it('la mappa del revisore si somma al profilo nuovo: il ripiego resta finché non lo toglie', () => {
-    // La mappa della visura il 18/09: il codice fiscale in `recipient.tax_id`, e un campo
-    // uscito dal registry a cui il revisore avesse cambiato il peso.
-    const corrected = createExtractionRegistryV2(REGISTRY_V2_DIR, REGISTRY_DIR, () => ({
+    // Un ripiego del revisore sulla visura, e un campo del registry a cui ha cambiato peso.
+    const corrected = createExtractionRegistry(REGISTRY_DIR, () => ({
       fields: {
         'corporate_registry.visura_camerale': {
-          'recipient.tax_id': 'core',
+          'counterparty.tax_id': 'optional',
           'recipient.name': 'excluded',
-          'company.registration_number': 'optional'
+          'company.tax_code': 'optional'
         }
       },
       hintLabels: {},
       cardinality: {}
     }))
     const profile = corrected.profile('corporate_registry.visura_camerale')!
-    expect(profile.core_fields).toEqual(
-      expect.arrayContaining(['company.tax_code', 'company.vat_number', 'recipient.tax_id'])
+    expect(profile.optional_fields).toEqual(
+      expect.arrayContaining(['company.tax_code', 'counterparty.tax_id'])
     )
-    expect(profile.core_fields).not.toContain('recipient.name')
-    // Una decisione su un campo che il registry non chiede più lo rimette nel profilo.
-    expect(profile.optional_fields).toContain('company.registration_number')
+    expect(profile.optional_fields).not.toContain('recipient.name')
+    // Il campo ripesato esce dagli obbligatori e non resta in tutte e due le liste.
+    expect(profile.required_fields).not.toContain('company.tax_code')
   })
 
   it('i documenti d’identità chiedono cognome e nome distinti, e le chiavi generiche', () => {
-    const roles = (type: string) => {
-      const profile = registry.profile(type)!
-      return {
-        required: profile.required_fields,
-        core: profile.core_fields,
-        optional: profile.optional_fields
-      }
-    }
+    const profileOf = (type: string) => registry.profile(type)!
+    // Le chiavi generiche hanno preso il posto di `identity.document_number`,
+    // `identity.issue_date` e `identity.expiry_date`: sono quelle che il pilota ha messo.
     const required = [
       'person.last_name',
       'person.first_name',
       'document.number',
       'document.issue_date',
-      'document.expiry_date'
-    ]
-    const core = [
-      'identity.document_type',
-      'person.tax_code',
+      'document.expiry_date',
       'person.birth_date',
-      'person.birth_place'
+      'person.birth_place',
+      'identity.document_type'
     ]
-    // Carta e permesso: anche cittadinanza e residenza, come nella mappa della carta.
     for (const type of [
       'identity_personal.carta_identita',
-      'identity_personal.permesso_di_soggiorno'
+      'identity_personal.permesso_di_soggiorno',
+      'identity_personal.patente_di_guida'
     ]) {
-      expect(roles(type), type).toEqual({
-        required: [...required, 'identity.nationality'],
-        core: [...core, 'person.address'],
-        optional: ['identity.issuing_authority']
-      })
+      const profile = profileOf(type)
+      expect(profile.required_fields, type).toEqual(expect.arrayContaining(required))
+      for (const gone of [
+        'identity.document_number',
+        'identity.issue_date',
+        'identity.expiry_date',
+        'identity.residence',
+        'person.name'
+      ]) {
+        expect(
+          [...profile.required_fields, ...profile.optional_fields],
+          `${type} ${gone}`
+        ).not.toContain(gone)
+      }
+      // La residenza resta un campo da confermare, non da dare per letto.
+      expect(profile.optional_fields, type).toContain('person.address')
     }
-    // Il passaporto scrive sempre la cittadinanza, la residenza non sempre.
-    expect(roles('identity_personal.passaporto')).toEqual({
-      required: [...required, 'identity.nationality'],
-      core,
-      optional: ['identity.issuing_authority', 'person.address']
-    })
-    // La patente europea non stampa né cittadinanza né residenza.
-    expect(roles('identity_personal.patente_di_guida')).toEqual({
-      required,
-      core,
-      optional: ['identity.issuing_authority']
-    })
+    // Il permesso ha in più il motivo del soggiorno; la patente le sue categorie.
+    expect(profileOf('identity_personal.permesso_di_soggiorno').required_fields).toContain(
+      'identity.permit_type'
+    )
+    expect(profileOf('identity_personal.patente_di_guida').optional_fields).toContain(
+      'identity.categories'
+    )
+    // Il passaporto è fuori dalle 171 del Brain MVP: non ha più una mappa.
+    expect(registry.profile('identity_personal.passaporto')).toBeNull()
 
     expect(registry.field('person.last_name')).toMatchObject({
       label_it: 'Cognome',
@@ -199,32 +217,30 @@ describe('profili espliciti', () => {
     expect(registry.field('person.first_name')).toMatchObject({ label_it: 'Nome', pii: 'personal' })
     // `person.name` resta dove una persona compare per intero.
     expect(registry.field('person.name')?.label_it).toBe('Nome e cognome')
-    expect(registry.profile('real_estate.contratto_locazione')!.core_fields).toContain(
+    expect(registry.profile('real_estate.contratto_locazione')!.optional_fields).toContain(
       'person.name'
     )
-    // Le date di `identity.*` restano su certificati e stato di famiglia, ora con un
-    // validatore: «COMUNE DI ROVIGO» in una scadenza non passa più in silenzio.
-    expect(registry.profile('identity_personal.certificato_nascita')!.core_fields).toEqual(
-      expect.arrayContaining(['identity.issue_date', 'identity.expiry_date'])
-    )
+    // Le chiavi `identity.*` che le generiche hanno sostituito sono uscite dall'ontologia:
+    // tenerle avrebbe lasciato due modi di dire la stessa cosa.
+    expect(registry.field('identity.issue_date')).toBeNull()
+    expect(registry.field('identity.expiry_date')).toBeNull()
+    expect(registry.field('identity.document_number')).toBeNull()
     // Numero e date sulle chiavi generiche, ma col `pii` delle chiavi `identity.*` che
-    // sostituiscono: lo decide il profilo del tipo, non l'ontologia.
+    // sostituiscono: lo decide la mappa del tipo, non l'ontologia.
     const pii = (type: string, fieldId: string) =>
       piiOf(registry.profile(type), fieldId, registry.field(fieldId)!)
     expect(pii('identity_personal.patente_di_guida', 'document.number')).toBe('sensitive')
     expect(pii('identity_personal.carta_identita', 'document.expiry_date')).toBe('sensitive')
     expect(pii('accounting.fattura', 'document.number')).toBe('none')
-    expect(registry.field('identity.issue_date')?.validators).toEqual(['valid_date'])
-    expect(registry.field('identity.expiry_date')?.validators).toEqual(['valid_date'])
   })
 
   it('la mappa del revisore sui documenti d’identità, dopo il cambio: cosa rientra', () => {
     // Le decisioni del 18/09 che l'export fa vedere, confrontate col registry di allora.
-    const corrected = createExtractionRegistryV2(REGISTRY_V2_DIR, REGISTRY_DIR, () => ({
+    const corrected = createExtractionRegistry(REGISTRY_DIR, () => ({
       fields: {
         'identity_personal.carta_identita': {
           'identity.nationality': 'required',
-          'person.address': 'core',
+          'person.address': 'optional',
           'identity.document_type': 'excluded',
           'identity.document_number': 'excluded',
           'identity.issue_date': 'excluded',
@@ -254,7 +270,7 @@ describe('profili espliciti', () => {
     }))
     const fields = (type: string) => {
       const profile = corrected.profile(type)!
-      return [...profile.required_fields, ...profile.core_fields, ...profile.optional_fields]
+      return [...profile.required_fields, ...profile.optional_fields, ...profile.optional_fields]
     }
 
     const carta = corrected.profile('identity_personal.carta_identita')!
@@ -293,40 +309,6 @@ describe('profili espliciti', () => {
   })
 })
 
-describe('LEGACY_FALLBACK', () => {
-  it('sintetizza il profilo dallo schema v1 portando i campi sull’ontologia', () => {
-    expect(registry.profileSource('accounting.fattura_elettronica')).toBe('LEGACY_FALLBACK')
-    const profile = registry.profile('accounting.fattura_elettronica')!
-    expect(profile).toMatchObject({
-      document_type_id: 'accounting.fattura_elettronica',
-      family: 'accounting',
-      schema_state: 'EXTRACTION_SCHEMA_LEGACY_FALLBACK',
-      required_fields: ['document.number', 'document.issue_date'],
-      core_fields: [
-        'issuer.name',
-        'recipient.name',
-        'money.taxable',
-        'money.tax',
-        'money.total',
-        'money.currency'
-      ],
-      optional_fields: [],
-      conditional_fields: [],
-      unknown_value_policy: 'LEAVE_EMPTY'
-    })
-    // Sintetizzato una volta sola.
-    expect(registry.profile('accounting.fattura_elettronica')).toBe(profile)
-  })
-
-  it('nessuno dei 511 tipi del registry resta senza profilo', () => {
-    const sources = testRegistry()
-      .types()
-      .map((type) => registry.profileSource(type.id))
-    expect(sources).not.toContain('MISSING')
-    expect(sources.filter((source) => source === 'LEGACY_FALLBACK')).toHaveLength(16)
-  })
-})
-
 describe('tipo senza profilo', () => {
   it('MISSING restituisce null senza errori', () => {
     expect(registry.profileSource('slug.manuale')).toBe('MISSING')
@@ -337,15 +319,15 @@ describe('tipo senza profilo', () => {
 describe('errori d’avvio', () => {
   it('un profilo che cita un campo assente dall’ontologia', () => {
     const dir = registryCopy()
-    editJson<{ profiles: Record<string, { core_fields: string[] }> }>(
+    editJson<{ document_types: Record<string, { optional_fields: string[] }> }>(
       dir,
-      'class_extraction_profiles_v2.json',
+      'document_fields.json',
       (data) => {
-        data.profiles['accounting.fattura']!.core_fields.push('campo.inventato')
+        data.document_types['accounting.fattura']!.optional_fields.push('campo.inventato')
       }
     )
-    expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
-      /1 riferimenti a campi assenti.*accounting\.fattura\.core_fields: campo\.inventato/
+    expect(() => createExtractionRegistry(dir)).toThrow(
+      /1 riferimenti a campi assenti.*accounting\.fattura\.optional_fields: campo\.inventato/
     )
   })
 
@@ -355,11 +337,11 @@ describe('errori d’avvio', () => {
   ])('un’eccezione ai validatori su %s', (_, fieldId) => {
     const dir = registryCopy()
     editJson<{
-      profiles: Record<string, { field_validator_overrides?: Record<string, string[]> }>
-    }>(dir, 'class_extraction_profiles_v2.json', (data) => {
-      data.profiles['accounting.fattura']!.field_validator_overrides = { [fieldId]: [] }
+      document_types: Record<string, { field_validator_overrides?: Record<string, string[]> }>
+    }>(dir, 'document_fields.json', (data) => {
+      data.document_types['accounting.fattura']!.field_validator_overrides = { [fieldId]: [] }
     })
-    expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
+    expect(() => createExtractionRegistry(dir)).toThrow(
       `accounting.fattura.field_validator_overrides: ${fieldId}`
     )
   })
@@ -370,11 +352,11 @@ describe('errori d’avvio', () => {
   ])('una descrizione per tipo su %s', (_, fieldId) => {
     const dir = registryCopy()
     editJson<{
-      profiles: Record<string, { field_description_overrides?: Record<string, string> }>
-    }>(dir, 'class_extraction_profiles_v2.json', (data) => {
-      data.profiles['accounting.fattura']!.field_description_overrides = { [fieldId]: 'boh' }
+      document_types: Record<string, { field_description_overrides?: Record<string, string> }>
+    }>(dir, 'document_fields.json', (data) => {
+      data.document_types['accounting.fattura']!.field_description_overrides = { [fieldId]: 'boh' }
     })
-    expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
+    expect(() => createExtractionRegistry(dir)).toThrow(
       `accounting.fattura.field_description_overrides: ${fieldId}`
     )
   })
@@ -385,61 +367,38 @@ describe('errori d’avvio', () => {
   ])('un’eccezione al pii su %s', (_, fieldId) => {
     const dir = registryCopy()
     editJson<{
-      profiles: Record<string, { field_pii_overrides?: Record<string, string> }>
-    }>(dir, 'class_extraction_profiles_v2.json', (data) => {
-      data.profiles['accounting.fattura']!.field_pii_overrides = { [fieldId]: 'sensitive' }
+      document_types: Record<string, { field_pii_overrides?: Record<string, string> }>
+    }>(dir, 'document_fields.json', (data) => {
+      data.document_types['accounting.fattura']!.field_pii_overrides = { [fieldId]: 'sensitive' }
     })
-    expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
+    expect(() => createExtractionRegistry(dir)).toThrow(
       `accounting.fattura.field_pii_overrides: ${fieldId}`
     )
   })
 
-  it('un’eccezione al pii vale solo coi valori del pack', () => {
+  it('un’eccezione al pii vale solo coi valori che il registry conosce', () => {
     const dir = registryCopy()
     editJson<{
-      profiles: Record<string, { field_pii_overrides?: Record<string, string> }>
-    }>(dir, 'class_extraction_profiles_v2.json', (data) => {
-      data.profiles['identity_personal.carta_identita']!.field_pii_overrides = {
+      document_types: Record<string, { field_pii_overrides?: Record<string, string> }>
+    }>(dir, 'document_fields.json', (data) => {
+      data.document_types['identity_personal.carta_identita']!.field_pii_overrides = {
         'document.number': 'segreto'
       }
     })
-    expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
-      /class_extraction_profiles_v2\.json ha una struttura inattesa in «profiles\.identity_personal\.carta_identita\.field_pii_overrides\.document\.number»/
+    expect(() => createExtractionRegistry(dir)).toThrow(
+      /document_fields\.json ha una struttura inattesa in «document_types\.identity_personal\.carta_identita\.field_pii_overrides\.document\.number»/
     )
   })
 
-  it('una mappa legacy che punta a un campo inesistente', () => {
-    const dir = registryCopy()
-    editJson<{ map: Record<string, string> }>(dir, 'legacy_field_map_v2.json', (data) => {
-      data.map.issue_date = 'document.data'
-    })
-    expect(() => createExtractionRegistryV2(dir, REGISTRY_DIR)).toThrow(
-      /legacy_field_map_v2\.json: issue_date -> document\.data/
-    )
-  })
-
-  it('un file dei profili mancante o rotto', () => {
+  it('un file del registry mancante o rotto', () => {
     const missing = registryCopy()
-    rmSync(join(missing, 'field_ontology_v2.json'))
-    expect(() => createExtractionRegistryV2(missing, REGISTRY_DIR)).toThrow(
-      /manca field_ontology_v2\.json/
-    )
+    rmSync(join(missing, 'fields.json'))
+    expect(() => createExtractionRegistry(missing)).toThrow(/manca fields\.json/)
 
     const broken = registryCopy()
-    writeFileSync(join(broken, 'extraction_hints_v2.json'), '{')
-    expect(() => createExtractionRegistryV2(broken, REGISTRY_DIR)).toThrow(
-      /extraction_hints_v2\.json non è JSON valido/
+    writeFileSync(join(broken, 'document_fields.json'), '{')
+    expect(() => createExtractionRegistry(broken)).toThrow(
+      /document_fields\.json non è JSON valido/
     )
-  })
-
-  it('senza gli schemi del registry v1', () => {
-    const dir = registryCopy()
-    expect(() => createExtractionRegistryV2(dir, dir)).toThrow(/manca extraction_schemas\.json/)
-  })
-
-  it('la mappa legacy si carica anche da sola', () => {
-    expect(loadLegacyFieldMap(REGISTRY_V2_DIR)).toMatchObject({
-      document_number: 'document.number'
-    })
   })
 })

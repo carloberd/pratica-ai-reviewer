@@ -18,12 +18,9 @@ import {
   firstPageFingerprint,
   firstPageTemplateSignature
 } from '../src/main/pipeline'
-import { matchDocumentTypeV2 } from '../src/main/registry/v2/classify-v2'
 import {
-  addClassification,
   addReviewCounts,
   addScore,
-  emptyClassificationTally,
   emptyReviewCounts,
   emptyScore,
   fieldOutcomes,
@@ -33,17 +30,11 @@ import {
   outsideProfile,
   parseManifest,
   reviewCounts,
-  summarizeClassification,
   summarizeScore,
   tally,
   valuesOf
 } from './helpers/pilot-benchmark'
-import {
-  TESSDATA_DIR,
-  testClassifierConfigV2,
-  testRegistry,
-  testRegistryV2
-} from './helpers/registry'
+import { TESSDATA_DIR, testExtractionRegistry } from './helpers/registry'
 
 /**
  * Benchmark su un corpus reale: classificazione ed estrazione misurate contro un manifest
@@ -115,7 +106,7 @@ describe('benchmark su corpus reale', () => {
 
 describe.skipIf(!enabled)('benchmark su corpus reale, col corpus', () => {
   it(
-    'misura classificazione ed estrazione senza portare documenti o valori nel repository',
+    'misura l estrazione senza portare documenti o valori nel repository',
     async () => {
       const corpus = resolve(corpusDirectory!)
       const manifestFile = resolve(manifestPath!)
@@ -133,17 +124,15 @@ describe.skipIf(!enabled)('benchmark su corpus reale, col corpus', () => {
       }
       const rules: LearningRule[] = learned?.rules ?? []
 
-      const registry = testRegistry()
-      const registryV2 = testRegistryV2()
-      const classifierConfig = testClassifierConfigV2()
-      const specOf = (fieldId: string) => registryV2.field(fieldId)
+      const registry = testExtractionRegistry()
+      const specOf = (fieldId: string) => registry.field(fieldId)
 
       // Prima di elaborare: un tipo atteso che il motore non conosce è un errore del
       // manifest, e misurato darebbe solo campi mancanti.
       for (const document of manifest.documents) {
         if (document.documentType === null) continue
         expect(
-          registryV2.profile(document.documentType),
+          registry.profile(document.documentType),
           `Tipo senza profilo di estrazione: ${document.documentType} (${document.file})`
         ).not.toBeNull()
       }
@@ -159,10 +148,9 @@ describe.skipIf(!enabled)('benchmark su corpus reale, col corpus', () => {
         dispose: () => engine.dispose()
       }
 
-      const classification = emptyClassificationTally()
-      const fields = { endToEnd: emptyScore(), oracleType: emptyScore() }
-      const expectedAbsentFilled = { endToEnd: 0, oracleType: 0 }
-      const review = { endToEnd: emptyReviewCounts(), oracleType: emptyReviewCounts() }
+      const fields = emptyScore()
+      let expectedAbsentFilled = 0
+      const review = emptyReviewCounts()
       const results = []
 
       try {
@@ -176,40 +164,23 @@ describe.skipIf(!enabled)('benchmark su corpus reale, col corpus', () => {
           )
 
           const extracted = await extractText({ filePath, mime: mime!, ocr })
-          // Come in `pipeline.ts`: memoria dei moduli per il classificatore, etichette
-          // apprese per l'estrazione. In BASELINE le regole sono zero e non cambia niente.
+          // Come in `pipeline.ts`: etichette apprese per l'estrazione, memoria dei moduli
+          // per l'audit. In BASELINE le regole sono zero e non cambia niente.
           const fingerprint = firstPageFingerprint(extracted)
           const signature = firstPageTemplateSignature(extracted)
           const templateMemory = templateMemoryFor(rules, fingerprint, signature)
 
-          const match = matchDocumentTypeV2({
-            aliases: registry.aliases(),
-            pages: extracted.pages.map((page) => page.text),
-            filename: expected.file,
-            config: classifierConfig,
-            templateMemory
-          })
-          const assignedType = match.decision === 'ASSIGN' ? match.documentType : null
-          const topType = match.candidates[0]?.documentType ?? null
-          addClassification(classification, {
-            expected: expected.documentType,
-            assigned: assignedType,
-            top: topType
-          })
-
           const extract = (documentType: string | null): ExtractionResultV2 | null => {
-            if (documentType === null || !registryV2.profile(documentType)) return null
+            if (documentType === null || !registry.profile(documentType)) return null
             return extractFactsV2({
               documentType,
               pages: extracted.pages,
-              registry: registryV2,
+              registry: registry,
               ocrPages: extracted.ocrPages,
               learnedLabels: learnedLabelsFor(rules, documentType, fingerprint, signature)
             })
           }
-          const oracleResult = extract(expected.documentType)
-          const endToEndResult =
-            assignedType === expected.documentType ? oracleResult : extract(assignedType)
+          const result = extract(expected.documentType)
 
           const measure = (result: ExtractionResultV2 | null, templateRuleIds: string[]) => {
             const values = valuesOf(result)
@@ -226,16 +197,14 @@ describe.skipIf(!enabled)('benchmark su corpus reale, col corpus', () => {
               values
             }
           }
-          const templateRuleIds = templateMemory.map((memory) => memory.ruleId)
-          const endToEnd = measure(endToEndResult, templateRuleIds)
-          const oracleType = measure(oracleResult, [])
+          const measured = measure(
+            result,
+            templateMemory.map((memory) => memory.ruleId)
+          )
 
-          addScore(fields.endToEnd, endToEnd.score)
-          addScore(fields.oracleType, oracleType.score)
-          expectedAbsentFilled.endToEnd += endToEnd.expectedAbsentFilled.length
-          expectedAbsentFilled.oracleType += oracleType.expectedAbsentFilled.length
-          addReviewCounts(review.endToEnd, endToEnd.review)
-          addReviewCounts(review.oracleType, oracleType.review)
+          addScore(fields, measured.score)
+          expectedAbsentFilled += measured.expectedAbsentFilled.length
+          addReviewCounts(review, measured.review)
 
           results.push({
             file: expected.file,
@@ -243,17 +212,7 @@ describe.skipIf(!enabled)('benchmark su corpus reale, col corpus', () => {
             textSource: extracted.source,
             ocrPages: extracted.ocrPages,
             expectedType: expected.documentType,
-            assignedType,
-            topType,
-            classification: {
-              decision: match.decision,
-              reason: match.reason,
-              confidence: match.confidence,
-              margin: match.margin,
-              candidates: match.candidates
-            },
-            endToEnd,
-            oracleType
+            ...measured
           })
         }
       } finally {
@@ -268,7 +227,7 @@ describe.skipIf(!enabled)('benchmark su corpus reale, col corpus', () => {
         code: {
           ...codeVersion(),
           extractionEngine: EXTRACTION_ENGINE_V2_VERSION,
-          profiles: registryV2.schemaVersion()
+          profiles: registry.schemaVersion()
         },
         learning: {
           mode: learned ? 'FROZEN' : 'BASELINE',
@@ -276,11 +235,7 @@ describe.skipIf(!enabled)('benchmark su corpus reale, col corpus', () => {
             ? { sha256: learnedSha256, ...learned.manifest, activeRules: learned.rules.length }
             : null
         },
-        classification: summarizeClassification(classification),
-        fields: {
-          endToEnd: summarizeScore(fields.endToEnd),
-          oracleType: summarizeScore(fields.oracleType)
-        },
+        fields: summarizeScore(fields),
         expectedAbsentFilled,
         review,
         results

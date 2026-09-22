@@ -2,7 +2,7 @@ import type { ClassExtractionProfile, FieldOntologyEntry } from '@shared/extract
 import { afterEach, describe, expect, it } from 'vitest'
 import type { FieldInput } from '../src/main/db/dao/fields'
 import type { Repository } from '../src/main/db/repository'
-import type { ExtractionRegistryV2, ProfileSource } from '../src/main/extract/v2/profile-loader'
+import type { ExtractionRegistry, ProfileSource } from '../src/main/extract/v2/profile-loader'
 import { collectTypeMap, collectTypeMeasure, profileFieldsOf } from '../src/main/profile-insights'
 import { createTestRepository, seedDocument } from './helpers/db'
 
@@ -20,11 +20,8 @@ function profile(overrides: Partial<ClassExtractionProfile> = {}): ClassExtracti
     canonical_name: 'fattura',
     family: 'accounting',
     schema_state: 'EXTRACTION_SCHEMA_DRAFT',
-    evidence_basis: 'LEGACY_REGISTRY+AI_PROPOSED',
     required_fields: ['document.issue_date'],
-    core_fields: ['document.number', 'issuer.name'],
-    optional_fields: ['line_items'],
-    conditional_fields: [],
+    optional_fields: ['document.number', 'issuer.name', 'line_items'],
     literal_evidence_required: true,
     unknown_value_policy: 'LEAVE_EMPTY',
     review_policy: 'REVIEW_LOW_CONFIDENCE_MISSING_REQUIRED_CONFLICTS_ONLY',
@@ -40,7 +37,7 @@ const LABELS: Record<string, string> = {
   line_items: 'Righe documento'
 }
 
-function fakeRegistry(profiles: Record<string, ClassExtractionProfile>): ExtractionRegistryV2 {
+function fakeRegistry(profiles: Record<string, ClassExtractionProfile>): ExtractionRegistry {
   const field = (fieldId: string) =>
     LABELS[fieldId] ? ({ id: fieldId, label_it: LABELS[fieldId] } as FieldOntologyEntry) : null
 
@@ -55,8 +52,9 @@ function fakeRegistry(profiles: Record<string, ClassExtractionProfile>): Extract
         .filter((entry): entry is FieldOntologyEntry => entry !== null),
     hints: () => [],
     profileSource: (documentType): ProfileSource =>
-      profiles[documentType] ? 'V2_EXPLICIT' : 'MISSING',
+      profiles[documentType] ? 'EXPLICIT' : 'MISSING',
     legacyNames: () => [],
+    documentTypes: () => [],
     schemaVersion: () => '2.0.0'
   }
 }
@@ -99,7 +97,7 @@ function field(name: string, value: string | null): FieldInput {
     label: LABELS[name] ?? name,
     value,
     confidence: value === null ? 0 : 0.85,
-    role: 'core',
+    role: 'optional',
     cardinality: 'one'
   }
 }
@@ -191,7 +189,7 @@ describe('misure sui profili dal database', () => {
 
     const issuer = measure.fields.find((entry) => entry.fieldId === 'issuer.name')!
     expect(issuer).toMatchObject({
-      role: 'core',
+      role: 'optional',
       confirmed: 1,
       corrected: 1,
       manual: 1,
@@ -282,9 +280,7 @@ describe('misure sui profili dal database', () => {
     const { repo } = scenario()
     const deps = {
       repo,
-      registry: fakeRegistry({
-        [FATTURA]: profile({ schema_state: 'EXTRACTION_SCHEMA_READY_FOR_FIELD_TEST' })
-      })
+      registry: fakeRegistry({ [FATTURA]: profile({ schema_state: 'PRETESTED' }) })
     }
     expect(collectTypeMeasure(deps, FATTURA)!.fieldTested).toBe(true)
   })
@@ -293,8 +289,8 @@ describe('misure sui profili dal database', () => {
     const registry = fakeRegistry({ [FATTURA]: profile() })
     expect(profileFieldsOf(registry, FATTURA)).toEqual([
       { fieldId: 'document.issue_date', label: 'Data emissione', role: 'required' },
-      { fieldId: 'document.number', label: 'Numero documento', role: 'core' },
-      { fieldId: 'issuer.name', label: 'Emittente', role: 'core' },
+      { fieldId: 'document.number', label: 'Numero documento', role: 'optional' },
+      { fieldId: 'issuer.name', label: 'Emittente', role: 'optional' },
       { fieldId: 'line_items', label: 'Righe documento', role: 'optional' }
     ])
     expect(profileFieldsOf(registry, 'ignoto.tipo')).toEqual([])

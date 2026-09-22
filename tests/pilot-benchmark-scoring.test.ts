@@ -43,7 +43,7 @@ const specOf = (fieldId: string) => specs[fieldId]
 function fact(fieldId: string, value: unknown, status: ExtractedFactV2['reviewStatus']) {
   return {
     fieldId,
-    role: 'core',
+    role: 'optional',
     cardinality: Array.isArray(value) ? 'many' : 'one',
     value,
     confidence: 0.85,
