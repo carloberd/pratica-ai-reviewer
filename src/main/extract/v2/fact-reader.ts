@@ -293,6 +293,15 @@ const IBAN = /\b([A-Za-z]{2}\d{2}(?:\s?[A-Za-z0-9]){11,30})\b/
 const REA_NUMBER = /^(?:([A-Z]{2})\s*[-–]?\s*)?(\d{1,7})(?!\d|[/.,]\d)/
 
 /**
+ * CIG e CUP: un blocco alfanumerico di lunghezza fissa, dieci caratteri il primo e quindici
+ * il secondo. La lunghezza è tutta la forma che hanno, ed è anche quello che li separa: su
+ * un ordine che li scrive uno accanto all'altro, la lettura per token prenderebbe il primo
+ * dei due per tutti e due.
+ */
+const CIG_CODE = /\b([A-Za-z0-9]{10})\b/
+const CUP_CODE = /\b([A-Za-z0-9]{15})\b/
+
+/**
  * Identificativo subito dopo l'etichetta: «Protocollo n. 2026/554321», «Documento n.
  * CC-2026-018». Deve contenere almeno una cifra e non essere una data.
  */
@@ -315,6 +324,14 @@ export function readIdentifier(text: string, format: string | null | undefined):
     if (!match?.[2]) return null
     // La forma in cui la scrive la visura, e in cui la trascrive il revisore: «RO - 160649».
     return match[1] ? `${match[1]} - ${match[2]}` : match[2]
+  }
+  if (format === 'cig' || format === 'cup') {
+    const match = (format === 'cig' ? CIG_CODE : CUP_CODE).exec(text)
+    const code = match?.[1]
+    // Almeno una cifra, come per ogni identificativo: «comunicare» ha dieci lettere e
+    // sarebbe un CIG a norma di lunghezza.
+    if (!code || match.index > VALUE_WINDOW || !/\d/.test(code)) return null
+    return code.toUpperCase()
   }
   if (format === 'iban') {
     const match = IBAN.exec(text)

@@ -131,6 +131,23 @@ describe('validatori dell’ontologia v2', () => {
     expect(runFieldValidator('vin', 'WVWZZZ1JZXW0000')).toBe('INVALID_VIN')
   })
 
+  it('CIG e CUP: la lunghezza è tutta la forma che hanno', () => {
+    expect(runFieldValidator('cig_format', 'Z1A2B3C4D5')).toBeNull()
+    expect(runFieldValidator('cig_format', 'z1a2b3c4d5')).toBeNull()
+    // Scritto a gruppi, come capita sull'ordine.
+    expect(runFieldValidator('cig_format', 'Z1A2 B3C4 D5')).toBeNull()
+    expect(runFieldValidator('cig_format', 'Z1A2B3C4D')).toBe('INVALID_CIG')
+    // Un CUP nel campo del CIG: è un identificativo vero nel campo sbagliato.
+    expect(runFieldValidator('cig_format', 'B71B21000320001')).toBe('INVALID_CIG')
+    expect(runFieldValidator('cig_format', 'Z1A2B3C4D_')).toBe('INVALID_CIG')
+
+    expect(runFieldValidator('cup_format', 'B71B21000320001')).toBeNull()
+    expect(runFieldValidator('cup_format', 'b71b21000320001')).toBeNull()
+    expect(runFieldValidator('cup_format', 'Z1A2B3C4D5')).toBe('INVALID_CUP')
+    expect(validationMessage('INVALID_CIG')).toContain('10')
+    expect(validationMessage('INVALID_CUP')).toContain('15')
+  })
+
   it('un validatore sconosciuto non blocca', () => {
     expect(runFieldValidator('sconosciuto', 'qualunque')).toBeNull()
   })

@@ -4855,7 +4855,9 @@
       "default_cardinality": "one",
       "pii": "none",
       "evidence_required": true,
-      "validators": [],
+      "validators": [
+        "cig_format"
+      ],
       "description": "Il codice identificativo gara: dieci caratteri alfanumerici assegnati da ANAC.",
       "label_aliases_it": [
         "codice identificativo gara"
@@ -4881,7 +4883,9 @@
       "default_cardinality": "one",
       "pii": "none",
       "evidence_required": true,
-      "validators": [],
+      "validators": [
+        "cup_format"
+      ],
       "description": "Il codice unico di progetto: quindici caratteri, distinto dal CIG.",
       "label_aliases_it": [
         "codice unico progetto"

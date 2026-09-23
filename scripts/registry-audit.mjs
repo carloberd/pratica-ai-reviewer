@@ -75,7 +75,9 @@ const VALIDATORS_OF = {
   'identifier|vat_number': ['vat_number_format'],
   'identifier|italian_tax_code': ['italian_tax_code_format'],
   'identifier|vehicle_plate': ['vehicle_plate'],
-  'identifier|vin': ['vin']
+  'identifier|vin': ['vin'],
+  'identifier|cig': ['cig_format'],
+  'identifier|cup': ['cup_format']
 }
 
 /** I validatori che `src/main/extract/v2/validators.ts` sa eseguire. */
@@ -88,7 +90,9 @@ const RUNNABLE = new Set([
   'vat_number_format',
   'italian_tax_code_format',
   'vehicle_plate',
-  'vin'
+  'vin',
+  'cig_format',
+  'cup_format'
 ])
 
 /**
@@ -115,7 +119,9 @@ const READER_FORMATS = new Set([
   'iban',
   'account_number',
   'vehicle_plate',
-  'vin'
+  'vin',
+  'cig',
+  'cup'
 ])
 
 /**

@@ -680,6 +680,23 @@ describe('partita IVA e codice fiscale in campi distinti', () => {
     expect(readIdentifier(' 12.03.2010', 'rea_number')).toBeNull()
     expect(readIdentifier(' iscritta dal 2010', 'rea_number')).toBeNull()
   })
+
+  it('CIG e CUP si leggono dalla loro lunghezza, non per token', () => {
+    expect(readIdentifier(': Z1A2B3C4D5', 'cig')).toBe('Z1A2B3C4D5')
+    expect(readIdentifier(' z1a2b3c4d5', 'cig')).toBe('Z1A2B3C4D5')
+    expect(readIdentifier(': B71B21000320001', 'cup')).toBe('B71B21000320001')
+    // Il CIG di dieci caratteri e il CUP di quindici sulla stessa riga: ognuno prende il
+    // suo, mentre la lettura per token darebbe il primo dei due a tutti e due.
+    const riga = ': Z1A2B3C4D5 CUP B71B21000320001'
+    expect(readIdentifier(riga, 'cig')).toBe('Z1A2B3C4D5')
+    expect(readIdentifier(riga, 'cup')).toBe('B71B21000320001')
+    // Un codice della lunghezza sbagliata non è il valore di quel campo.
+    expect(readIdentifier(': Z1A2B3C4D', 'cig')).toBeNull()
+    expect(readIdentifier(': B71B21000320001', 'cig')).toBeNull()
+    expect(readIdentifier(': Z1A2B3C4D5', 'cup')).toBeNull()
+    // «comunicare» ha dieci lettere: senza una cifra non è un codice.
+    expect(readIdentifier(' da comunicare', 'cig')).toBeNull()
+  })
 })
 
 describe('cognome e nome distinti sui documenti d’identità', () => {

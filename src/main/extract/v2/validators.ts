@@ -118,7 +118,16 @@ const VEHICLE_PLATE = /^[A-Z]{2}\d{3}[A-Z]{2}$/
 /** Numero di telaio: 17 caratteri, senza `I`, `O` e `Q`. */
 const VIN = /^[A-HJ-NPR-Z\d]{17}$/
 
-/** Targhe e telai si scrivono anche con spazi o trattini: «AB 123 CD», «AB-123-CD». */
+/**
+ * CIG e CUP, i due codici con cui una gara e un progetto pubblico si identificano. Il CIG
+ * è di dieci caratteri alfanumerici, il CUP di quindici: nessuno dei due ha un carattere
+ * di controllo che si possa ricalcolare qui, ma la lunghezza li distingue fra loro e da
+ * tutto il resto — un CIG di quindici caratteri è un CUP finito nel campo sbagliato.
+ */
+const CIG = /^[A-Z0-9]{10}$/
+const CUP = /^[A-Z0-9]{15}$/
+
+/** Targhe, telai, CIG e CUP si scrivono anche con spazi o trattini: «AB 123 CD». */
 function compactCode(value: string): string {
   return value.replace(/[\s-]+/g, '').toUpperCase()
 }
@@ -133,7 +142,9 @@ export const FIELD_VALIDATORS = [
   'vat_number_format',
   'italian_tax_code_format',
   'vehicle_plate',
-  'vin'
+  'vin',
+  'cig_format',
+  'cup_format'
 ] as const
 
 /**
@@ -172,6 +183,12 @@ export function runFieldValidator(name: string, value: unknown): string | null {
     return 'INVALID_VEHICLE_PLATE'
   }
   if (name === 'vin' && text !== null && !VIN.test(compactCode(text))) return 'INVALID_VIN'
+  if (name === 'cig_format' && text !== null && !CIG.test(compactCode(text))) {
+    return 'INVALID_CIG'
+  }
+  if (name === 'cup_format' && text !== null && !CUP.test(compactCode(text))) {
+    return 'INVALID_CUP'
+  }
   if (name === 'non_negative_money') {
     const amount = typeof value === 'number' ? value : Number(text)
     if (Number.isFinite(amount) && amount < 0) return 'NEGATIVE_MONEY'

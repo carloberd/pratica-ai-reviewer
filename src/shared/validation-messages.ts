@@ -19,7 +19,9 @@ const MESSAGES: Record<string, string> = {
   INVALID_DATE: 'Non è una data.',
   NEGATIVE_MONEY: 'Importo negativo.',
   INVALID_VEHICLE_PLATE: 'Non ha la forma di una targa (AA 000 AA).',
-  INVALID_VIN: 'Un telaio ha 17 caratteri, senza I, O e Q.'
+  INVALID_VIN: 'Un telaio ha 17 caratteri, senza I, O e Q.',
+  INVALID_CIG: 'Un CIG ha 10 caratteri fra lettere e cifre.',
+  INVALID_CUP: 'Un CUP ha 15 caratteri fra lettere e cifre.'
 }
 
 export function validationMessage(code: string): string {
