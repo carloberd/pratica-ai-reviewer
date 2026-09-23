@@ -632,88 +632,90 @@ const report = {
           }
         ])
     ),
-    rows: rowTemplates.slice(0, 8)
+    rows: rowTemplates
   }
 }
 
 const broken = invariants.reduce((total, check) => total + check.count, 0)
 
+// `process.exitCode` e non `process.exit()`: su una pipe l'uscita immediata taglia quello
+// che è ancora nel buffer, e il rapporto JSON arriverebbe a metà a chi lo legge.
 if (asJson) {
   console.log(JSON.stringify(report, null, 2))
-  process.exit(broken > 0 ? 1 : 0)
-}
+  process.exitCode = broken > 0 ? 1 : 0
+} else {
+  const pad = (n) => String(n).padStart(5)
+  const rule = (char = '─') => console.log(char.repeat(78))
 
-const pad = (n) => String(n).padStart(5)
-const rule = (char = '─') => console.log(char.repeat(78))
+  console.log(`\nregistry ${dir} — campi v${report.fieldsVersion}, mappa v${report.mapVersion}`)
+  console.log(
+    `${report.counts.fields} campi, ${report.counts.types} tipi di documento, ` +
+      `${report.counts.required} richieste obbligatorie e ${report.counts.optional} opzionali`
+  )
 
-console.log(`\nregistry ${dir} — campi v${report.fieldsVersion}, mappa v${report.mapVersion}`)
-console.log(
-  `${report.counts.fields} campi, ${report.counts.types} tipi di documento, ` +
-    `${report.counts.required} richieste obbligatorie e ${report.counts.optional} opzionali`
-)
-
-rule()
-console.log('INVARIANTI — devono restare a zero\n')
-for (const check of invariants) {
-  const mark = check.count === 0 ? 'ok  ' : 'ROTTO'
-  console.log(`  ${mark} ${pad(check.count)}  ${check.title}`)
-  for (const line of check.sample) console.log(`               ⤷ ${line}`)
-  if (check.count > check.sample.length) {
-    console.log(`               ⤷ …e altri ${check.count - check.sample.length}`)
+  rule()
+  console.log('INVARIANTI — devono restare a zero\n')
+  for (const check of invariants) {
+    const mark = check.count === 0 ? 'ok  ' : 'ROTTO'
+    console.log(`  ${mark} ${pad(check.count)}  ${check.title}`)
+    for (const line of check.sample) console.log(`               ⤷ ${line}`)
+    if (check.count > check.sample.length) {
+      console.log(`               ⤷ …e altri ${check.count - check.sample.length}`)
+    }
   }
-}
 
-rule()
-console.log('AVANZAMENTO — numeri da far scendere\n')
-for (const item of progress) {
-  console.log(`  ${pad(item.count)}  ${item.title}`)
-  console.log(`         ${item.note}`)
-  for (const line of item.sample) console.log(`         ⤷ ${line}`)
-  if (item.count > item.sample.length && item.sample.length > 0) {
-    console.log(`         ⤷ …e altri ${item.count - item.sample.length}`)
+  rule()
+  console.log('AVANZAMENTO — numeri da far scendere\n')
+  for (const item of progress) {
+    console.log(`  ${pad(item.count)}  ${item.title}`)
+    console.log(`         ${item.note}`)
+    for (const line of item.sample) console.log(`         ⤷ ${line}`)
+    if (item.count > item.sample.length && item.sample.length > 0) {
+      console.log(`         ⤷ …e altri ${item.count - item.sample.length}`)
+    }
+    console.log('')
+  }
+
+  rule()
+  console.log('QUANTO PESA LA MAPPA\n')
+  console.log(`  ${report.weight.requiredPerType} campi obbligatori per tipo, in media`)
+  console.log(`  ${report.weight.optionalPerType} opzionali per tipo, in media`)
+  console.log('  I tipi che ne chiedono di più:')
+  for (const entry of report.weight.heaviest) {
+    console.log(`         ⤷ ${pad(entry.required)}  ${entry.type}`)
   }
   console.log('')
-}
+  console.log('  Stato delle mappe:')
+  for (const [state, count] of Object.entries(report.states).sort((a, b) => b[1] - a[1])) {
+    console.log(`         ⤷ ${pad(count)}  ${state}`)
+  }
 
-rule()
-console.log('QUANTO PESA LA MAPPA\n')
-console.log(`  ${report.weight.requiredPerType} campi obbligatori per tipo, in media`)
-console.log(`  ${report.weight.optionalPerType} opzionali per tipo, in media`)
-console.log('  I tipi che ne chiedono di più:')
-for (const entry of report.weight.heaviest) {
-  console.log(`         ⤷ ${pad(entry.required)}  ${entry.type}`)
-}
-console.log('')
-console.log('  Stato delle mappe:')
-for (const [state, count] of Object.entries(report.states).sort((a, b) => b[1] - a[1])) {
-  console.log(`         ⤷ ${pad(count)}  ${state}`)
-}
-
-rule()
-console.log('CONVERSIONE A TEMPLATE NUEXTRACT\n')
-for (const [type, info] of Object.entries(report.conversion.byOntologyType)) {
-  console.log(`  ${type.padEnd(11)} ${pad(info.fields)} campi  →  ${info.nuextract}`)
-}
-console.log('')
-console.log('  Le righe, come il template le chiede:')
-for (const row of report.conversion.rows) {
-  console.log(`         ⤷ ${row.id}`)
-  console.log(`           ${row.template}`)
-}
-if (report.conversion.rowsWithSchema > report.conversion.rows.length) {
+  rule()
+  console.log('CONVERSIONE A TEMPLATE NUEXTRACT\n')
+  for (const [type, info] of Object.entries(report.conversion.byOntologyType)) {
+    console.log(`  ${type.padEnd(11)} ${pad(info.fields)} campi  →  ${info.nuextract}`)
+  }
+  console.log('')
+  console.log('  Le righe, come il template le chiede:')
+  const shown = report.conversion.rows.slice(0, 8)
+  for (const row of shown) {
+    console.log(`         ⤷ ${row.id}`)
+    console.log(`           ${row.template}`)
+  }
+  if (report.conversion.rows.length > shown.length) {
+    console.log(`         ⤷ …e altre ${report.conversion.rows.length - shown.length}`)
+  }
+  console.log('')
+  console.log(`  ${pad(report.conversion.readyTypes)} tipi convertibili senza altre decisioni`)
   console.log(
-    `         ⤷ …e altre ${report.conversion.rowsWithSchema - report.conversion.rows.length}`
+    `  ${pad(report.conversion.blockedTypes)} tipi fermi su almeno un campo «object» senza colonne`
   )
-}
-console.log('')
-console.log(`  ${pad(report.conversion.readyTypes)} tipi convertibili senza altre decisioni`)
-console.log(
-  `  ${pad(report.conversion.blockedTypes)} tipi fermi su almeno un campo «object» senza colonne`
-)
-rule()
+  rule()
 
-if (broken > 0) {
-  console.log(`\n${broken} violazioni di invariante: il registry è incoerente con sé stesso.\n`)
-  process.exit(1)
+  if (broken > 0) {
+    console.log(`\n${broken} violazioni di invariante: il registry è incoerente con sé stesso.\n`)
+    process.exitCode = 1
+  } else {
+    console.log('\nInvarianti tutti rispettati.\n')
+  }
 }
-console.log('\nInvarianti tutti rispettati.\n')

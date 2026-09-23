@@ -90,8 +90,6 @@
       "schema_state": "PRETESTED",
       "required_fields": [
         "bank.iban",
-        "counterparty.role",
-        "document.direction",
         "document.issue_date",
         "document.number",
         "issuer.name",
@@ -113,6 +111,10 @@
         "procurement.cig",
         "procurement.cup",
         "tax.vat_summary"
+      ],
+      "derived_fields": [
+        "counterparty.role",
+        "document.direction"
       ]
     },
     "accounting.fattura_proforma": {
@@ -122,8 +124,6 @@
       "schema_state": "PRETESTED",
       "required_fields": [
         "bank.iban",
-        "counterparty.role",
-        "document.direction",
         "document.issue_date",
         "document.number",
         "issuer.name",
@@ -144,6 +144,10 @@
         "procurement.cig",
         "procurement.cup",
         "tax.vat_summary"
+      ],
+      "derived_fields": [
+        "counterparty.role",
+        "document.direction"
       ]
     },
     "accounting.nota_di_credito": {
@@ -153,8 +157,6 @@
       "schema_state": "SCHEMA_READY",
       "required_fields": [
         "bank.iban",
-        "counterparty.role",
-        "document.direction",
         "document.issue_date",
         "document.number",
         "document.reason",
@@ -178,6 +180,10 @@
         "procurement.cig",
         "procurement.cup",
         "tax.vat_summary"
+      ],
+      "derived_fields": [
+        "counterparty.role",
+        "document.direction"
       ],
       "field_validator_overrides": {
         "money.total": [],
@@ -192,8 +198,6 @@
       "schema_state": "SCHEMA_READY",
       "required_fields": [
         "bank.iban",
-        "counterparty.role",
-        "document.direction",
         "document.issue_date",
         "document.number",
         "document.reason",
@@ -217,6 +221,10 @@
         "procurement.cig",
         "procurement.cup",
         "tax.vat_summary"
+      ],
+      "derived_fields": [
+        "counterparty.role",
+        "document.direction"
       ]
     },
     "accounting.parcella_professionale": {
@@ -264,7 +272,6 @@
         "accounting.entries",
         "company.name",
         "counterparty.name",
-        "counterparty.role",
         "counterparty.tax_id",
         "payment.due_date",
         "period.end",
@@ -274,6 +281,9 @@
         "document.references",
         "document.status",
         "money.amount"
+      ],
+      "derived_fields": [
+        "counterparty.role"
       ]
     },
     "assets_maintenance.contratto_manutenzione": {
@@ -655,9 +665,7 @@
       "family": "commercial",
       "schema_state": "PROPOSTA - NON IMPLEMENTATA",
       "required_fields": [
-        "counterparty.role",
         "document.deadline",
-        "document.direction",
         "document.issue_date",
         "document.references",
         "procurement.supplier",
@@ -667,6 +675,10 @@
       "optional_fields": [
         "money.amount",
         "sales.resolution"
+      ],
+      "derived_fields": [
+        "counterparty.role",
+        "document.direction"
       ]
     },
     "commercial.offer": {
@@ -675,11 +687,9 @@
       "family": "commercial",
       "schema_state": "PROPOSTA - NON IMPLEMENTATA",
       "required_fields": [
-        "document.direction",
         "document.expiry_date",
         "document.issue_date",
         "document.number",
-        "document.variant",
         "issuer.name",
         "payment.due_date",
         "procurement.items",
@@ -693,6 +703,10 @@
         "money.total",
         "procurement.delivery_date",
         "sales.amount"
+      ],
+      "derived_fields": [
+        "document.direction",
+        "document.variant"
       ]
     },
     "commercial.order": {
@@ -701,8 +715,6 @@
       "family": "commercial",
       "schema_state": "PROPOSTA - NON IMPLEMENTATA",
       "required_fields": [
-        "counterparty.role",
-        "document.direction",
         "document.issue_date",
         "document.number",
         "money.currency",
@@ -721,6 +733,10 @@
         "document.references",
         "procurement.delivery_date",
         "procurement.delivery_place"
+      ],
+      "derived_fields": [
+        "counterparty.role",
+        "document.direction"
       ]
     },
     "commercial.order_confirmation": {
@@ -729,8 +745,6 @@
       "family": "commercial",
       "schema_state": "PROPOSTA - NON IMPLEMENTATA",
       "required_fields": [
-        "counterparty.role",
-        "document.direction",
         "document.issue_date",
         "document.number",
         "money.currency",
@@ -749,6 +763,10 @@
         "document.references",
         "procurement.delivery_date",
         "procurement.delivery_place"
+      ],
+      "derived_fields": [
+        "counterparty.role",
+        "document.direction"
       ]
     },
     "commercial.price_list": {
@@ -757,7 +775,6 @@
       "family": "commercial",
       "schema_state": "PROPOSTA - NON IMPLEMENTATA",
       "required_fields": [
-        "counterparty.role",
         "document.expiry_date",
         "document.issue_date",
         "procurement.items",
@@ -768,6 +785,9 @@
       "optional_fields": [
         "money.currency",
         "sales.amount"
+      ],
+      "derived_fields": [
+        "counterparty.role"
       ]
     },
     "communications.comunicazione_controparte": {
@@ -778,8 +798,6 @@
       "required_fields": [
         "communication.response_deadline",
         "communication.subject",
-        "counterparty.role",
-        "document.direction",
         "document.issue_date",
         "issuer.name",
         "recipient.name"
@@ -789,6 +807,10 @@
         "communication.reference",
         "document.attachments",
         "document.number"
+      ],
+      "derived_fields": [
+        "counterparty.role",
+        "document.direction"
       ]
     },
     "communications.notifica_sdi": {
@@ -825,7 +847,6 @@
         "communication.subject",
         "document.issue_date",
         "issuer.name",
-        "receipt_type",
         "recipient.name"
       ],
       "optional_fields": [
@@ -834,6 +855,9 @@
         "document.attachments",
         "document.number",
         "document.protocol_number"
+      ],
+      "derived_fields": [
+        "receipt_type"
       ]
     },
     "communications.richiesta_documenti_ente": {
@@ -1913,14 +1937,16 @@
         "employment.protocol",
         "employment.submission_date",
         "employment.unilav_communication_id",
-        "employment.unilav_event_date",
-        "event_type"
+        "employment.unilav_event_date"
       ],
       "optional_fields": [
         "employment.contract_type",
         "employment.job_title",
         "employment.start_date",
         "employment.workplace"
+      ],
+      "derived_fields": [
+        "event_type"
       ]
     },
     "hr_payroll.prospetto_costo_del_personale": {
@@ -2013,7 +2039,6 @@
       "family": "hr_personnel",
       "schema_state": "PROPOSTA - NON IMPLEMENTATA",
       "required_fields": [
-        "absence_type",
         "document.issue_date",
         "employment.employee_name",
         "employment.employee_tax_code",
@@ -2029,6 +2054,9 @@
         "hr.hours",
         "issuer.name",
         "recipient.name"
+      ],
+      "derived_fields": [
+        "absence_type"
       ]
     },
     "hr_personnel.scelta_destinazione_tfr": {
@@ -2342,8 +2370,7 @@
         "hse.preventive_measures",
         "hse.risk_result",
         "hse.risk_type",
-        "hse.site",
-        "risk_type"
+        "hse.site"
       ],
       "optional_fields": [
         "document.effective_date",
@@ -2353,6 +2380,9 @@
         "hse.legal_basis",
         "hse.measurements",
         "hse.worker_groups"
+      ],
+      "derived_fields": [
+        "risk_type"
       ]
     },
     "hse_training.attestato_formazione_sicurezza": {
@@ -2361,7 +2391,6 @@
       "family": "hse_training",
       "schema_state": "PROPOSTA - NON IMPLEMENTATA",
       "required_fields": [
-        "course_type",
         "employment.employee_name",
         "employment.employee_tax_code",
         "hse.training_course",
@@ -2374,6 +2403,9 @@
         "hse.training_provider",
         "hse.training_topics",
         "recipient.name"
+      ],
+      "derived_fields": [
+        "course_type"
       ]
     },
     "hse_training.nomina_addetto_antincendio": {
@@ -2579,7 +2611,6 @@
         "insurance.policy_number",
         "insurance.policyholder",
         "insurance.vehicle_plate",
-        "policy_type",
         "realestate.address",
         "vehicle.plate"
       ],
@@ -2590,6 +2621,9 @@
         "insurance.premium",
         "issuer.name",
         "money.currency"
+      ],
+      "derived_fields": [
+        "policy_type"
       ]
     },
     "insurance.quietanza_premio_assicurativo": {
@@ -3446,12 +3480,14 @@
         "quality.scope",
         "quality.standard",
         "quality.valid_from",
-        "quality.valid_to",
-        "standard"
+        "quality.valid_to"
       ],
       "optional_fields": [
         "document.issue_date",
         "issuer.name"
+      ],
+      "derived_fields": [
+        "standard"
       ]
     },
     "quality_iso.rapporto_non_conformita": {
@@ -3522,7 +3558,6 @@
         "contract.parties",
         "document.issue_date",
         "document.outcome",
-        "event_type",
         "realestate.address"
       ],
       "optional_fields": [
@@ -3532,6 +3567,9 @@
         "person.name",
         "realestate.cadastral_data",
         "realestate.property_id"
+      ],
+      "derived_fields": [
+        "event_type"
       ]
     },
     "real_estate.visura_catastale": {
@@ -3717,8 +3755,7 @@
         "utility.account_id",
         "utility.consumption",
         "utility.due_date",
-        "utility.unit",
-        "utility_type"
+        "utility.unit"
       ],
       "optional_fields": [
         "environment.quantity",
@@ -3730,6 +3767,9 @@
         "utility.pod",
         "utility.readings",
         "utility.tariff"
+      ],
+      "derived_fields": [
+        "utility_type"
       ]
     },
     "vehicles_transport.carta_circolazione": {

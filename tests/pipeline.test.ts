@@ -90,13 +90,13 @@ describe('PDF con testo nativo', () => {
     expect(outcome.documentType).toBe('accounting.fattura')
     // Il tipo lo ha scelto il revisore: non c'è una confidenza da mostrare.
     expect(outcome.typeConfidence).toBeNull()
-    expect(outcome).toMatchObject({ filledFields: 10, totalFields: 22, confidence: 0.814 })
+    expect(outcome).toMatchObject({ filledFields: 10, totalFields: 20, confidence: 0.814 })
 
     const rows = repo.fields.listForDocument(id)
     expect(rows.map((f) => [f.name, f.role, f.review_status, f.value])).toEqual([
+      // `counterparty.role` e `document.direction` non ci sono: il tipo li elenca fra i
+      // derivati, e un documento non va più in revisione perché mancano dalla carta.
       ['bank.iban', 'required', 'MISSING', null],
-      ['counterparty.role', 'required', 'MISSING', null],
-      ['document.direction', 'required', 'MISSING', null],
       ['document.issue_date', 'required', 'AUTO_ACCEPTED', '2026-09-08'],
       ['document.number', 'required', 'AUTO_ACCEPTED', '114/2026'],
       ['issuer.name', 'required', 'AUTO_ACCEPTED', 'Alfa S.r.l.'],
@@ -138,10 +138,11 @@ describe('PDF con testo nativo', () => {
       expect(evidence?.bbox?.w, `${field.name} senza evidenza`).toBeGreaterThan(0)
     }
     expect(document.evidence).toHaveLength(10)
-    // Sei obbligatori che questa fattura non scrive: il Brain MVP li chiede tutti «ORA»,
-    // e il documento va in revisione invece di passare come completo.
+    // Quattro obbligatori che questa fattura non scrive, e il documento va in revisione
+    // invece di passare come completo. Il ruolo della controparte e la direzione non ci
+    // sono più: nessuna fattura li scrive, e chiederli mandava in revisione tutte.
     expect(document.warnings).toEqual([
-      'Campi obbligatori senza evidenza: IBAN, Ruolo controparte, Direzione documento, Codice fiscale emittente, Scadenza pagamento, Codice fiscale destinatario.'
+      'Campi obbligatori senza evidenza: IBAN, Codice fiscale emittente, Scadenza pagamento, Codice fiscale destinatario.'
     ])
     expect(repo.search.matchingDocumentIds('costruzioni')).toEqual([id])
 
@@ -149,7 +150,7 @@ describe('PDF con testo nativo', () => {
     expect(events.map((e) => e.title)).toEqual(['Tipo confermato', 'Campi precompilati'])
     expect(events[0]?.detail).toBe('Mantenuto il tipo «accounting.fattura» assegnato dal revisore.')
     expect(events[1]?.detail).toMatch(
-      /^10 campi su 22 con evidenza verbatim, mappa PRETESTED\. Obbligatori senza evidenza: .*Un conflitto fra candidati da verificare\.$/
+      /^10 campi su 20 con evidenza verbatim, mappa PRETESTED\. Obbligatori senza evidenza: .*Un conflitto fra candidati da verificare\.$/
     )
 
     const [run] = repo.extractionRuns.listForDocument(id)
@@ -162,8 +163,6 @@ describe('PDF con testo nativo', () => {
     })
     expect(JSON.parse(run!.missing_required_json!)).toEqual([
       'bank.iban',
-      'counterparty.role',
-      'document.direction',
       'issuer.tax_code',
       'payment.due_date',
       'recipient.tax_code'
@@ -205,7 +204,7 @@ describe('un campo del profilo che l’ontologia non descrive', () => {
       'SHARED_EVIDENCE:issuer.vat_number|recipient.vat_number'
     ])
     // Prima il campo spariva dal run: copertura piena su un obbligatorio mai cercato.
-    expect(JSON.parse(run!.metrics_json!)).toMatchObject({ coverage: 0.43, totalFields: 23 })
+    expect(JSON.parse(run!.metrics_json!)).toMatchObject({ coverage: 0.48, totalFields: 21 })
     expect(repo.getReviewDocument(id)!.warnings[0]).toContain('ghost.field')
     repo.close()
   })
@@ -388,7 +387,7 @@ describe('rielaborazione e correzioni', () => {
     await process(input)
 
     const document = repo.getReviewDocument(id)!
-    expect(document.fields).toHaveLength(22)
+    expect(document.fields).toHaveLength(20)
     expect(document.evidence).toHaveLength(10)
     expect(repo.extractionRuns.listForDocument(id)).toHaveLength(2)
     repo.close()

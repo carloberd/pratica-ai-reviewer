@@ -120,26 +120,6 @@
           "pick": null
         },
         {
-          "name": "counterparty.role",
-          "label": "Ruolo controparte",
-          "role": "required",
-          "cardinality": "one",
-          "value": null,
-          "origin": null,
-          "evidence": null,
-          "pick": null
-        },
-        {
-          "name": "document.direction",
-          "label": "Direzione documento",
-          "role": "required",
-          "cardinality": "one",
-          "value": null,
-          "origin": null,
-          "evidence": null,
-          "pick": null
-        },
-        {
           "name": "document.issue_date",
           "label": "Data emissione",
           "role": "required",

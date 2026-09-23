@@ -25,13 +25,14 @@
       "format": null,
       "default_cardinality": "one",
       "pii": "none",
-      "evidence_required": true,
+      "evidence_required": false,
       "validators": [],
       "description": "Quale assenza la richiesta riguarda: ferie, permesso, congedo.",
       "label_aliases_it": [
         "Tipo di assenza",
         "Motivo dell'assenza"
-      ]
+      ],
+      "derived": true
     },
     "accounting.balance": {
       "id": "accounting.balance",
@@ -1000,12 +1001,13 @@
       "pii": "none",
       "evidence_required": true,
       "validators": [],
-      "description": "La percentuale di avanzamento raggiunta, in punti percentuali.",
+      "description": "La percentuale di avanzamento raggiunta, in punti percentuali. Scala 0–100, come sta scritto: 3,5 = 3,5%.",
       "label_aliases_it": [
         "Avanzamento",
         "Stato di avanzamento",
         "Percentuale di avanzamento"
-      ]
+      ],
+      "scale": "0_100"
     },
     "construction.project": {
       "id": "construction.project",
@@ -1365,14 +1367,15 @@
       "format": null,
       "default_cardinality": "one",
       "pii": "none",
-      "evidence_required": true,
+      "evidence_required": false,
       "validators": [],
       "description": "Il ruolo della controparte rispetto all'azienda: supplier, customer, employee, bank, authority, insurer, other.",
       "label_aliases_it": [
         "Ruolo della controparte",
         "Qualità della controparte",
         "Controparte in qualità di"
-      ]
+      ],
+      "derived": true
     },
     "counterparty.tax_id": {
       "id": "counterparty.tax_id",
@@ -1398,13 +1401,14 @@
       "format": null,
       "default_cardinality": "one",
       "pii": "none",
-      "evidence_required": true,
+      "evidence_required": false,
       "validators": [],
       "description": "Quale corso di sicurezza l'attestato certifica: antincendio, RLS, preposto, primo soccorso, lavori in quota, spazi confinati, DPI di terza categoria.",
       "label_aliases_it": [
         "Tipo di corso",
         "Corso di sicurezza"
-      ]
+      ],
+      "derived": true
     },
     "credit.days_overdue": {
       "id": "credit.days_overdue",
@@ -1777,14 +1781,15 @@
       "format": null,
       "default_cardinality": "one",
       "pii": "none",
-      "evidence_required": true,
+      "evidence_required": false,
       "validators": [],
       "description": "Se il documento è ricevuto, emesso o interno, confrontando emittente e destinatario con l'azienda: incoming, outgoing, internal.",
       "label_aliases_it": [
         "Direzione",
         "Documento in entrata o in uscita",
         "Entrata o uscita"
-      ]
+      ],
+      "derived": true
     },
     "document.effective_date": {
       "id": "document.effective_date",
@@ -2076,13 +2081,14 @@
       "format": null,
       "default_cardinality": "one",
       "pii": "none",
-      "evidence_required": true,
+      "evidence_required": false,
       "validators": [],
       "description": "Il sottotipo del documento dentro la sua classe, quando la classe ne prevede più d'uno.",
       "label_aliases_it": [
         "Variante",
         "Sottotipo del documento"
-      ]
+      ],
+      "derived": true
     },
     "document.version": {
       "id": "document.version",
@@ -2655,13 +2661,14 @@
       "format": null,
       "default_cardinality": "one",
       "pii": "none",
-      "evidence_required": true,
+      "evidence_required": false,
       "validators": [],
       "description": "Quale evento il documento comunica dentro la sua classe: assunzione, cessazione, proroga, trasformazione, consegna, riconsegna.",
       "label_aliases_it": [
         "Tipo di evento",
         "Evento comunicato"
-      ]
+      ],
+      "derived": true
     },
     "finance.balance_closing": {
       "id": "finance.balance_closing",
@@ -2799,11 +2806,12 @@
       "pii": "none",
       "evidence_required": true,
       "validators": [],
-      "description": "Il tasso di interesse in punti percentuali, quando il documento non lo qualifica come TAN o TAEG.",
+      "description": "Il tasso di interesse in punti percentuali, quando il documento non lo qualifica come TAN o TAEG. Scala 0–100, come sta scritto: 3,5 = 3,5%.",
       "label_aliases_it": [
         "Tasso di interesse",
         "Tasso applicato"
-      ]
+      ],
+      "scale": "0_100"
     },
     "finance.principal": {
       "id": "finance.principal",
@@ -2863,11 +2871,12 @@
       "pii": "none",
       "evidence_required": true,
       "validators": [],
-      "description": "Il tasso annuo effettivo globale in punti percentuali, che comprende le spese: distinto dal TAN.",
+      "description": "Il tasso annuo effettivo globale in punti percentuali, che comprende le spese: distinto dal TAN. Scala 0–100, come sta scritto: 3,5 = 3,5%.",
       "label_aliases_it": [
         "Tasso annuo effettivo globale",
         "T.A.E.G."
-      ]
+      ],
+      "scale": "0_100"
     },
     "finance.tan": {
       "id": "finance.tan",
@@ -2878,11 +2887,12 @@
       "pii": "none",
       "evidence_required": true,
       "validators": [],
-      "description": "Il tasso annuo nominale in punti percentuali, distinto dal TAEG che comprende anche le spese.",
+      "description": "Il tasso annuo nominale in punti percentuali, distinto dal TAEG che comprende anche le spese. Scala 0–100, come sta scritto: 3,5 = 3,5%.",
       "label_aliases_it": [
         "Tasso annuo nominale",
         "T.A.N."
-      ]
+      ],
+      "scale": "0_100"
     },
     "finance.transaction_date": {
       "id": "finance.transaction_date",
@@ -4412,11 +4422,12 @@
       "pii": "none",
       "evidence_required": true,
       "validators": [],
-      "description": "L'aliquota della ritenuta d'acconto in punti percentuali: 20 per il venti per cento.",
+      "description": "L'aliquota della ritenuta d'acconto in punti percentuali: 20 per il venti per cento. Scala 0–100, come sta scritto: 3,5 = 3,5%.",
       "label_aliases_it": [
         "Aliquota della ritenuta d'acconto",
         "Percentuale di ritenuta"
-      ]
+      ],
+      "scale": "0_100"
     },
     "issuer.address": {
       "id": "issuer.address",
@@ -5278,9 +5289,41 @@
       "pii": "none",
       "evidence_required": true,
       "validators": [],
-      "description": "La valuta degli importi, in codice ISO a tre lettere: EUR, USD. Dal simbolo o dalla riga «Valuta importi».",
+      "description": "La valuta degli importi, in codice ISO a tre lettere: EUR, USD. Dal simbolo o dalla riga «Valuta importi». Il codice ISO 4217 a tre lettere maiuscole: «€», «euro» e «EURO» diventano EUR.",
       "label_aliases_it": [
         "Valuta importi"
+      ],
+      "enum": [
+        "EUR",
+        "USD",
+        "GBP",
+        "CHF",
+        "SEK",
+        "NOK",
+        "DKK",
+        "PLN",
+        "CZK",
+        "HUF",
+        "RON",
+        "BGN",
+        "TRY",
+        "JPY",
+        "CNY",
+        "HKD",
+        "SGD",
+        "AUD",
+        "NZD",
+        "CAD",
+        "INR",
+        "BRL",
+        "MXN",
+        "ZAR",
+        "AED",
+        "SAR",
+        "ILS",
+        "KRW",
+        "RUB",
+        "UAH"
       ]
     },
     "money.discount": {
@@ -5343,11 +5386,12 @@
       "pii": "none",
       "evidence_required": true,
       "validators": [],
-      "description": "L'aliquota IVA applicata, in punti percentuali: 22 per il ventidue per cento.",
+      "description": "L'aliquota IVA applicata, in punti percentuali: 22 per il ventidue per cento. Scala 0–100, come sta scritto: 3,5 = 3,5%.",
       "label_aliases_it": [
         "Aliquota IVA",
         "Percentuale IVA"
-      ]
+      ],
+      "scale": "0_100"
     },
     "money.tax": {
       "id": "money.tax",
@@ -6212,13 +6256,14 @@
       "format": null,
       "default_cardinality": "one",
       "pii": "none",
-      "evidence_required": true,
+      "evidence_required": false,
       "validators": [],
       "description": "Quale copertura la polizza presta: RCA, CAR, RCT/RCO, RC professionale, incendio.",
       "label_aliases_it": [
         "Tipo di polizza",
         "Ramo della polizza"
-      ]
+      ],
+      "derived": true
     },
     "privacy.breach_date": {
       "id": "privacy.breach_date",
@@ -7380,13 +7425,14 @@
       "format": null,
       "default_cardinality": "one",
       "pii": "none",
-      "evidence_required": true,
+      "evidence_required": false,
       "validators": [],
       "description": "Quale ricevuta PEC è: acceptance quando il gestore accetta l'invio, delivery quando la consegna alla casella del destinatario.",
       "label_aliases_it": [
         "Tipo di ricevuta",
         "Ricevuta di"
-      ]
+      ],
+      "derived": true
     },
     "recipient.address": {
       "id": "recipient.address",
@@ -7461,13 +7507,14 @@
       "format": null,
       "default_cardinality": "one",
       "pii": "none",
-      "evidence_required": true,
+      "evidence_required": false,
       "validators": [],
       "description": "Quale rischio specifico la valutazione tratta: chimico, rumore, vibrazioni, stress lavoro-correlato.",
       "label_aliases_it": [
         "Rischio trattato",
         "Tipologia del rischio"
-      ]
+      ],
+      "derived": true
     },
     "sales.activities": {
       "id": "sales.activities",
@@ -7649,13 +7696,14 @@
       "format": null,
       "default_cardinality": "one",
       "pii": "none",
-      "evidence_required": true,
+      "evidence_required": false,
       "validators": [],
       "description": "Quale standard il certificato attesta: ISO 9001, 14001, 27001, 37001, 45001, 50001.",
       "label_aliases_it": [
         "Norma di certificazione",
         "Standard di riferimento"
-      ]
+      ],
+      "derived": true
     },
     "tax.amount_due": {
       "id": "tax.amount_due",
@@ -8137,13 +8185,14 @@
       "format": null,
       "default_cardinality": "one",
       "pii": "none",
-      "evidence_required": true,
+      "evidence_required": false,
       "validators": [],
       "description": "Quale utenza la bolletta fattura: electricity, gas, water, waste, telecom, other.",
       "label_aliases_it": [
         "Tipo di utenza",
         "Servizio fatturato"
-      ]
+      ],
+      "derived": true
     },
     "vehicle.driver": {
       "id": "vehicle.driver",
