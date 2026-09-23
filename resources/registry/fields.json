@@ -79,6 +79,31 @@
       "label_aliases_it": [
         "Movimenti contabili strutturate",
         "righe contabili strutturate"
+      ],
+      "columns": [
+        {
+          "id": "data",
+          "label_it": "Data",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "descrizione",
+          "label_it": "Descrizione",
+          "type": "string"
+        },
+        {
+          "id": "dare",
+          "label_it": "Dare",
+          "type": "money",
+          "format": "decimal"
+        },
+        {
+          "id": "avere",
+          "label_it": "Avere",
+          "type": "money",
+          "format": "decimal"
+        }
       ]
     },
     "asset.id": {
@@ -255,7 +280,32 @@
       "evidence_required": true,
       "validators": [],
       "description": "I movimenti dell'estratto conto, con data, valuta, causale e importo con segno.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "data",
+          "label_it": "Data",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "valuta",
+          "label_it": "Data valuta",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "causale",
+          "label_it": "Causale",
+          "type": "string"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "signed_decimal"
+        }
+      ]
     },
     "certification.scope": {
       "id": "certification.scope",
@@ -482,6 +532,18 @@
       "label_aliases_it": [
         "Amministratori",
         "cariche"
+      ],
+      "columns": [
+        {
+          "id": "nome",
+          "label_it": "Nome",
+          "type": "string"
+        },
+        {
+          "id": "carica",
+          "label_it": "Carica",
+          "type": "string"
+        }
       ]
     },
     "company.pec": {
@@ -553,6 +615,19 @@
       "label_aliases_it": [
         "Soci",
         "partecipazioni"
+      ],
+      "columns": [
+        {
+          "id": "socio",
+          "label_it": "Socio",
+          "type": "string"
+        },
+        {
+          "id": "quota",
+          "label_it": "Quota di partecipazione",
+          "type": "number",
+          "format": "percentage"
+        }
       ]
     },
     "company.status": {
@@ -615,7 +690,25 @@
       "evidence_required": true,
       "validators": [],
       "description": "I titolari effettivi individuati, con nome, quota e criterio di individuazione.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "nome",
+          "label_it": "Nome",
+          "type": "string"
+        },
+        {
+          "id": "quota",
+          "label_it": "Quota",
+          "type": "number",
+          "format": "percentage"
+        },
+        {
+          "id": "criterio",
+          "label_it": "Criterio di individuazione",
+          "type": "string"
+        }
+      ]
     },
     "compliance.decision": {
       "id": "compliance.decision",
@@ -735,6 +828,19 @@
       "label_aliases_it": [
         "Registrazioni giornale lavori",
         "Registrazioni contabilità lavori"
+      ],
+      "columns": [
+        {
+          "id": "data",
+          "label_it": "Data",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "annotazione",
+          "label_it": "Annotazione",
+          "type": "string"
+        }
       ]
     },
     "construction.measurements": {
@@ -751,6 +857,29 @@
         "Misure",
         "quantità",
         "lavorazioni"
+      ],
+      "columns": [
+        {
+          "id": "voce",
+          "label_it": "Voce",
+          "type": "string"
+        },
+        {
+          "id": "unita",
+          "label_it": "Unità di misura",
+          "type": "string"
+        },
+        {
+          "id": "quantita",
+          "label_it": "Quantità",
+          "type": "number"
+        },
+        {
+          "id": "prezzo",
+          "label_it": "Prezzo",
+          "type": "money",
+          "format": "decimal"
+        }
       ]
     },
     "construction.progress_percent": {
@@ -868,7 +997,19 @@
       "evidence_required": true,
       "validators": [],
       "description": "Gli obblighi principali che il contratto pone a ciascuna parte.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "parte",
+          "label_it": "Parte obbligata",
+          "type": "string"
+        },
+        {
+          "id": "obbligo",
+          "label_it": "Obbligo",
+          "type": "string"
+        }
+      ]
     },
     "contract.parties": {
       "id": "contract.parties",
@@ -880,7 +1021,19 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le parti che si obbligano, con il ruolo di ciascuna: committente e appaltatore, locatore e conduttore.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "parte",
+          "label_it": "Parte",
+          "type": "string"
+        },
+        {
+          "id": "ruolo",
+          "label_it": "Ruolo",
+          "type": "string"
+        }
+      ]
     },
     "contract.payment_terms": {
       "id": "contract.payment_terms",
@@ -904,7 +1057,26 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le penali previste, con il fatto che le fa scattare e il loro importo o percentuale.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "fattispecie",
+          "label_it": "Fatto che fa scattare la penale",
+          "type": "string"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "decimal"
+        },
+        {
+          "id": "percentuale",
+          "label_it": "Percentuale",
+          "type": "number",
+          "format": "percentage"
+        }
+      ]
     },
     "contract.references": {
       "id": "contract.references",
@@ -1075,7 +1247,21 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le rate del piano di rientro concordato, con scadenza e importo di ciascuna.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "scadenza",
+          "label_it": "Scadenza",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "decimal"
+        }
+      ]
     },
     "credit.invoice_refs": {
       "id": "credit.invoice_refs",
@@ -1090,6 +1276,25 @@
       "label_aliases_it": [
         "Fatture collegate",
         "partite collegate"
+      ],
+      "columns": [
+        {
+          "id": "numero",
+          "label_it": "Numero",
+          "type": "string"
+        },
+        {
+          "id": "data",
+          "label_it": "Data",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "decimal"
+        }
       ]
     },
     "credit.outstanding_amount": {
@@ -1299,6 +1504,18 @@
       "label_aliases_it": [
         "Allegati agli allegati",
         "riferimenti agli allegati"
+      ],
+      "columns": [
+        {
+          "id": "titolo",
+          "label_it": "Titolo",
+          "type": "string"
+        },
+        {
+          "id": "riferimento",
+          "label_it": "Riferimento",
+          "type": "string"
+        }
       ]
     },
     "document.deadline": {
@@ -1513,7 +1730,25 @@
       "evidence_required": true,
       "validators": [],
       "description": "Gli altri documenti che questo richiama: ordine, contratto, DDT, fattura, pratica, con il loro numero e la loro data.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "tipo",
+          "label_it": "Tipo di documento",
+          "type": "string"
+        },
+        {
+          "id": "numero",
+          "label_it": "Numero",
+          "type": "string"
+        },
+        {
+          "id": "data",
+          "label_it": "Data",
+          "type": "date",
+          "format": "date"
+        }
+      ]
     },
     "document.signature_date": {
       "id": "document.signature_date",
@@ -1934,7 +2169,24 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le emissioni dichiarate o misurate, con inquinante, valore e unità.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "inquinante",
+          "label_it": "Inquinante",
+          "type": "string"
+        },
+        {
+          "id": "valore",
+          "label_it": "Valore",
+          "type": "number"
+        },
+        {
+          "id": "unita",
+          "label_it": "Unità di misura",
+          "type": "string"
+        }
+      ]
     },
     "environment.material": {
       "id": "environment.material",
@@ -2030,6 +2282,29 @@
       "label_aliases_it": [
         "Movimenti strutturati",
         "rifiuti strutturati"
+      ],
+      "columns": [
+        {
+          "id": "data",
+          "label_it": "Data",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "codice_eer",
+          "label_it": "Codice EER",
+          "type": "string"
+        },
+        {
+          "id": "quantita",
+          "label_it": "Quantità",
+          "type": "number"
+        },
+        {
+          "id": "destinazione",
+          "label_it": "Destinazione",
+          "type": "string"
+        }
       ]
     },
     "event_type": {
@@ -2112,6 +2387,37 @@
       "label_aliases_it": [
         "Rate ammortamento",
         "piano ammortamento"
+      ],
+      "columns": [
+        {
+          "id": "numero_rata",
+          "label_it": "Numero rata",
+          "type": "integer"
+        },
+        {
+          "id": "scadenza",
+          "label_it": "Scadenza",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "quota_capitale",
+          "label_it": "Quota capitale",
+          "type": "money",
+          "format": "decimal"
+        },
+        {
+          "id": "quota_interessi",
+          "label_it": "Quota interessi",
+          "type": "money",
+          "format": "decimal"
+        },
+        {
+          "id": "residuo",
+          "label_it": "Capitale residuo",
+          "type": "money",
+          "format": "decimal"
+        }
       ]
     },
     "finance.interest": {
@@ -2228,7 +2534,26 @@
       "evidence_required": true,
       "validators": [],
       "description": "I movimenti elencati dal documento, con data, descrizione e importo con segno.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "data",
+          "label_it": "Data",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "descrizione",
+          "label_it": "Descrizione",
+          "type": "string"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "signed_decimal"
+        }
+      ]
     },
     "governance.actions": {
       "id": "governance.actions",
@@ -2243,6 +2568,24 @@
       "label_aliases_it": [
         "Azioni correttive",
         "Azioni adempimenti"
+      ],
+      "columns": [
+        {
+          "id": "azione",
+          "label_it": "Azione",
+          "type": "string"
+        },
+        {
+          "id": "responsabile",
+          "label_it": "Responsabile",
+          "type": "string"
+        },
+        {
+          "id": "termine",
+          "label_it": "Termine",
+          "type": "date",
+          "format": "date"
+        }
       ]
     },
     "governance.findings": {
@@ -2258,6 +2601,23 @@
       "label_aliases_it": [
         "Rilievi",
         "criticità"
+      ],
+      "columns": [
+        {
+          "id": "rilievo",
+          "label_it": "Rilievo",
+          "type": "string"
+        },
+        {
+          "id": "gravita",
+          "label_it": "Gravità",
+          "type": "string"
+        },
+        {
+          "id": "area",
+          "label_it": "Area",
+          "type": "string"
+        }
       ]
     },
     "grant.amount_granted": {
@@ -2355,6 +2715,25 @@
       "label_aliases_it": [
         "Spese strutturato",
         "rendiconto strutturato"
+      ],
+      "columns": [
+        {
+          "id": "giustificativo",
+          "label_it": "Giustificativo",
+          "type": "string"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "decimal"
+        },
+        {
+          "id": "quota_ammessa",
+          "label_it": "Quota ammessa",
+          "type": "money",
+          "format": "decimal"
+        }
       ]
     },
     "grant.program": {
@@ -2476,7 +2855,31 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le voci di spesa della nota, con data, tipo, importo e giustificativo di ciascuna.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "data",
+          "label_it": "Data",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "tipo",
+          "label_it": "Tipo di spesa",
+          "type": "string"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "decimal"
+        },
+        {
+          "id": "giustificativo",
+          "label_it": "Giustificativo",
+          "type": "string"
+        }
+      ]
     },
     "hr.hours": {
       "id": "hr.hours",
@@ -2569,6 +2972,24 @@
       "label_aliases_it": [
         "Controlli",
         "verifiche"
+      ],
+      "columns": [
+        {
+          "id": "controllo",
+          "label_it": "Controllo",
+          "type": "string"
+        },
+        {
+          "id": "data",
+          "label_it": "Data",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "esito",
+          "label_it": "Esito",
+          "type": "string"
+        }
       ]
     },
     "hse.dpi_items": {
@@ -2581,7 +3002,25 @@
       "evidence_required": true,
       "validators": [],
       "description": "I dispositivi di protezione consegnati, con tipo, taglia e data di consegna.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "tipo",
+          "label_it": "Tipo di DPI",
+          "type": "string"
+        },
+        {
+          "id": "taglia",
+          "label_it": "Taglia",
+          "type": "string"
+        },
+        {
+          "id": "consegna",
+          "label_it": "Data di consegna",
+          "type": "date",
+          "format": "date"
+        }
+      ]
     },
     "hse.emergency_roles": {
       "id": "hse.emergency_roles",
@@ -2596,6 +3035,18 @@
       "label_aliases_it": [
         "Ruoli emergenza",
         "squadre emergenza"
+      ],
+      "columns": [
+        {
+          "id": "nome",
+          "label_it": "Nome",
+          "type": "string"
+        },
+        {
+          "id": "ruolo",
+          "label_it": "Ruolo",
+          "type": "string"
+        }
       ]
     },
     "hse.event_date": {
@@ -2694,6 +3145,28 @@
       "label_aliases_it": [
         "Misure",
         "rilievi"
+      ],
+      "columns": [
+        {
+          "id": "grandezza",
+          "label_it": "Grandezza",
+          "type": "string"
+        },
+        {
+          "id": "valore",
+          "label_it": "Valore",
+          "type": "number"
+        },
+        {
+          "id": "unita",
+          "label_it": "Unità di misura",
+          "type": "string"
+        },
+        {
+          "id": "postazione",
+          "label_it": "Postazione",
+          "type": "string"
+        }
       ]
     },
     "hse.next_medical_due": {
@@ -2723,6 +3196,19 @@
       "label_aliases_it": [
         "Misure prevenzione",
         "Misure protezione"
+      ],
+      "columns": [
+        {
+          "id": "misura",
+          "label_it": "Misura",
+          "type": "string"
+        },
+        {
+          "id": "scadenza",
+          "label_it": "Scadenza",
+          "type": "date",
+          "format": "date"
+        }
       ]
     },
     "hse.prognosis_days": {
@@ -2874,6 +3360,23 @@
       "label_aliases_it": [
         "Gruppi omogenei",
         "Gruppi lavoratori"
+      ],
+      "columns": [
+        {
+          "id": "gruppo",
+          "label_it": "Gruppo omogeneo",
+          "type": "string"
+        },
+        {
+          "id": "mansione",
+          "label_it": "Mansione",
+          "type": "string"
+        },
+        {
+          "id": "addetti",
+          "label_it": "Numero di addetti",
+          "type": "integer"
+        }
       ]
     },
     "identity.categories": {
@@ -2889,6 +3392,25 @@
       "label_aliases_it": [
         "Categorie patente",
         "Categorie abilitazioni"
+      ],
+      "columns": [
+        {
+          "id": "categoria",
+          "label_it": "Categoria",
+          "type": "string"
+        },
+        {
+          "id": "conseguimento",
+          "label_it": "Data di conseguimento",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "scadenza",
+          "label_it": "Data di scadenza",
+          "type": "date",
+          "format": "date"
+        }
       ]
     },
     "identity.document_type": {
@@ -3075,7 +3597,26 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le garanzie prestate, con massimale e franchigia di ciascuna.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "garanzia",
+          "label_it": "Garanzia",
+          "type": "string"
+        },
+        {
+          "id": "massimale",
+          "label_it": "Massimale",
+          "type": "money",
+          "format": "decimal"
+        },
+        {
+          "id": "franchigia",
+          "label_it": "Franchigia",
+          "type": "money",
+          "format": "decimal"
+        }
+      ]
     },
     "insurance.damage_description": {
       "id": "insurance.damage_description",
@@ -3250,6 +3791,19 @@
       "label_aliases_it": [
         "Documenti fiscali originari collegati",
         "Documenti fiscali rettificati collegati"
+      ],
+      "columns": [
+        {
+          "id": "numero",
+          "label_it": "Numero",
+          "type": "string"
+        },
+        {
+          "id": "data",
+          "label_it": "Data",
+          "type": "date",
+          "format": "date"
+        }
       ]
     },
     "invoice.social_security_amount": {
@@ -3413,6 +3967,23 @@
       "label_aliases_it": [
         "Vulnerabilità",
         "rilievi"
+      ],
+      "columns": [
+        {
+          "id": "rilievo",
+          "label_it": "Rilievo",
+          "type": "string"
+        },
+        {
+          "id": "gravita",
+          "label_it": "Gravità",
+          "type": "string"
+        },
+        {
+          "id": "componente",
+          "label_it": "Componente",
+          "type": "string"
+        }
       ]
     },
     "it.incident_date": {
@@ -3586,7 +4157,19 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le parti del procedimento, con il ruolo di ciascuna: attore, convenuto, ricorrente, resistente.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "parte",
+          "label_it": "Parte",
+          "type": "string"
+        },
+        {
+          "id": "ruolo",
+          "label_it": "Ruolo",
+          "type": "string"
+        }
+      ]
     },
     "legal.request": {
       "id": "legal.request",
@@ -3683,6 +4266,18 @@
       "label_aliases_it": [
         "Ambito",
         "attività"
+      ],
+      "columns": [
+        {
+          "id": "attivita",
+          "label_it": "Attività",
+          "type": "string"
+        },
+        {
+          "id": "limiti",
+          "label_it": "Limiti",
+          "type": "string"
+        }
       ]
     },
     "license.status": {
@@ -3710,7 +4305,37 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le righe del documento, con descrizione, quantità, prezzo unitario, aliquota e importo di ciascuna.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "descrizione",
+          "label_it": "Descrizione",
+          "type": "string"
+        },
+        {
+          "id": "quantita",
+          "label_it": "Quantità",
+          "type": "number"
+        },
+        {
+          "id": "prezzo_unitario",
+          "label_it": "Prezzo unitario",
+          "type": "money",
+          "format": "decimal"
+        },
+        {
+          "id": "aliquota",
+          "label_it": "Aliquota",
+          "type": "number",
+          "format": "percentage"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "decimal"
+        }
+      ]
     },
     "logistics.carrier": {
       "id": "logistics.carrier",
@@ -3746,7 +4371,24 @@
       "evidence_required": true,
       "validators": [],
       "description": "La merce trasportata, con descrizione, quantità e imballo di ciascuna voce.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "descrizione",
+          "label_it": "Descrizione",
+          "type": "string"
+        },
+        {
+          "id": "quantita",
+          "label_it": "Quantità",
+          "type": "number"
+        },
+        {
+          "id": "imballo",
+          "label_it": "Imballo",
+          "type": "string"
+        }
+      ]
     },
     "logistics.origin": {
       "id": "logistics.origin",
@@ -3884,6 +4526,18 @@
       "label_aliases_it": [
         "Ricambi utilizzati",
         "materiali utilizzati"
+      ],
+      "columns": [
+        {
+          "id": "codice",
+          "label_it": "Codice",
+          "type": "string"
+        },
+        {
+          "id": "quantita",
+          "label_it": "Quantità",
+          "type": "number"
+        }
       ]
     },
     "maintenance.scheduled_date": {
@@ -3940,7 +4594,24 @@
       "evidence_required": true,
       "validators": [],
       "description": "Chi ha partecipato, con nome e qualifica, e chi risulta assente giustificato.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "nome",
+          "label_it": "Nome",
+          "type": "string"
+        },
+        {
+          "id": "qualifica",
+          "label_it": "Qualifica",
+          "type": "string"
+        },
+        {
+          "id": "assente_giustificato",
+          "label_it": "Assente giustificato",
+          "type": "boolean"
+        }
+      ]
     },
     "money.amount": {
       "id": "money.amount",
@@ -4170,6 +4841,25 @@
       "label_aliases_it": [
         "Pagamenti strutturate",
         "disposizioni strutturate"
+      ],
+      "columns": [
+        {
+          "id": "beneficiario",
+          "label_it": "Beneficiario",
+          "type": "string"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "decimal"
+        },
+        {
+          "id": "iban",
+          "label_it": "IBAN",
+          "type": "identifier",
+          "format": "iban"
+        }
       ]
     },
     "payment.method": {
@@ -4271,7 +4961,20 @@
       "evidence_required": true,
       "validators": [],
       "description": "I contributi previdenziali e assistenziali, con ente e importo di ciascuno.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "ente",
+          "label_it": "Ente",
+          "type": "string"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "decimal"
+        }
+      ]
     },
     "payroll.deductions": {
       "id": "payroll.deductions",
@@ -4283,7 +4986,20 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le voci trattenute al lavoratore, con descrizione e importo di ciascuna.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "descrizione",
+          "label_it": "Descrizione",
+          "type": "string"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "decimal"
+        }
+      ]
     },
     "payroll.earnings": {
       "id": "payroll.earnings",
@@ -4295,7 +5011,20 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le voci di competenza del cedolino, con descrizione e importo di ciascuna.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "descrizione",
+          "label_it": "Descrizione",
+          "type": "string"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "decimal"
+        }
+      ]
     },
     "payroll.employee_count": {
       "id": "payroll.employee_count",
@@ -4319,7 +5048,20 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le righe per dipendente di un riepilogo, con nominativo e importi di ciascuno.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "nominativo",
+          "label_it": "Nominativo",
+          "type": "string"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "decimal"
+        }
+      ]
     },
     "payroll.employer_cost": {
       "id": "payroll.employer_cost",
@@ -4378,6 +5120,28 @@
       "label_aliases_it": [
         "Ferie residui",
         "permessi residui"
+      ],
+      "columns": [
+        {
+          "id": "voce",
+          "label_it": "Voce",
+          "type": "string"
+        },
+        {
+          "id": "maturato",
+          "label_it": "Maturato",
+          "type": "number"
+        },
+        {
+          "id": "goduto",
+          "label_it": "Goduto",
+          "type": "number"
+        },
+        {
+          "id": "saldo",
+          "label_it": "Saldo",
+          "type": "number"
+        }
       ]
     },
     "payroll.net_pay": {
@@ -4531,7 +5295,24 @@
       "evidence_required": true,
       "validators": [],
       "description": "I titoli di studio dichiarati, con istituto e anno.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "titolo",
+          "label_it": "Titolo di studio",
+          "type": "string"
+        },
+        {
+          "id": "istituto",
+          "label_it": "Istituto",
+          "type": "string"
+        },
+        {
+          "id": "anno",
+          "label_it": "Anno",
+          "type": "integer"
+        }
+      ]
     },
     "person.email": {
       "id": "person.email",
@@ -4555,7 +5336,24 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le esperienze professionali dichiarate, con azienda, ruolo e periodo.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "azienda",
+          "label_it": "Azienda",
+          "type": "string"
+        },
+        {
+          "id": "ruolo",
+          "label_it": "Ruolo",
+          "type": "string"
+        },
+        {
+          "id": "periodo",
+          "label_it": "Periodo",
+          "type": "string"
+        }
+      ]
     },
     "person.first_name": {
       "id": "person.first_name",
@@ -4770,7 +5568,29 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le righe del registro dei trattamenti, con finalità, categorie, base giuridica e conservazione di ciascuna.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "finalita",
+          "label_it": "Finalità",
+          "type": "string"
+        },
+        {
+          "id": "categorie",
+          "label_it": "Categorie di dati",
+          "type": "string"
+        },
+        {
+          "id": "base_giuridica",
+          "label_it": "Base giuridica",
+          "type": "string"
+        },
+        {
+          "id": "conservazione",
+          "label_it": "Conservazione",
+          "type": "string"
+        }
+      ]
     },
     "privacy.processing_purpose": {
       "id": "privacy.processing_purpose",
@@ -4830,7 +5650,19 @@
       "evidence_required": true,
       "validators": [],
       "description": "I diritti dell'interessato che l'informativa richiama e come esercitarli.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "diritto",
+          "label_it": "Diritto",
+          "type": "string"
+        },
+        {
+          "id": "esercizio",
+          "label_it": "Come esercitarlo",
+          "type": "string"
+        }
+      ]
     },
     "procurement.buyer": {
       "id": "procurement.buyer",
@@ -4956,6 +5788,18 @@
       "label_aliases_it": [
         "Criteri valutazione",
         "punteggi valutazione"
+      ],
+      "columns": [
+        {
+          "id": "criterio",
+          "label_it": "Criterio",
+          "type": "string"
+        },
+        {
+          "id": "punteggio",
+          "label_it": "Punteggio",
+          "type": "number"
+        }
       ]
     },
     "procurement.exclusion_grounds": {
@@ -4968,7 +5812,19 @@
       "evidence_required": true,
       "validators": [],
       "description": "I motivi di esclusione su cui il documento si pronuncia, con la dichiarazione relativa a ciascuno.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "motivo",
+          "label_it": "Motivo di esclusione",
+          "type": "string"
+        },
+        {
+          "id": "dichiarazione",
+          "label_it": "Dichiarazione",
+          "type": "string"
+        }
+      ]
     },
     "procurement.items": {
       "id": "procurement.items",
@@ -4983,6 +5839,29 @@
       "label_aliases_it": [
         "Righe articolo",
         "Righe servizio"
+      ],
+      "columns": [
+        {
+          "id": "codice",
+          "label_it": "Codice",
+          "type": "string"
+        },
+        {
+          "id": "descrizione",
+          "label_it": "Descrizione",
+          "type": "string"
+        },
+        {
+          "id": "quantita",
+          "label_it": "Quantità",
+          "type": "number"
+        },
+        {
+          "id": "prezzo",
+          "label_it": "Prezzo",
+          "type": "money",
+          "format": "decimal"
+        }
       ]
     },
     "procurement.lot": {
@@ -5117,7 +5996,20 @@
       "evidence_required": true,
       "validators": [],
       "description": "La composizione del prodotto: materiali, sostanze, percentuali.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "sostanza",
+          "label_it": "Materiale o sostanza",
+          "type": "string"
+        },
+        {
+          "id": "percentuale",
+          "label_it": "Percentuale",
+          "type": "number",
+          "format": "percentage"
+        }
+      ]
     },
     "product.declared_performance": {
       "id": "product.declared_performance",
@@ -5129,7 +6021,24 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le prestazioni dichiarate riga per riga, con caratteristica essenziale, valore e norma.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "caratteristica",
+          "label_it": "Caratteristica essenziale",
+          "type": "string"
+        },
+        {
+          "id": "valore",
+          "label_it": "Valore",
+          "type": "string"
+        },
+        {
+          "id": "norma",
+          "label_it": "Norma",
+          "type": "string"
+        }
+      ]
     },
     "product.name": {
       "id": "product.name",
@@ -5183,7 +6092,24 @@
       "evidence_required": true,
       "validators": [],
       "description": "I risultati delle prove eseguite, con grandezza, valore e metodo di ciascuna.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "grandezza",
+          "label_it": "Grandezza",
+          "type": "string"
+        },
+        {
+          "id": "valore",
+          "label_it": "Valore",
+          "type": "string"
+        },
+        {
+          "id": "metodo",
+          "label_it": "Metodo",
+          "type": "string"
+        }
+      ]
     },
     "quality.actions": {
       "id": "quality.actions",
@@ -5195,7 +6121,25 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le azioni correttive decise, con responsabile e termine di ciascuna.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "azione",
+          "label_it": "Azione",
+          "type": "string"
+        },
+        {
+          "id": "responsabile",
+          "label_it": "Responsabile",
+          "type": "string"
+        },
+        {
+          "id": "termine",
+          "label_it": "Termine",
+          "type": "date",
+          "format": "date"
+        }
+      ]
     },
     "quality.certificate_number": {
       "id": "quality.certificate_number",
@@ -5236,6 +6180,18 @@
       "label_aliases_it": [
         "Rilievi conformità",
         "non conformità"
+      ],
+      "columns": [
+        {
+          "id": "rilievo",
+          "label_it": "Rilievo",
+          "type": "string"
+        },
+        {
+          "id": "classificazione",
+          "label_it": "Classificazione",
+          "type": "string"
+        }
       ]
     },
     "quality.nonconformity_id": {
@@ -5363,7 +6319,45 @@
       "evidence_required": true,
       "validators": [],
       "description": "Gli identificativi catastali completi: comune, sezione, foglio, particella, subalterno, categoria, rendita.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "comune",
+          "label_it": "Comune",
+          "type": "string"
+        },
+        {
+          "id": "sezione",
+          "label_it": "Sezione",
+          "type": "string"
+        },
+        {
+          "id": "foglio",
+          "label_it": "Foglio",
+          "type": "string"
+        },
+        {
+          "id": "particella",
+          "label_it": "Particella",
+          "type": "string"
+        },
+        {
+          "id": "subalterno",
+          "label_it": "Subalterno",
+          "type": "string"
+        },
+        {
+          "id": "categoria",
+          "label_it": "Categoria",
+          "type": "string"
+        },
+        {
+          "id": "rendita",
+          "label_it": "Rendita",
+          "type": "money",
+          "format": "decimal"
+        }
+      ]
     },
     "realestate.cadastral_income": {
       "id": "realestate.cadastral_income",
@@ -5638,6 +6632,24 @@
       "label_aliases_it": [
         "Righe prodotto",
         "Righe servizio"
+      ],
+      "columns": [
+        {
+          "id": "descrizione",
+          "label_it": "Descrizione",
+          "type": "string"
+        },
+        {
+          "id": "quantita",
+          "label_it": "Quantità",
+          "type": "number"
+        },
+        {
+          "id": "prezzo",
+          "label_it": "Prezzo",
+          "type": "money",
+          "format": "decimal"
+        }
       ]
     },
     "sales.next_action": {
@@ -5843,6 +6855,24 @@
         "Righe strutturati",
         "quadro strutturati",
         "tributi strutturati"
+      ],
+      "columns": [
+        {
+          "id": "codice_tributo",
+          "label_it": "Codice tributo",
+          "type": "string"
+        },
+        {
+          "id": "periodo",
+          "label_it": "Periodo",
+          "type": "string"
+        },
+        {
+          "id": "importo",
+          "label_it": "Importo",
+          "type": "money",
+          "format": "decimal"
+        }
       ]
     },
     "tax.return_type": {
@@ -5885,6 +6915,31 @@
       "label_aliases_it": [
         "Riepilogo IVA per aliquota",
         "Riepilogo IVA per natura"
+      ],
+      "columns": [
+        {
+          "id": "aliquota",
+          "label_it": "Aliquota",
+          "type": "number",
+          "format": "percentage"
+        },
+        {
+          "id": "natura",
+          "label_it": "Natura",
+          "type": "string"
+        },
+        {
+          "id": "imponibile",
+          "label_it": "Imponibile",
+          "type": "money",
+          "format": "decimal"
+        },
+        {
+          "id": "imposta",
+          "label_it": "Imposta",
+          "type": "money",
+          "format": "decimal"
+        }
       ]
     },
     "tax.year": {
@@ -6017,6 +7072,24 @@
       "label_aliases_it": [
         "Letture strutturati",
         "consumi strutturati"
+      ],
+      "columns": [
+        {
+          "id": "data",
+          "label_it": "Data",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "tipo",
+          "label_it": "Tipo di lettura",
+          "type": "string"
+        },
+        {
+          "id": "valore",
+          "label_it": "Valore",
+          "type": "number"
+        }
       ]
     },
     "utility.tariff": {
@@ -6183,7 +7256,35 @@
       "evidence_required": true,
       "validators": [],
       "description": "I dati del cronotachigrafo, con data, conducente, guida, riposo e infrazioni.",
-      "label_aliases_it": []
+      "label_aliases_it": [],
+      "columns": [
+        {
+          "id": "data",
+          "label_it": "Data",
+          "type": "date",
+          "format": "date"
+        },
+        {
+          "id": "conducente",
+          "label_it": "Conducente",
+          "type": "string"
+        },
+        {
+          "id": "guida",
+          "label_it": "Guida",
+          "type": "string"
+        },
+        {
+          "id": "riposo",
+          "label_it": "Riposo",
+          "type": "string"
+        },
+        {
+          "id": "infrazioni",
+          "label_it": "Infrazioni",
+          "type": "string"
+        }
+      ]
     },
     "vehicle.vin": {
       "id": "vehicle.vin",
