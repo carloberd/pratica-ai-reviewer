@@ -174,7 +174,7 @@
     },
     "bank.balance_accounting": {
       "id": "bank.balance_accounting",
-      "label_it": "Saldo contabile",
+      "label_it": "Saldo contabile del conto",
       "type": "money",
       "format": "signed_decimal",
       "default_cardinality": "one",
@@ -4212,7 +4212,7 @@
     },
     "license.expiry_date": {
       "id": "license.expiry_date",
-      "label_it": "Data scadenza",
+      "label_it": "Data scadenza licenza",
       "type": "date",
       "format": "date",
       "default_cardinality": "one",
@@ -5003,7 +5003,7 @@
     },
     "payroll.earnings": {
       "id": "payroll.earnings",
-      "label_it": "Competenze",
+      "label_it": "Voci di competenza",
       "type": "object",
       "format": null,
       "default_cardinality": "many",
@@ -5866,7 +5866,7 @@
     },
     "procurement.lot": {
       "id": "procurement.lot",
-      "label_it": "Lotto",
+      "label_it": "Lotto di gara",
       "type": "string",
       "format": null,
       "default_cardinality": "one",
@@ -6530,7 +6530,7 @@
     },
     "risk_type": {
       "id": "risk_type",
-      "label_it": "Tipo rischio",
+      "label_it": "Tipo di rischio valutato",
       "type": "string",
       "format": null,
       "default_cardinality": "one",
@@ -6759,7 +6759,7 @@
     },
     "tax.interest": {
       "id": "tax.interest",
-      "label_it": "Interessi",
+      "label_it": "Interessi liquidati",
       "type": "money",
       "format": "decimal",
       "default_cardinality": "one",
@@ -6983,7 +6983,7 @@
     },
     "utility.due_date": {
       "id": "utility.due_date",
-      "label_it": "Scadenza pagamento",
+      "label_it": "Scadenza bolletta",
       "type": "date",
       "format": "date",
       "default_cardinality": "one",
@@ -7178,7 +7178,7 @@
     },
     "vehicle.owner": {
       "id": "vehicle.owner",
-      "label_it": "Proprietario",
+      "label_it": "Intestatario del veicolo",
       "type": "string",
       "format": null,
       "default_cardinality": "one",
