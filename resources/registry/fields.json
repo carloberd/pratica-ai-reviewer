@@ -28,7 +28,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Quale assenza la richiesta riguarda: ferie, permesso, congedo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tipo di assenza",
+        "Motivo dell'assenza"
+      ]
     },
     "accounting.balance": {
       "id": "accounting.balance",
@@ -40,7 +43,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il saldo della scheda o del conto, a debito o a credito: può essere negativo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Saldo della scheda",
+        "Saldo dare avere"
+      ]
     },
     "accounting.balance_closing": {
       "id": "accounting.balance_closing",
@@ -52,7 +58,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il saldo alla fine del periodo, dopo i movimenti elencati.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Saldo contabile finale",
+        "Saldo di chiusura contabile"
+      ]
     },
     "accounting.balance_opening": {
       "id": "accounting.balance_opening",
@@ -64,7 +73,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il saldo all'inizio del periodo, riportato dal periodo precedente.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Saldo contabile iniziale",
+        "Saldo di apertura contabile"
+      ]
     },
     "accounting.entries": {
       "id": "accounting.entries",
@@ -131,7 +143,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Dove il bene si trova: sede, reparto, cantiere.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Ubicazione del cespite",
+        "Collocazione",
+        "Luogo di installazione"
+      ]
     },
     "asset.serial_number": {
       "id": "asset.serial_number",
@@ -158,7 +174,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'intestatario del conto, distinto dal beneficiario di una singola operazione.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Intestatario del conto",
+        "Intestazione del rapporto"
+      ]
     },
     "bank.account_number": {
       "id": "bank.account_number",
@@ -170,7 +189,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il numero di conto o di rapporto, dove il documento non dà l'IBAN.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Numero di conto",
+        "Numero di rapporto",
+        "Conto corrente n."
+      ]
     },
     "bank.balance_accounting": {
       "id": "bank.balance_accounting",
@@ -182,7 +205,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il saldo contabile del conto, che può essere negativo. Non il disponibile.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Saldo contabile",
+        "Saldo del conto"
+      ]
     },
     "bank.balance_available": {
       "id": "bank.balance_available",
@@ -194,7 +220,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il saldo disponibile, al netto di quanto è vincolato o non ancora liquido. Non il contabile.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Disponibile",
+        "Saldo liquido"
+      ]
     },
     "bank.bic": {
       "id": "bank.bic",
@@ -221,7 +250,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La causale con cui la banca classifica il movimento, distinta dalla causale scritta dall'ordinante.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Causale ABI",
+        "Descrizione dell'operazione"
+      ]
     },
     "bank.counterparty_iban": {
       "id": "bank.counterparty_iban",
@@ -235,7 +267,10 @@
         "iban_checksum"
       ],
       "description": "L'IBAN dell'altra parte dell'operazione, quando il documento dà entrambi i conti.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "IBAN della controparte",
+        "Conto della controparte"
+      ]
     },
     "bank.iban": {
       "id": "bank.iban",
@@ -280,7 +315,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "I movimenti dell'estratto conto, con data, valuta, causale e importo con segno.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Movimenti",
+        "Elenco movimenti",
+        "Lista movimenti"
+      ],
       "columns": [
         {
           "id": "data",
@@ -317,7 +356,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il campo di applicazione della certificazione, dove il documento non è un certificato di sistema qualità.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Ambito di applicazione",
+        "Scopo della certificazione"
+      ]
     },
     "commercial.customer_reference": {
       "id": "commercial.customer_reference",
@@ -329,7 +371,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il riferimento che il cliente usa per questa pratica: il suo numero d'ordine, il suo codice commessa.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Vostro riferimento",
+        "Riferimento del cliente"
+      ]
     },
     "commercial.order_number": {
       "id": "commercial.order_number",
@@ -341,7 +386,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il numero dell'ordine cui il documento si riferisce, distinto dal numero del documento stesso.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Numero d'ordine",
+        "Vostro ordine",
+        "Ordine n."
+      ]
     },
     "commercial.quote_number": {
       "id": "commercial.quote_number",
@@ -368,7 +417,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il riferimento che il fornitore usa per questa pratica, distinto da quello del cliente.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Nostro riferimento",
+        "Riferimento del fornitore"
+      ]
     },
     "communication.action_required": {
       "id": "communication.action_required",
@@ -380,7 +432,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Cosa la comunicazione chiede di fare, in una frase.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Si richiede di",
+        "Adempimento richiesto"
+      ]
     },
     "communication.delivery_status": {
       "id": "communication.delivery_status",
@@ -440,7 +495,10 @@
         "valid_date"
       ],
       "description": "Entro quando bisogna rispondere, secondo quello che la comunicazione chiede.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Rispondere entro",
+        "Termine per il riscontro"
+      ]
     },
     "communication.subject": {
       "id": "communication.subject",
@@ -452,7 +510,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'oggetto della comunicazione, dalla riga «Oggetto:».",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Oggetto",
+        "Oggetto della comunicazione"
+      ]
     },
     "company.address": {
       "id": "company.address",
@@ -464,7 +525,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "La sede legale dell'impresa: via, numero, CAP, comune. Non la sede operativa, se il documento le distingue.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Sede legale",
+        "Indirizzo della sede legale",
+        "Sede"
+      ]
     },
     "company.ateco": {
       "id": "company.ateco",
@@ -476,7 +541,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il codice ATECO dell'attività, nella forma a punti che il documento scrive: «41.20.00».",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "ATECO",
+        "Codice attività",
+        "Attività prevalente"
+      ]
     },
     "company.incorporation_date": {
       "id": "company.incorporation_date",
@@ -490,7 +559,10 @@
         "valid_date"
       ],
       "description": "La data di costituzione dell'impresa, distinta dalla data di iscrizione al registro.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data di costituzione",
+        "Costituita il"
+      ]
     },
     "company.legal_form": {
       "id": "company.legal_form",
@@ -502,7 +574,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La forma giuridica dell'impresa per esteso o in sigla: società a responsabilità limitata, S.p.A., società semplice.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Natura giuridica",
+        "Forma societaria"
+      ]
     },
     "company.name": {
       "id": "company.name",
@@ -556,7 +631,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'indirizzo PEC dell'impresa, distinto da un'email ordinaria.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Posta elettronica certificata",
+        "Indirizzo PEC"
+      ]
     },
     "company.rea_number": {
       "id": "company.rea_number",
@@ -600,7 +678,10 @@
         "non_negative_money"
       ],
       "description": "Il capitale sociale dichiarato, con la sua valuta: quello deliberato, se il documento distingue deliberato, sottoscritto e versato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Capitale sociale deliberato",
+        "Capitale"
+      ]
     },
     "company.shareholders": {
       "id": "company.shareholders",
@@ -640,7 +721,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Lo stato dell'impresa nel registro: attiva, inattiva, in liquidazione, cessata.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Stato attività",
+        "Stato dell'impresa"
+      ]
     },
     "company.tax_code": {
       "id": "company.tax_code",
@@ -690,7 +774,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I titolari effettivi individuati, con nome, quota e criterio di individuazione.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Titolare effettivo",
+        "Elenco dei titolari effettivi"
+      ],
       "columns": [
         {
           "id": "nome",
@@ -720,7 +807,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'esito della verifica: accettato, accettato con misure rafforzate, rifiutato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Esito dell'adeguata verifica",
+        "Decisione assunta"
+      ]
     },
     "compliance.pep_status": {
       "id": "compliance.pep_status",
@@ -732,7 +822,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Se il soggetto è una persona politicamente esposta, e a che titolo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Persona politicamente esposta",
+        "PEP"
+      ]
     },
     "compliance.relationship_purpose": {
       "id": "compliance.relationship_purpose",
@@ -744,7 +837,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Scopo e natura del rapporto continuativo dichiarati nell'adeguata verifica.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Scopo e natura del rapporto",
+        "Finalità del rapporto"
+      ]
     },
     "compliance.source_of_funds": {
       "id": "compliance.source_of_funds",
@@ -756,7 +852,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Da dove provengono i fondi, come l'adeguata verifica lo dichiara.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Origine dei fondi",
+        "Provenienza dei fondi"
+      ]
     },
     "construction.amount_period": {
       "id": "construction.amount_period",
@@ -770,7 +869,10 @@
         "non_negative_money"
       ],
       "description": "L'importo dei lavori del solo periodo, distinto dal progressivo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Importo del periodo di riferimento",
+        "Importo dei lavori del periodo"
+      ]
     },
     "construction.amount_progressive": {
       "id": "construction.amount_progressive",
@@ -784,7 +886,10 @@
         "non_negative_money"
       ],
       "description": "L'importo progressivo dall'inizio dei lavori, che comprende i periodi precedenti.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Importo progressivo dei lavori",
+        "Progressivo a tutto il"
+      ]
     },
     "construction.completion_date": {
       "id": "construction.completion_date",
@@ -798,7 +903,11 @@
         "valid_date"
       ],
       "description": "La data di ultimazione dei lavori, accertata o prevista.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data di ultimazione",
+        "Ultimazione dei lavori",
+        "Fine lavori"
+      ]
     },
     "construction.contract": {
       "id": "construction.contract",
@@ -892,7 +1001,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "La percentuale di avanzamento raggiunta, in punti percentuali.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Avanzamento",
+        "Stato di avanzamento",
+        "Percentuale di avanzamento"
+      ]
     },
     "construction.project": {
       "id": "construction.project",
@@ -935,7 +1048,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Se il contratto si rinnova da sé in mancanza di disdetta: vero o falso, dalla clausola di rinnovo tacito.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Rinnovo tacito",
+        "Tacito rinnovo"
+      ]
     },
     "contract.duration": {
       "id": "contract.duration",
@@ -947,7 +1063,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La durata come il contratto la scrive, quando non dà una data di fine: «dodici mesi», «triennale».",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Durata",
+        "Durata del rapporto"
+      ]
     },
     "contract.end_date": {
       "id": "contract.end_date",
@@ -961,7 +1080,12 @@
         "valid_date"
       ],
       "description": "La data in cui il contratto finisce, quando è a termine.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data di scadenza del contratto",
+        "Scadenza contratto",
+        "Fino al",
+        "Termine del contratto"
+      ]
     },
     "contract.notice_period": {
       "id": "contract.notice_period",
@@ -973,7 +1097,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Quanto preavviso serve per disdire, come il contratto lo scrive: «sei mesi», «90 giorni».",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Termine di preavviso",
+        "Con preavviso di",
+        "Periodo di preavviso"
+      ]
     },
     "contract.number": {
       "id": "contract.number",
@@ -985,7 +1113,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il numero con cui le parti identificano il contratto, distinto dal numero di repertorio o di protocollo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Numero del contratto",
+        "Contratto n."
+      ]
     },
     "contract.obligations": {
       "id": "contract.obligations",
@@ -997,7 +1128,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "Gli obblighi principali che il contratto pone a ciascuna parte.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Obblighi",
+        "Obblighi delle parti",
+        "Obbligazioni",
+        "Impegni delle parti"
+      ],
       "columns": [
         {
           "id": "parte",
@@ -1021,7 +1157,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le parti che si obbligano, con il ruolo di ciascuna: committente e appaltatore, locatore e conduttore.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Parti",
+        "Tra le parti",
+        "Le parti",
+        "Parti del contratto"
+      ],
       "columns": [
         {
           "id": "parte",
@@ -1045,7 +1186,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Come e quando si paga secondo il contratto: termini, rate, modalità.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Termini di pagamento",
+        "Condizioni e termini di pagamento",
+        "Pagamenti"
+      ]
     },
     "contract.penalties": {
       "id": "contract.penalties",
@@ -1057,7 +1202,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le penali previste, con il fatto che le fa scattare e il loro importo o percentuale.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Penale",
+        "Clausola penale"
+      ],
       "columns": [
         {
           "id": "fattispecie",
@@ -1103,7 +1251,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "A quali condizioni il contratto si rinnova e con quale preavviso: la clausola di rinnovo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Rinnovo",
+        "Condizioni di rinnovo",
+        "Clausola di rinnovo",
+        "Rinnovo del contratto"
+      ]
     },
     "contract.start_date": {
       "id": "contract.start_date",
@@ -1117,7 +1270,12 @@
         "valid_date"
       ],
       "description": "La data da cui il contratto decorre, che può non coincidere con quella della firma.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data di inizio",
+        "Inizio contratto",
+        "Data inizio contratto",
+        "Validità dal"
+      ]
     },
     "contract.subject": {
       "id": "contract.subject",
@@ -1129,7 +1287,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Che cosa il contratto ha per oggetto, nella formula dell'articolo che lo definisce.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Oggetto del contratto",
+        "Oggetto dell'incarico",
+        "Oggetto della fornitura"
+      ]
     },
     "contract.termination_terms": {
       "id": "contract.termination_terms",
@@ -1156,7 +1318,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Che contratto è: appalto, fornitura, locazione, servizio, agenzia, comodato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tipo di contratto",
+        "Natura del contratto"
+      ]
     },
     "contract.value": {
       "id": "contract.value",
@@ -1170,7 +1335,12 @@
         "non_negative_money"
       ],
       "description": "Il corrispettivo complessivo pattuito, distinto dal canone periodico.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Corrispettivo",
+        "Importo del contratto",
+        "Valore complessivo",
+        "Corrispettivo complessivo"
+      ]
     },
     "counterparty.name": {
       "id": "counterparty.name",
@@ -1182,7 +1352,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "La controparte del documento rispetto all'azienda, quando il documento non la distingue già come emittente o destinatario.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Controparte",
+        "Denominazione controparte",
+        "Ragione sociale della controparte"
+      ]
     },
     "counterparty.role": {
       "id": "counterparty.role",
@@ -1194,7 +1368,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il ruolo della controparte rispetto all'azienda: supplier, customer, employee, bank, authority, insurer, other.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Ruolo della controparte",
+        "Qualità della controparte",
+        "Controparte in qualità di"
+      ]
     },
     "counterparty.tax_id": {
       "id": "counterparty.tax_id",
@@ -1223,7 +1401,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Quale corso di sicurezza l'attestato certifica: antincendio, RLS, preposto, primo soccorso, lavori in quota, spazi confinati, DPI di terza categoria.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tipo di corso",
+        "Corso di sicurezza"
+      ]
     },
     "credit.days_overdue": {
       "id": "credit.days_overdue",
@@ -1235,7 +1416,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Da quanti giorni la posizione è scaduta, dove il documento lo conta.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Giorni di scaduto",
+        "Giorni di ritardo nel pagamento"
+      ]
     },
     "credit.installments": {
       "id": "credit.installments",
@@ -1247,7 +1431,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le rate del piano di rientro concordato, con scadenza e importo di ciascuna.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Rate",
+        "Piano di rientro",
+        "Rateizzazione"
+      ],
       "columns": [
         {
           "id": "scadenza",
@@ -1309,7 +1497,11 @@
         "non_negative_money"
       ],
       "description": "Quanto resta da incassare in tutto, scaduto e a scadere.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Residuo",
+        "Saldo aperto",
+        "Totale da incassare"
+      ]
     },
     "credit.overdue_amount": {
       "id": "credit.overdue_amount",
@@ -1323,7 +1515,10 @@
         "non_negative_money"
       ],
       "description": "La sola parte già scaduta del credito, distinta dal residuo complessivo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Importo scaduto",
+        "Totale scaduto"
+      ]
     },
     "credit.promise_date": {
       "id": "credit.promise_date",
@@ -1337,7 +1532,10 @@
         "valid_date"
       ],
       "description": "La data entro cui il debitore si impegna a pagare.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Pagamento promesso entro",
+        "Impegno di pagamento entro"
+      ]
     },
     "credit.status": {
       "id": "credit.status",
@@ -1364,7 +1562,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il paese di destinazione della merce.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Paese di destinazione",
+        "Stato di destinazione"
+      ]
     },
     "customs.duties": {
       "id": "customs.duties",
@@ -1378,7 +1579,10 @@
         "non_negative_money"
       ],
       "description": "I dazi liquidati dalla dichiarazione, distinti dall'IVA all'importazione.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Dazi doganali",
+        "Diritti doganali"
+      ]
     },
     "customs.mrn": {
       "id": "customs.mrn",
@@ -1405,7 +1609,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'ufficio doganale competente per l'operazione.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Dogana",
+        "Ufficio della dogana"
+      ]
     },
     "customs.origin_country": {
       "id": "customs.origin_country",
@@ -1417,7 +1624,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il paese di origine della merce, distinto dal paese di spedizione.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Paese di origine",
+        "Origine della merce"
+      ]
     },
     "customs.procedure": {
       "id": "customs.procedure",
@@ -1462,7 +1672,10 @@
         "non_negative_money"
       ],
       "description": "L'IVA all'importazione liquidata dalla dogana, distinta dai dazi.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "IVA all'importazione",
+        "IVA all'import"
+      ]
     },
     "document.action_required": {
       "id": "document.action_required",
@@ -1489,7 +1702,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Chi approva o autorizza, distinto da chi redige e da chi firma per presa visione.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Approvato da",
+        "Autorizzato da",
+        "Visto di approvazione"
+      ]
     },
     "document.attachments": {
       "id": "document.attachments",
@@ -1530,7 +1747,10 @@
         "valid_date"
       ],
       "description": "Il termine operativo entro cui fare quello che il documento chiede, quando non è una scadenza di pagamento né la scadenza del documento.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Entro il",
+        "Termine ultimo per adempiere"
+      ]
     },
     "document.declaration_date": {
       "id": "document.declaration_date",
@@ -1544,7 +1764,11 @@
         "valid_date"
       ],
       "description": "La data in cui chi dichiara sottoscrive la dichiarazione, quando è distinta dalla data di emissione del documento.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data della dichiarazione",
+        "Dichiarato il",
+        "Data di sottoscrizione"
+      ]
     },
     "document.direction": {
       "id": "document.direction",
@@ -1556,7 +1780,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Se il documento è ricevuto, emesso o interno, confrontando emittente e destinatario con l'azienda: incoming, outgoing, internal.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Direzione",
+        "Documento in entrata o in uscita",
+        "Entrata o uscita"
+      ]
     },
     "document.effective_date": {
       "id": "document.effective_date",
@@ -1570,7 +1798,12 @@
         "valid_date"
       ],
       "description": "La data da cui il documento produce effetti, che può essere successiva o anteriore alla data di emissione.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Decorrenza",
+        "Data di decorrenza",
+        "Con decorrenza dal",
+        "Data di efficacia"
+      ]
     },
     "document.expiry_date": {
       "id": "document.expiry_date",
@@ -1620,7 +1853,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La lingua in cui il documento è redatto, quando il documento la dichiara o è plurilingue.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Lingua del documento",
+        "Lingua di redazione"
+      ]
     },
     "document.legal_basis": {
       "id": "document.legal_basis",
@@ -1632,7 +1868,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "La norma su cui il documento si fonda, citata nel testo: articolo, decreto, regolamento.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Normativa di riferimento",
+        "Ai sensi dell'articolo",
+        "Fondamento normativo",
+        "Visti"
+      ]
     },
     "document.next_review_date": {
       "id": "document.next_review_date",
@@ -1646,7 +1887,12 @@
         "valid_date"
       ],
       "description": "La data della prossima revisione o del prossimo aggiornamento programmato del documento.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Prossima revisione",
+        "Revisione prevista",
+        "Prossimo aggiornamento",
+        "Da rivedere entro"
+      ]
     },
     "document.number": {
       "id": "document.number",
@@ -1672,7 +1918,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'esito che il documento registra, in una parola o una frase: conforme, accolto, respinto, positivo, con riserva.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Esito del documento",
+        "Risultato",
+        "Esito finale",
+        "Con esito"
+      ]
     },
     "document.owner": {
       "id": "document.owner",
@@ -1730,7 +1981,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "Gli altri documenti che questo richiama: ordine, contratto, DDT, fattura, pratica, con il loro numero e la loro data.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Riferimenti",
+        "Documenti collegati",
+        "Riferimenti documenti",
+        "Documenti di riferimento"
+      ],
       "columns": [
         {
           "id": "tipo",
@@ -1762,7 +2018,10 @@
         "valid_date"
       ],
       "description": "La data accanto alla firma, quando è distinta dalla data di emissione.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data della firma",
+        "Sottoscritto il"
+      ]
     },
     "document.signer": {
       "id": "document.signer",
@@ -1774,7 +2033,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Chi firma il documento: nome e cognome sotto la firma, non la società per cui firma.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Sottoscritto da",
+        "Il dichiarante",
+        "Firmato da"
+      ]
     },
     "document.status": {
       "id": "document.status",
@@ -1786,7 +2049,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Lo stato in cui il documento dichiara di trovarsi: bozza, definitivo, annullato, sostituito.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Stato del documento",
+        "Situazione del documento"
+      ]
     },
     "document.title": {
       "id": "document.title",
@@ -1798,7 +2064,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il titolo stampato in testa al documento, come lo scrive il documento stesso: non il nome del file né il tipo dedotto.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Titolo",
+        "Titolo del documento"
+      ]
     },
     "document.variant": {
       "id": "document.variant",
@@ -1810,7 +2079,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il sottotipo del documento dentro la sua classe, quando la classe ne prevede più d'uno.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Variante",
+        "Sottotipo del documento"
+      ]
     },
     "document.version": {
       "id": "document.version",
@@ -1837,7 +2109,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il contratto collettivo applicato, per settore: metalmeccanico industria, commercio, edilizia.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Contratto collettivo",
+        "Contratto collettivo nazionale di lavoro",
+        "CCNL applicato"
+      ]
     },
     "employment.contract_type": {
       "id": "employment.contract_type",
@@ -1849,7 +2125,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Che rapporto è: tempo indeterminato, determinato, apprendistato, somministrazione, intermittente.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tipologia contrattuale",
+        "Natura del rapporto",
+        "Tipo di rapporto di lavoro"
+      ]
     },
     "employment.disciplinary_deadline": {
       "id": "employment.disciplinary_deadline",
@@ -1878,7 +2158,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il lavoratore cui il documento si riferisce, distinto da chi firma per il datore.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Dipendente",
+        "Nome del lavoratore",
+        "Nominativo lavoratore",
+        "Nome e cognome del dipendente"
+      ]
     },
     "employment.employee_tax_code": {
       "id": "employment.employee_tax_code",
@@ -1892,7 +2177,12 @@
         "italian_tax_code_format"
       ],
       "description": "Il codice fiscale del lavoratore: sedici caratteri.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Codice fiscale del lavoratore",
+        "Codice fiscale dipendente",
+        "C.F. lavoratore",
+        "Codice fiscale del dipendente"
+      ]
     },
     "employment.employer_name": {
       "id": "employment.employer_name",
@@ -1904,7 +2194,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il datore di lavoro, distinto dall'ente che riceve la comunicazione.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Datore",
+        "Ragione sociale del datore di lavoro",
+        "Nominativo del datore di lavoro"
+      ]
     },
     "employment.employer_tax_id": {
       "id": "employment.employer_tax_id",
@@ -1999,7 +2293,10 @@
         "valid_date"
       ],
       "description": "Quando finisce il periodo di prova.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Scadenza del periodo di prova",
+        "Periodo di prova fino al"
+      ]
     },
     "employment.protocol": {
       "id": "employment.protocol",
@@ -2011,7 +2308,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il protocollo con cui la comunicazione obbligatoria è stata registrata dal ministero.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Protocollo della comunicazione",
+        "Numero di protocollo ministeriale"
+      ]
     },
     "employment.reason": {
       "id": "employment.reason",
@@ -2041,7 +2341,11 @@
         "non_negative_money"
       ],
       "description": "La retribuzione lorda pattuita, con il periodo a cui si riferisce se il documento lo scrive.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Retribuzione annua lorda",
+        "RAL",
+        "Stipendio lordo"
+      ]
     },
     "employment.start_date": {
       "id": "employment.start_date",
@@ -2055,7 +2359,11 @@
         "valid_date"
       ],
       "description": "La data di assunzione o di inizio del rapporto.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data di assunzione",
+        "Assunto il",
+        "Inizio del rapporto di lavoro"
+      ]
     },
     "employment.submission_date": {
       "id": "employment.submission_date",
@@ -2069,7 +2377,10 @@
         "valid_date"
       ],
       "description": "La data in cui la comunicazione è stata trasmessa, distinta dalla data dell'evento che comunica.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data di invio",
+        "Comunicazione inviata il"
+      ]
     },
     "employment.termination_reason": {
       "id": "employment.termination_reason",
@@ -2095,7 +2406,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il codice di comunicazione UNILAV, distinto dal protocollo ministeriale.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Codice comunicazione",
+        "Codice UNILAV"
+      ]
     },
     "employment.unilav_event_date": {
       "id": "employment.unilav_event_date",
@@ -2109,7 +2423,10 @@
         "valid_date"
       ],
       "description": "La data dell'evento comunicato — assunzione, cessazione, proroga, trasformazione — distinta dalla data di invio.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data dell'evento",
+        "Data evento"
+      ]
     },
     "employment.weekly_hours": {
       "id": "employment.weekly_hours",
@@ -2121,7 +2438,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le ore settimanali contrattuali, distinte dalle ore lavorate in un periodo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Orario settimanale",
+        "Ore settimanali di lavoro"
+      ]
     },
     "employment.workplace": {
       "id": "employment.workplace",
@@ -2133,7 +2453,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La sede in cui il lavoratore presta servizio, distinta dalla sede legale del datore.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Luogo di lavoro",
+        "Sede di assegnazione"
+      ]
     },
     "environment.criteria": {
       "id": "environment.criteria",
@@ -2145,7 +2468,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I criteri ambientali minimi o i requisiti a cui il documento dichiara conformità.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Criteri ambientali minimi",
+        "CAM"
+      ]
     },
     "environment.destination_plant": {
       "id": "environment.destination_plant",
@@ -2157,7 +2483,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'impianto che riceve il rifiuto, con la sua autorizzazione se il documento la scrive.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Impianto di destinazione",
+        "Destinatario del rifiuto"
+      ]
     },
     "environment.emissions": {
       "id": "environment.emissions",
@@ -2169,7 +2498,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le emissioni dichiarate o misurate, con inquinante, valore e unità.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Emissioni in atmosfera",
+        "Valori di emissione"
+      ],
       "columns": [
         {
           "id": "inquinante",
@@ -2228,7 +2560,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La quantità di rifiuto o di materiale movimentata, nel numero.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Quantità movimentata",
+        "Quantitativo"
+      ]
     },
     "environment.transporter": {
       "id": "environment.transporter",
@@ -2240,7 +2575,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Chi trasporta il rifiuto, distinto dal produttore e dal destinatario.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Trasportatore del rifiuto",
+        "Impresa di trasporto"
+      ]
     },
     "environment.unit": {
       "id": "environment.unit",
@@ -2252,7 +2590,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'unità in cui la quantità è espressa: kg, t, m³, litri.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Unità",
+        "U.M."
+      ]
     },
     "environment.waste_code": {
       "id": "environment.waste_code",
@@ -2317,7 +2658,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Quale evento il documento comunica dentro la sua classe: assunzione, cessazione, proroga, trasformazione, consegna, riconsegna.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tipo di evento",
+        "Evento comunicato"
+      ]
     },
     "finance.balance_closing": {
       "id": "finance.balance_closing",
@@ -2329,7 +2673,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il saldo alla fine del periodo dell'estratto, che può essere negativo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Saldo finale del periodo",
+        "Saldo di chiusura"
+      ]
     },
     "finance.balance_opening": {
       "id": "finance.balance_opening",
@@ -2341,7 +2688,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il saldo all'inizio del periodo dell'estratto, che può essere negativo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Saldo iniziale del periodo",
+        "Saldo di apertura"
+      ]
     },
     "finance.final_value": {
       "id": "finance.final_value",
@@ -2372,7 +2722,10 @@
         "non_negative_money"
       ],
       "description": "Quanto vale una rata, distinta dal totale e dal capitale residuo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Importo della rata",
+        "Rata mensile"
+      ]
     },
     "finance.installments": {
       "id": "finance.installments",
@@ -2432,7 +2785,10 @@
         "non_negative_money"
       ],
       "description": "Gli interessi, in valore: quanto costa il finanziamento, non il tasso.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Interessi passivi",
+        "Oneri per interessi"
+      ]
     },
     "finance.interest_rate": {
       "id": "finance.interest_rate",
@@ -2444,7 +2800,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il tasso di interesse in punti percentuali, quando il documento non lo qualifica come TAN o TAEG.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tasso di interesse",
+        "Tasso applicato"
+      ]
     },
     "finance.principal": {
       "id": "finance.principal",
@@ -2458,7 +2817,10 @@
         "non_negative_money"
       ],
       "description": "Il capitale finanziato o erogato all'origine, distinto dal residuo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Capitale finanziato",
+        "Capitale erogato"
+      ]
     },
     "finance.product_type": {
       "id": "finance.product_type",
@@ -2470,7 +2832,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Che prodotto finanziario è: mutuo, leasing, finanziamento, factoring, conto corrente.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tipo di finanziamento",
+        "Forma tecnica"
+      ]
     },
     "finance.residual_principal": {
       "id": "finance.residual_principal",
@@ -2484,7 +2849,10 @@
         "non_negative_money"
       ],
       "description": "Il capitale ancora da restituire a una certa data, distinto da quello erogato all'origine.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Debito residuo",
+        "Residuo in linea capitale"
+      ]
     },
     "finance.taeg": {
       "id": "finance.taeg",
@@ -2496,7 +2864,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il tasso annuo effettivo globale in punti percentuali, che comprende le spese: distinto dal TAN.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tasso annuo effettivo globale",
+        "T.A.E.G."
+      ]
     },
     "finance.tan": {
       "id": "finance.tan",
@@ -2508,7 +2879,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il tasso annuo nominale in punti percentuali, distinto dal TAEG che comprende anche le spese.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tasso annuo nominale",
+        "T.A.N."
+      ]
     },
     "finance.transaction_date": {
       "id": "finance.transaction_date",
@@ -2522,7 +2896,10 @@
         "valid_date"
       ],
       "description": "La data dell'operazione finanziaria, dove il documento non distingue inserimento, esecuzione e valuta.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data dell'operazione",
+        "Data contabile"
+      ]
     },
     "finance.transactions": {
       "id": "finance.transactions",
@@ -2534,7 +2911,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I movimenti elencati dal documento, con data, descrizione e importo con segno.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Elenco dei movimenti",
+        "Operazioni"
+      ],
       "columns": [
         {
           "id": "data",
@@ -2632,7 +3012,11 @@
         "non_negative_money"
       ],
       "description": "Il contributo concesso dal provvedimento, distinto da quello richiesto e da quello già erogato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Contributo concesso",
+        "Importo del contributo",
+        "Agevolazione concessa"
+      ]
     },
     "grant.amount_paid": {
       "id": "grant.amount_paid",
@@ -2646,7 +3030,10 @@
         "non_negative_money"
       ],
       "description": "Quanto è stato effettivamente erogato, distinto dal concesso.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Contributo erogato",
+        "Somma erogata"
+      ]
     },
     "grant.amount_requested": {
       "id": "grant.amount_requested",
@@ -2660,7 +3047,10 @@
         "non_negative_money"
       ],
       "description": "Il contributo richiesto, distinto da quello concesso e da quello erogato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Contributo richiesto",
+        "Importo della richiesta"
+      ]
     },
     "grant.application_number": {
       "id": "grant.application_number",
@@ -2672,7 +3062,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il numero o il codice della domanda presentata.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Numero della domanda",
+        "Codice domanda",
+        "Protocollo domanda"
+      ]
     },
     "grant.deadline": {
       "id": "grant.deadline",
@@ -2686,7 +3080,11 @@
         "valid_date"
       ],
       "description": "Il termine per presentare la domanda o per rendicontare.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Termine di presentazione della domanda",
+        "Scadenza della domanda",
+        "Domande entro il"
+      ]
     },
     "grant.eligible_cost": {
       "id": "grant.eligible_cost",
@@ -2700,7 +3098,10 @@
         "non_negative_money"
       ],
       "description": "La spesa riconosciuta ammissibile, distinta dalla spesa sostenuta e dal contributo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Spesa ammissibile",
+        "Costo ammesso"
+      ]
     },
     "grant.expense_items": {
       "id": "grant.expense_items",
@@ -2761,7 +3162,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il progetto finanziato, con il suo titolo e il suo codice.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Titolo del progetto",
+        "Progetto finanziato",
+        "Denominazione del progetto"
+      ]
     },
     "grant.status": {
       "id": "grant.status",
@@ -2790,7 +3195,10 @@
         "valid_date"
       ],
       "description": "L'ultimo giorno di assenza richiesto o certificato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Ultimo giorno di assenza",
+        "Assenza fino al"
+      ]
     },
     "hr.absence_start": {
       "id": "hr.absence_start",
@@ -2804,7 +3212,10 @@
         "valid_date"
       ],
       "description": "Il primo giorno di assenza richiesto o certificato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Primo giorno di assenza",
+        "Assenza dal"
+      ]
     },
     "hr.absence_type": {
       "id": "hr.absence_type",
@@ -2831,7 +3242,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I giorni che il documento conta: di assenza, di trasferta, di prognosi.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Numero di giorni",
+        "Giorni totali"
+      ]
     },
     "hr.destination": {
       "id": "hr.destination",
@@ -2843,7 +3257,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Dove la trasferta si svolge: località e, se il documento lo scrive, il cliente o il cantiere.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Località della trasferta",
+        "Destinazione della missione"
+      ]
     },
     "hr.expense_items": {
       "id": "hr.expense_items",
@@ -2855,7 +3272,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le voci di spesa della nota, con data, tipo, importo e giustificativo di ciascuna.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Spese",
+        "Dettaglio delle spese"
+      ],
       "columns": [
         {
           "id": "data",
@@ -2891,7 +3311,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le ore che il documento conta, quando l'unità non sono i giorni.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Numero di ore",
+        "Ore totali"
+      ]
     },
     "hr.reimbursement_amount": {
       "id": "hr.reimbursement_amount",
@@ -2905,7 +3328,10 @@
         "non_negative_money"
       ],
       "description": "Il totale che viene rimborsato, distinto dal totale delle spese sostenute.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Totale rimborso",
+        "Rimborso spettante"
+      ]
     },
     "hse.appointed_person": {
       "id": "hse.appointed_person",
@@ -2917,7 +3343,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Chi viene nominato, distinto da chi conferisce la nomina.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Incaricato",
+        "Designato"
+      ]
     },
     "hse.appointment_date": {
       "id": "hse.appointment_date",
@@ -2931,7 +3360,10 @@
         "valid_date"
       ],
       "description": "La data da cui la nomina ha effetto.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data della nomina",
+        "Nominato in data"
+      ]
     },
     "hse.appointment_role": {
       "id": "hse.appointment_role",
@@ -2943,7 +3375,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "A quale ruolo la persona è nominata: RSPP, ASPP, RLS, preposto, addetto antincendio, medico competente.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Incarico",
+        "Ruolo conferito",
+        "Nominato quale"
+      ]
     },
     "hse.assessment_date": {
       "id": "hse.assessment_date",
@@ -2957,7 +3393,11 @@
         "valid_date"
       ],
       "description": "La data della valutazione dei rischi, distinta da quella della prossima revisione.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data della valutazione",
+        "Valutazione del",
+        "Data di redazione della valutazione"
+      ]
     },
     "hse.controls": {
       "id": "hse.controls",
@@ -3002,7 +3442,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I dispositivi di protezione consegnati, con tipo, taglia e data di consegna.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "DPI",
+        "Dispositivi di protezione individuale"
+      ],
       "columns": [
         {
           "id": "tipo",
@@ -3076,7 +3519,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Dove l'evento è avvenuto, che può non essere la sede né il cantiere abituale.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Luogo dell'evento",
+        "Luogo dell'infortunio"
+      ]
     },
     "hse.fitness_limitations": {
       "id": "hse.fitness_limitations",
@@ -3103,7 +3549,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il giudizio di idoneità alla mansione: idoneo, idoneo con prescrizioni, temporaneamente inidoneo, inidoneo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Giudizio",
+        "Esito della visita",
+        "Idoneità alla mansione"
+      ]
     },
     "hse.injury_description": {
       "id": "hse.injury_description",
@@ -3130,7 +3580,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "La norma di sicurezza su cui l'atto si fonda: l'articolo del D.Lgs. 81/2008 o l'accordo Stato-Regioni.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Riferimenti normativi",
+        "Norma di riferimento",
+        "Ai sensi del D.Lgs. 81/2008",
+        "Normativa applicata"
+      ]
     },
     "hse.measurements": {
       "id": "hse.measurements",
@@ -3181,7 +3636,10 @@
         "valid_date"
       ],
       "description": "Quando è prevista la prossima visita di sorveglianza sanitaria.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Prossima visita medica",
+        "Scadenza della sorveglianza sanitaria"
+      ]
     },
     "hse.preventive_measures": {
       "id": "hse.preventive_measures",
@@ -3221,7 +3679,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I giorni di prognosi assegnati dal certificato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Giorni di prognosi",
+        "Prognosi di giorni"
+      ]
     },
     "hse.risk_result": {
       "id": "hse.risk_result",
@@ -3248,7 +3709,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il rischio specifico valutato: chimico, rumore, vibrazioni, stress lavoro-correlato, movimentazione manuale.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tipologia di rischio",
+        "Rischio valutato",
+        "Rischio specifico"
+      ]
     },
     "hse.site": {
       "id": "hse.site",
@@ -3292,7 +3757,11 @@
         "valid_date"
       ],
       "description": "Quando la formazione si è svolta o si è conclusa, distinta dalla data di rilascio dell'attestato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data del corso",
+        "Corso svolto il",
+        "Data di svolgimento"
+      ]
     },
     "hse.training_expiry": {
       "id": "hse.training_expiry",
@@ -3306,7 +3775,11 @@
         "valid_date"
       ],
       "description": "Quando la formazione va rinnovata: la scadenza dell'attestato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Scadenza dell'attestato",
+        "Aggiornamento entro",
+        "Validità della formazione"
+      ]
     },
     "hse.training_hours": {
       "id": "hse.training_hours",
@@ -3318,7 +3791,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "La durata del corso in ore, come l'attestato la dichiara.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Durata del corso",
+        "Ore di formazione",
+        "Monte ore"
+      ]
     },
     "hse.training_provider": {
       "id": "hse.training_provider",
@@ -3345,7 +3822,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "I contenuti del corso, come il programma li elenca.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Contenuti del corso",
+        "Programma del corso",
+        "Argomenti"
+      ]
     },
     "hse.worker_groups": {
       "id": "hse.worker_groups",
@@ -3533,7 +4014,10 @@
         "valid_date"
       ],
       "description": "La data in cui il sinistro è avvenuto, distinta da quella della denuncia.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data del sinistro",
+        "Sinistro avvenuto il"
+      ]
     },
     "insurance.claim_number": {
       "id": "insurance.claim_number",
@@ -3545,7 +4029,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il numero di sinistro assegnato dalla compagnia, distinto dal numero di polizza.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Numero del sinistro",
+        "Sinistro n."
+      ]
     },
     "insurance.claim_status": {
       "id": "insurance.claim_status",
@@ -3557,7 +4044,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "A che punto è il sinistro: aperto, in istruttoria, liquidato, respinto, chiuso senza seguito.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Stato del sinistro",
+        "Fase del sinistro"
+      ]
     },
     "insurance.coverage_end": {
       "id": "insurance.coverage_end",
@@ -3571,7 +4061,10 @@
         "valid_date"
       ],
       "description": "Fino a quando la copertura ha effetto: la scadenza del periodo assicurato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Scadenza della copertura",
+        "Copertura fino al"
+      ]
     },
     "insurance.coverage_start": {
       "id": "insurance.coverage_start",
@@ -3585,7 +4078,11 @@
         "valid_date"
       ],
       "description": "Da quando la copertura ha effetto, distinta dalla data di emissione della polizza.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Decorrenza della copertura",
+        "Copertura dal",
+        "Effetto dal"
+      ]
     },
     "insurance.coverages": {
       "id": "insurance.coverages",
@@ -3597,7 +4094,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le garanzie prestate, con massimale e franchigia di ciascuna.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Garanzie prestate",
+        "Coperture"
+      ],
       "columns": [
         {
           "id": "garanzia",
@@ -3628,7 +4128,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il danno rilevato, come il perito o la denuncia lo descrivono.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Descrizione del danno",
+        "Danni riscontrati"
+      ]
     },
     "insurance.deductible": {
       "id": "insurance.deductible",
@@ -3657,7 +4160,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il codice della Carta Verde, che identifica l'assicuratore nel sistema internazionale.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Carta Verde",
+        "Codice della Carta Verde"
+      ]
     },
     "insurance.insured": {
       "id": "insurance.insured",
@@ -3669,7 +4175,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Chi è assicurato: la persona o il bene su cui la copertura agisce, distinto dal contraente.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Soggetto assicurato",
+        "Nominativo dell'assicurato"
+      ]
     },
     "insurance.limit": {
       "id": "insurance.limit",
@@ -3683,7 +4192,10 @@
         "non_negative_money"
       ],
       "description": "Il massimale della garanzia: il tetto oltre cui la compagnia non paga.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Massimale di garanzia",
+        "Limite di indennizzo"
+      ]
     },
     "insurance.policy_number": {
       "id": "insurance.policy_number",
@@ -3710,7 +4222,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il contraente, cioè chi stipula e paga, distinto dall'assicurato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Contraente della polizza",
+        "Stipulante"
+      ]
     },
     "insurance.premium": {
       "id": "insurance.premium",
@@ -3724,7 +4239,10 @@
         "non_negative_money"
       ],
       "description": "Il premio dovuto per il periodo, lordo di imposte se il documento dà il lordo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Premio di polizza",
+        "Premio dovuto"
+      ]
     },
     "insurance.product": {
       "id": "insurance.product",
@@ -3736,7 +4254,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il nome commerciale del prodotto assicurativo, distinto dal ramo e dal tipo di copertura.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Nome del prodotto",
+        "Prodotto"
+      ]
     },
     "insurance.settlement_amount": {
       "id": "insurance.settlement_amount",
@@ -3750,7 +4271,10 @@
         "non_negative_money"
       ],
       "description": "Quanto la compagnia ha effettivamente liquidato, distinto dal danno richiesto.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Somma liquidata",
+        "Indennizzo liquidato"
+      ]
     },
     "insurance.territorial_validity": {
       "id": "insurance.territorial_validity",
@@ -3762,7 +4286,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I paesi in cui la copertura vale, come il documento li elenca o li barra.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Estensione territoriale",
+        "Paesi coperti"
+      ]
     },
     "insurance.vehicle_plate": {
       "id": "insurance.vehicle_plate",
@@ -3776,7 +4303,10 @@
         "vehicle_plate"
       ],
       "description": "La targa del veicolo coperto dalla polizza: due lettere, tre cifre, due lettere.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Targa",
+        "Targa del veicolo assicurato"
+      ]
     },
     "invoice.related_documents": {
       "id": "invoice.related_documents",
@@ -3835,7 +4365,10 @@
         "non_negative_money"
       ],
       "description": "L'imposta di bollo addebitata in fattura, di solito due euro.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Bollo",
+        "Imposta di bollo assolta"
+      ]
     },
     "invoice.type_code": {
       "id": "invoice.type_code",
@@ -3865,7 +4398,10 @@
         "non_negative_money"
       ],
       "description": "La ritenuta d'acconto trattenuta, in valore.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Ritenuta d'acconto",
+        "Importo della ritenuta"
+      ]
     },
     "invoice.withholding_rate": {
       "id": "invoice.withholding_rate",
@@ -3877,7 +4413,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'aliquota della ritenuta d'acconto in punti percentuali: 20 per il venti per cento.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Aliquota della ritenuta d'acconto",
+        "Percentuale di ritenuta"
+      ]
     },
     "issuer.address": {
       "id": "issuer.address",
@@ -3889,7 +4428,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'indirizzo di chi emette, dal blocco dell'emittente: via, numero, CAP, comune.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Indirizzo del cedente prestatore",
+        "Sede dell'emittente"
+      ]
     },
     "issuer.name": {
       "id": "issuer.name",
@@ -3952,7 +4494,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'asset informatico interessato: server, applicativo, postazione, apparato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Asset",
+        "Bene informatico"
+      ]
     },
     "it.findings": {
       "id": "it.findings",
@@ -3998,7 +4543,10 @@
         "valid_date"
       ],
       "description": "Quando l'incidente è avvenuto o è stato rilevato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data dell'incidente",
+        "Incidente rilevato il"
+      ]
     },
     "it.recovery_target": {
       "id": "it.recovery_target",
@@ -4010,7 +4558,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'obiettivo di ripristino dichiarato: RTO, RPO, o il tempo che il documento si dà.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Obiettivo di ripristino",
+        "RTO e RPO"
+      ]
     },
     "it.severity": {
       "id": "it.severity",
@@ -4022,7 +4573,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La gravità attribuita all'incidente o alla vulnerabilità, nella scala che il documento usa.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Livello di gravità",
+        "Severità"
+      ]
     },
     "it.system": {
       "id": "it.system",
@@ -4049,7 +4603,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il numero di ruolo o di procedimento assegnato dall'autorità.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Numero di ruolo",
+        "R.G.",
+        "Numero di causa"
+      ]
     },
     "legal.claim_amount": {
       "id": "legal.claim_amount",
@@ -4063,7 +4621,11 @@
         "non_negative_money"
       ],
       "description": "L'importo preteso o il valore della causa.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Valore della causa",
+        "Somma richiesta",
+        "Importo preteso"
+      ]
     },
     "legal.court": {
       "id": "legal.court",
@@ -4092,7 +4654,11 @@
         "valid_date"
       ],
       "description": "Il termine processuale che l'atto fa decorrere: entro quando si deve reagire.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Termine processuale",
+        "Termine per opporsi",
+        "Entro il termine di"
+      ]
     },
     "legal.hearing_date": {
       "id": "legal.hearing_date",
@@ -4106,7 +4672,10 @@
         "valid_date"
       ],
       "description": "La data dell'udienza fissata.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data dell'udienza",
+        "Udienza del"
+      ]
     },
     "legal.lawyer": {
       "id": "legal.lawyer",
@@ -4133,7 +4702,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La controparte del procedimento rispetto all'azienda.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Controparte del procedimento",
+        "Parte avversa"
+      ]
     },
     "legal.outcome": {
       "id": "legal.outcome",
@@ -4145,7 +4717,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Come il procedimento si è concluso: accolto, rigettato, transatto, estinto.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Esito del procedimento",
+        "Decisione",
+        "Dispositivo"
+      ]
     },
     "legal.parties": {
       "id": "legal.parties",
@@ -4157,7 +4733,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le parti del procedimento, con il ruolo di ciascuna: attore, convenuto, ricorrente, resistente.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Parti del procedimento",
+        "Le parti in causa"
+      ],
       "columns": [
         {
           "id": "parte",
@@ -4196,7 +4775,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "A che punto è il procedimento: notificato, pendente, in decisione, definito, sospeso.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Stato del procedimento",
+        "Fase del procedimento"
+      ]
     },
     "license.authority": {
       "id": "license.authority",
@@ -4208,7 +4790,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'autorità che ha rilasciato la licenza o l'autorizzazione.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Ente rilasciante",
+        "Rilasciata da",
+        "Autorità di rilascio",
+        "Ente emittente"
+      ]
     },
     "license.expiry_date": {
       "id": "license.expiry_date",
@@ -4222,7 +4809,11 @@
         "valid_date"
       ],
       "description": "Quando la licenza scade: la data da mettere a scadenzario.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Scadenza della licenza",
+        "Valida fino al",
+        "Scadenza dell'autorizzazione"
+      ]
     },
     "license.issue_date": {
       "id": "license.issue_date",
@@ -4236,7 +4827,10 @@
         "valid_date"
       ],
       "description": "Quando la licenza è stata rilasciata.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Rilasciata il",
+        "Data di emissione della licenza"
+      ]
     },
     "license.number": {
       "id": "license.number",
@@ -4305,7 +4899,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le righe del documento, con descrizione, quantità, prezzo unitario, aliquota e importo di ciascuna.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Righe",
+        "Dettaglio righe",
+        "Descrizione beni e servizi",
+        "Dettaglio articoli"
+      ],
       "columns": [
         {
           "id": "descrizione",
@@ -4347,7 +4946,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il vettore che esegue il trasporto, distinto da mittente e destinatario.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Vettore incaricato",
+        "Spedizioniere"
+      ]
     },
     "logistics.destination": {
       "id": "logistics.destination",
@@ -4359,7 +4961,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il luogo in cui la merce va consegnata.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Luogo di destinazione",
+        "Destinazione finale"
+      ]
     },
     "logistics.goods": {
       "id": "logistics.goods",
@@ -4371,7 +4976,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "La merce trasportata, con descrizione, quantità e imballo di ciascuna voce.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Merce",
+        "Descrizione della merce",
+        "Natura della merce"
+      ],
       "columns": [
         {
           "id": "descrizione",
@@ -4400,7 +5009,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il luogo da cui la merce parte.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Luogo di partenza",
+        "Provenienza",
+        "Partenza da"
+      ]
     },
     "logistics.package_count": {
       "id": "logistics.package_count",
@@ -4412,7 +5025,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Quanti colli compongono la spedizione.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Colli",
+        "N. colli",
+        "Numero di colli"
+      ]
     },
     "logistics.shipment_date": {
       "id": "logistics.shipment_date",
@@ -4426,7 +5043,11 @@
         "valid_date"
       ],
       "description": "La data in cui la merce parte, distinta dalla data del documento.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data di spedizione",
+        "Spedito il",
+        "Data di partenza"
+      ]
     },
     "logistics.weight": {
       "id": "logistics.weight",
@@ -4438,7 +5059,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il peso della spedizione, lordo se il documento non distingue.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Peso lordo",
+        "Peso totale",
+        "Peso in kg"
+      ]
     },
     "maintenance.activities": {
       "id": "maintenance.activities",
@@ -4467,7 +5092,11 @@
         "valid_date"
       ],
       "description": "Quando l'intervento è stato eseguito, distinta da quando era programmato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data di esecuzione",
+        "Intervento eseguito il",
+        "Eseguito il"
+      ]
     },
     "maintenance.frequency": {
       "id": "maintenance.frequency",
@@ -4479,7 +5108,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Ogni quanto l'intervento va ripetuto: annuale, semestrale, ogni 500 ore.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Frequenza dell'intervento",
+        "Periodicità"
+      ]
     },
     "maintenance.next_due_date": {
       "id": "maintenance.next_due_date",
@@ -4552,7 +5184,10 @@
         "valid_date"
       ],
       "description": "Quando l'intervento era o è programmato, distinta da quando è stato eseguito.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data programmata",
+        "Intervento programmato per il"
+      ]
     },
     "maintenance.technician": {
       "id": "maintenance.technician",
@@ -4594,7 +5229,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Chi ha partecipato, con nome e qualifica, e chi risulta assente giustificato.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Presenti",
+        "Elenco dei partecipanti"
+      ],
       "columns": [
         {
           "id": "nome",
@@ -4625,7 +5263,11 @@
         "non_negative_money"
       ],
       "description": "L'importo principale del documento, quando il documento non distingue imponibile, imposta e totale.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Ammontare",
+        "Somma",
+        "Importo in euro"
+      ]
     },
     "money.currency": {
       "id": "money.currency",
@@ -4653,7 +5295,10 @@
         "non_negative_money"
       ],
       "description": "Lo sconto applicato, in valore: quanto è stato tolto, non la percentuale.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Sconto applicato",
+        "Abbuono"
+      ]
     },
     "money.gross": {
       "id": "money.gross",
@@ -4667,7 +5312,10 @@
         "non_negative_money"
       ],
       "description": "L'importo al lordo, dove il documento distingue lordo e netto senza che sia totale e imponibile.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Importo lordo",
+        "Totale lordo"
+      ]
     },
     "money.net": {
       "id": "money.net",
@@ -4681,7 +5329,10 @@
         "non_negative_money"
       ],
       "description": "L'importo al netto, dove il documento distingue netto e lordo senza che sia imponibile e totale.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Importo netto",
+        "Totale netto"
+      ]
     },
     "money.rate": {
       "id": "money.rate",
@@ -4693,7 +5344,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'aliquota IVA applicata, in punti percentuali: 22 per il ventidue per cento.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Aliquota IVA",
+        "Percentuale IVA"
+      ]
     },
     "money.tax": {
       "id": "money.tax",
@@ -4760,7 +5414,11 @@
         "valid_date"
       ],
       "description": "La data in cui il pagamento risulta fatto, su un documento che ne dà prova.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data del pagamento",
+        "Pagato il",
+        "Data di esecuzione del pagamento"
+      ]
     },
     "payment.debit_account": {
       "id": "payment.debit_account",
@@ -4792,7 +5450,12 @@
         "valid_date"
       ],
       "description": "La data entro cui il documento va pagato: «scadenza», «pagamento entro». Non la scadenza di validità del documento.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data scadenza pagamento",
+        "Pagamento entro",
+        "Da pagare entro",
+        "Termine di pagamento"
+      ]
     },
     "payment.entry_date": {
       "id": "payment.entry_date",
@@ -4872,7 +5535,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "Con che mezzo si paga o si è pagato: bonifico, RID, RiBa, contanti, carta, MAV.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Modalità di pagamento",
+        "Mezzo di pagamento",
+        "Tipo di pagamento",
+        "Strumento di pagamento"
+      ]
     },
     "payment.payee": {
       "id": "payment.payee",
@@ -4884,7 +5552,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "Chi riceve il pagamento: il beneficiario, distinto da chi lo dispone.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "A favore di",
+        "Beneficiario del pagamento",
+        "Accreditare a",
+        "Pagare a"
+      ]
     },
     "payment.payer": {
       "id": "payment.payer",
@@ -4896,7 +5569,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "Chi dispone il pagamento: l'ordinante, distinto dal beneficiario.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Ordinante",
+        "Debitore",
+        "A carico di",
+        "Disposto da"
+      ]
     },
     "payment.reference": {
       "id": "payment.reference",
@@ -4908,7 +5586,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "La causale o il riferimento con cui il pagamento va identificato: quello che va scritto nella causale del bonifico.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Causale",
+        "Causale del pagamento",
+        "Causale del bonifico",
+        "Riferimento del pagamento"
+      ]
     },
     "payment.status": {
       "id": "payment.status",
@@ -4920,7 +5603,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "A che punto è il pagamento secondo questo documento: richiesto, disposto, eseguito, respinto, stornato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Stato del pagamento",
+        "Situazione pagamento",
+        "Pagamento effettuato",
+        "Esito del pagamento"
+      ]
     },
     "payment.transaction_id": {
       "id": "payment.transaction_id",
@@ -4932,7 +5620,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il codice con cui il circuito identifica l'operazione, dove non è il CRO o il TRN di un bonifico.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Identificativo dell'operazione",
+        "Codice autorizzazione",
+        "Numero operazione"
+      ]
     },
     "payment.value_date": {
       "id": "payment.value_date",
@@ -4961,7 +5653,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I contributi previdenziali e assistenziali, con ente e importo di ciascuno.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Contributi previdenziali",
+        "Oneri contributivi"
+      ],
       "columns": [
         {
           "id": "ente",
@@ -4986,7 +5681,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le voci trattenute al lavoratore, con descrizione e importo di ciascuna.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Ritenute",
+        "Voci di trattenuta"
+      ],
       "columns": [
         {
           "id": "descrizione",
@@ -5011,7 +5709,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le voci di competenza del cedolino, con descrizione e importo di ciascuna.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Competenze",
+        "Retribuzioni lorde"
+      ],
       "columns": [
         {
           "id": "descrizione",
@@ -5036,7 +5737,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Quanti dipendenti il documento conta, su un riepilogo o una denuncia.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Numero di dipendenti",
+        "Dipendenti in forza"
+      ]
     },
     "payroll.employees": {
       "id": "payroll.employees",
@@ -5048,7 +5752,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le righe per dipendente di un riepilogo, con nominativo e importi di ciascuno.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Dettaglio per dipendente",
+        "Elenco dei dipendenti"
+      ],
       "columns": [
         {
           "id": "nominativo",
@@ -5075,7 +5782,10 @@
         "non_negative_money"
       ],
       "description": "Il costo complessivo a carico dell'azienda, distinto dal lordo e dal netto del lavoratore.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Costo del personale",
+        "Costo per l'azienda"
+      ]
     },
     "payroll.inail_position": {
       "id": "payroll.inail_position",
@@ -5156,7 +5866,11 @@
         "non_negative_money"
       ],
       "description": "Il netto in busta, dopo trattenute e contributi.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Netto in busta",
+        "Netto del mese",
+        "Retribuzione netta"
+      ]
     },
     "payroll.period": {
       "id": "payroll.period",
@@ -5168,7 +5882,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il mese o il periodo di paga a cui il cedolino si riferisce.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Periodo di retribuzione",
+        "Mese di riferimento",
+        "Mese di competenza"
+      ]
     },
     "payroll.social_security_base": {
       "id": "payroll.social_security_base",
@@ -5182,7 +5900,10 @@
         "non_negative_money"
       ],
       "description": "L'imponibile contributivo, distinto dall'imponibile fiscale e dal lordo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Imponibile previdenziale",
+        "Base imponibile contributiva"
+      ]
     },
     "payroll.tfr": {
       "id": "payroll.tfr",
@@ -5196,7 +5917,10 @@
         "non_negative_money"
       ],
       "description": "Il trattamento di fine rapporto maturato o accantonato nel periodo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Trattamento di fine rapporto",
+        "Quota TFR"
+      ]
     },
     "period.end": {
       "id": "period.end",
@@ -5295,7 +6019,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I titoli di studio dichiarati, con istituto e anno.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Titolo di studio",
+        "Istruzione e formazione"
+      ],
       "columns": [
         {
           "id": "titolo",
@@ -5324,7 +6051,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'indirizzo email della persona.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Email",
+        "Indirizzo email",
+        "Posta elettronica"
+      ]
     },
     "person.experience": {
       "id": "person.experience",
@@ -5336,7 +6067,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le esperienze professionali dichiarate, con azienda, ruolo e periodo.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Esperienze professionali",
+        "Esperienza lavorativa"
+      ],
       "columns": [
         {
           "id": "azienda",
@@ -5401,7 +6135,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Nome e cognome della persona in un solo campo, dove il documento non li separa.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Nominativo",
+        "Cognome e nome",
+        "Il sottoscritto"
+      ]
     },
     "person.phone": {
       "id": "person.phone",
@@ -5413,7 +6151,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il numero di telefono della persona.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Telefono",
+        "Recapito telefonico",
+        "Cellulare"
+      ]
     },
     "person.role": {
       "id": "person.role",
@@ -5440,7 +6182,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le competenze dichiarate, così come il documento le elenca.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Competenze professionali",
+        "Capacità e competenze"
+      ]
     },
     "person.tax_code": {
       "id": "person.tax_code",
@@ -5470,7 +6215,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Quale copertura la polizza presta: RCA, CAR, RCT/RCO, RC professionale, incendio.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tipo di polizza",
+        "Ramo della polizza"
+      ]
     },
     "privacy.breach_date": {
       "id": "privacy.breach_date",
@@ -5484,7 +6232,10 @@
         "valid_date"
       ],
       "description": "Quando la violazione è avvenuta o è stata scoperta, secondo quello che la notifica dichiara.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data della violazione",
+        "Violazione avvenuta il"
+      ]
     },
     "privacy.breach_impact": {
       "id": "privacy.breach_impact",
@@ -5496,7 +6247,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le conseguenze probabili della violazione per gli interessati, come la notifica le valuta.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Conseguenze della violazione",
+        "Impatto sugli interessati"
+      ]
     },
     "privacy.controller": {
       "id": "privacy.controller",
@@ -5508,7 +6262,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il titolare del trattamento, distinto dal responsabile e dal DPO.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Titolare del trattamento",
+        "Titolare"
+      ]
     },
     "privacy.data_categories": {
       "id": "privacy.data_categories",
@@ -5520,7 +6277,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Quali categorie di dati sono trattate, comprese quelle particolari se ci sono.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Categorie di dati",
+        "Tipologie di dati trattati"
+      ]
     },
     "privacy.data_subjects": {
       "id": "privacy.data_subjects",
@@ -5532,7 +6292,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Chi sono gli interessati: clienti, dipendenti, fornitori, candidati.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Categorie di interessati",
+        "Soggetti interessati"
+      ]
     },
     "privacy.dpo": {
       "id": "privacy.dpo",
@@ -5544,7 +6307,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il responsabile della protezione dei dati, con il suo recapito se il documento lo dà.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Responsabile della protezione dei dati",
+        "Data Protection Officer"
+      ]
     },
     "privacy.legal_basis": {
       "id": "privacy.legal_basis",
@@ -5556,7 +6322,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La base giuridica del trattamento ai sensi dell'art. 6 GDPR: consenso, contratto, obbligo legale, interesse legittimo.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Base giuridica del trattamento",
+        "Fondamento di liceità"
+      ]
     },
     "privacy.processing_entries": {
       "id": "privacy.processing_entries",
@@ -5568,7 +6337,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le righe del registro dei trattamenti, con finalità, categorie, base giuridica e conservazione di ciascuna.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Trattamenti",
+        "Registro dei trattamenti"
+      ],
       "columns": [
         {
           "id": "finalita",
@@ -5602,7 +6374,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Per quali finalità i dati sono trattati, come l'informativa le elenca.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Finalità del trattamento",
+        "Finalità"
+      ]
     },
     "privacy.processor": {
       "id": "privacy.processor",
@@ -5614,7 +6389,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il responsabile del trattamento nominato dal titolare, distinto dal titolare stesso.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Responsabile del trattamento",
+        "Responsabile esterno"
+      ]
     },
     "privacy.recipients": {
       "id": "privacy.recipients",
@@ -5626,7 +6404,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "A chi i dati sono comunicati o da chi sono trattati per conto del titolare.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Destinatari dei dati",
+        "Categorie di destinatari"
+      ]
     },
     "privacy.retention": {
       "id": "privacy.retention",
@@ -5638,7 +6419,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Per quanto tempo i dati sono conservati, o il criterio con cui il termine si determina.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Periodo di conservazione",
+        "Tempi di conservazione"
+      ]
     },
     "privacy.rights": {
       "id": "privacy.rights",
@@ -5650,7 +6434,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I diritti dell'interessato che l'informativa richiama e come esercitarli.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Diritti dell'interessato",
+        "Esercizio dei diritti"
+      ],
       "columns": [
         {
           "id": "diritto",
@@ -5705,7 +6492,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "La stazione appaltante che indice la procedura, distinta dall'operatore che partecipa.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Amministrazione aggiudicatrice",
+        "Ente appaltante",
+        "Committente",
+        "Ente banditore"
+      ]
     },
     "procurement.cup": {
       "id": "procurement.cup",
@@ -5735,7 +6527,12 @@
         "valid_date"
       ],
       "description": "Il termine per presentare l'offerta o la domanda.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Termine di presentazione delle offerte",
+        "Termine ultimo",
+        "Scadenza presentazione offerte",
+        "Presentare entro"
+      ]
     },
     "procurement.declaration_scope": {
       "id": "procurement.declaration_scope",
@@ -5747,7 +6544,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Per chi e per cosa la dichiarazione vale: operatore singolo, raggruppamento, ausiliaria.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Ambito della dichiarazione",
+        "La dichiarazione vale per"
+      ]
     },
     "procurement.delivery_date": {
       "id": "procurement.delivery_date",
@@ -5761,7 +6561,11 @@
         "valid_date"
       ],
       "description": "La data di consegna richiesta o confermata, distinta dalla data dell'ordine.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data di consegna",
+        "Consegna prevista",
+        "Termine di consegna"
+      ]
     },
     "procurement.delivery_place": {
       "id": "procurement.delivery_place",
@@ -5773,7 +6577,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Dove la merce va consegnata, quando non coincide con la sede del destinatario.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Luogo di consegna",
+        "Consegna presso"
+      ]
     },
     "procurement.evaluation_items": {
       "id": "procurement.evaluation_items",
@@ -5812,7 +6619,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I motivi di esclusione su cui il documento si pronuncia, con la dichiarazione relativa a ciascuno.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Motivi di esclusione",
+        "Motivi di esclusione dichiarati"
+      ],
       "columns": [
         {
           "id": "motivo",
@@ -5874,7 +6684,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il lotto della gara a cui il documento si riferisce, con numero e denominazione.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Lotto",
+        "Numero del lotto",
+        "Lotto di riferimento"
+      ]
     },
     "procurement.procedure_number": {
       "id": "procurement.procedure_number",
@@ -5886,7 +6700,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il numero con cui la stazione appaltante identifica la procedura, distinto dal CIG.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Numero di gara",
+        "Numero della procedura",
+        "N. gara",
+        "Numero di protocollo della gara"
+      ]
     },
     "procurement.procedure_title": {
       "id": "procurement.procedure_title",
@@ -5898,7 +6717,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'oggetto della procedura di gara, nella formula del bando.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Oggetto della gara",
+        "Oggetto dell'appalto",
+        "Oggetto della procedura",
+        "Denominazione della procedura"
+      ]
     },
     "procurement.selection_criteria": {
       "id": "procurement.selection_criteria",
@@ -5910,7 +6734,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I criteri di selezione richiesti o dichiarati: requisiti economici, tecnici, professionali.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Requisiti di partecipazione",
+        "Criteri di qualificazione"
+      ]
     },
     "procurement.supplier": {
       "id": "procurement.supplier",
@@ -5922,7 +6749,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il fornitore a cui l'ordine è rivolto o che ha offerto, distinto dall'acquirente.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Ragione sociale fornitore",
+        "Nominativo fornitore",
+        "Denominazione fornitore",
+        "Operatore economico"
+      ]
     },
     "procurement.supplier_score": {
       "id": "procurement.supplier_score",
@@ -5934,7 +6766,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il punteggio attribuito al fornitore nella valutazione, nella scala che il documento usa.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Punteggio del fornitore",
+        "Valutazione del fornitore"
+      ]
     },
     "procurement.tender_amount": {
       "id": "procurement.tender_amount",
@@ -5948,7 +6783,10 @@
         "non_negative_money"
       ],
       "description": "L'importo a base di gara, distinto dall'importo offerto e da quello aggiudicato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Importo a base di gara",
+        "Base d'asta"
+      ]
     },
     "product.batch": {
       "id": "product.batch",
@@ -5960,7 +6798,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il lotto di produzione, distinto dal codice prodotto e dal lotto di gara.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Lotto di produzione",
+        "Numero di lotto",
+        "Lotto n."
+      ]
     },
     "product.certifications": {
       "id": "product.certifications",
@@ -5972,7 +6814,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le certificazioni o le marcature del prodotto: CE, ATEX, marchi di conformità.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Certificazioni di prodotto",
+        "Marcature",
+        "Marchi di conformità",
+        "Certificazioni e marcature"
+      ]
     },
     "product.code": {
       "id": "product.code",
@@ -5984,7 +6831,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il codice con cui il prodotto è identificato a catalogo, distinto dal lotto.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Codice articolo",
+        "Codice a catalogo",
+        "Cod. prodotto"
+      ]
     },
     "product.composition": {
       "id": "product.composition",
@@ -5996,7 +6847,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La composizione del prodotto: materiali, sostanze, percentuali.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Composizione del prodotto",
+        "Materiali"
+      ],
       "columns": [
         {
           "id": "sostanza",
@@ -6021,7 +6875,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le prestazioni dichiarate riga per riga, con caratteristica essenziale, valore e norma.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Prestazioni dichiarate del prodotto",
+        "Caratteristiche essenziali"
+      ],
       "columns": [
         {
           "id": "caratteristica",
@@ -6065,7 +6922,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le prestazioni del prodotto, come la scheda le dichiara.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Prestazioni del prodotto",
+        "Caratteristiche prestazionali"
+      ]
     },
     "product.standard": {
       "id": "product.standard",
@@ -6092,7 +6952,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I risultati delle prove eseguite, con grandezza, valore e metodo di ciascuna.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Risultati delle prove",
+        "Esiti delle prove"
+      ],
       "columns": [
         {
           "id": "grandezza",
@@ -6121,7 +6984,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le azioni correttive decise, con responsabile e termine di ciascuna.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Azioni correttive",
+        "Azioni da intraprendere"
+      ],
       "columns": [
         {
           "id": "azione",
@@ -6151,7 +7017,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il numero del certificato assegnato dall'ente, distinto dal numero del documento.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Numero del certificato",
+        "Certificato n."
+      ]
     },
     "quality.due_date": {
       "id": "quality.due_date",
@@ -6165,7 +7034,10 @@
         "valid_date"
       ],
       "description": "Entro quando l'azione correttiva va chiusa.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Termine dell'azione",
+        "Chiusura prevista entro"
+      ]
     },
     "quality.findings": {
       "id": "quality.findings",
@@ -6204,7 +7076,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il codice con cui la non conformità è registrata, distinto dal numero del rapporto.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Numero della non conformità",
+        "Codice NC"
+      ]
     },
     "quality.root_cause": {
       "id": "quality.root_cause",
@@ -6216,7 +7091,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La causa radice individuata dall'analisi, distinta dalla descrizione del problema.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Causa principale",
+        "Analisi delle cause"
+      ]
     },
     "quality.scope": {
       "id": "quality.scope",
@@ -6228,7 +7106,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il campo di applicazione della certificazione: quali attività e quali siti copre.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Campo di applicazione della certificazione",
+        "Scopo del certificato"
+      ]
     },
     "quality.standard": {
       "id": "quality.standard",
@@ -6257,7 +7138,10 @@
         "valid_date"
       ],
       "description": "Da quando il certificato vale, distinta dalla data di emissione.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Valido dal",
+        "Data di inizio validità"
+      ]
     },
     "quality.valid_to": {
       "id": "quality.valid_to",
@@ -6271,7 +7155,10 @@
         "valid_date"
       ],
       "description": "Fino a quando il certificato vale: la sua scadenza.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Scadenza del certificato",
+        "Data di fine validità"
+      ]
     },
     "quality.verification_result": {
       "id": "quality.verification_result",
@@ -6283,7 +7170,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'esito della verifica di efficacia dell'azione: efficace, non efficace, da riverificare.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Verifica di efficacia",
+        "Esito della verifica"
+      ]
     },
     "realestate.address": {
       "id": "realestate.address",
@@ -6295,7 +7185,12 @@
       "evidence_required": true,
       "validators": [],
       "description": "Dove l'immobile si trova: via, numero civico, interno, comune.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Ubicazione",
+        "Indirizzo dell'immobile",
+        "Ubicazione dell'immobile",
+        "Sito in"
+      ]
     },
     "realestate.area": {
       "id": "realestate.area",
@@ -6307,7 +7202,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "La superficie dell'immobile, nel numero: quella che il documento qualifica come utile o commerciale.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Superficie commerciale",
+        "Superficie utile",
+        "Metri quadri"
+      ]
     },
     "realestate.cadastral_data": {
       "id": "realestate.cadastral_data",
@@ -6319,7 +7218,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Gli identificativi catastali completi: comune, sezione, foglio, particella, subalterno, categoria, rendita.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Identificativi catastali",
+        "Estremi catastali"
+      ],
       "columns": [
         {
           "id": "comune",
@@ -6371,7 +7273,10 @@
         "non_negative_money"
       ],
       "description": "La rendita catastale dell'immobile, in euro.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Rendita",
+        "Rendita catastale rivalutata"
+      ]
     },
     "realestate.deposit": {
       "id": "realestate.deposit",
@@ -6385,7 +7290,10 @@
         "non_negative_money"
       ],
       "description": "Il deposito cauzionale versato, distinto dal canone.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Cauzione",
+        "Deposito"
+      ]
     },
     "realestate.energy_class": {
       "id": "realestate.energy_class",
@@ -6397,7 +7305,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La classe energetica attribuita dall'APE: da A4 a G.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Classe energetica dell'immobile",
+        "Prestazione energetica"
+      ]
     },
     "realestate.owner": {
       "id": "realestate.owner",
@@ -6409,7 +7320,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il proprietario dell'immobile, distinto dal locatore e dal conduttore.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Parte proprietaria",
+        "Intestatario dell'immobile"
+      ]
     },
     "realestate.parcel": {
       "id": "realestate.parcel",
@@ -6437,7 +7351,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il codice con cui l'immobile è identificato nel documento, distinto dai dati catastali.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Codice immobile",
+        "Riferimento immobile"
+      ]
     },
     "realestate.rent": {
       "id": "realestate.rent",
@@ -6451,7 +7368,10 @@
         "non_negative_money"
       ],
       "description": "Il canone pattuito, con la sua periodicità se il documento la scrive.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Canone di locazione",
+        "Canone mensile"
+      ]
     },
     "receipt_type": {
       "id": "receipt_type",
@@ -6463,7 +7383,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Quale ricevuta PEC è: acceptance quando il gestore accetta l'invio, delivery quando la consegna alla casella del destinatario.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tipo di ricevuta",
+        "Ricevuta di"
+      ]
     },
     "recipient.address": {
       "id": "recipient.address",
@@ -6475,7 +7398,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'indirizzo del destinatario, dal suo blocco: via, numero, CAP, comune.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Indirizzo del cessionario committente",
+        "Sede del destinatario"
+      ]
     },
     "recipient.name": {
       "id": "recipient.name",
@@ -6538,7 +7464,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Quale rischio specifico la valutazione tratta: chimico, rumore, vibrazioni, stress lavoro-correlato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Rischio trattato",
+        "Tipologia del rischio"
+      ]
     },
     "sales.activities": {
       "id": "sales.activities",
@@ -6550,7 +7479,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Le attività svolte durante l'intervento, come il rapportino le elenca.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Attività",
+        "Lavori svolti"
+      ]
     },
     "sales.amount": {
       "id": "sales.amount",
@@ -6564,7 +7496,10 @@
         "non_negative_money"
       ],
       "description": "Il valore commerciale dell'opportunità o dell'attività.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Valore dell'opportunità",
+        "Importo commerciale"
+      ]
     },
     "sales.contact": {
       "id": "sales.contact",
@@ -6576,7 +7511,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La persona di riferimento presso il cliente, distinta dalla ragione sociale.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Persona di contatto",
+        "Referente"
+      ]
     },
     "sales.customer": {
       "id": "sales.customer",
@@ -6588,7 +7526,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il cliente a cui l'attività commerciale si riferisce.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Nominativo cliente",
+        "Ragione sociale del cliente",
+        "Denominazione cliente"
+      ]
     },
     "sales.intervention_date": {
       "id": "sales.intervention_date",
@@ -6602,7 +7544,10 @@
         "valid_date"
       ],
       "description": "Quando l'intervento è stato eseguito.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data dell'intervento",
+        "Intervento del"
+      ]
     },
     "sales.issue": {
       "id": "sales.issue",
@@ -6662,7 +7607,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il prossimo passo concordato, con la sua data se il documento la dà.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Prossimo passo",
+        "Azione successiva"
+      ]
     },
     "sales.resolution": {
       "id": "sales.resolution",
@@ -6689,7 +7637,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'oggetto commerciale dell'attività o dell'opportunità.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Oggetto dell'offerta",
+        "Oggetto dell'opportunità"
+      ]
     },
     "standard": {
       "id": "standard",
@@ -6701,7 +7652,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Quale standard il certificato attesta: ISO 9001, 14001, 27001, 37001, 45001, 50001.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Norma di certificazione",
+        "Standard di riferimento"
+      ]
     },
     "tax.amount_due": {
       "id": "tax.amount_due",
@@ -6715,7 +7669,11 @@
         "non_negative_money"
       ],
       "description": "Quanto il documento chiede di versare in tutto, sanzioni e interessi compresi se il totale li comprende.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Totale da versare",
+        "Importo da pagare",
+        "Totale dovuto"
+      ]
     },
     "tax.assessment_period": {
       "id": "tax.assessment_period",
@@ -6727,7 +7685,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il periodo d'imposta su cui l'atto interviene, che non è quello in cui l'atto è emesso.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Periodo oggetto di accertamento",
+        "Annualità accertata"
+      ]
     },
     "tax.credit": {
       "id": "tax.credit",
@@ -6741,7 +7702,10 @@
         "non_negative_money"
       ],
       "description": "Il credito d'imposta che il documento riconosce, in valore.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Credito d'imposta",
+        "A credito"
+      ]
     },
     "tax.debit": {
       "id": "tax.debit",
@@ -6755,7 +7719,10 @@
         "non_negative_money"
       ],
       "description": "Il debito d'imposta che il documento accerta, in valore.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Debito d'imposta",
+        "A debito"
+      ]
     },
     "tax.interest": {
       "id": "tax.interest",
@@ -6769,7 +7736,10 @@
         "non_negative_money"
       ],
       "description": "Gli interessi liquidati dall'atto, separati dall'imposta e dalle sanzioni.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Interessi dovuti",
+        "Interessi di mora"
+      ]
     },
     "tax.payment_date": {
       "id": "tax.payment_date",
@@ -6783,7 +7753,11 @@
         "valid_date"
       ],
       "description": "La data del versamento, su una quietanza o una ricevuta telematica.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data del versamento",
+        "Versato il",
+        "Data di pagamento del tributo"
+      ]
     },
     "tax.payment_status": {
       "id": "tax.payment_status",
@@ -6812,7 +7786,10 @@
         "non_negative_money"
       ],
       "description": "Le sanzioni liquidate dall'atto, separate dall'imposta e dagli interessi.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Sanzioni dovute",
+        "Importo delle sanzioni"
+      ]
     },
     "tax.period": {
       "id": "tax.period",
@@ -6824,7 +7801,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il periodo d'imposta come il documento lo scrive, quando non è un anno solo: «gennaio 2026», «I trimestre 2026».",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Periodo di imposta",
+        "Periodo di riferimento"
+      ]
     },
     "tax.protocol_id": {
       "id": "tax.protocol_id",
@@ -6885,7 +7865,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Quale dichiarazione è: 730, Redditi PF, IVA annuale, IRAP, 770.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tipo di dichiarazione",
+        "Modello dichiarativo"
+      ]
     },
     "tax.vat_nature": {
       "id": "tax.vat_nature",
@@ -6952,7 +7935,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'anno d'imposta a quattro cifre, distinto dall'anno in cui il documento è emesso.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Anno di imposta",
+        "Anno di riferimento"
+      ]
     },
     "utility.account_id": {
       "id": "utility.account_id",
@@ -6979,7 +7965,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il consumo del periodo, nel numero, senza l'unità.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Consumo del periodo",
+        "Consumi"
+      ]
     },
     "utility.due_date": {
       "id": "utility.due_date",
@@ -6993,7 +7982,10 @@
         "valid_date"
       ],
       "description": "Entro quando la bolletta va pagata, distinta dalla fine del periodo fatturato.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Pagare entro il",
+        "Termine di pagamento della bolletta"
+      ]
     },
     "utility.meter_id": {
       "id": "utility.meter_id",
@@ -7005,7 +7997,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La matricola del contatore, distinta dal POD e dal codice cliente.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Matricola del contatore",
+        "Numero del contatore"
+      ]
     },
     "utility.pdr": {
       "id": "utility.pdr",
@@ -7017,7 +8012,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il punto di riconsegna del gas: quattordici cifre, distinto dal POD.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Punto di riconsegna",
+        "Codice PDR"
+      ]
     },
     "utility.period_end": {
       "id": "utility.period_end",
@@ -7031,7 +8029,10 @@
         "valid_date"
       ],
       "description": "La fine del periodo fatturato, distinta dalla scadenza del pagamento.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Fine del periodo fatturato",
+        "Periodo fino al"
+      ]
     },
     "utility.period_start": {
       "id": "utility.period_start",
@@ -7045,7 +8046,10 @@
         "valid_date"
       ],
       "description": "L'inizio del periodo fatturato, distinto dalla data della bolletta.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Inizio del periodo fatturato",
+        "Periodo dal"
+      ]
     },
     "utility.pod": {
       "id": "utility.pod",
@@ -7057,7 +8061,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il punto di prelievo dell'energia elettrica: «IT» seguito da cifre e lettere.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Punto di prelievo",
+        "Codice POD"
+      ]
     },
     "utility.readings": {
       "id": "utility.readings",
@@ -7102,7 +8109,11 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'offerta o la tariffa applicata, con il suo nome commerciale.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Offerta",
+        "Nome dell'offerta",
+        "Tariffa applicata"
+      ]
     },
     "utility.unit": {
       "id": "utility.unit",
@@ -7114,7 +8125,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'unità in cui il consumo è misurato: kWh, Smc, m³.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Unità di misura del consumo",
+        "U.M. del consumo"
+      ]
     },
     "utility_type": {
       "id": "utility_type",
@@ -7126,7 +8140,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Quale utenza la bolletta fattura: electricity, gas, water, waste, telecom, other.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Tipo di utenza",
+        "Servizio fatturato"
+      ]
     },
     "vehicle.driver": {
       "id": "vehicle.driver",
@@ -7138,7 +8155,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Chi guidava o è assegnato al veicolo, distinto dall'intestatario.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Autista",
+        "Guidatore"
+      ]
     },
     "vehicle.make": {
       "id": "vehicle.make",
@@ -7150,7 +8170,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "La marca del veicolo, distinta dal modello.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Marca del veicolo",
+        "Casa costruttrice"
+      ]
     },
     "vehicle.model": {
       "id": "vehicle.model",
@@ -7162,7 +8185,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il modello del veicolo, distinto dalla marca e dall'allestimento.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Modello del veicolo",
+        "Tipo del veicolo"
+      ]
     },
     "vehicle.odometer": {
       "id": "vehicle.odometer",
@@ -7174,7 +8200,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "Il chilometraggio letto, nel numero, senza l'unità.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Km percorsi",
+        "Lettura del contachilometri"
+      ]
     },
     "vehicle.owner": {
       "id": "vehicle.owner",
@@ -7186,7 +8215,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "L'intestatario del veicolo, distinto dal conducente e dall'utilizzatore.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Proprietario del veicolo",
+        "Intestatario"
+      ]
     },
     "vehicle.plate": {
       "id": "vehicle.plate",
@@ -7216,7 +8248,10 @@
         "valid_date"
       ],
       "description": "La data di prima immatricolazione, distinta dalla data di acquisto.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data di immatricolazione",
+        "Prima immatricolazione"
+      ]
     },
     "vehicle.revision_date": {
       "id": "vehicle.revision_date",
@@ -7230,7 +8265,10 @@
         "valid_date"
       ],
       "description": "Quando la revisione è stata eseguita, distinta da quando scade.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Data della revisione",
+        "Revisione eseguita il"
+      ]
     },
     "vehicle.revision_expiry": {
       "id": "vehicle.revision_expiry",
@@ -7244,7 +8282,10 @@
         "valid_date"
       ],
       "description": "Quando la revisione va rifatta: la data da mettere a scadenzario.",
-      "label_aliases_it": []
+      "label_aliases_it": [
+        "Scadenza della revisione",
+        "Prossima revisione entro"
+      ]
     },
     "vehicle.tachograph_entries": {
       "id": "vehicle.tachograph_entries",
@@ -7256,7 +8297,10 @@
       "evidence_required": true,
       "validators": [],
       "description": "I dati del cronotachigrafo, con data, conducente, guida, riposo e infrazioni.",
-      "label_aliases_it": [],
+      "label_aliases_it": [
+        "Dati del cronotachigrafo",
+        "Registrazioni tachigrafiche"
+      ],
       "columns": [
         {
           "id": "data",
