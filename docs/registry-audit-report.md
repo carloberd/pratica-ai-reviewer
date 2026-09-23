@@ -74,9 +74,16 @@ particolari»? `privacy.recipients` distingue destinatario e ruolo? `environment
 
 ## Da decidere: i 28 campi che nessun tipo chiede (buco 8)
 
-Dei 50 campi che nessun tipo chiedeva, 22 hanno trovato una casa — e solo dove il
-namespace del campo e il dominio del tipo dicono la stessa cosa. Non si è cancellato
-niente: quella è una decisione fuori da questo lavoro.
+Dei 50 campi che nessun tipo chiedeva, 22 hanno trovato una casa — in `optional_fields`,
+e solo dove il namespace del campo e il dominio del tipo dicono la stessa cosa. Non si è
+cancellato niente: i campi restano 454, e cancellarne è una decisione fuori da questo
+lavoro.
+
+Nel conteggio `derived_fields` vale come casa: un tipo che dichiara un campo derivato lo
+sta chiedendo, anche se il lettore non lo cerca. Senza quella regola il numero sarebbe 39
+invece di 28, perché gli 11 attributi derivati sono usciti da `required_fields` e
+diventerebbero «mai chiesti» il giorno stesso in cui li si sistema — un buco che si
+allarga mentre lo chiudi. È una scelta dello script, non un dato del registry.
 
 I 28 che restano sono ontologia non verificata, e si dividono in quattro gruppi.
 
