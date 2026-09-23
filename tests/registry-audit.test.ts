@@ -129,7 +129,7 @@ describe('registry-audit: gli invarianti nuovi colti in flagrante', () => {
   it('un campo non si legge e si deriva insieme, e i derivati sono dichiarati tali', () => {
     const { status, report } = auditOf((_fields, map) => {
       map.document_types['accounting.fattura']!.required_fields!.push('document.direction')
-      map.document_types['accounting.fattura']!.derived_fields!.push('money.discount')
+      map.document_types['accounting.fattura']!.derived_fields!.push('money.net')
     })
 
     expect(status).toBe(1)

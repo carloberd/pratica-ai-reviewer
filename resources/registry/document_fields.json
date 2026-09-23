@@ -26,11 +26,13 @@
         "document.reason",
         "document.references",
         "invoice.related_documents",
+        "issuer.address",
         "line_items",
         "money.tax",
         "money.taxable",
         "procurement.cig",
         "procurement.cup",
+        "recipient.address",
         "tax.vat_nature",
         "tax.vat_summary"
       ]
@@ -73,10 +75,14 @@
         "money.total"
       ],
       "optional_fields": [
+        "issuer.address",
         "line_items",
+        "money.discount",
+        "money.rate",
         "money.tax",
         "money.taxable",
         "payment.method",
+        "recipient.address",
         "recipient.name",
         "recipient.tax_code",
         "recipient.vat_number",
@@ -105,11 +111,15 @@
       "optional_fields": [
         "document.references",
         "invoice.type_code",
+        "issuer.address",
         "line_items",
+        "money.discount",
+        "money.rate",
         "money.tax",
         "money.taxable",
         "procurement.cig",
         "procurement.cup",
+        "recipient.address",
         "tax.vat_summary"
       ],
       "derived_fields": [
@@ -138,11 +148,13 @@
       ],
       "optional_fields": [
         "document.references",
+        "issuer.address",
         "line_items",
         "money.tax",
         "money.taxable",
         "procurement.cig",
         "procurement.cup",
+        "recipient.address",
         "tax.vat_summary"
       ],
       "derived_fields": [
@@ -174,11 +186,13 @@
       "optional_fields": [
         "document.references",
         "invoice.type_code",
+        "issuer.address",
         "line_items",
         "money.tax",
         "money.taxable",
         "procurement.cig",
         "procurement.cup",
+        "recipient.address",
         "tax.vat_summary"
       ],
       "derived_fields": [
@@ -215,11 +229,13 @@
       "optional_fields": [
         "document.references",
         "invoice.type_code",
+        "issuer.address",
         "line_items",
         "money.tax",
         "money.taxable",
         "procurement.cig",
         "procurement.cup",
+        "recipient.address",
         "tax.vat_summary"
       ],
       "derived_fields": [
@@ -253,11 +269,13 @@
         "invoice.stamp_duty",
         "invoice.type_code",
         "invoice.withholding_rate",
+        "issuer.address",
         "line_items",
         "money.tax",
         "money.taxable",
         "procurement.cig",
         "procurement.cup",
+        "recipient.address",
         "tax.vat_summary"
       ]
     },
@@ -391,6 +409,7 @@
         "payment.status"
       ],
       "optional_fields": [
+        "bank.account_number",
         "bank.causal",
         "document.number",
         "document.references",
@@ -437,6 +456,7 @@
         "period.start"
       ],
       "optional_fields": [
+        "bank.account_number",
         "bank.balance_accounting",
         "bank.balance_available",
         "finance.balance_closing",
@@ -458,6 +478,7 @@
         "period.start"
       ],
       "optional_fields": [
+        "bank.account_number",
         "bank.balance_accounting",
         "bank.balance_available",
         "finance.balance_closing",
@@ -698,11 +719,16 @@
         "sales.items"
       ],
       "optional_fields": [
+        "commercial.customer_reference",
         "commercial.quote_number",
+        "commercial.supplier_reference",
         "money.currency",
+        "money.discount",
         "money.total",
         "procurement.delivery_date",
-        "sales.amount"
+        "sales.amount",
+        "sales.contact",
+        "sales.subject"
       ],
       "derived_fields": [
         "document.direction",
@@ -728,8 +754,10 @@
         "sales.items"
       ],
       "optional_fields": [
+        "commercial.customer_reference",
         "commercial.order_number",
         "commercial.quote_number",
+        "commercial.supplier_reference",
         "document.references",
         "procurement.delivery_date",
         "procurement.delivery_place"
@@ -758,8 +786,10 @@
         "sales.items"
       ],
       "optional_fields": [
+        "commercial.customer_reference",
         "commercial.order_number",
         "commercial.quote_number",
+        "commercial.supplier_reference",
         "document.references",
         "procurement.delivery_date",
         "procurement.delivery_place"
@@ -1047,14 +1077,18 @@
         "document.number"
       ],
       "optional_fields": [
+        "contract.duration",
         "contract.notice_period",
+        "contract.number",
         "contract.obligations",
         "contract.payment_terms",
         "contract.renewal_terms",
         "contract.termination_terms",
+        "contract.type",
         "contract.value",
         "document.reason",
         "document.references",
+        "document.signature_date",
         "issuer.name",
         "recipient.name"
       ]
@@ -1073,13 +1107,17 @@
         "document.number"
       ],
       "optional_fields": [
+        "contract.duration",
         "contract.notice_period",
+        "contract.number",
         "contract.obligations",
         "contract.payment_terms",
         "contract.renewal_terms",
         "contract.termination_terms",
+        "contract.type",
         "contract.value",
         "document.references",
+        "document.signature_date",
         "issuer.name",
         "recipient.name"
       ]
@@ -1098,13 +1136,17 @@
         "document.number"
       ],
       "optional_fields": [
+        "contract.duration",
         "contract.notice_period",
+        "contract.number",
         "contract.obligations",
         "contract.payment_terms",
         "contract.renewal_terms",
         "contract.termination_terms",
+        "contract.type",
         "contract.value",
         "document.references",
+        "document.signature_date",
         "issuer.name",
         "recipient.name"
       ]
@@ -1123,13 +1165,17 @@
         "document.number"
       ],
       "optional_fields": [
+        "contract.duration",
         "contract.notice_period",
+        "contract.number",
         "contract.obligations",
         "contract.payment_terms",
         "contract.renewal_terms",
         "contract.termination_terms",
+        "contract.type",
         "contract.value",
         "document.references",
+        "document.signature_date",
         "issuer.name",
         "recipient.name"
       ]
@@ -1152,14 +1198,18 @@
       ],
       "optional_fields": [
         "construction.work_category",
+        "contract.duration",
         "contract.notice_period",
+        "contract.number",
         "contract.obligations",
         "contract.payment_terms",
         "contract.penalties",
         "contract.renewal_terms",
         "contract.termination_terms",
+        "contract.type",
         "contract.value",
         "document.references",
+        "document.signature_date",
         "issuer.name",
         "recipient.name"
       ]
@@ -1816,6 +1866,7 @@
       ],
       "optional_fields": [
         "line_items",
+        "payroll.earnings",
         "payroll.leave_balances",
         "payroll.tfr"
       ]
@@ -2097,6 +2148,7 @@
         "person.email",
         "person.experience",
         "person.phone",
+        "person.role",
         "person.skills",
         "person.tax_code",
         "recipient.name"
@@ -2326,6 +2378,7 @@
         "document.references",
         "document.version",
         "hse.assessment_date",
+        "hse.dpi_items",
         "hse.legal_basis",
         "hse.measurements",
         "hse.worker_groups",
@@ -2459,6 +2512,7 @@
         "person.last_name"
       ],
       "optional_fields": [
+        "document.language",
         "identity.issuing_authority",
         "identity.nationality",
         "issuer.name",
@@ -2545,6 +2599,7 @@
         "person.last_name"
       ],
       "optional_fields": [
+        "document.language",
         "identity.issuing_authority",
         "identity.nationality",
         "issuer.name",
@@ -2573,8 +2628,11 @@
       "optional_fields": [
         "insurance.coverages",
         "insurance.deductible",
+        "insurance.green_card_code",
         "insurance.limit",
         "insurance.premium",
+        "insurance.product",
+        "insurance.territorial_validity",
         "issuer.name",
         "money.currency"
       ]
@@ -2619,6 +2677,8 @@
         "insurance.deductible",
         "insurance.limit",
         "insurance.premium",
+        "insurance.product",
+        "insurance.territorial_validity",
         "issuer.name",
         "money.currency"
       ],
@@ -2660,7 +2720,8 @@
         "contract.obligations",
         "contract.penalties",
         "document.legal_basis",
-        "document.references"
+        "document.references",
+        "document.signature_date"
       ]
     },
     "legal_corporate.cessione_credito": {
@@ -3332,6 +3393,7 @@
         "procurement.contracting_authority"
       ],
       "optional_fields": [
+        "contract.number",
         "contract.value",
         "document.references",
         "issuer.name",
@@ -3608,6 +3670,7 @@
       "optional_fields": [
         "asset.id",
         "asset.serial_number",
+        "contract.duration",
         "contract.payment_terms",
         "contract.renewal_terms",
         "contract.termination_terms",
@@ -3646,7 +3709,10 @@
       "optional_fields": [
         "document.references",
         "hse.site",
-        "line_items"
+        "line_items",
+        "sales.contact",
+        "sales.next_action",
+        "sales.subject"
       ]
     },
     "sales_customers.reso_cliente": {
@@ -3677,7 +3743,9 @@
       ],
       "optional_fields": [
         "document.references",
-        "meeting.attendees"
+        "meeting.attendees",
+        "sales.contact",
+        "sales.next_action"
       ]
     },
     "technical_products.dichiarazione_cam": {
@@ -3716,7 +3784,8 @@
         "product.certifications",
         "product.code",
         "product.composition",
-        "product.performance"
+        "product.performance",
+        "product.test_results"
       ]
     },
     "technical_products.scheda_tecnica_prodotto": {
@@ -3735,7 +3804,8 @@
         "product.certifications",
         "product.code",
         "product.composition",
-        "product.standard"
+        "product.standard",
+        "product.test_results"
       ]
     },
     "utilities_subscriptions.bolletta_utenza": {

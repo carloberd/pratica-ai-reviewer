@@ -90,7 +90,7 @@ describe('PDF con testo nativo', () => {
     expect(outcome.documentType).toBe('accounting.fattura')
     // Il tipo lo ha scelto il revisore: non c'è una confidenza da mostrare.
     expect(outcome.typeConfidence).toBeNull()
-    expect(outcome).toMatchObject({ filledFields: 10, totalFields: 20, confidence: 0.814 })
+    expect(outcome).toMatchObject({ filledFields: 10, totalFields: 24, confidence: 0.814 })
 
     const rows = repo.fields.listForDocument(id)
     expect(rows.map((f) => [f.name, f.role, f.review_status, f.value])).toEqual([
@@ -112,11 +112,15 @@ describe('PDF con testo nativo', () => {
       ['recipient.vat_number', 'required', 'CONFLICT', '01234567890'],
       ['document.references', 'optional', 'MISSING', null],
       ['invoice.type_code', 'optional', 'MISSING', null],
+      ['issuer.address', 'optional', 'MISSING', null],
       ['line_items', 'optional', 'MISSING', null],
+      ['money.discount', 'optional', 'MISSING', null],
+      ['money.rate', 'optional', 'MISSING', null],
       ['money.tax', 'optional', 'AUTO_ACCEPTED', '15583.93'],
       ['money.taxable', 'optional', 'AUTO_ACCEPTED', '70836.07'],
       ['procurement.cig', 'optional', 'MISSING', null],
       ['procurement.cup', 'optional', 'MISSING', null],
+      ['recipient.address', 'optional', 'MISSING', null],
       ['tax.vat_summary', 'optional', 'MISSING', null]
     ])
     expect(rows.find((f) => f.name === 'line_items')?.cardinality).toBe('many')
@@ -150,7 +154,7 @@ describe('PDF con testo nativo', () => {
     expect(events.map((e) => e.title)).toEqual(['Tipo confermato', 'Campi precompilati'])
     expect(events[0]?.detail).toBe('Mantenuto il tipo «accounting.fattura» assegnato dal revisore.')
     expect(events[1]?.detail).toMatch(
-      /^10 campi su 20 con evidenza verbatim, mappa PRETESTED\. Obbligatori senza evidenza: .*Un conflitto fra candidati da verificare\.$/
+      /^10 campi su 24 con evidenza verbatim, mappa PRETESTED\. Obbligatori senza evidenza: .*Un conflitto fra candidati da verificare\.$/
     )
 
     const [run] = repo.extractionRuns.listForDocument(id)
@@ -204,7 +208,7 @@ describe('un campo del profilo che l’ontologia non descrive', () => {
       'SHARED_EVIDENCE:issuer.vat_number|recipient.vat_number'
     ])
     // Prima il campo spariva dal run: copertura piena su un obbligatorio mai cercato.
-    expect(JSON.parse(run!.metrics_json!)).toMatchObject({ coverage: 0.48, totalFields: 21 })
+    expect(JSON.parse(run!.metrics_json!)).toMatchObject({ coverage: 0.4, totalFields: 25 })
     expect(repo.getReviewDocument(id)!.warnings[0]).toContain('ghost.field')
     repo.close()
   })
@@ -387,7 +391,7 @@ describe('rielaborazione e correzioni', () => {
     await process(input)
 
     const document = repo.getReviewDocument(id)!
-    expect(document.fields).toHaveLength(20)
+    expect(document.fields).toHaveLength(24)
     expect(document.evidence).toHaveLength(10)
     expect(repo.extractionRuns.listForDocument(id)).toHaveLength(2)
     repo.close()
