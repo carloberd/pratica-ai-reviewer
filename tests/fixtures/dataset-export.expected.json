@@ -120,26 +120,6 @@
           "pick": null
         },
         {
-          "name": "counterparty.role",
-          "label": "Ruolo controparte",
-          "role": "required",
-          "cardinality": "one",
-          "value": null,
-          "origin": null,
-          "evidence": null,
-          "pick": null
-        },
-        {
-          "name": "document.direction",
-          "label": "Direzione documento",
-          "role": "required",
-          "cardinality": "one",
-          "value": null,
-          "origin": null,
-          "evidence": null,
-          "pick": null
-        },
-        {
           "name": "document.issue_date",
           "label": "Data emissione",
           "role": "required",
@@ -323,6 +303,16 @@
           "pick": null
         },
         {
+          "name": "issuer.address",
+          "label": "Indirizzo emittente",
+          "role": "optional",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null,
+          "pick": null
+        },
+        {
           "name": "line_items",
           "label": "Righe documento",
           "role": "optional",
@@ -371,6 +361,26 @@
               "pick": null
             }
           ]
+        },
+        {
+          "name": "money.discount",
+          "label": "Sconto",
+          "role": "optional",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null,
+          "pick": null
+        },
+        {
+          "name": "money.rate",
+          "label": "Aliquota",
+          "role": "optional",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null,
+          "pick": null
         },
         {
           "name": "money.tax",
@@ -423,6 +433,16 @@
         {
           "name": "procurement.cup",
           "label": "CUP",
+          "role": "optional",
+          "cardinality": "one",
+          "value": null,
+          "origin": null,
+          "evidence": null,
+          "pick": null
+        },
+        {
+          "name": "recipient.address",
+          "label": "Indirizzo destinatario",
           "role": "optional",
           "cardinality": "one",
           "value": null,

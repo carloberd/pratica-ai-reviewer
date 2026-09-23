@@ -268,6 +268,57 @@ export function readInteger(text: string, window: number): string | null {
   return Number.isSafeInteger(value) ? String(value) : null
 }
 
+/**
+ * Una percentuale nella convenzione del registry (`scale: "0_100"`): il numero come sta
+ * scritto, dove 3,5 è il tre e mezzo per cento. Fuori da quell'intervallo non è una
+ * percentuale di questa convenzione — un importo finito accanto a un'aliquota lo era — e
+ * il campo resta vuoto invece di portarsi dietro un numero che nessuno sa più leggere.
+ */
+export function readPercentage(text: string, window: number): string | null {
+  const value = readNumber(text, window)
+  if (value === null) return null
+  const number = Number(value)
+  return number >= 0 && number <= 100 ? value : null
+}
+
+/**
+ * Come i documenti scrivono la valuta prima che diventi un codice ISO 4217: il simbolo, il
+ * nome per esteso, la sigla in minuscolo. Sono le forme che i documenti portano davvero,
+ * non tutte quelle immaginabili.
+ */
+const CURRENCY_WORDS: Record<string, string> = {
+  '€': 'EUR',
+  euro: 'EUR',
+  eur: 'EUR',
+  $: 'USD',
+  dollaro: 'USD',
+  dollari: 'USD',
+  usd: 'USD',
+  '£': 'GBP',
+  sterlina: 'GBP',
+  sterline: 'GBP',
+  gbp: 'GBP',
+  franchi: 'CHF',
+  franco: 'CHF',
+  chf: 'CHF'
+}
+
+/**
+ * La valuta, normalizzata prima del confronto con l'enum del campo: «€», «euro» e «EURO»
+ * sono tutti `EUR`. Un codice che l'enum non ha non è il valore di questo campo: il campo
+ * resta vuoto e chi rivede lo vede, invece che una stringa libera che il template non sa
+ * dove mettere.
+ */
+export function readCurrency(text: string, allowed: readonly string[]): string | null {
+  const token = /[\p{L}€$£]+/u.exec(text.replace(/^[\s:=]+/, ''))?.[0]
+  const symbol = /[€$£]/.exec(text)?.[0]
+  const raw = token ?? symbol
+  if (!raw) return null
+  const code = CURRENCY_WORDS[raw.toLowerCase()] ?? (symbol ? CURRENCY_WORDS[symbol] : undefined)
+  const candidate = code ?? raw.toUpperCase()
+  return allowed.includes(candidate) ? candidate : null
+}
+
 function readBoolean(text: string): string | null {
   const trimmed = text.replace(/^[\s:=]+/, '')
   if (/^(s[iì]|yes|true|vero)\b/i.test(trimmed)) return 'true'
@@ -293,6 +344,15 @@ const IBAN = /\b([A-Za-z]{2}\d{2}(?:\s?[A-Za-z0-9]){11,30})\b/
 const REA_NUMBER = /^(?:([A-Z]{2})\s*[-–]?\s*)?(\d{1,7})(?!\d|[/.,]\d)/
 
 /**
+ * CIG e CUP: un blocco alfanumerico di lunghezza fissa, dieci caratteri il primo e quindici
+ * il secondo. La lunghezza è tutta la forma che hanno, ed è anche quello che li separa: su
+ * un ordine che li scrive uno accanto all'altro, la lettura per token prenderebbe il primo
+ * dei due per tutti e due.
+ */
+const CIG_CODE = /\b([A-Za-z0-9]{10})\b/
+const CUP_CODE = /\b([A-Za-z0-9]{15})\b/
+
+/**
  * Identificativo subito dopo l'etichetta: «Protocollo n. 2026/554321», «Documento n.
  * CC-2026-018». Deve contenere almeno una cifra e non essere una data.
  */
@@ -315,6 +375,14 @@ export function readIdentifier(text: string, format: string | null | undefined):
     if (!match?.[2]) return null
     // La forma in cui la scrive la visura, e in cui la trascrive il revisore: «RO - 160649».
     return match[1] ? `${match[1]} - ${match[2]}` : match[2]
+  }
+  if (format === 'cig' || format === 'cup') {
+    const match = (format === 'cig' ? CIG_CODE : CUP_CODE).exec(text)
+    const code = match?.[1]
+    // Almeno una cifra, come per ogni identificativo: «comunicare» ha dieci lettere e
+    // sarebbe un CIG a norma di lunghezza.
+    if (!code || match.index > VALUE_WINDOW || !/\d/.test(code)) return null
+    return code.toUpperCase()
   }
   if (format === 'iban') {
     const match = IBAN.exec(text)
@@ -377,13 +445,15 @@ function readValue(
 ): string | null {
   const window = mode === 'next-line' ? NEXT_LINE_WINDOW : VALUE_WINDOW
   if (readsAsIdentifier(fieldId, spec)) return readIdentifier(text, spec.format)
+  // Un campo chiuso si legge nel suo vocabolario: la valuta, l'unico che ne ha uno oggi.
+  if (spec.format === 'currency') return readCurrency(text, spec.enum ?? [])
   switch (spec.type) {
     case 'date':
       return readDate(text, window)
     case 'money':
       return readMoney(text, window)
     case 'number':
-      return readNumber(text, window)
+      return spec.scale === '0_100' ? readPercentage(text, window) : readNumber(text, window)
     case 'integer':
       return readInteger(text, window)
     case 'boolean':

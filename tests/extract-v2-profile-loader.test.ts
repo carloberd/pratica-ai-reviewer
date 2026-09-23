@@ -390,6 +390,30 @@ describe('errori d’avvio', () => {
     )
   })
 
+  it('i derivati stanno fuori dai due ruoli, e un id sbagliato lì è un errore d’avvio', () => {
+    const fattura = registry.profile('accounting.fattura')!
+    // Nessuna fattura scrive la direzione del documento o il ruolo della controparte: il
+    // motore li calcola, e finché li chiedeva obbligatori ogni fattura andava in revisione.
+    expect(fattura.derived_fields).toEqual(['counterparty.role', 'document.direction'])
+    for (const fieldId of fattura.derived_fields ?? []) {
+      expect(fattura.required_fields).not.toContain(fieldId)
+      expect(fattura.optional_fields).not.toContain(fieldId)
+      expect(registry.field(fieldId)).toMatchObject({ derived: true, evidence_required: false })
+    }
+
+    const dir = registryCopy()
+    editJson<{ document_types: Record<string, { derived_fields: string[] }> }>(
+      dir,
+      'document_fields.json',
+      (data) => {
+        data.document_types['accounting.fattura']!.derived_fields = ['fantasma.campo']
+      }
+    )
+    expect(() => createExtractionRegistry(dir)).toThrow(
+      /riferimenti a campi assenti .*accounting\.fattura\.derived_fields: fantasma\.campo/s
+    )
+  })
+
   it('un file del registry mancante o rotto', () => {
     const missing = registryCopy()
     rmSync(join(missing, 'fields.json'))

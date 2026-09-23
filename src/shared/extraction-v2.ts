@@ -9,6 +9,25 @@ export type ExtractionScalar =
   | 'object'
 
 export type Cardinality = 'one' | 'many'
+
+/**
+ * Una colonna della riga di un campo `object`. Le colonne sono la struttura che la
+ * descrizione del campo elenca — «con data, descrizione, dare e avere di ciascuna» — e
+ * senza di esse una riga non si può convertire in niente. Il tipo è quello dei campi, meno
+ * `object`: una riga dentro una riga non esiste.
+ */
+export interface FieldColumn {
+  id: string
+  label_it: string
+  type: Exclude<ExtractionScalar, 'object'>
+  format?: string | null
+}
+
+/**
+ * La convenzione con cui una percentuale sta scritta. `0_100` vuol dire come il documento
+ * la scrive: 3,5 è il tre e mezzo per cento, non lo 0,035.
+ */
+export type PercentageScale = '0_100'
 export type FieldRole = 'required' | 'optional'
 export type FieldReviewStatus = 'AUTO_ACCEPTED' | 'NEEDS_REVIEW' | 'MISSING' | 'CONFLICT'
 
@@ -27,6 +46,17 @@ export interface FieldOntologyEntry {
   validators: string[]
   description: string
   label_aliases_it: string[]
+  /** Le colonne della riga, per i campi `object`: l'ordine è quello del documento. */
+  columns?: FieldColumn[]
+  /** I valori ammessi, per i campi chiusi: il lettore non ne accetta altri. */
+  enum?: string[]
+  /** La convenzione di scala, per le percentuali. */
+  scale?: PercentageScale
+  /**
+   * Il campo non sta scritto sulla carta: lo calcola il motore dal resto del documento.
+   * Allora non ha una frase da quotare, e `evidence_required` è `false`.
+   */
+  derived?: boolean
 }
 
 export interface ClassExtractionProfile {
@@ -36,6 +66,12 @@ export interface ClassExtractionProfile {
   schema_state: string
   required_fields: string[]
   optional_fields: string[]
+  /**
+   * I campi che il tipo vuole e che nessuno legge sul documento: li calcola il motore. Non
+   * sono un terzo ruolo — il lettore non li cerca — ma un documento non va in revisione
+   * perché mancano, che è quello che succedeva finché stavano fra gli obbligatori.
+   */
+  derived_fields?: string[]
   literal_evidence_required: boolean
   unknown_value_policy: 'LEAVE_EMPTY'
   review_policy: string

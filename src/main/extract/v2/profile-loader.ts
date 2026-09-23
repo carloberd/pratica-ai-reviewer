@@ -54,6 +54,7 @@ const documentTypeSchema = z.looseObject({
   schema_state: z.string(),
   required_fields: stringList,
   optional_fields: stringList,
+  derived_fields: stringList.optional(),
   field_validator_overrides: z.record(z.string(), stringList).optional(),
   field_pii_overrides: z.record(z.string(), piiSchema).optional(),
   field_description_overrides: z.record(z.string(), z.string()).optional()
@@ -89,7 +90,20 @@ const fieldsSchema = z.object({
       evidence_required: z.boolean(),
       validators: stringList,
       description: z.string(),
-      label_aliases_it: stringList
+      label_aliases_it: stringList,
+      columns: z
+        .array(
+          z.object({
+            id: z.string(),
+            label_it: z.string(),
+            type: z.enum(['string', 'identifier', 'date', 'money', 'number', 'integer', 'boolean']),
+            format: z.string().nullable().optional()
+          })
+        )
+        .optional(),
+      enum: stringList.optional(),
+      scale: z.literal('0_100').optional(),
+      derived: z.boolean().optional()
     })
   )
 })
@@ -127,6 +141,10 @@ export function createExtractionRegistry(
       for (const fieldId of entry[key]) {
         if (!catalog.fields[fieldId]) unknownRefs.push(`${documentType}.${key}: ${fieldId}`)
       }
+    }
+    // I derivati non si leggono, ma esistono: un id sbagliato lì è sbagliato lo stesso.
+    for (const fieldId of entry.derived_fields ?? []) {
+      if (!catalog.fields[fieldId]) unknownRefs.push(`${documentType}.derived_fields: ${fieldId}`)
     }
     // Un'eccezione ai validatori, al `pii` o alla descrizione vale per un campo che il tipo
     // chiede: su un campo fuori mappa non cambierebbe niente, e dice che la mappa o
@@ -181,6 +199,7 @@ export function createExtractionRegistry(
       schema_state: entry.schema_state,
       required_fields: entry.required_fields,
       optional_fields: entry.optional_fields,
+      derived_fields: entry.derived_fields,
       literal_evidence_required: true,
       unknown_value_policy: 'LEAVE_EMPTY',
       review_policy: 'REVIEW_LOW_CONFIDENCE_MISSING_REQUIRED_CONFLICTS_ONLY'

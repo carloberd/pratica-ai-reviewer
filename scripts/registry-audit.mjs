@@ -18,6 +18,17 @@
  * non condizioni da superare: non fanno mai fallire il comando, così questo script si può
  * tenere nel gate anche prima che siano a zero.
  *
+ * Le chiavi con cui i due file chiudono quei buchi, e che questo script legge:
+ *
+ *   `columns`        le colonne della riga di un campo `object`, in ordine: senza di esse
+ *                    la riga non ha uno schema e il tipo che la chiede non è convertibile.
+ *   `enum`           i valori ammessi di un campo chiuso, come `money.currency`.
+ *   `scale`          la convenzione di scala di una percentuale: `0_100` è «3,5 = 3,5%».
+ *   `derived`        il campo non sta scritto sulla carta, lo calcola il motore: allora non
+ *                    ha una frase da quotare e `evidence_required` è `false`.
+ *   `derived_fields` i campi derivati che un tipo vuole, accanto a `required_fields` e
+ *                    `optional_fields`: un documento non va in revisione perché mancano.
+ *
  * Il registry si scrive altrove e qui non si tocca niente: entrano due file, esce un
  * rapporto.
  */
@@ -29,8 +40,18 @@ const DEFAULT_DIR = 'resources/registry'
 const FIELDS_FILE = 'fields.json'
 const DOCUMENT_FIELDS_FILE = 'document_fields.json'
 
-/** I ruoli con cui un tipo elenca i campi che vuole. */
+/** I ruoli con cui un tipo elenca i campi che vuole leggere sul documento. */
 const ROLE_KEYS = ['required_fields', 'optional_fields']
+
+/**
+ * I campi che un tipo vuole ma che nessuno legge sul documento: li calcola il motore. Non
+ * sono un terzo ruolo del lettore — stanno fuori dai due — ma il tipo li elenca lo stesso,
+ * perché fanno parte di quello che di quel documento si sa.
+ */
+const DERIVED_KEY = 'derived_fields'
+
+/** Tutte le liste di campi che un tipo può scrivere: i due ruoli più i derivati. */
+const FIELD_LIST_KEYS = [...ROLE_KEYS, DERIVED_KEY]
 
 /** Le eccezioni che un tipo può mettere al posto di quello che dice l'ontologia. */
 const OVERRIDE_KEYS = [
@@ -54,7 +75,9 @@ const VALIDATORS_OF = {
   'identifier|vat_number': ['vat_number_format'],
   'identifier|italian_tax_code': ['italian_tax_code_format'],
   'identifier|vehicle_plate': ['vehicle_plate'],
-  'identifier|vin': ['vin']
+  'identifier|vin': ['vin'],
+  'identifier|cig': ['cig_format'],
+  'identifier|cup': ['cup_format']
 }
 
 /** I validatori che `src/main/extract/v2/validators.ts` sa eseguire. */
@@ -67,7 +90,9 @@ const RUNNABLE = new Set([
   'vat_number_format',
   'italian_tax_code_format',
   'vehicle_plate',
-  'vin'
+  'vin',
+  'cig_format',
+  'cup_format'
 ])
 
 /**
@@ -94,8 +119,20 @@ const READER_FORMATS = new Set([
   'iban',
   'account_number',
   'vehicle_plate',
-  'vin'
+  'vin',
+  'cig',
+  'cup'
 ])
+
+/**
+ * I tipi che una colonna di un campo `object` può avere: lo stesso vocabolario dei campi,
+ * meno `object`. Una riga di riga non esiste: quello che una colonna non sa dire va scritto
+ * come un campo a parte, non annidato.
+ */
+const COLUMN_TYPES = new Set(Object.keys(NUEXTRACT_TYPE_OF))
+
+/** Le convenzioni di scala che una percentuale può dichiarare. */
+const PERCENT_SCALES = new Set(['0_100'])
 
 /**
  * Gli attributi che il Brain MVP ha introdotto per non moltiplicare le classi. Non stanno
@@ -142,14 +179,25 @@ const typeIds = Object.keys(documentTypes)
 const shapeOf = (id) => `${fields[id].type}/${fields[id].format ?? '—'}`
 const expectedValidators = (id) => VALIDATORS_OF[`${fields[id].type}|${fields[id].format ?? '—'}`]
 
-/** I campi che un tipo chiede, senza distinguere il ruolo. */
+/** I campi che un tipo chiede di leggere sul documento, senza distinguere il ruolo. */
 const fieldsOf = (type) => new Set(ROLE_KEYS.flatMap((key) => documentTypes[type]?.[key] ?? []))
 
-/** Quante volte ogni campo è chiesto da un tipo. */
+/** I campi che un tipo vuole e che nessuno legge: li calcola il motore. */
+const derivedOf = (type) => new Set(documentTypes[type]?.[DERIVED_KEY] ?? [])
+
+/** Quante volte ogni campo è chiesto da un tipo, derivati compresi: è la sua casa. */
 const usage = new Map()
 for (const type of typeIds) {
-  for (const field of fieldsOf(type)) usage.set(field, (usage.get(field) ?? 0) + 1)
+  for (const field of new Set([...fieldsOf(type), ...derivedOf(type)])) {
+    usage.set(field, (usage.get(field) ?? 0) + 1)
+  }
 }
+
+/** Le colonne dichiarate da un campo, in ordine. */
+const columnsOf = (id) => fields[id].columns ?? []
+
+/** Un campo `object` senza colonne non ha uno schema di riga, e non si converte. */
+const hasRowSchema = (id) => fields[id].type !== 'object' || columnsOf(id).length > 0
 
 const invariants = []
 const progress = []
@@ -168,7 +216,7 @@ const gap = (title, count, note, sample = []) => {
 
 const orphans = []
 for (const type of typeIds) {
-  for (const key of ROLE_KEYS) {
+  for (const key of FIELD_LIST_KEYS) {
     for (const field of documentTypes[type][key] ?? []) {
       if (!fields[field]) orphans.push({ type, field, key })
     }
@@ -195,7 +243,7 @@ invariant(
 
 const duplicates = []
 for (const type of typeIds) {
-  for (const key of ROLE_KEYS) {
+  for (const key of FIELD_LIST_KEYS) {
     const list = documentTypes[type][key] ?? []
     if (new Set(list).size !== list.length) duplicates.push({ type, key })
   }
@@ -295,17 +343,108 @@ const noRequired = typeIds.filter(
 )
 invariant('tipi senza nemmeno un campo obbligatorio', noRequired, (t) => t)
 
+const columnKeyClashes = []
+const columnTypeStrays = []
+const mutedColumns = []
+const columnsOnScalars = []
+for (const id of fieldIds) {
+  const columns = columnsOf(id)
+  if (columns.length > 0 && fields[id].type !== 'object') columnsOnScalars.push(id)
+  const seen = new Set()
+  for (const column of columns) {
+    if (seen.has(column.id)) columnKeyClashes.push({ id, column: column.id })
+    seen.add(column.id)
+    if (!COLUMN_TYPES.has(column.type)) columnTypeStrays.push({ id, column })
+    if (!column.label_it) mutedColumns.push({ id, column: column.id })
+  }
+}
+invariant(
+  'colonne con lo stesso id dentro lo stesso campo',
+  columnKeyClashes,
+  (o) => `${o.id}: «${o.column}»`
+)
+invariant(
+  'colonne con un tipo fuori dal vocabolario dell’ontologia',
+  columnTypeStrays,
+  (o) => `${o.id}.${o.column.id} — «${o.column.type}»`
+)
+invariant('colonne senza etichetta', mutedColumns, (o) => `${o.id}.${o.column}`)
+invariant(
+  'colonne su un campo che non è «object»',
+  columnsOnScalars,
+  (id) => `${id} (${shapeOf(id)})`
+)
+
+const brokenEnums = []
+for (const id of fieldIds) {
+  const values = fields[id].enum
+  if (!values) continue
+  const seen = new Set()
+  for (const value of values) {
+    if (typeof value !== 'string' || value.trim() === '') brokenEnums.push({ id, value })
+    else if (seen.has(value)) brokenEnums.push({ id, value })
+    seen.add(value)
+  }
+}
+invariant('valori di enum vuoti o ripetuti', brokenEnums, (o) => `${o.id} — «${o.value}»`)
+
+// Un campo che il motore calcola non ha una frase da quotare: chiedergliene una lo
+// manderebbe in revisione per un'evidenza che il documento non porta.
+const derivedWantingEvidence = fieldIds.filter(
+  (id) => fields[id].derived === true && fields[id].evidence_required !== false
+)
+invariant(
+  'campi derivati che chiedono comunque una citazione',
+  derivedWantingEvidence,
+  (id) => `${id} — evidence_required: ${fields[id].evidence_required}`
+)
+
+const derivedAndRead = []
+for (const type of typeIds) {
+  const read = fieldsOf(type)
+  for (const field of derivedOf(type)) {
+    if (read.has(field)) derivedAndRead.push({ type, field })
+  }
+}
+invariant(
+  'campi che un tipo elenca fra i derivati e insieme fra quelli da leggere',
+  derivedAndRead,
+  (o) => `${o.type}: ${o.field}`
+)
+
+const undeclaredDerived = []
+for (const type of typeIds) {
+  for (const field of derivedOf(type)) {
+    if (fields[field] && fields[field].derived !== true) undeclaredDerived.push({ type, field })
+  }
+}
+invariant(
+  'campi derivati da un tipo ma non dichiarati «derived» dall’ontologia',
+  undeclaredDerived,
+  (o) => `${o.type}: ${o.field}`
+)
+
+const badScales = fieldIds.filter(
+  (id) => fields[id].scale !== undefined && !PERCENT_SCALES.has(fields[id].scale)
+)
+invariant(
+  'convenzioni di scala che nessuno sa leggere',
+  badScales,
+  (id) => `${id} — «${fields[id].scale}»`
+)
+
 // ─── Avanzamento ─────────────────────────────────────────────────────────────
 
 const objectFields = fieldIds.filter((id) => fields[id].type === 'object')
+const schemalessObjects = objectFields.filter((id) => !hasRowSchema(id))
 const blockedTypes = typeIds.filter((type) =>
-  [...fieldsOf(type)].some((f) => fields[f]?.type === 'object')
+  [...fieldsOf(type)].some((f) => fields[f] && !hasRowSchema(f))
 )
 gap(
   'campi «object» senza schema di riga',
-  objectFields.length,
+  schemalessObjects.length,
   `bloccano ${blockedTypes.length} tipi su ${typeIds.length}: senza le colonne non esiste una conversione`,
-  objectFields
+  schemalessObjects
     .map((id) => `${id} (in ${usage.get(id) ?? 0} tipi)`)
     .sort((a, b) => Number(b.match(/\d+/)?.[0] ?? 0) - Number(a.match(/\d+/)?.[0] ?? 0))
 )
@@ -321,10 +460,15 @@ gap(
     .map((entry) => `${entry.id} — «${fields[entry.id].label_it}» (in ${entry.uses} tipi)`)
 )
 
+// Un attributo che il tipo elenca fra i derivati è già a posto: nessuno lo cerca sulla
+// carta, e la sua assenza non manda in revisione. Contano solo quelli rimasti obbligatori.
 const attributesRequired = []
 for (const type of typeIds) {
+  const derived = derivedOf(type)
   for (const field of documentTypes[type].required_fields ?? []) {
-    if (ATTRIBUTE_FIELDS.includes(field)) attributesRequired.push(`${type}: ${field}`)
+    if (ATTRIBUTE_FIELDS.includes(field) && !derived.has(field)) {
+      attributesRequired.push(`${type}: ${field}`)
+    }
   }
 }
 gap(
@@ -345,7 +489,9 @@ gap(
   unknownFormats.map((id) => `${id} — «${fields[id].format}»`)
 )
 
-const percentages = fieldIds.filter((id) => fields[id].format === 'percentage')
+const percentages = fieldIds.filter(
+  (id) => fields[id].format === 'percentage' && fields[id].scale === undefined
+)
 gap(
   'percentuali senza convenzione di scala',
   percentages.length,
@@ -353,7 +499,9 @@ gap(
   percentages
 )
 
-const openEnums = fieldIds.filter((id) => fields[id].format === 'currency')
+const openEnums = fieldIds.filter(
+  (id) => fields[id].format === 'currency' && (fields[id].enum ?? []).length === 0
+)
 gap(
   'campi da enum lasciati stringa libera',
   openEnums.length,
@@ -382,13 +530,15 @@ gap(
   unused
 )
 
-const constantFlag = fieldIds.every((id) => fields[id].evidence_required === true)
+const flagValues = new Set(fieldIds.map((id) => fields[id].evidence_required))
+const constantFlag = flagValues.size <= 1
 gap(
   'campi con «evidence_required» sempre uguale',
   constantFlag ? fieldIds.length : 0,
   constantFlag
-    ? 'vale true su tutti: il campo non distingue niente'
-    : 'il campo distingue qualcosa',
+    ? `vale ${[...flagValues][0]} su tutti: il campo non distingue niente`
+    : `${fieldIds.filter((id) => fields[id].evidence_required === false).length} campi ` +
+        'non chiedono una citazione: sono quelli che il motore calcola',
   []
 )
 
@@ -409,6 +559,33 @@ for (const id of fieldIds) {
   const t = fields[id].type
   byOntologyType[t] = (byOntologyType[t] ?? 0) + 1
 }
+
+/**
+ * La foglia del template NuExtract di una colonna o di un campo scalare. Un campo con
+ * `enum` non è una stringa libera: il template porta i valori ammessi, e il modello sceglie
+ * fra quelli invece di ricopiare come il documento scrive la valuta.
+ */
+const leafOf = (spec) => {
+  if ((spec.enum ?? []).length > 0) return `[${spec.enum.map((v) => `"${v}"`).join(' | ')}]`
+  return NUEXTRACT_TYPE_OF[spec.type] ?? 'da definire'
+}
+
+/**
+ * Il template di un campo. Un `object` con le colonne diventa l'oggetto della riga, che la
+ * cardinalità `many` ripete: è la conversione che senza `columns` non si poteva scrivere.
+ */
+const templateOf = (id) => {
+  const spec = fields[id]
+  if (spec.type !== 'object') return leafOf(spec)
+  const columns = columnsOf(id)
+  if (columns.length === 0) return 'da definire'
+  return `[{ ${columns.map((c) => `"${c.id}": ${leafOf(c)}`).join(', ')} }]`
+}
+
+const rowTemplates = objectFields
+  .filter((id) => hasRowSchema(id))
+  .map((id) => ({ id, uses: usage.get(id) ?? 0, template: templateOf(id) }))
+  .sort((a, b) => b.uses - a.uses)
 
 const readyTypes = typeIds.filter((type) => !blockedTypes.includes(type))
 const states = {}
@@ -438,79 +615,107 @@ const report = {
   conversion: {
     readyTypes: readyTypes.length,
     blockedTypes: blockedTypes.length,
+    rowsWithSchema: rowTemplates.length,
+    rowsWithoutSchema: schemalessObjects.length,
+    enums: fieldIds.filter((id) => (fields[id].enum ?? []).length > 0).length,
     byOntologyType: Object.fromEntries(
       Object.entries(byOntologyType)
         .sort((a, b) => b[1] - a[1])
-        .map(([t, n]) => [t, { fields: n, nuextract: NUEXTRACT_TYPE_OF[t] ?? 'da definire' }])
-    )
+        .map(([t, n]) => [
+          t,
+          {
+            fields: n,
+            nuextract:
+              t === 'object'
+                ? `[{ … }] dalle «columns» (${rowTemplates.length} su ${n} le hanno)`
+                : (NUEXTRACT_TYPE_OF[t] ?? 'da definire')
+          }
+        ])
+    ),
+    rows: rowTemplates
   }
 }
 
 const broken = invariants.reduce((total, check) => total + check.count, 0)
 
+// `process.exitCode` e non `process.exit()`: su una pipe l'uscita immediata taglia quello
+// che è ancora nel buffer, e il rapporto JSON arriverebbe a metà a chi lo legge.
 if (asJson) {
   console.log(JSON.stringify(report, null, 2))
-  process.exit(broken > 0 ? 1 : 0)
-}
+  process.exitCode = broken > 0 ? 1 : 0
+} else {
+  const pad = (n) => String(n).padStart(5)
+  const rule = (char = '─') => console.log(char.repeat(78))
 
-const pad = (n) => String(n).padStart(5)
-const rule = (char = '─') => console.log(char.repeat(78))
+  console.log(`\nregistry ${dir} — campi v${report.fieldsVersion}, mappa v${report.mapVersion}`)
+  console.log(
+    `${report.counts.fields} campi, ${report.counts.types} tipi di documento, ` +
+      `${report.counts.required} richieste obbligatorie e ${report.counts.optional} opzionali`
+  )
 
-console.log(`\nregistry ${dir} — campi v${report.fieldsVersion}, mappa v${report.mapVersion}`)
-console.log(
-  `${report.counts.fields} campi, ${report.counts.types} tipi di documento, ` +
-    `${report.counts.required} richieste obbligatorie e ${report.counts.optional} opzionali`
-)
-
-rule()
-console.log('INVARIANTI — devono restare a zero\n')
-for (const check of invariants) {
-  const mark = check.count === 0 ? 'ok  ' : 'ROTTO'
-  console.log(`  ${mark} ${pad(check.count)}  ${check.title}`)
-  for (const line of check.sample) console.log(`               ⤷ ${line}`)
-  if (check.count > check.sample.length) {
-    console.log(`               ⤷ …e altri ${check.count - check.sample.length}`)
+  rule()
+  console.log('INVARIANTI — devono restare a zero\n')
+  for (const check of invariants) {
+    const mark = check.count === 0 ? 'ok  ' : 'ROTTO'
+    console.log(`  ${mark} ${pad(check.count)}  ${check.title}`)
+    for (const line of check.sample) console.log(`               ⤷ ${line}`)
+    if (check.count > check.sample.length) {
+      console.log(`               ⤷ …e altri ${check.count - check.sample.length}`)
+    }
   }
-}
 
-rule()
-console.log('AVANZAMENTO — numeri da far scendere\n')
-for (const item of progress) {
-  console.log(`  ${pad(item.count)}  ${item.title}`)
-  console.log(`         ${item.note}`)
-  for (const line of item.sample) console.log(`         ⤷ ${line}`)
-  if (item.count > item.sample.length && item.sample.length > 0) {
-    console.log(`         ⤷ …e altri ${item.count - item.sample.length}`)
+  rule()
+  console.log('AVANZAMENTO — numeri da far scendere\n')
+  for (const item of progress) {
+    console.log(`  ${pad(item.count)}  ${item.title}`)
+    console.log(`         ${item.note}`)
+    for (const line of item.sample) console.log(`         ⤷ ${line}`)
+    if (item.count > item.sample.length && item.sample.length > 0) {
+      console.log(`         ⤷ …e altri ${item.count - item.sample.length}`)
+    }
+    console.log('')
+  }
+
+  rule()
+  console.log('QUANTO PESA LA MAPPA\n')
+  console.log(`  ${report.weight.requiredPerType} campi obbligatori per tipo, in media`)
+  console.log(`  ${report.weight.optionalPerType} opzionali per tipo, in media`)
+  console.log('  I tipi che ne chiedono di più:')
+  for (const entry of report.weight.heaviest) {
+    console.log(`         ⤷ ${pad(entry.required)}  ${entry.type}`)
   }
   console.log('')
-}
+  console.log('  Stato delle mappe:')
+  for (const [state, count] of Object.entries(report.states).sort((a, b) => b[1] - a[1])) {
+    console.log(`         ⤷ ${pad(count)}  ${state}`)
+  }
 
-rule()
-console.log('QUANTO PESA LA MAPPA\n')
-console.log(`  ${report.weight.requiredPerType} campi obbligatori per tipo, in media`)
-console.log(`  ${report.weight.optionalPerType} opzionali per tipo, in media`)
-console.log('  I tipi che ne chiedono di più:')
-for (const entry of report.weight.heaviest) {
-  console.log(`         ⤷ ${pad(entry.required)}  ${entry.type}`)
-}
-console.log('')
-console.log('  Stato delle mappe:')
-for (const [state, count] of Object.entries(report.states).sort((a, b) => b[1] - a[1])) {
-  console.log(`         ⤷ ${pad(count)}  ${state}`)
-}
+  rule()
+  console.log('CONVERSIONE A TEMPLATE NUEXTRACT\n')
+  for (const [type, info] of Object.entries(report.conversion.byOntologyType)) {
+    console.log(`  ${type.padEnd(11)} ${pad(info.fields)} campi  →  ${info.nuextract}`)
+  }
+  console.log('')
+  console.log('  Le righe, come il template le chiede:')
+  const shown = report.conversion.rows.slice(0, 8)
+  for (const row of shown) {
+    console.log(`         ⤷ ${row.id}`)
+    console.log(`           ${row.template}`)
+  }
+  if (report.conversion.rows.length > shown.length) {
+    console.log(`         ⤷ …e altre ${report.conversion.rows.length - shown.length}`)
+  }
+  console.log('')
+  console.log(`  ${pad(report.conversion.readyTypes)} tipi convertibili senza altre decisioni`)
+  console.log(
+    `  ${pad(report.conversion.blockedTypes)} tipi fermi su almeno un campo «object» senza colonne`
+  )
+  rule()
 
-rule()
-console.log('CONVERSIONE A TEMPLATE NUEXTRACT\n')
-for (const [type, info] of Object.entries(report.conversion.byOntologyType)) {
-  console.log(`  ${type.padEnd(11)} ${pad(info.fields)} campi  →  ${info.nuextract}`)
+  if (broken > 0) {
+    console.log(`\n${broken} violazioni di invariante: il registry è incoerente con sé stesso.\n`)
+    process.exitCode = 1
+  } else {
+    console.log('\nInvarianti tutti rispettati.\n')
+  }
 }
-console.log('')
-console.log(`  ${pad(report.conversion.readyTypes)} tipi convertibili senza altre decisioni`)
-console.log(`  ${pad(report.conversion.blockedTypes)} tipi fermi su almeno un campo «object»`)
-rule()
-
-if (broken > 0) {
-  console.log(`\n${broken} violazioni di invariante: il registry è incoerente con sé stesso.\n`)
-  process.exit(1)
-}
-console.log('\nInvarianti tutti rispettati.\n')

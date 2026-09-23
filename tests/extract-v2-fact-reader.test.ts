@@ -12,11 +12,13 @@ import {
   fiscalTwinOf,
   foldWithOrigin,
   parseDecimal,
+  readCurrency,
   readDate,
   readIdentifier,
   readInteger,
   readMoney,
   readNumber,
+  readPercentage,
   readsOfLabel
 } from '../src/main/extract/v2/fact-reader'
 import type { ExtractionRegistry } from '../src/main/extract/v2/profile-loader'
@@ -29,6 +31,8 @@ interface FieldSpec {
   many?: boolean
   validators?: string[]
   legacy?: string[]
+  enum?: string[]
+  scale?: '0_100'
 }
 
 /**
@@ -64,7 +68,9 @@ function registryOf(
     evidence_required: true,
     validators: spec.validators ?? [],
     description: id,
-    label_aliases_it: []
+    label_aliases_it: [],
+    enum: spec.enum,
+    scale: spec.scale
   })
   return {
     profile: (type) => (type === 'test.tipo' ? profile : null),
@@ -679,6 +685,23 @@ describe('partita IVA e codice fiscale in campi distinti', () => {
     expect(readIdentifier(' 12/03/2010', 'rea_number')).toBeNull()
     expect(readIdentifier(' 12.03.2010', 'rea_number')).toBeNull()
     expect(readIdentifier(' iscritta dal 2010', 'rea_number')).toBeNull()
+  })
+
+  it('CIG e CUP si leggono dalla loro lunghezza, non per token', () => {
+    expect(readIdentifier(': Z1A2B3C4D5', 'cig')).toBe('Z1A2B3C4D5')
+    expect(readIdentifier(' z1a2b3c4d5', 'cig')).toBe('Z1A2B3C4D5')
+    expect(readIdentifier(': B71B21000320001', 'cup')).toBe('B71B21000320001')
+    // Il CIG di dieci caratteri e il CUP di quindici sulla stessa riga: ognuno prende il
+    // suo, mentre la lettura per token darebbe il primo dei due a tutti e due.
+    const riga = ': Z1A2B3C4D5 CUP B71B21000320001'
+    expect(readIdentifier(riga, 'cig')).toBe('Z1A2B3C4D5')
+    expect(readIdentifier(riga, 'cup')).toBe('B71B21000320001')
+    // Un codice della lunghezza sbagliata non è il valore di quel campo.
+    expect(readIdentifier(': Z1A2B3C4D', 'cig')).toBeNull()
+    expect(readIdentifier(': B71B21000320001', 'cig')).toBeNull()
+    expect(readIdentifier(': Z1A2B3C4D5', 'cup')).toBeNull()
+    // «comunicare» ha dieci lettere: senza una cifra non è un codice.
+    expect(readIdentifier(' da comunicare', 'cig')).toBeNull()
   })
 })
 
@@ -1560,5 +1583,70 @@ describe('la scadenza della formazione non si deduce più da sola', () => {
       reviewStatus: 'AUTO_ACCEPTED'
     })
     expect(fact('hse.training_expiry').computed).toBeUndefined()
+  })
+})
+
+describe('i campi chiusi e le percentuali, nella convenzione del registry', () => {
+  it('la valuta si normalizza prima del confronto con l’enum', () => {
+    const codes = ['EUR', 'USD', 'GBP', 'CHF']
+    expect(readCurrency(': €', codes)).toBe('EUR')
+    expect(readCurrency(' euro', codes)).toBe('EUR')
+    expect(readCurrency(': EURO', codes)).toBe('EUR')
+    expect(readCurrency(' Eur', codes)).toBe('EUR')
+    expect(readCurrency(': $', codes)).toBe('USD')
+    expect(readCurrency(' USD', codes)).toBe('USD')
+    expect(readCurrency(': franchi svizzeri', codes)).toBe('CHF')
+    // Un codice che l'enum non ha non è il valore di questo campo: meglio vuoto che una
+    // stringa libera che il template non sa dove mettere.
+    expect(readCurrency(': DKK', codes)).toBeNull()
+    expect(readCurrency(': da definire', codes)).toBeNull()
+    expect(readCurrency(': ', codes)).toBeNull()
+  })
+
+  it('la valuta letta dal documento arriva già come codice ISO', () => {
+    const read = (line: string) =>
+      extractFactsV2({
+        documentType: 'test.tipo',
+        pages: [page([line])],
+        registry: registryOf({
+          'money.currency': {
+            type: 'string',
+            format: 'currency',
+            labels: ['Valuta'],
+            enum: ['EUR', 'USD']
+          }
+        })
+      }).facts[0]?.value
+
+    expect(read('Valuta: €')).toBe('EUR')
+    expect(read('Valuta: euro')).toBe('EUR')
+    expect(read('Valuta: EUR')).toBe('EUR')
+  })
+
+  it('una percentuale sta fra 0 e 100, come il documento la scrive', () => {
+    expect(readPercentage(': 22', 40)).toBe('22')
+    expect(readPercentage(': 3,5%', 40)).toBe('3.5')
+    // 0,22 è lo 0,22 per cento: la convenzione non lo converte in 22.
+    expect(readPercentage(': 0,22', 40)).toBe('0.22')
+    expect(readPercentage(': 0', 40)).toBe('0')
+    expect(readPercentage(': 100', 40)).toBe('100')
+    // Un importo finito accanto a un'aliquota non è un'aliquota.
+    expect(readPercentage(': 1.250,00', 40)).toBeNull()
+    expect(readPercentage(': -5', 40)).toBeNull()
+    expect(readNumber(': 1.250,00', 40)).toBe('1250')
+  })
+
+  it('la convenzione vale dove il campo la dichiara, non su ogni numero', () => {
+    const read = (scale?: '0_100') =>
+      extractFactsV2({
+        documentType: 'test.tipo',
+        pages: [page(['Aliquota: 1.250,00'])],
+        registry: registryOf({
+          'money.rate': { type: 'number', format: 'percentage', labels: ['Aliquota'], scale }
+        })
+      }).facts[0]?.value
+
+    expect(read('0_100')).toBeNull()
+    expect(read()).toBe('1250')
   })
 })
