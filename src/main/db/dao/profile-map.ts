@@ -2,14 +2,15 @@ import { randomUUID } from 'node:crypto'
 import type { Cardinality } from '@shared/extraction-v2'
 import type { ProfileEditReason } from '@shared/profile-edit'
 import type { ProfileAction, ProfileActionKind } from '@shared/profile-history'
-import type {
-  CardinalityByType,
-  FieldState,
-  MapValue,
-  OverridesByType,
-  ProfileOverlay,
-  TypeCardinality,
-  TypeOverrides
+import {
+  type CardinalityByType,
+  type FieldState,
+  fieldStateOrNull,
+  type MapValue,
+  type OverridesByType,
+  type ProfileOverlay,
+  type TypeCardinality,
+  type TypeOverrides
 } from '@shared/profile-overlay'
 import type { Db } from '../index'
 
@@ -61,6 +62,18 @@ interface ActionRow {
   reverted_at: string | null
 }
 
+/**
+ * Un valore della cronologia come lo intende il codice di oggi: una cardinalità resta
+ * quella, un ruolo passa da `fieldStateOrNull`. `previousOverride` è quello che un
+ * annullamento rimette su `profile_overrides`, quindi un ruolo di quattro versioni fa
+ * deve arrivarci tradotto, o la riga che riscrive non sarebbe accettata. Il racconto
+ * dell'azione resta in `detail`, com'era scritto allora.
+ */
+function toMapValue(value: string | null): MapValue | null {
+  if (value === 'one' || value === 'many') return value
+  return fieldStateOrNull(value)
+}
+
 function toAction(row: ActionRow): ProfileAction {
   return {
     id: row.id,
@@ -69,9 +82,9 @@ function toAction(row: ActionRow): ProfileAction {
     documentType: row.document_type,
     fieldId: row.field_id,
     label: row.label,
-    before: row.before_state as MapValue | null,
-    after: row.after_state as MapValue | null,
-    previousOverride: row.previous_override as MapValue | null,
+    before: toMapValue(row.before_state),
+    after: toMapValue(row.after_state),
+    previousOverride: toMapValue(row.previous_override),
     detail: row.detail,
     reason: row.numbers_json ? (JSON.parse(row.numbers_json) as ProfileEditReason) : null,
     revertsId: row.reverts_id,
@@ -141,8 +154,14 @@ export function createProfileMapDao(db: Db) {
 
     const fields: OverridesByType = {}
     for (const row of selectOverrides.all() as OverrideRow[]) {
+      // Una riga scritta quando i ruoli erano quattro va letta come si legge oggi. La
+      // 0021 le ha già convertite: qui si legge anche un database che quella migrazione
+      // non ha ancora visto, e una riga illeggibile vale «nessuna decisione» invece di
+      // far cadere il motore e ogni export.
+      const state = fieldStateOrNull(row.state)
+      if (!state) continue
       const forType = fields[row.document_type] ?? {}
-      forType[row.field_id] = row.state as FieldState
+      forType[row.field_id] = state
       fields[row.document_type] = forType
     }
 

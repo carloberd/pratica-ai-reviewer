@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { toFtsQuery } from '../src/main/db/dao/search'
-import { createTestRepository, seedDocument } from './helpers/db'
+import { createRepository } from '../src/main/db/repository'
+import { createTestRepository, databaseAt, seedDocument } from './helpers/db'
 
 let repo: ReturnType<typeof createTestRepository> | null = null
 
@@ -1012,5 +1013,36 @@ describe('l’azienda e la direzione', () => {
 
     r.documents.setDirectionChoice(id, null)
     expect(r.getReviewDocument(id)?.directionChoice).toBeNull()
+  })
+})
+
+/**
+ * Un database fermo a prima della 0021 — l'app appena aggiornata, la migrazione non
+ * ancora girata, o un file ripreso da un backup — ha ancora i ruoli di quando erano
+ * quattro. Il DAO li legge come li intende il codice di oggi: è l'ultima riga di difesa
+ * prima che quello stato arrivi all'overlay, che indicizza per ruolo.
+ */
+describe('profile map dao: le decisioni scritte quando i ruoli erano quattro', () => {
+  it('le legge sui due ruoli di adesso, senza cadere', () => {
+    const db = databaseAt('0020')
+    for (const [fieldId, state] of [
+      ['document.number', 'required'],
+      ['document.issue_date', 'core'],
+      ['payment.iban', 'conditional'],
+      ['document.protocol', 'excluded']
+    ]) {
+      db.prepare(
+        'INSERT INTO profile_overrides (document_type, field_id, state, updated_at) VALUES (?, ?, ?, ?)'
+      ).run('accounting.fattura', fieldId, state, '2026-09-18T10:00:00.000Z')
+    }
+    const r = createRepository(db, { requiredFields: () => [], typeLabel: () => null })
+
+    expect(r.profileMap.overlay().fields['accounting.fattura']).toEqual({
+      'document.number': 'required',
+      'document.issue_date': 'optional',
+      'payment.iban': 'optional',
+      'document.protocol': 'excluded'
+    })
+    db.close()
   })
 })

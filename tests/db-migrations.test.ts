@@ -168,7 +168,8 @@ describe('migrazioni', () => {
       '0017',
       '0018',
       '0019',
-      '0020'
+      '0020',
+      '0021'
     ])
 
     expect(
@@ -206,7 +207,8 @@ describe('migrazioni', () => {
       '0017',
       '0018',
       '0019',
-      '0020'
+      '0020',
+      '0021'
     ])
 
     // NULL = da calcolare al primo export, non «documento senza impronta».
@@ -236,7 +238,8 @@ describe('migrazioni', () => {
       '0017',
       '0018',
       '0019',
-      '0020'
+      '0020',
+      '0021'
     ])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_overrides').get()).toEqual({ n: 0 })
@@ -273,7 +276,8 @@ describe('migrazioni', () => {
       '0017',
       '0018',
       '0019',
-      '0020'
+      '0020',
+      '0021'
     ])
 
     expect(db.prepare('SELECT COUNT(*) AS n FROM profile_cardinality_overrides').get()).toEqual({
@@ -317,7 +321,8 @@ describe('migrazioni', () => {
       '0017',
       '0018',
       '0019',
-      '0020'
+      '0020',
+      '0021'
     ])
 
     expect(db.prepare('SELECT origin, method, line_start, char_start FROM evidence').get()).toEqual(
@@ -355,7 +360,8 @@ describe('migrazioni', () => {
       '0017',
       '0018',
       '0019',
-      '0020'
+      '0020',
+      '0021'
     ])
 
     expect(db.prepare('SELECT id, mode FROM learning_state').all()).toEqual([
@@ -392,7 +398,8 @@ describe('migrazioni', () => {
       '0017',
       '0018',
       '0019',
-      '0020'
+      '0020',
+      '0021'
     ])
     const columns = (table: string) =>
       (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map(
@@ -439,7 +446,17 @@ describe('migrazioni', () => {
     rule('template-attiva', 'TEMPLATE', 'ACTIVE', 'aabbccdd11223344')
     rule('classe', 'CLASS', 'CANDIDATE', null)
 
-    expect(migrate(db)).toEqual(['0013', '0014', '0015', '0016', '0017', '0018', '0019', '0020'])
+    expect(migrate(db)).toEqual([
+      '0013',
+      '0014',
+      '0015',
+      '0016',
+      '0017',
+      '0018',
+      '0019',
+      '0020',
+      '0021'
+    ])
 
     // Le impronte del vecchio algoritmo spariscono: l'elaborazione e l'export le rifanno.
     expect(db.prepare('SELECT template_fingerprint FROM documents').get()).toEqual({
@@ -484,7 +501,7 @@ describe('migrazioni', () => {
       "INSERT INTO learning_events (id, at, actor, document_id, kind, outcome, learner_version) VALUES ('e', '2026-09-15', 'chi@esempio.it', 'd', 'FIELD_VALUE', 'FILLED', 'v')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0014', '0015', '0016', '0017', '0018', '0019', '0020'])
+    expect(migrate(db)).toEqual(['0014', '0015', '0016', '0017', '0018', '0019', '0020', '0021'])
 
     // Gli eventi di prima sono stati registrati sul momento: non hanno una data di ripasso.
     expect(db.prepare('SELECT at, replayed_at FROM learning_events').get()).toEqual({
@@ -503,7 +520,7 @@ describe('migrazioni', () => {
       "INSERT INTO evidence (id, document_id, page, text, confidence, origin, method) VALUES ('e', 'd', 1, '29 O7 2026', 1, 'REVIEWER', 'AREA_OCR')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0015', '0016', '0017', '0018', '0019', '0020'])
+    expect(migrate(db)).toEqual(['0015', '0016', '0017', '0018', '0019', '0020', '0021'])
 
     // Una selezione registrata prima di questa versione era per forza il valore salvato:
     // il testo non era stato sistemato, o la selezione non sarebbe qui.
@@ -524,7 +541,7 @@ describe('migrazioni', () => {
        VALUES ('e', '2026-01-01', 'chi', 'd', 'DOCUMENT_TYPE', 'CONFIRMED', 'local-learner/0.1.0', 'abc123')`
     ).run()
 
-    expect(migrate(db)).toEqual(['0016', '0017', '0018', '0019', '0020'])
+    expect(migrate(db)).toEqual(['0016', '0017', '0018', '0019', '0020', '0021'])
 
     // L'impronta esatta non si tocca: le regole scritte prima continuano a valere per
     // confronto esatto, e la firma manca semplicemente su quello che c'era già.
@@ -553,7 +570,7 @@ describe('migrazioni', () => {
       "INSERT INTO evidence (id, document_id, page, text, confidence, origin, method) VALUES ('revisore', 'd', 1, '12/09/2026', 1, 'REVIEWER', 'TEXT_SELECTION')"
     ).run()
 
-    expect(migrate(db)).toEqual(['0017', '0018', '0019', '0020'])
+    expect(migrate(db)).toEqual(['0017', '0018', '0019', '0020', '0021'])
 
     // Come sia stato letto un valore prima di qui non è ricostruibile: la colonna resta
     // vuota, e vuota vuol dire «non registrato», non «letto in nessun modo».
@@ -601,6 +618,51 @@ describe('migrazioni', () => {
     db.close()
   })
 
+  it('la 0021 porta sui due ruoli le decisioni prese quando erano quattro', () => {
+    const db = databaseAt('0020')
+    // Come le scriveva l'app prima del Brain MVP: quattro ruoli, e il CHECK della 0008
+    // li accettava tutti.
+    for (const [fieldId, state] of [
+      ['document.number', 'required'],
+      ['document.issue_date', 'core'],
+      ['supplier.iban', 'conditional'],
+      ['document.protocol', 'excluded']
+    ]) {
+      db.prepare(
+        'INSERT INTO profile_overrides (document_type, field_id, state, updated_at) VALUES (?, ?, ?, ?)'
+      ).run('accounting.fattura', fieldId, state, '2026-09-18T10:00:00.000Z')
+    }
+
+    expect(migrate(db)).toEqual(['0021'])
+
+    // «core» e «conditional» diventano «optional»: è quello che facevano — solo
+    // «required» mandava un documento in revisione — e la decisione del revisore resta.
+    expect(
+      db.prepare('SELECT field_id, state FROM profile_overrides ORDER BY field_id').all()
+    ).toEqual([
+      { field_id: 'document.issue_date', state: 'optional' },
+      { field_id: 'document.number', state: 'required' },
+      { field_id: 'document.protocol', state: 'excluded' },
+      { field_id: 'supplier.iban', state: 'optional' }
+    ])
+    // La data della decisione non si tocca: quando è stata presa resta quello.
+    expect(
+      db
+        .prepare("SELECT updated_at FROM profile_overrides WHERE field_id = 'document.issue_date'")
+        .get()
+    ).toEqual({ updated_at: '2026-09-18T10:00:00.000Z' })
+
+    // E il CHECK adesso dice la verità: un ruolo che il codice non conosce non entra più.
+    expect(() =>
+      db
+        .prepare(
+          'INSERT INTO profile_overrides (document_type, field_id, state, updated_at) VALUES (?, ?, ?, ?)'
+        )
+        .run('accounting.fattura', 'document.total', 'core', '2026-09-25T10:00:00.000Z')
+    ).toThrow()
+    db.close()
+  })
+
   it('la 0007 aggiunge la nota del revisore, vuota sui documenti già chiusi', () => {
     const db = databaseAt('0006')
     db.prepare(
@@ -621,7 +683,8 @@ describe('migrazioni', () => {
       '0017',
       '0018',
       '0019',
-      '0020'
+      '0020',
+      '0021'
     ])
 
     // Chi ha chiuso un documento prima di questa versione non ha una nota da recuperare:
@@ -697,7 +760,8 @@ describe('migrazione 0004 su un database esistente', () => {
       '0017',
       '0018',
       '0019',
-      '0020'
+      '0020',
+      '0021'
     ])
 
     const rows = db

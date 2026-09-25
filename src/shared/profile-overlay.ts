@@ -17,6 +17,30 @@ import type { Cardinality, FieldRole } from './extraction-v2'
 export type FieldState = FieldRole | 'excluded'
 
 /**
+ * Gli stati che il database può contenere ma il codice non conosce più.
+ *
+ * Fino al Brain MVP i ruoli erano quattro: `required`, `core`, `optional`, `conditional`.
+ * Le decisioni scritte allora sono ancora nel database, e vanno lette adesso che i ruoli
+ * sono due. `core` e `conditional` diventano `optional` perché è quello che **facevano**:
+ * solo `required` mandava un documento in revisione per un campo senza valore, gli altri
+ * tre no. Un campo che non bloccava prima non deve cominciare a bloccare adesso.
+ */
+const LEGACY_STATES: Record<string, FieldState> = { core: 'optional', conditional: 'optional' }
+
+/**
+ * Lo stato come lo intende il codice di oggi, o `null` se quella riga non si sa leggere.
+ *
+ * Passa di qui tutto quello che arriva dal database: uno stato che nessuna versione ha
+ * mai scritto non deve far cadere né il motore né un export, e nemmeno diventare di
+ * nascosto un ruolo che il revisore non ha scelto. Vale «non c'è decisione»: il campo
+ * segue il registry, come prima che qualcuno lo toccasse.
+ */
+export function fieldStateOrNull(state: string | null | undefined): FieldState | null {
+  if (state === 'required' || state === 'optional' || state === 'excluded') return state
+  return state ? (LEGACY_STATES[state] ?? null) : null
+}
+
+/**
  * Le due liste di campi: il profilo del motore le ha, e le ha anche il profilo grezzo del
  * file JSON con tutte le sue chiavi in più. L'overlay lavora su entrambi.
  */
@@ -97,8 +121,20 @@ export function applyOverlay<T extends ProfileRoleLists>(
 ): T {
   if (!overrides || Object.keys(overrides).length === 0) return profile
 
-  const added: Record<FieldRole, string[]> = { required: [], optional: [] }
+  // Prima si legge cosa il revisore ha deciso davvero: una decisione scritta quando i
+  // ruoli erano quattro si traduce, una che nessuna versione ha mai scritto esce di mezzo
+  // e il campo torna a seguire il registry. Toglierlo dalle liste senza rimetterlo da
+  // nessuna parte lo farebbe sparire come se fosse stato escluso, che è una decisione
+  // che nessuno ha preso.
+  const decided = new Map<string, FieldState>()
   for (const [fieldId, state] of Object.entries(overrides)) {
+    const value = fieldStateOrNull(state)
+    if (value) decided.set(fieldId, value)
+  }
+  if (decided.size === 0) return profile
+
+  const added: Record<FieldRole, string[]> = { required: [], optional: [] }
+  for (const [fieldId, state] of decided) {
     if (state !== 'excluded') added[state].push(fieldId)
   }
 
@@ -107,7 +143,7 @@ export function applyOverlay<T extends ProfileRoleLists>(
     const key = ROLE_KEYS[role]
     // Un campo con una decisione sopra esce da tutte le liste del registry: se il
     // revisore gli ha dato un ruolo rientra da `added`, se l'ha escluso resta fuori.
-    const kept = profile[key].filter((fieldId) => !(fieldId in overrides))
+    const kept = profile[key].filter((fieldId) => !decided.has(fieldId))
     const fresh = added[role].filter((fieldId) => !kept.includes(fieldId)).sort()
     lists[key] = [...kept, ...fresh]
   }
