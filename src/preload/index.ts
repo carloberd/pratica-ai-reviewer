@@ -18,6 +18,7 @@ import type {
   AuthStatus,
   CacheUsage,
   DashboardStats,
+  DatasetBundleResult,
   DatasetExportResult,
   DocumentFilters,
   DocumentPick,
@@ -113,7 +114,9 @@ export const reviewerApi = {
     /** Chiede dove salvare e scrive il dataset annotato. */
     export: () => invoke<IpcResultOf<DatasetExportResult>>('dataset:export'),
     /** Lo stesso dataset in foglio di calcolo: due tabelle, `documents` e `fields`. */
-    exportXlsx: () => invoke<IpcResultOf<XlsxExportResult>>('dataset:export-xlsx')
+    exportXlsx: () => invoke<IpcResultOf<XlsxExportResult>>('dataset:export-xlsx'),
+    /** Dataset e documenti revisionati insieme, in una cartella. */
+    exportBundle: () => invoke<IpcResultOf<DatasetBundleResult>>('dataset:export-bundle')
   },
   /** La mappa «tipo documento ↔ dati da estrarre», corretta dal documento aperto. */
   map: {

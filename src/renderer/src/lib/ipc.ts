@@ -99,7 +99,8 @@ export const api = {
   },
   dataset: {
     export: () => call(() => window.reviewer.dataset.export()),
-    exportXlsx: () => call(() => window.reviewer.dataset.exportXlsx())
+    exportXlsx: () => call(() => window.reviewer.dataset.exportXlsx()),
+    exportBundle: () => call(() => window.reviewer.dataset.exportBundle())
   },
   map: {
     get: (documentId: string) => call(() => window.reviewer.map.get(documentId)),

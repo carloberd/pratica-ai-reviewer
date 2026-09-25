@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { type DatasetManifestInput, datasetFileName } from '@shared/dataset'
+import { datasetBundleFolderName } from '@shared/dataset-bundle'
 import { datasetXlsxFileName } from '@shared/dataset-xlsx'
 import { isDirectionChoice } from '@shared/document-direction'
 import {
@@ -17,6 +18,7 @@ import type {
   TypeFieldMap
 } from '@shared/profile-workspace'
 import type {
+  DatasetBundleResult,
   DatasetExportResult,
   IpcResult,
   RegistryTypeOption,
@@ -25,6 +27,7 @@ import type {
 import { ipcMain, type WebContents } from 'electron'
 import { z } from 'zod'
 import type { AuthService } from '../auth/service'
+import { exportDatasetBundle } from '../dataset-bundle'
 import { collectDataset, writeDatasetFile } from '../dataset-export'
 import type { Repository } from '../db/repository'
 import { toStatus } from '../db/rows'
@@ -106,6 +109,8 @@ export interface IpcContext {
     choosePath: (defaultName: string) => Promise<string | null>
     /** Percorso per il foglio di calcolo, con il suo filtro `.xlsx`. */
     chooseXlsxPath: (defaultName: string) => Promise<string | null>
+    /** Cartella dove scrivere dataset e documenti insieme, `null` se annulla. */
+    chooseBundleDirectory: (defaultName: string) => Promise<string | null>
   }
   /**
    * Scheda «Campi da estrarre» della revisione: la mappa del tipo del documento, le
@@ -340,6 +345,48 @@ export function registerIpcHandlers(context: IpcContext): void {
     if (!path) return { saved: false, path: null, documents, fields }
     await writeXlsxFile(path, rows)
     return { saved: true, path, documents, fields }
+  })
+
+  /**
+   * Il dataset **e i documenti da cui è uscito**, in una cartella sola: `dataset.json`,
+   * `dataset.xlsx`, una copia dei file chiusi dal revisore e `documenti.json` che lega
+   * ogni copia alla sua riga del dataset.
+   *
+   * È l'export da mandare a chi il dataset lo userà: le evidenze rimandano a pagine e
+   * coordinate di file che senza questa cartella restano su questa macchina.
+   */
+  handle('dataset:export-bundle', noInput, async (): Promise<DatasetBundleResult> => {
+    if (!context.dataset) {
+      throw new ReviewerError('UNSUPPORTED', 'Export non disponibile su questa istanza.')
+    }
+    const now = new Date()
+    const empty = {
+      saved: false as const,
+      directory: null,
+      documents: 0,
+      corrections: 0,
+      copied: 0,
+      missing: 0,
+      mismatched: 0,
+      bytes: 0
+    }
+    // Lo stesso dataset della voce «JSON», raccolto una volta sola: nella cartella ci
+    // finisce questo, e da qui si sa già se c'è qualcosa da esportare.
+    const dataset = collectDataset(repo, {
+      ...context.dataset.manifest(),
+      exportedAt: now.toISOString()
+    })
+    if (dataset.manifest.counts.documents === 0) {
+      throw new ReviewerError(
+        'NOT_FOUND',
+        'Nessun documento da esportare: il dataset contiene solo documenti salvati o scartati.'
+      )
+    }
+
+    const directory = await context.dataset.chooseBundleDirectory(datasetBundleFolderName(now))
+    if (!directory) return empty
+
+    return exportDatasetBundle({ repo, dataset, directory })
   })
 
   // ---- campi da estrarre ---------------------------------------------------

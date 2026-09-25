@@ -1,3 +1,4 @@
+import { describeDatasetBundle } from '@shared/dataset-bundle'
 import type { CompanyIdentity, DirectionChoice } from '@shared/document-direction'
 import type { LearningOverview, ManualRuleStatus } from '@shared/learning-workspace'
 import { LEARNING_MODE_LABELS, type LearningMode } from '@shared/local-learning'
@@ -396,6 +397,13 @@ export default function DocumentReviewShell() {
         return
       }
 
+      if (format === 'bundle') {
+        const result = await api.dataset.exportBundle()
+        if (!result.saved) return
+        setMessage(describeDatasetBundle(result))
+        return
+      }
+
       if (format === 'map') {
         const result = await api.profiles.exportMap()
         if (!result.saved) return
@@ -543,14 +551,12 @@ export default function DocumentReviewShell() {
               </div>
               <ExportMenu
                 busy={busy}
+                // `run` etichetta l'operazione `export-<forma>`: qui si torna alla forma,
+                // così aggiungerne una non lascia indietro l'etichetta del pulsante.
                 pending={
-                  pending === 'export-json'
-                    ? 'json'
-                    : pending === 'export-xlsx'
-                      ? 'xlsx'
-                      : pending === 'export-map'
-                        ? 'map'
-                        : null
+                  pending?.startsWith('export-')
+                    ? (pending.slice('export-'.length) as ExportFormat)
+                    : null
                 }
                 onExport={(format) => void exportDataset(format)}
               />

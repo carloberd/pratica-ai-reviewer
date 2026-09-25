@@ -465,7 +465,12 @@ il formato JSON non cambia perché esiste anche quello Excel. «Esporta», nella
 apre un menu con le due voci: sono lo stesso export e cambia solo la forma del file,
 mentre due pulsanti affiancati facevano sembrare che fossero due cose diverse.
 
-Sotto una riga di separazione c'è una terza voce, **Mappa dei campi da estrarre**, che non esporta i
+La terza voce, **Dataset completo con i documenti**, mette tutte e due in una cartella
+insieme a una copia dei file revisionati: è quella da consegnare, perché il dataset da solo
+rimanda a documenti che restano su questa macchina. Come è fatta sta [più
+sotto](#dataset-completo-coi-documenti).
+
+Sotto una riga di separazione c'è l'ultima voce, **Mappa dei campi da estrarre**, che non esporta i
 documenti annotati ma le correzioni alla mappa «tipo ↔ dati da estrarre»: è l'unico modo in
 cui quelle decisioni diventano file. Come è fatta sta [più sotto](#export-della-mappa).
 
@@ -702,6 +707,82 @@ non si riscarica niente da Drive.
 
 Il test `tests/xlsx-export.test.ts` scrive il file dalle fixture e lo rilegge con
 exceljs: intestazioni, conteggi, impronte e valori confermati.
+
+### Dataset completo, coi documenti
+
+I due export di sopra descrivono documenti che chi li riceve non ha: le evidenze sono
+pagine, righe e riquadri di file che stanno nella cache di questa macchina, e senza quei
+file un valore non si controlla e un motore non ci si fa girare sopra. La voce **Dataset
+completo con i documenti** chiede una cartella e ci scrive tutto insieme:
+
+```
+praticaai-dataset-2026-09-25/
+├── dataset.json        # identico all'export JSON, byte per byte
+├── dataset.xlsx        # identico all'export Excel
+├── documenti.json      # quale file è quale riga del dataset
+└── documenti/
+    ├── Fattura 114.pdf
+    └── DURC 1_2026.pdf
+```
+
+I due file di dati non sono una seconda versione del formato: sono gli stessi che
+escono dalle voci «JSON» ed «Excel», scritti dallo stesso codice
+(`src/main/dataset-bundle.ts`), e il test lo confronta byte per byte. Quello che si
+aggiunge è la cartella `documenti/` e il file che la lega al dataset.
+
+I nomi dei file copiati sono quelli che il revisore vede in Drive, ripuliti di quello che
+un filesystem rifiuta (`/ \ : * ? " < > |` e i caratteri di controllo) e con l'estensione
+del mime, perché quella cartella la apre una persona. Due documenti che su Drive si
+chiamano allo stesso modo — «fattura.pdf» ce n'è in ogni cartella — non si sovrascrivono:
+il secondo prende un `-2`. L'ordine è quello del dataset (nome file, poi id di Drive), così
+due export dello stesso database danno gli stessi nomi.
+
+`documenti.json` è il legame fra le due cose, ed è la parte che conta:
+
+```jsonc
+{
+  "format": "praticaai-reviewer/annotated-dataset-files",
+  "formatVersion": "1.0.0",
+  "exportedAt": "2026-09-25T18:00:00.000Z",
+  "counts": { "documents": 3, "copied": 2, "missing": 1, "mismatched": 0, "bytes": 3512044 },
+  "files": [
+    { "driveFileId": "…",              // la stessa chiave del dataset
+      "filename": "Fattura 114.pdf", "mime": "application/pdf", "status": "REVIEWED",
+      "file": "documenti/Fattura 114.pdf",
+      "bytes": 184320,
+      "sha256": "…",                   // della copia, ricalcolato dopo averla scritta
+      "contentSha256": "…",            // del file su cui il revisore ha annotato
+      "matchesAnnotated": true,
+      "missing": null },
+    { "driveFileId": "…", "filename": "Visura 2026.pdf", "mime": "application/pdf",
+      "status": "REVIEWED", "file": null, "bytes": null, "sha256": null,
+      "contentSha256": "…", "matchesAnnotated": null,
+      "missing": "NO_LOCAL_COPY" }     // o FILE_GONE, COPY_FAILED
+  ]
+}
+```
+
+- Entrano **tutti** i documenti del dataset, scartati compresi: «questo non vale» è
+  un'annotazione come le altre, e chi misura vuole vedere su cosa è stata presa.
+- Ogni copia viene riletta per il suo `sha256` e confrontata col `contentSha256` registrato
+  quando il documento è stato elaborato. Se non coincidono, il file su Drive è cambiato
+  dopo la revisione e **i valori annotati non sono di quel file**: `matchesAnnotated: false`,
+  il documento esce lo stesso e il conto `mismatched` lo dice anche nella riga di stato. Un
+  documento elaborato prima della `1.1.0` non ha un `contentSha256` da confrontare e resta
+  `null`, che non è la stessa cosa di `false`.
+- Un file che manca non è un documento in meno: la riga nel dataset resta e il manifest
+  scrive perché non c'è. `NO_LOCAL_COPY` è la copia tolta dalla cache con «Libera spazio»,
+  `FILE_GONE` il path registrato ma il file sparito dal disco. Anche qui l'export **non
+  riscarica niente da Drive** — vale la regola dell'XLSX, e per lo stesso motivo: un export
+  non deve dipendere dal fatto che Drive risponda. I mancanti si contano nella riga di
+  stato, con cosa fare («riaprili da Drive e riesporta»).
+
+La forma dei nomi e del manifest sta in `src/shared/dataset-bundle.ts`, modulo puro senza
+filesystem; copie e sha li fa `src/main/dataset-bundle.ts`. I test sono
+`tests/shared-dataset-bundle.test.ts` per i nomi e i conti, e `tests/dataset-bundle.test.ts`
+che esporta davvero una cartella dalle fixture e la rilegge, compresi i tre casi che
+contano: il file che manca, il file sparito dal disco e la copia che non è più il documento
+annotato.
 
 ---
 
