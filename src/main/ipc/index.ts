@@ -302,6 +302,15 @@ export function registerIpcHandlers(context: IpcContext): void {
   }
 
   // ---- dataset annotato ----------------------------------------------------
+  /**
+   * Nel dataset entrano i documenti **chiusi** dal revisore, salvati o scartati; quelli
+   * ancora in coda no. Se non ce n'è nemmeno uno non c'è niente da scrivere, e conviene
+   * dirlo prima di chiedere dove salvare.
+   */
+  const EMPTY_DATASET =
+    'Nessun documento da esportare: nessun documento è stato ancora salvato o scartato. ' +
+    'I documenti ancora in coda di revisione non entrano nel dataset.'
+
   handle('dataset:export', noInput, async (): Promise<DatasetExportResult> => {
     if (!context.dataset) {
       throw new ReviewerError('UNSUPPORTED', 'Export non disponibile su questa istanza.')
@@ -313,10 +322,7 @@ export function registerIpcHandlers(context: IpcContext): void {
     })
     const { documents, corrections } = dataset.manifest.counts
     if (documents === 0) {
-      throw new ReviewerError(
-        'NOT_FOUND',
-        'Nessun documento da esportare: il dataset contiene solo documenti salvati o scartati.'
-      )
+      throw new ReviewerError('NOT_FOUND', EMPTY_DATASET)
     }
 
     const path = await context.dataset.choosePath(datasetFileName(now))
@@ -335,10 +341,7 @@ export function registerIpcHandlers(context: IpcContext): void {
     const documents = rows.documents.length
     const fields = rows.fields.length
     if (documents === 0) {
-      throw new ReviewerError(
-        'NOT_FOUND',
-        'Nessun documento da esportare: il dataset contiene solo documenti salvati o scartati.'
-      )
+      throw new ReviewerError('NOT_FOUND', EMPTY_DATASET)
     }
 
     const path = await context.dataset.chooseXlsxPath(datasetXlsxFileName(new Date()))
@@ -377,10 +380,7 @@ export function registerIpcHandlers(context: IpcContext): void {
       exportedAt: now.toISOString()
     })
     if (dataset.manifest.counts.documents === 0) {
-      throw new ReviewerError(
-        'NOT_FOUND',
-        'Nessun documento da esportare: il dataset contiene solo documenti salvati o scartati.'
-      )
+      throw new ReviewerError('NOT_FOUND', EMPTY_DATASET)
     }
 
     const directory = await context.dataset.chooseBundleDirectory(datasetBundleFolderName(now))

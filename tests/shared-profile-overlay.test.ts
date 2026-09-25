@@ -6,6 +6,7 @@ import {
   applyOverlay,
   cardinalityOf,
   excludedFields,
+  fieldStateOrNull,
   roleIn
 } from '../src/shared/profile-overlay'
 
@@ -83,6 +84,52 @@ describe('uno o più valori', () => {
     expect(applyCardinalityOverlay(PROFILE, {})).toBe(PROFILE)
     applyCardinalityOverlay(PROFILE, { 'issuer.name': 'many' })
     expect(PROFILE.field_cardinality).toBeUndefined()
+  })
+})
+
+/**
+ * Il database può contenere decisioni scritte quando i ruoli erano quattro: nessuna
+ * migrazione le aveva portate avanti, e `applyOverlay` indicizzava per ruolo. Una riga
+ * `core` cercava una lista che non esiste — «Cannot read properties of undefined
+ * (reading 'push')» — e faceva cadere la rielaborazione del documento e l'export della
+ * mappa, cioè l'unico modo in cui quelle decisioni diventano file.
+ */
+describe('i ruoli di prima del Brain MVP', () => {
+  it('«core» e «conditional» valgono «optional»: è quello che facevano', () => {
+    expect(fieldStateOrNull('core')).toBe('optional')
+    expect(fieldStateOrNull('conditional')).toBe('optional')
+  })
+
+  it('i tre stati di adesso restano quelli', () => {
+    expect(fieldStateOrNull('required')).toBe('required')
+    expect(fieldStateOrNull('optional')).toBe('optional')
+    expect(fieldStateOrNull('excluded')).toBe('excluded')
+  })
+
+  it('uno stato che nessuna versione ha scritto vale «nessuna decisione»', () => {
+    expect(fieldStateOrNull('principale')).toBeNull()
+    expect(fieldStateOrNull(null)).toBeNull()
+    expect(fieldStateOrNull(undefined)).toBeNull()
+  })
+
+  it('un profilo con una decisione vecchia si applica invece di cadere', () => {
+    // @ts-expect-error: il tipo non lo prevede più, il database sì
+    const next = applyOverlay(PROFILE, { 'procurement.cig': 'core', 'payment.iban': 'conditional' })
+
+    expect(next.required_fields).toEqual(['document.number', 'document.issue_date'])
+    expect(next.optional_fields).toEqual(['issuer.name', 'payment.iban', 'procurement.cig'])
+  })
+
+  it('una decisione illeggibile lascia il campo com’è nel registry', () => {
+    // @ts-expect-error: proprio un valore che nessuno ha mai scritto
+    const next = applyOverlay(PROFILE, { 'document.number': 'boh' })
+
+    // Non sparisce dalla mappa: uno stato che non si sa leggere non è «non utile».
+    expect(next.required_fields).toEqual(['document.number', 'document.issue_date'])
+    expect(next.optional_fields).toEqual(['issuer.name', 'procurement.cig'])
+    // E se non resta niente di leggibile, il profilo è proprio lo stesso oggetto.
+    // @ts-expect-error: come sopra
+    expect(applyOverlay(PROFILE, { 'document.number': 'boh' })).toEqual(PROFILE)
   })
 })
 

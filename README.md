@@ -878,6 +878,21 @@ pack — e restano identici. Quello che il revisore decide è una riga su
 (`@shared/profile-overlay`), quindi una correzione vale **subito** — sul prossimo
 documento elaborato — senza riscrivere niente sul disco e senza rileggere il registry.
 
+**I ruoli sono due, e lo sono anche nelle decisioni già prese.** Fino al Brain MVP
+(22/09/2026) erano quattro — `required`, `core`, `optional`, `conditional` — e il revisore
+poteva scriverli tutti su `profile_overrides`. Il codice ne ha due da allora, ma le righe
+scritte prima erano rimaste com'erano, e il CHECK della `0008` continuava ad accettarle:
+`applyOverlay` indicizza per ruolo, quindi su una riga `core` cercava una lista che non
+esiste e cadeva con «Cannot read properties of undefined (reading 'push')» — sia
+rielaborando un documento di quel tipo, sia esportando la mappa. La migrazione `0021` le
+porta avanti: `core` e `conditional` diventano `optional`, perché è quello che facevano —
+solo `required` manda un documento in revisione per un campo senza valore — e il CHECK
+adesso dice i tre stati veri. Chi legge (`fieldStateOrNull`) traduce lo stesso, per un
+database che quella migrazione non ha ancora visto; uno stato che nessuna versione ha mai
+scritto vale «nessuna decisione» e il campo torna a seguire il registry, invece di sparire
+dalla mappa come se fosse stato escluso. La cronologia non si tocca: `profile_actions`
+racconta quello che è stato fatto col nome che il ruolo aveva allora.
+
 È un cambiamento rispetto alle versioni fino alla 1.3: prima ogni correzione riscriveva i
 JSON del repo e ne faceva un commit git. Quel meccanismo funzionava solo in sviluppo —
 l'app impacchettata legge il registry da `process.resourcesPath`, di sola lettura, e lì la
