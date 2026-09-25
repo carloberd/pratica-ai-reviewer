@@ -3,7 +3,7 @@ import { cx } from '../lib/cx'
 import styles from './document-review.module.css'
 
 /** Quale export è in corso, per l'etichetta del pulsante. */
-export type ExportFormat = 'json' | 'xlsx' | 'map'
+export type ExportFormat = 'json' | 'xlsx' | 'bundle' | 'map'
 
 interface Props {
   busy: boolean
@@ -16,8 +16,12 @@ interface Props {
  *
  * Le prime due voci sono lo stesso dataset in due forme — gli stessi documenti chiusi dal
  * revisore, le stesse regole sul valore confermato — e cambia solo la forma del file. La
- * terza è un'altra cosa e sta sotto una riga di separazione: non i documenti annotati, ma
- * la mappa «tipo ↔ dati da estrarre» come l'ha corretta il revisore. È l'unico modo in
+ * terza è una cartella con dentro tutte e due più una copia dei documenti revisionati: è
+ * quella da mandare a chi il dataset lo userà, perché le evidenze rimandano a file che
+ * altrimenti restano su questa macchina.
+ *
+ * L'ultima è un'altra cosa e sta sotto una riga di separazione: non i documenti annotati,
+ * ma la mappa «tipo ↔ dati da estrarre» come l'ha corretta il revisore. È l'unico modo in
  * cui quelle correzioni diventano file: durante il lavoro restano nel database.
  */
 export default function ExportMenu({ busy, pending, onExport }: Props) {
@@ -81,6 +85,18 @@ export default function ExportMenu({ busy, pending, onExport }: Props) {
             Excel
             <span className={styles.menuItemHint}>
               Due fogli da lavorare in tabella: una riga per documento, una per campo.
+            </span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.menuItem}
+            onClick={() => choose('bundle')}
+          >
+            Dataset completo con i documenti
+            <span className={styles.menuItemHint}>
+              Una cartella con JSON, Excel e una copia dei file revisionati: da mandare a chi userà
+              il dataset.
             </span>
           </button>
           <div className={styles.menuSeparator} />

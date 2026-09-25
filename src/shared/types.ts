@@ -496,4 +496,22 @@ export interface XlsxExportResult {
   fields: number
 }
 
+/**
+ * v3 reviewer: esito dell'export completo — il dataset e i documenti da cui è uscito, in
+ * una cartella sola. `copied` sono i file finiti nella cartella, `missing` i documenti
+ * rimasti senza (copia locale tolta dalla cache) e `mismatched` le copie che non
+ * corrispondono più al documento annotato.
+ */
+export interface DatasetBundleResult {
+  /** `false` se il revisore ha annullato la scelta della cartella. */
+  saved: boolean
+  directory: string | null
+  documents: number
+  corrections: number
+  copied: number
+  missing: number
+  mismatched: number
+  bytes: number
+}
+
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: IpcError }

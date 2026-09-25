@@ -83,7 +83,9 @@ function start(): void {
       }),
       choosePath: (defaultName) => chooseSavePath('Esporta il dataset annotato', defaultName),
       chooseXlsxPath: (defaultName) =>
-        chooseSavePath('Esporta il dataset annotato in Excel', defaultName)
+        chooseSavePath('Esporta il dataset annotato in Excel', defaultName),
+      chooseBundleDirectory: (defaultName) =>
+        chooseExportFolder('Dove salvare il dataset completo', defaultName)
     },
     learning: { legacyFieldMap: LEGACY_FIELD_MAP },
     profiles: {
@@ -121,9 +123,9 @@ function start(): void {
 }
 
 /**
- * Finestra «scegli la cartella», per l'export della mappa: i file della mappa corretta
- * sono quattro e vanno insieme, quindi si sceglie dove crearne la cartella e non un file
- * per volta.
+ * Finestra «scegli la cartella», per gli export fatti di più file: la mappa corretta sono
+ * quattro file che vanno insieme, il dataset completo è due file più i documenti copiati.
+ * In tutti e due i casi si sceglie dove creare la cartella, non un file per volta.
  */
 async function chooseExportFolder(title: string, folderName: string): Promise<string | null> {
   const options = {
